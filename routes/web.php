@@ -2,10 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
-use App\Http\Controllers\User_Management\User_Management_Controller;
+use App\Http\Controllers\User_Management\User_Management;
 
 
-Route::get('/', [User_Management_Controller::class, 'index']);
+Route::get('/', [User_Management::class, 'index']);
 
 
 
@@ -15,8 +15,11 @@ Route::get('/login', function () {
 });
 
 Route::get('/register', function () {
-    return view('auth/register');
+    return view('user_management/register');
 });
+
+Route::post('/user_create', [User_Management::class, 'store'])->name('userlist.create');
+
 
 
 
