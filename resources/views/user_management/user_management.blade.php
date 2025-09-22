@@ -1,22 +1,22 @@
 @extends('layouts.main')
 
+@if(isset($styles))
+    @foreach($styles as $style)
+        <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
+    @endforeach
+@endif
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">User Management</li>
-@endsection
 
-@section('styles')
-    <styles>
-
-    </styles>
 @endsection
 
 @section('content')
-<h1>My Main</h1>
+<h1>Dashboard</h1>
 @endsection
 
-@section('scripts')
-    <script>
 
-    </script>
-@endsection
+@if(isset($scripts))
+    @foreach($scripts as $script)
+        <script src="{{ asset('js/' . $script) }}"></script>
+    @endforeach
+@endif

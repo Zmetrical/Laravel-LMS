@@ -2,11 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
+use App\Http\Controllers\UserManagement\UserManagement;
 
 
-Route::get('/', function () {
-    return view('dashboard');
-});
+Route::get('/', [UserManagement::class, 'index']);
+
+
 
 Route::get('/user_management', function () {
     return view('user_management/user_management');
@@ -16,8 +17,6 @@ Route::get('/user_management', function () {
 Route::get('/welcome', function () {
     return view('welcome');
 });
-
-
 
 
 
