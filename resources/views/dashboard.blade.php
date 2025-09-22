@@ -1,13 +1,18 @@
-@extends('layouts.adminlte')
+@extends('layouts.main')
 
-@section('title', 'Calendar')
 
 @section('breadcrumb')
     <li class="breadcrumb-item active">Dashboard</li>
 @endsection
 
-@section('content')
+@section('styles')
+    <styles>
 
+    </styles>
+@endsection
+
+@section('content')
+<h1>My Main</h1>
 @endsection
 
 @section('scripts')

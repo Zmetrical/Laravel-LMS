@@ -1,9 +1,12 @@
-@extends('layouts.adminlte')
-
-@section('title', 'Calendar')
+@extends('layouts.main')
 
 @section('breadcrumb')
     <li class="breadcrumb-item active">Dashboard</li>
+@endsection
+
+@section('styles')
+    <!-- calendar -->
+    <link rel="stylesheet" href="{{ asset('plugins/fullcalendar/main.css') }}">
 @endsection
 
 @section('content')
@@ -27,7 +30,7 @@
                 <div id="external-events">
                   <div class="external-event bg-primary">Lunch</div>
                   <div class="external-event bg-green">Go home</div>
-                  <div class="external-event bg-orange">Do homework</div>
+                  <div class="external-event b  g-orange">Do homework</div>
                   <div class="external-event bg-red">Work on UI design</div>
                   <div class="external-event bg-light">Sleep tight</div>
                 </div>
@@ -49,6 +52,10 @@
 @endsection
 
 @section('scripts')
+    <!-- calendar -->
+    <script src="{{ asset('plugins/moment/moment.min.js') }}"></script>
+    <script src="{{ asset('plugins/fullcalendar/main.js') }}"></script>
+
     <script>
     $(function () {
     // Initialize the calendar
