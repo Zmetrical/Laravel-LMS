@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\UserManagement;
+namespace App\Http\Controllers\User_Management;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class UserManagement extends Controller
+class User_Management_Controller extends Controller
 {
-    public function index(){
+        public function index(){
         $data = [
             'scripts' => [
                 'user_management/user_management.js',

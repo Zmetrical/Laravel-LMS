@@ -2,24 +2,21 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
-use App\Http\Controllers\UserManagement\UserManagement;
+use App\Http\Controllers\User_Management\User_Management_Controller;
 
 
-Route::get('/', [UserManagement::class, 'index']);
+Route::get('/', [User_Management_Controller::class, 'index']);
 
 
 
-Route::get('/user_management', function () {
-    return view('user_management/user_management');
+
+Route::get('/login', function () {
+    return view('auth/login');
 });
 
-
-Route::get('/welcome', function () {
-    return view('welcome');
+Route::get('/register', function () {
+    return view('auth/register');
 });
-
-
-
 
 
 

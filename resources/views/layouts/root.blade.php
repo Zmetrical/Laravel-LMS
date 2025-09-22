@@ -21,9 +21,7 @@
     @yield('head')
 </head>
 
-<body>
-     @yield('body')
-</body>
+@yield('body')
 
 <!-- jQuery -->
 <script src="{{ asset('plugins/jquery/jquery.min.js') }}"></script>
