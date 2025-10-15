@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Student extends Model
+class Student extends ParentModel
 {
-    protected $table = 'student_list'; // Your table name
-
+    protected $table = 'students'; // Your table name
+    public $timestamps = false; // Add this line
     protected $fillable = [
         'user_id',
+        'strand_id',
+        'section_id',
         'student_number',
         'enrollment_date',
         'year_level',
@@ -17,13 +19,4 @@ class Student extends Model
         'status'
     ];
 
-    protected $casts = [
-        'enrollment_date' => 'date',
-    ];
-
-    // Student belongs to a user
-    public function user()
-    {
-        return $this->belongsTo(User_List::class, 'user_id');
-    }
 }

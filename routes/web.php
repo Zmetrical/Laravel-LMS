@@ -14,11 +14,26 @@ Route::get('/login', function () {
     return view('auth/login');
 });
 
-Route::get('/register', function () {
-    return view('user_management/register');
+
+
+// ---------------------------------------------------------------------------
+//  User Management
+// ---------------------------------------------------------------------------
+Route::prefix('user_management')->group(function () {
+    Route::get('/register', function () {
+        return view(view: 'user_management.register');
+    })->name('user.register');
+
+    Route::post('/create_student', [User_Management::class, 'store'])->name('user.create_student');
+
+    Route::get('/list', function () {
+        return view('user_management.list');
+    })->name('user.list');
+
 });
 
-Route::post('/user_create', [User_Management::class, 'store'])->name('userlist.create');
+
+
 
 
 

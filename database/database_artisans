@@ -1,0 +1,10 @@
+//migration
+
+php artisan make:migration create_sections_table
+
+php artisan migrate:refresh
+php artisan migrate:status
+
+
+php artisan make:seeder StrandsSeeder
+php artisan db:seed --class=StrandsSeeder

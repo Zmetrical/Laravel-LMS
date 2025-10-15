@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class User_List extends Model
+class Users extends ParentModel
 {
     // Specify the table name (Laravel expects 'user__lists' by default)
     protected $table = 'users_list';
