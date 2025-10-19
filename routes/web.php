@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
 use App\Http\Controllers\User_Management\User_Management;
+use App\Http\Controllers\Admin;
 
 
 Route::get('/', [User_Management::class, 'index']);
@@ -30,18 +31,29 @@ Route::get('/login', function () {
 
 
 // ---------------------------------------------------------------------------
+//  Admin Page
+// ---------------------------------------------------------------------------
+
+Route::get('/', [Admin::class, 'index'])
+->name('admin.home');
+
+
+// ---------------------------------------------------------------------------
 //  User Management - Admin 
 // ---------------------------------------------------------------------------
 
-Route::get('/user_management/insert_student', [User_Management::class, 'page_insertUser'])
-->name('user.insert');
 
 
-Route::get('/sections', [User_Management::class, 'get_Sections']);
-Route::post('/insert_Student', [User_Management::class, 'insert_Student'])
-->name('insert.student');
+Route::get('/user_management/insert_student', [User_Management::class, 'page_inserStudents'])
+->name('admin.insert_student');
 
 
+Route::get('/procedure/get_sections', [User_Management::class, 'get_Sections']);
+Route::post('/procedure/insert_Student', [User_Management::class, 'insert_Student'])
+->name('procedure.insert_Student');
+
+Route::post('/procedure/insert_Students', [User_Management::class, 'insert_Students'])
+->name('procedure.insert_Students');
 
 // ---------------------------------------------------------------------------
 //  Sample UI

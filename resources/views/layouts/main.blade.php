@@ -14,9 +14,8 @@
             <nav class="main-header navbar navbar-expand navbar-white navbar-light">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+                        <a class="nav-link" data-widget="pushmenu" href="{{ route(name: 'admin.home') }}" role="button"><i class="fas fa-bars"></i></a>
                     </li>
-
                 </ul>
 
                 <ul class="navbar-nav ml-auto">
@@ -35,22 +34,86 @@
 
             <!-- Main Sidebar -->
             <aside class="main-sidebar sidebar-dark-primary elevation-4">
-
+                <a href="{{ route( 'admin.home') }}" class="brand-link text-center">
+                    <span class="brand-text font-weight-light">Admin</span>
+                </a>
                 <div class="sidebar">
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
                             data-accordion="false">
-                            <li class="nav-item">
+                            <!-- User Menu -->
+                            <li class="nav-item has-treeview">
                                 <a href="" class="nav-link">
-                                    <i class=""></i>
-                                    <p>Register</p>
+                                    <i class="nav-icon fas fa-clipboard-list"></i>
+                                    <p>
+                                        User Management
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
                                 </a>
+                                <ul class="nav nav-treeview">
+                                    <li class="nav-item">
+                                        <a href="{{ route('admin.insert_student') }}" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Insert Student</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route( 'admin.insert_student') }}" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Insert Students</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route( 'admin.insert_student') }}" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Insert Teacher</p>
+                                        </a>
+                                    </li>
+
+                                    <li class="nav-item">
+                                        <a href="{{ route( 'admin.insert_student') }}" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>List Students</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route( 'admin.insert_student') }}" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>List Teachers</p>
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
-                            <li class="nav-item">
+
+                            <!-- Class Menu -->
+                            <li class="nav-item has-treeview">
                                 <a href="" class="nav-link">
-                                    <i class=""></i>
-                                    <p>User</p>
+                                    <i class="nav-icon fas fa-clipboard-list"></i>
+                                    <p>
+                                        Class Management
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
                                 </a>
+                                <ul class="nav nav-treeview">
+                                    <li class="nav-item">
+                                        <a href="" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Insert Class</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>List Strand</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="" class="nav-link">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>List Class</p>
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         </ul>
                     </nav>
