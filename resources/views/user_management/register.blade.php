@@ -55,8 +55,6 @@
                 @endif
 
                 <form class="row g-3" method="POST" action="{{ route('user.create_student') }}">
-
-
                     @csrf
                     <div class="row g-3">
                         <!-- Row 1: Basic Info -->

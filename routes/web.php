@@ -7,9 +7,6 @@ use App\Http\Controllers\User_Management\User_Management;
 
 Route::get('/', [User_Management::class, 'index']);
 
-
-
-
 Route::get('/login', function () {
     return view('auth/login');
 });
@@ -19,26 +16,36 @@ Route::get('/login', function () {
 // ---------------------------------------------------------------------------
 //  User Management
 // ---------------------------------------------------------------------------
-Route::prefix('user_management')->group(function () {
-    Route::get('/register', function () {
-        return view(view: 'user_management.register');
-    })->name('user.register');
+// Route::prefix('user_management')->group(function () {
+//     Route::get('/register', function () {
+//         return view(view: 'user_management.register');
+//     })->name('user.register');
 
-    Route::post('/create_student', [User_Management::class, 'store'])->name('user.create_student');
+//     Route::post('/create_student', [User_Management::class, 'store'])->name('user.create_student');
 
-    Route::get('/list', function () {
-        return view('user_management.list');
-    })->name('user.list');
-
-});
-
+//     Route::get('/list', function () {
+//         return view('user_management.list');
+//     })->name('user.list');
+// });
 
 
+// ---------------------------------------------------------------------------
+//  User Management - Admin 
+// ---------------------------------------------------------------------------
+
+Route::get('/user_management/insert_student', [User_Management::class, 'page_insertUser'])
+->name('user.insert');
+
+
+Route::get('/sections', [User_Management::class, 'get_Sections']);
+Route::post('/insert_Student', [User_Management::class, 'insert_Student'])
+->name('insert.student');
 
 
 
-
-// sample ui
+// ---------------------------------------------------------------------------
+//  Sample UI
+// ---------------------------------------------------------------------------
 Route::get('/calendar', function () {
     return view('calendar');
 });
