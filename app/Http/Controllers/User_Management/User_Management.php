@@ -174,7 +174,6 @@ class User_Management extends MainController
         }
     }
 
-
     private function generateStudentNumber()
     {
         $year = date('Y');
