@@ -1,0 +1,23 @@
+install xammp 8.2+
+install composer
+
+---------------
+TERMINAL
+---------------
+cd "C:\Users\serviceunit\Documents\GitHub\Laravel-LMS"
+
+copy .env.example .env
+C:\xampp8\php\php.exe artisan key:generate
+
+composer install
+
+
+------------------
+.ENV
+------------------
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel_lms
+DB_USERNAME=root
+DB_PASSWORD=

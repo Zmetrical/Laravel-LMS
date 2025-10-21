@@ -1,5 +1,7 @@
 //migration
 
+C:\xampp8\php\php.exe
+
 php artisan make:migration create_sections_table
 
 php artisan migrate:refresh

@@ -5,7 +5,7 @@ $(document).ready(function () {
     const levelSelect = $('#level');
     const sectionSelect = $('#section');
 
-    function fetchSections() {
+    function render_Sections() {
         const strandId = strandSelect.val();
         const levelId = levelSelect.val();
 
@@ -48,14 +48,14 @@ $(document).ready(function () {
         }
     }
 
-    strandSelect.on('change', fetchSections);
-    levelSelect.on('change', fetchSections);
+    strandSelect.on('change', render_Sections);
+    levelSelect.on('change', render_Sections);
 
 
     let rowCounter = 0;
-    generateRows();
+    generate_Rows();
 
-    function generateRows() {
+    function generate_Rows() {
         const numRows = parseInt($('#numRows').val()) || 5;
 
         if (numRows < 1 || numRows > 50) {
@@ -67,11 +67,11 @@ $(document).ready(function () {
         rowCounter = 0;
 
         for (let i = 0; i < numRows; i++) {
-            renderRow();
+            render_Row();
         }
     }
 
-    function renderRow() {
+    function render_Row() {
         rowCounter++;
 
         const row = `
@@ -101,12 +101,12 @@ $(document).ready(function () {
 
     // Generate rows button
     $('#generateRowsBtn').on('click', function () {
-        generateRows();
+        generate_Rows();
     });
 
     // Add single row button
     $('#addRowBtn').on('click', function () {
-        renderRow();
+        render_Row();
     });
 
     // Delete row (event delegation)

@@ -44,7 +44,7 @@ Route::get('/', [Admin::class, 'index'])
 
 
 
-Route::get('/user_management/insert_student', [User_Management::class, 'page_inserStudents'])
+Route::get('/user_management/insert_student', [User_Management::class, 'page_insertStudents'])
 ->name('admin.insert_student');
 
 
@@ -54,6 +54,13 @@ Route::post('/procedure/insert_Student', [User_Management::class, 'insert_Studen
 
 Route::post('/procedure/insert_Students', [User_Management::class, 'insert_Students'])
 ->name('procedure.insert_Students');
+
+
+
+Route::get('/user_management/list_student', [User_Management::class, 'page_listStudents'])
+->name('admin.list_student');
+
+
 
 // ---------------------------------------------------------------------------
 //  Sample UI
