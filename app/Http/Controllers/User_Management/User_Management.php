@@ -16,10 +16,10 @@ use App\Models\User_Management\Student;
 class User_Management extends MainController
 {
     // ---------------------------------------------------------------------------
-    //  Insert User Page
+    //  Insert Student Page
     // ---------------------------------------------------------------------------
 
-    public function page_inserStudents()
+    public function page_insertStudents(Request $request)
     {
 
         $strands = Strand::all();
@@ -187,5 +187,45 @@ class User_Management extends MainController
         $password = ucfirst(strtolower($firstName)) . ucfirst(strtolower($lastName)) . '@' . date('Y');
 
         return $password;
+    }
+
+
+    // ---------------------------------------------------------------------------
+    //  List Student Page
+    // ---------------------------------------------------------------------------
+
+    public function page_listStudents(Request $request)
+    {
+        $strands = Strand::all();
+        $levels = Level::all();
+        $sections = Section::all();
+
+        $students = DB::table('students')
+            ->join('sections', 'students.section_id', '=', 'sections.id')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+            ->select(
+                'students.*',
+                'sections.name as section',
+                'levels.name as level',
+                'strands.code as strand'
+            )
+            ->get();
+
+        $data = [
+            'scripts' => [
+                'user_management/list_student.js',
+            ],
+            'styles' => [
+                'user_management/list_student.css'
+            ],
+
+            'strands' => $strands,
+            'levels' => $levels,
+            'sections' => $sections,
+            'students' => $students
+        ];
+
+        return view('admin.user_management.list_student', $data);
     }
 }

@@ -71,7 +71,7 @@
                                     </li>
 
                                     <li class="nav-item">
-                                        <a href="{{ route( 'admin.insert_student') }}" class="nav-link">
+                                        <a href="{{ route( 'admin.list_student') }}" class="nav-link">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>List Students</p>
                                         </a>
