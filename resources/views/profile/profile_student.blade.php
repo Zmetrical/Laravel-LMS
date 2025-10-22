@@ -41,11 +41,10 @@
         <!-- Profile Card - Horizontal Layout -->
         <div class="card card-primary card-outline">
             <div class="card-body">
-                <form id="profileForm" method="POST" data-student-id="{{ $student->id }}"
-                    action="{{ $mode === 'edit' ? route('profile.student.update', $student->id) : '#' }}">
+                <form id="profileForm" method="POST" data-student-id="{{ $student->id }}">
                     @if($mode === 'edit')
                         @csrf
-                        @method('PUT')
+                        @method('POST')
                     @endif
 
                     <div class="row">
@@ -59,8 +58,8 @@
                                 <label for="profileImageInput" class="btn btn-default mb-0">
                                     <i class="fas fa-camera"></i> Upload Photo
                                 </label>
-                                <input type="file" id="profileImageInput" name="profile_image" accept="image/*"
-                                    data-editable class="d-none">
+                                <input type="file" id="profileImageInput" name="profile_image"
+                                    class="d-none">
                             </div>
                         </div>
 

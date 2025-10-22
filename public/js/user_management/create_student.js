@@ -213,21 +213,25 @@ $(document).ready(function () {
 
             },
             error: function (xhr) {
-                let errorMsg = 'An error occurred';
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON.errors;
+                    let errorMessage = '';
 
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
+                    $.each(errors, function (key, value) {
+                        errorMessage += value[0] + '<br>';
+                    });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Validation Error',
+                        html: errorMessage
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Something went wrong. Please try again.'
+                    });
                 }
-
-                if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    errorMsg += '\n\n' + xhr.responseJSON.errors.join('\n');
-                }
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMsg
-                });
             }
         });
     });

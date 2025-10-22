@@ -52,7 +52,7 @@
         <div class="bs-stepper-content">
             <form id="insert_students" method="POST" 
                 data-submit-url="{{ route('procedure.insert_Students') }}"
-                data-redirect-url="{{ route('admin.insert_student') }}">
+                data-redirect-url="{{ route('admin.create_student') }}">
                 
                 @csrf
 

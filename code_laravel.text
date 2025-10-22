@@ -1,0 +1,1 @@
+\Log::info('All Input: ', $request->all());

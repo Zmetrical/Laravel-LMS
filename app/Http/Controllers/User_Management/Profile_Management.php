@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Storage;
 
 class Profile_Management extends MainController
 {
+    // ---------------------------------------------------------------------------
+    //  Student
+    // ---------------------------------------------------------------------------
+
     // View only
     public function show_student($id)
     {
@@ -63,13 +67,13 @@ class Profile_Management extends MainController
 
         return view('profile.profile_student', $data);
     }
-
-
     public function update_student(Request $request, $id)
     {
         try {
             $student = Student::findOrFail($id);
-            
+
+
+
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
@@ -83,13 +87,13 @@ class Profile_Management extends MainController
                 if ($student->profile_image) {
                     Storage::disk('public')->delete($student->profile_image);
                 }
-                
+
                 // Save new image to storage/app/public/students
                 $image = $request->file('profile_image');
                 $imageName = 'student_' . $id . '_' . time() . '.' . $image->extension();
-                $imagePath = $image->storeAs('students', $imageName, 'public');
-                
+
                 // Store path in database: students/student_1_1234567890.jpg
+                $imagePath = $image->storeAs('students', $imageName, 'public');
                 $validated['profile_image'] = $imagePath;
             }
 
@@ -108,7 +112,7 @@ class Profile_Management extends MainController
             // === Return Redirect  ===
             return redirect()->route('profile.student.show', $id)
                 ->with('success', 'Profile updated successfully');
-                
+
         } catch (\Exception $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -116,8 +120,23 @@ class Profile_Management extends MainController
                     'message' => 'Failed to update profile: ' . $e->getMessage()
                 ], 500);
             }
-            
+
             return back()->with('error', 'Failed to update profile');
         }
+    }
+
+    // ---------------------------------------------------------------------------
+    //  Teacher
+    // ---------------------------------------------------------------------------
+
+    public function show_teacher()
+    {
+
+        $data = [
+            'mode' => 'view',
+            'scripts' => ['user_management/profile_teacher.js']
+        ];
+
+        return view('profile.profile_teacher', $data);
     }
 }

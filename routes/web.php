@@ -43,40 +43,60 @@ Route::get('/', [Admin::class, 'index'])
 //  User Management - Admin 
 // ---------------------------------------------------------------------------
 
-
-
-Route::get('/user_management/insert_student', [User_Management::class, 'create_student'])
-    ->name('admin.insert_student');
+// === Student ===
+Route::get('/user_management/create_student', action: [User_Management::class, 'create_student'])
+    ->name('admin.create_student');
 
 
 Route::get('/procedure/get_sections', [User_Management::class, 'get_Sections']);
+
 Route::post('/procedure/insert_Student', [User_Management::class, 'insert_Student'])
     ->name('procedure.insert_Student');
 
 Route::post('/procedure/insert_Students', [User_Management::class, 'insert_Students'])
     ->name('procedure.insert_Students');
 
-
-
 Route::get('/user_management/list_student', [User_Management::class, 'list_Students'])
     ->name('admin.list_student');
+
+
+// === Teacher ===
+Route::get('/user_management/create_teacher', [User_Management::class, 'create_teacher'])
+    ->name('admin.create_teacher');
+
+Route::post('/user_management/insert_teacher', [User_Management::class, 'insert_teacher'])
+    ->name('procedure.insert_teacher');
+
+Route::get('/user_management/list_teacher', [User_Management::class, 'list_teacher'])
+    ->name('admin.list_teacher');
 
 
 // ---------------------------------------------------------------------------
 //  Profile 
 // ---------------------------------------------------------------------------
 
+// === STUDENT ===
 Route::get('/profile/student/{id}/edit', [Profile_Management::class, 'edit_student'])
     ->name('profile.student.edit');
 
 Route::get('/profile/student/{id}', [Profile_Management::class, 'show_student'])
     ->name('profile.student.show');
 
-Route::put('/profile/student/{id}', [Profile_Management::class, 'update_student'])
-    ->name('profile.student.update');
+// ===
+Route::post('/profile/student/{id}/update', [Profile_Management::class, 'update_student']); 
 
-// == AJAX FALLBACK
-Route::post('/profile/student/{id}', [Profile_Management::class, 'update_student']); 
+
+// === TEACHER ===
+Route::get('/profile/teacher/{id}/edit', [Profile_Management::class, 'edit_teacher'])
+    ->name('profile.teacher.edit');
+
+Route::get('/profile/teacher/', [Profile_Management::class, 'show_teacher'])
+    ->name('profile.teacher.show');
+
+// ===
+Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_teacher']); 
+
+
 
 
 // ---------------------------------------------------------------------------

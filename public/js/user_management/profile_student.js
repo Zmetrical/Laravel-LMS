@@ -54,30 +54,21 @@ $(document).ready(function () {
         e.preventDefault();
 
         const formData = new FormData(this);
-        const submitBtn = $('#submit_update');
 
         const id = $(this).data('student-id');
 
-        const fileInput = document.getElementById('profileImageInput');
-        if (fileInput && fileInput.files.length > 0) {
-            console.log('File selected:', fileInput.files[0]);
-            formData.append('profile_image', fileInput.files[0]);
-        } else {
-            console.log('No file selected');
-        }
-        if (!id) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'Student ID not found'
-            });
-            return;
-        }
-        // Disable button and show loading
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        // Show loading
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Creating student records',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         $.ajax({
-            url: `/profile/student/${id}`,
+            url: `/profile/student/${id}/update`,
             type: 'POST',
             data: formData,
             processData: false,
@@ -96,13 +87,11 @@ $(document).ready(function () {
                         showConfirmButton: false
                     }).then(() => {
                         // === Redirect  ===
-                        // window.location.href = `/profile/student/${id}`;
+                        window.location.href = `/profile/student/${id}`;
                     });
                 }
             },
             error: function (xhr) {
-                submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Changes');
-
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
                     let errorMessage = '';
@@ -125,8 +114,6 @@ $(document).ready(function () {
             }
         });
     });
-
-
 
 });
 

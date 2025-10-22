@@ -56,19 +56,19 @@
                                 </a>
                                 <ul class="nav nav-treeview">
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.insert_student') }}" class="nav-link">
+                                        <a href="{{ route('admin.create_student') }}" class="nav-link">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Insert Student</p>
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.insert_student') }}" class="nav-link">
+                                        <a href="{{ route('admin.create_student') }}" class="nav-link">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Insert Students</p>
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.insert_student') }}" class="nav-link">
+                                        <a href="{{ route('admin.create_teacher') }}" class="nav-link">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Insert Teacher</p>
                                         </a>
@@ -80,7 +80,7 @@
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.insert_student') }}" class="nav-link">
+                                        <a href="{{ route('admin.list_teacher') }}" class="nav-link">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>List Teachers</p>
                                         </a>

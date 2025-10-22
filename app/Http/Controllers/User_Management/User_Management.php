@@ -12,23 +12,25 @@ use App\Models\User_Management\Strand;
 use App\Models\User_Management\Section;
 use App\Models\User_Management\Level;
 use App\Models\User_Management\Student;
+use App\Models\User_Management\Teacher;
+
+use Exception;
 
 class User_Management extends MainController
 {
     // ---------------------------------------------------------------------------
-    //  Insert Student Page
+    //  Create Student Page
     // ---------------------------------------------------------------------------
 
     public function create_student(Request $request)
     {
-
         $strands = Strand::all();
         $levels = Level::all();
         $sections = Section::all();
 
         $data = [
             'scripts' => [
-                'user_management/insert_student.js',
+                'user_management/create_student.js',
             ],
 
             'strands' => $strands,
@@ -37,7 +39,7 @@ class User_Management extends MainController
 
         ];
 
-        return view('admin.user_management.insert_student', $data);
+        return view('admin.user_management.create_student', $data);
     }
 
     public function get_Sections(Request $request)
@@ -53,8 +55,6 @@ class User_Management extends MainController
 
         return response()->json($query->get());
     }
-
-
 
     public function insert_Student(Request $request)
     {
@@ -92,10 +92,18 @@ class User_Management extends MainController
                 ]);
             });
 
-            return redirect()->back()->with('success', 'Student created successfully!');
+            return response()->json([
+                'success' => true,
+                'message' => 'Teacher created successfully!',
+                // 'redirect_url' => route('profile.teacher', ['id' => $teacherId])
+            ], 201);
         } catch (\Exception $e) {
-            \Log::error('Error creating student: ' . $e->getMessage());
-            return redirect()->back()->withErrors(['error' => 'Failed to create student. Please try again.']);
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create teacher: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -221,5 +229,94 @@ class User_Management extends MainController
         ];
 
         return view('admin.user_management.list_student', $data);
+    }
+
+    // ---------------------------------------------------------------------------
+    //  Create Teacher Page
+    // ---------------------------------------------------------------------------
+
+    public function create_teacher(Request $request)
+    {
+        $data = [
+            'scripts' => [
+                'user_management/create_teacher.js',
+            ],
+
+        ];
+
+        return view('admin.user_management.create_teacher', $data);
+    }
+
+    public function insert_teacher(Request $request)
+    {
+        // Validate the form data to match the view fields
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'email' => 'required|email|unique:users,email|max:255',
+            'phone' => 'required|string|max:20',
+        ]);
+
+        try {
+            // Start database transaction
+            DB::beginTransaction();
+
+            // Generate default password (you can customize this)
+            $defaultPassword = 'Teacher@' . date('Y');
+
+            // Insert teacher into users table
+            $teacher = Teacher::create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'middle_name' => $request->middle_name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'gender' => $request->gender,
+
+                'user' => $request->first_name . " " . $request->last_name,
+                'password' => Hash::make($defaultPassword),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            \Log::info('Student created successfully', [
+                'student_id' => $teacher->id,
+                'student_number' => $teacher->user,
+                'default_password' => $teacher->password,
+            ]);
+
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Teacher created successfully!',
+                // 'redirect_url' => route('profile.teacher', ['id' => $teacherId])
+            ], 201);
+
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create teacher: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    //  List Student Page
+    // ---------------------------------------------------------------------------
+
+    public function list_teacher(Request $request)
+    {
+
+        $data = [
+            'scripts' => [
+                'user_management/list_teacher.js',
+            ]
+        ];
+
+        return view('admin.user_management.list_teacher', $data);
     }
 }
