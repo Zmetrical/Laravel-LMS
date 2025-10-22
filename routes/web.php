@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\User_Management\Profile_Management;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
 use App\Http\Controllers\User_Management\User_Management;
@@ -35,7 +36,7 @@ Route::get('/login', function () {
 // ---------------------------------------------------------------------------
 
 Route::get('/', [Admin::class, 'index'])
-->name('admin.home');
+    ->name('admin.home');
 
 
 // ---------------------------------------------------------------------------
@@ -44,22 +45,38 @@ Route::get('/', [Admin::class, 'index'])
 
 
 
-Route::get('/user_management/insert_student', [User_Management::class, 'page_insertStudents'])
-->name('admin.insert_student');
+Route::get('/user_management/insert_student', [User_Management::class, 'create_student'])
+    ->name('admin.insert_student');
 
 
 Route::get('/procedure/get_sections', [User_Management::class, 'get_Sections']);
 Route::post('/procedure/insert_Student', [User_Management::class, 'insert_Student'])
-->name('procedure.insert_Student');
+    ->name('procedure.insert_Student');
 
 Route::post('/procedure/insert_Students', [User_Management::class, 'insert_Students'])
-->name('procedure.insert_Students');
+    ->name('procedure.insert_Students');
 
 
 
-Route::get('/user_management/list_student', [User_Management::class, 'page_listStudents'])
-->name('admin.list_student');
+Route::get('/user_management/list_student', [User_Management::class, 'list_Students'])
+    ->name('admin.list_student');
 
+
+// ---------------------------------------------------------------------------
+//  Profile 
+// ---------------------------------------------------------------------------
+
+Route::get('/profile/student/{id}/edit', [Profile_Management::class, 'edit_student'])
+    ->name('profile.student.edit');
+
+Route::get('/profile/student/{id}', [Profile_Management::class, 'show_student'])
+    ->name('profile.student.show');
+
+Route::put('/profile/student/{id}', [Profile_Management::class, 'update_student'])
+    ->name('profile.student.update');
+
+// == AJAX FALLBACK
+Route::post('/profile/student/{id}', [Profile_Management::class, 'update_student']); 
 
 
 // ---------------------------------------------------------------------------

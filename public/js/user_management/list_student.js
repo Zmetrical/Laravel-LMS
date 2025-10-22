@@ -5,6 +5,11 @@ let currentFirstNameFilter = '';
 let currentLastNameFilter = '';
 
 $(document).ready(function () {
+
+    // ---------------------------------------------------------------------------
+    // Filters
+    // ---------------------------------------------------------------------------
+
     dataTable = $('#studentTable').DataTable({
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
@@ -53,7 +58,7 @@ $(document).ready(function () {
     const levelSelect = $('#level');
     const sectionSelect = $('#section');
 
-    // === Update FILTER OPTIONS ===
+    // === Update Header OPTIONS ===
     function render_Sections() {
         const strandId = strandSelect.val();
         const levelId = levelSelect.val();
@@ -101,6 +106,26 @@ $(document).ready(function () {
     levelSelect.on('change', render_Sections);
 
 
+    // === ALPAHABET FILTERS ===
+    initialize_AlphabetFilters();
+
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        const firstName = data[1] || ''; // Column index 1 is first name
+        const lastName = data[2] || '';  // Column index 2 is last name
+
+        // Check first name filter
+        if (currentFirstNameFilter && !firstName.toUpperCase().startsWith(currentFirstNameFilter)) {
+            return false;
+        }
+
+        // Check last name filter
+        if (currentLastNameFilter && !lastName.toUpperCase().startsWith(currentLastNameFilter)) {
+            return false;
+        }
+
+        return true;
+    });
+
     // === Clear FILTER ===
     $('#clearFilters').on('click', function () {
 
@@ -120,26 +145,6 @@ $(document).ready(function () {
 
         reset_AlphabetFilters();
         dataTable.search('').columns().search('').draw();
-    });
-
-    // === ALPAHABET FILTERS ===
-    initialize_AlphabetFilters();
-
-    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-        const firstName = data[1] || ''; // Column index 1 is first name
-        const lastName = data[2] || '';  // Column index 2 is last name
-
-        // Check first name filter
-        if (currentFirstNameFilter && !firstName.toUpperCase().startsWith(currentFirstNameFilter)) {
-            return false;
-        }
-
-        // Check last name filter
-        if (currentLastNameFilter && !lastName.toUpperCase().startsWith(currentLastNameFilter)) {
-            return false;
-        }
-
-        return true;
     });
 });
 

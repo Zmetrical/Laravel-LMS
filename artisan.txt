@@ -1,0 +1,38 @@
+C:\xampp8\php\php.exe
+
+artisan serve
+artisan tinker
+
+artisan cache:clear
+artisan config:clear
+
+
+artisan storage:link
+
+//---view---
+artisan make:view name
+
+//---controller---
+artisan make:controller Profile_Management
+
+//---model---
+artisan make:model name
+
+//---middleware---
+
+
+
+//---migration---
+
+artisan make:migration create_name_table
+
+artisan migrate:rollback
+artisan migrate:refresh
+artisan migrate:status
+
+
+artisan make:seeder SeederName
+artisan db:seed --class=SeederName
+
+
+

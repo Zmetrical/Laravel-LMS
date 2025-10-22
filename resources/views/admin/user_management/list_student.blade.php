@@ -130,12 +130,13 @@
                                     <td>{{ $student->level }}</td>
                                     <td>{{ $student->section }}</td>
                                     <td>
-                                        <button class="btn btn-sm btn-info">
+                                        <a href="{{ route('profile.student.show', $student->id) }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-user"></i> Profile
-                                        </button>
-                                        <button class="btn btn-sm btn-primary">
+                                        </a>
+                                        <a href="{{ route('profile.student.edit', $student->id) }}"
+                                            class="btn btn-sm btn-primary">
                                             <i class="fas fa-edit"></i> Edit
-                                        </button>
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach

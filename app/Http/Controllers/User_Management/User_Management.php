@@ -19,7 +19,7 @@ class User_Management extends MainController
     //  Insert Student Page
     // ---------------------------------------------------------------------------
 
-    public function page_insertStudents(Request $request)
+    public function create_student(Request $request)
     {
 
         $strands = Strand::all();
@@ -29,9 +29,6 @@ class User_Management extends MainController
         $data = [
             'scripts' => [
                 'user_management/insert_student.js',
-            ],
-            'styles' => [
-                'user_management/insert_student.css'
             ],
 
             'strands' => $strands,
@@ -194,7 +191,7 @@ class User_Management extends MainController
     //  List Student Page
     // ---------------------------------------------------------------------------
 
-    public function page_listStudents(Request $request)
+    public function list_Students(Request $request)
     {
         $strands = Strand::all();
         $levels = Level::all();
@@ -215,9 +212,6 @@ class User_Management extends MainController
         $data = [
             'scripts' => [
                 'user_management/list_student.js',
-            ],
-            'styles' => [
-                'user_management/list_student.css'
             ],
 
             'strands' => $strands,
