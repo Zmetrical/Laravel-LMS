@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 21, 2025 at 12:03 AM
+-- Generation Time: Oct 22, 2025 at 11:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -87,19 +87,19 @@ CREATE TABLE `sections` (
 --
 
 INSERT INTO `sections` (`id`, `name`, `strand_id`, `level_id`, `status`, `created_at`, `updated_at`) VALUES
-(7, 'Sagittarius', 1, 1, 1, '2025-10-19 09:17:04', '2025-10-19 09:34:03'),
-(8, 'Capricorn', 1, 1, 1, '2025-10-19 09:17:04', '2025-10-19 09:34:21'),
-(9, 'Virgo', 2, 1, 1, '2025-10-19 09:17:04', '2025-10-19 09:34:58'),
-(10, 'Aries', 2, 2, 1, '2025-10-19 09:17:04', '2025-10-19 09:35:06'),
-(11, 'Gemini', 3, 2, 1, '2025-10-19 09:17:04', '2025-10-19 09:35:25'),
-(12, 'Libra', 3, 2, 1, '2025-10-19 09:17:04', '2025-10-19 09:35:29'),
-(13, 'Pisces', 3, 1, 1, '2025-10-19 09:36:06', '2025-10-19 09:36:06'),
-(14, 'Aquarius', 3, 1, 1, '2025-10-19 09:36:06', '2025-10-19 09:36:06'),
-(15, 'Ophiuchus', 4, 1, 1, '2025-10-19 09:36:32', '2025-10-19 09:36:32'),
-(16, 'Leo', 4, 1, 1, '2025-10-19 09:36:32', '2025-10-19 09:36:32'),
-(18, 'Taurus', 5, 1, 1, '2025-10-19 09:37:56', '2025-10-19 09:37:56'),
-(19, 'Cancer', 5, 1, 1, '2025-10-19 09:37:56', '2025-10-19 09:37:56'),
-(20, 'Scorpio', 5, 1, 1, '2025-10-19 09:37:56', '2025-10-19 09:37:56');
+(1, 'Sagittarius', 1, 1, 1, '2025-10-19 09:17:04', '2025-10-21 09:00:49'),
+(2, 'Capricorn', 1, 1, 1, '2025-10-19 09:17:04', '2025-10-21 09:00:52'),
+(3, 'Virgo', 2, 1, 1, '2025-10-19 09:17:04', '2025-10-21 09:00:57'),
+(4, 'Aries', 2, 2, 1, '2025-10-19 09:17:04', '2025-10-21 09:01:01'),
+(5, 'Gemini', 3, 2, 1, '2025-10-19 09:17:04', '2025-10-21 09:01:03'),
+(6, 'Libra', 3, 2, 1, '2025-10-19 09:17:04', '2025-10-21 09:01:05'),
+(7, 'Pisces', 3, 1, 1, '2025-10-19 09:36:06', '2025-10-21 09:01:07'),
+(8, 'Aquarius', 3, 1, 1, '2025-10-19 09:36:06', '2025-10-21 09:01:08'),
+(9, 'Ophiuchus', 4, 1, 1, '2025-10-19 09:36:32', '2025-10-21 09:01:10'),
+(10, 'Leo', 4, 1, 1, '2025-10-19 09:36:32', '2025-10-21 09:01:13'),
+(11, 'Taurus', 5, 1, 1, '2025-10-19 09:37:56', '2025-10-21 09:01:16'),
+(12, 'Cancer', 5, 1, 1, '2025-10-19 09:37:56', '2025-10-21 09:01:18'),
+(13, 'Scorpio', 5, 1, 1, '2025-10-19 09:37:56', '2025-10-21 09:01:20');
 
 -- --------------------------------------------------------
 
@@ -121,11 +121,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('2I0MawfBZZeFHhwDUEFzgyT8Z26uzKx0opXLslcU', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiUFNjMGtweXpVM2hlMUV1eExLOUcxb3JMTHNLTDFsMGxENXB6NzN2bCI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6NTI6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC91c2VyX21hbmFnZW1lbnQvaW5zZXJ0X3N0dWRlbnQiO31zOjIyOiJQSFBERUJVR0JBUl9TVEFDS19EQVRBIjthOjA6e319', 1760883694),
-('f01cZvdVCvt2rp52SxTXlzUOIKG33ZoDBOPdNVyg', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiaFNDZzUxSk9qTVA5VWdDMm5ReWxqU1NSRFptdEF4YW1UWVgxTE9tayI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6NTM6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9zZWN0aW9ucz9sZXZlbF9pZD0yJnN0cmFuZF9pZD0zIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1760868342),
-('oljWg2B6GaoFaW1eKFVu6cCWX1r1QHKHLVl0NWa9', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoieWtFQ0htVEl1VG5mdTJqT0ZXWDA3NTBtTEFMWEs4TFphV3M4Z09TTyI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MzM6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9pbnNlcnRfdXNlciI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1760867395),
-('oQ3t7yq9E624AmgxpkRHrJxUsMkhd34RI1sQUtjA', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiQW1ndHpTZFR3TElGaWt1U3E5dnQ2c0tjZ2hJRGFlMjJFQTBHV1cwYiI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MzM6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9pbnNlcnRfdXNlciI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1760869196),
-('R6y2gXaTtljOBOoOoAOlO9IburoMQ7zQJUvv4NKM', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'YToyOntzOjY6Il90b2tlbiI7czo0MDoicWg3cXlmNE9NTVFBb09KUzNnaGcySmc2WEgydW1oMmw0M3VwMVZyYiI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1760876659);
+('8iuHZJD6gHxHP2wiIKfd0mNCxouogJ1dGQPgxjNa', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiNVJQQ3Z6bFNQbTZ6RlA3VkVWbUd4M3RkRHdFRjJEblNFRG5tUzdIOSI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6MjI6IlBIUERFQlVHQkFSX1NUQUNLX0RBVEEiO2E6MDp7fX0=', 1761126390);
 
 -- --------------------------------------------------------
 
@@ -168,21 +164,43 @@ CREATE TABLE `students` (
   `middle_name` varchar(100) NOT NULL,
   `last_name` varchar(100) NOT NULL,
   `gender` varchar(10) NOT NULL,
+  `profile_image` varchar(255) DEFAULT NULL,
   `section_id` bigint(20) UNSIGNED DEFAULT NULL,
   `enrollment_date` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `students`
+--
+
+INSERT INTO `students` (`id`, `student_number`, `student_password`, `email`, `first_name`, `middle_name`, `last_name`, `gender`, `profile_image`, `section_id`, `enrollment_date`, `created_at`, `updated_at`) VALUES
+(21, '2024-0001', '$2y$12$pF9aAOTvujmIol6K6i/2xeqpt8ea7X8rXOAE1YWrJG5mjRymla8T.', 'john.reel@example.com', 'Johnnyere', 'Michael', 'Reelsr', 'Male', NULL, 1, '2024-08-15', '2025-10-21 00:56:21', '2025-10-21 23:47:10'),
+(22, '2024-0002', '$2y$12$87rudi6DhgzVQovq4A6yQeZFebLmdgeZBZsB1Jn781R068u.kzG3G', 'jane.smith@example.com', 'Jane', 'Marie', 'Smith', 'Female', NULL, 1, '2024-08-15', '2025-10-21 00:56:22', '2025-10-21 00:56:22'),
+(23, '2024-0003', '$2y$12$S4pTqTk8N/z/CHVqjK0gNuQGT.q2GDidRpnDOJbRI/Gq2qI9TED4K', 'robert.johnson@example.com', 'Robert', 'James', 'Johnson', 'Male', NULL, 2, '2024-08-16', '2025-10-21 00:56:22', '2025-10-21 00:56:22'),
+(24, '2024-0004', '$2y$12$NMbSIEqGsXQ.D5QqAX92LeDjduzfjP0kd0J198x.R7AefIDSaPpMe', 'emily.williams@example.com', 'Emily', 'Rose', 'Williams', 'Female', NULL, 2, '2024-08-16', '2025-10-21 00:56:22', '2025-10-21 00:56:22'),
+(25, '2024-0005', '$2y$12$MwZjPLzV9wGA1OUHI/XXLOFV1nv2B9mBMSCsmcL5l2/lfIgafm3rS', 'michael.brown@example.com', 'Michael', 'David', 'Brown', 'Male', NULL, 3, '2024-08-17', '2025-10-21 00:56:22', '2025-10-21 00:56:22');
+
 -- --------------------------------------------------------
 
 --
--- Table structure for table `teacher`
+-- Table structure for table `teachers`
 --
 
-CREATE TABLE `teacher` (
+CREATE TABLE `teachers` (
   `id` bigint(20) UNSIGNED NOT NULL,
-  `user_id` bigint(20) UNSIGNED NOT NULL
+  `first_name` varchar(255) NOT NULL,
+  `middle_name` varchar(255) NOT NULL,
+  `last_name` varchar(255) NOT NULL,
+  `gender` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(255) NOT NULL,
+  `user` varchar(100) NOT NULL,
+  `password` varchar(100) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -256,11 +274,10 @@ ALTER TABLE `students`
   ADD UNIQUE KEY `students_student_number_unique` (`student_number`);
 
 --
--- Indexes for table `teacher`
+-- Indexes for table `teachers`
 --
-ALTER TABLE `teacher`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `teacher_user_id_unique` (`user_id`);
+ALTER TABLE `teachers`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `users`
@@ -301,13 +318,13 @@ ALTER TABLE `strands`
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
--- AUTO_INCREMENT for table `teacher`
+-- AUTO_INCREMENT for table `teachers`
 --
-ALTER TABLE `teacher`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE `teachers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
