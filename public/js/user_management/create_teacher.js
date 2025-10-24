@@ -56,7 +56,7 @@ $(document).ready(function () {
                         confirmButtonText: 'OK'
                     }).then(() => {
                         // Redirect to appropriate page
-                        window.location.href = '/user_management/create_teacher';
+                        // window.location.href = '/user_management/create_teacher';
                     });
                 } else {
                     Swal.fire({

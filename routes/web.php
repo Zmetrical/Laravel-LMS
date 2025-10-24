@@ -90,10 +90,9 @@ Route::post('/profile/student/{id}/update', [Profile_Management::class, 'update_
 Route::get('/profile/teacher/{id}/edit', [Profile_Management::class, 'edit_teacher'])
     ->name('profile.teacher.edit');
 
-Route::get('/profile/teacher/', [Profile_Management::class, 'show_teacher'])
+Route::get('/profile/teacher/{id}', [Profile_Management::class, 'show_teacher'])
     ->name('profile.teacher.show');
 
-// ===
 Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_teacher']); 
 
 

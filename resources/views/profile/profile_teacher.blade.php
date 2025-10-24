@@ -16,21 +16,19 @@
     <style>
 
     </style>
-
-
 @endsection
 
 @section('breadcrumb')
     <div class="row mb-2">
         <div class="col-sm-6">
             <h1>
-                <i class="fas fa-user-graduate"></i> Student Page
+                <i class="fas fa-user-graduate"></i> Teacher Page
             </h1>
         </div>
         <div class="col-sm-6">
             <ol class="breadcrumb float-sm-right">
                 <li class="breadcrumb-item"><a href="{{ route(name: 'admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Student Page</li>
+                <li class="breadcrumb-item active">Teacher Page</li>
             </ol>
         </div>
     </div>
@@ -57,10 +55,11 @@
 
                         <ul class="list-group list-group-unbordered mb-3">
                             <li class="list-group-item">
-                                <b>Email:</b> <span class="float-right">e.delacruz@school.edu</span>
+                                <b>Email:</b> <span class="float-right">{{ $teachers->email}}</span>
                             </li>
+
                             <li class="list-group-item">
-                                <b>Employee ID:</b> <span class="float-right">TCH-001</span>
+                                <b>Phone Number:</b> <span class="float-right">{{ $teachers->phone}}</span>
                             </li>
                         </ul>
 
@@ -83,46 +82,40 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="firstName">First Name</label>
-                                        <input type="text" class="form-control" id="firstName" value="Elena" />
+                                        <input type="text" class="form-control" id="firstName" value="{{ $teachers->first_name}}" />
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="lastName">Last Name</label>
-                                        <input type="text" class="form-control" id="lastName" value="Dela Cruz" />
+                                        <input type="text" class="form-control" id="lastName" value="{{ $teachers->last_name}}" />
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="email">Email Address</label>
-                                        <input type="email" class="form-control" id="email" value="e.delacruz@school.edu" />
+                                        <input type="email" class="form-control" id="email" value="{{ $teachers->email}}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="text">Phone Number</label>
+                                        <input type="text" class="form-control" id="phone" value="{{ $teachers->phone}}" />
                                     </div>
                                 </div>
                             </div>
-
-
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="employeeId">Employee ID</label>
-                                        <input type="text" class="form-control" id="employeeId" value="TCH-001" readonly />
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <div class="form-group">
                                         <label for="dateJoined">Date Joined</label>
-                                        <input type="date" class="form-control" id="dateJoined" value="2020-08-15"
+                                        <input type="date" class="form-control" id="dateJoined" value="{{ $teachers->email}}"
                                             readonly />
                                     </div>
                                 </div>
                             </div>
-
-
                         </div>
 
                         <div class="card-footer">
-
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Save Changes
                             </button>

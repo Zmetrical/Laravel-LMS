@@ -129,14 +129,22 @@ class Profile_Management extends MainController
     //  Teacher
     // ---------------------------------------------------------------------------
 
-    public function show_teacher()
+    public function show_teacher($id)
     {
-
+        $teachers = DB::table(table: 'teachers')
+            ->select(
+                'teachers.*',
+            )
+            ->where('teachers.id', '=', value: $id)
+            ->first();
         $data = [
             'mode' => 'view',
-            'scripts' => ['user_management/profile_teacher.js']
+            'scripts' => ['user_management/profile_teacher.js'],
+            'teachers' => $teachers
         ];
 
         return view('profile.profile_teacher', $data);
     }
+
+
 }

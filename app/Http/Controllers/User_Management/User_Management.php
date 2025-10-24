@@ -19,7 +19,7 @@ use Exception;
 class User_Management extends MainController
 {
     // ---------------------------------------------------------------------------
-    //  Create Student Page
+    //  Students Page
     // ---------------------------------------------------------------------------
 
     public function create_student(Request $request)
@@ -194,11 +194,6 @@ class User_Management extends MainController
         return $password;
     }
 
-
-    // ---------------------------------------------------------------------------
-    //  List Student Page
-    // ---------------------------------------------------------------------------
-
     public function list_Students(Request $request)
     {
         $strands = Strand::all();
@@ -232,7 +227,7 @@ class User_Management extends MainController
     }
 
     // ---------------------------------------------------------------------------
-    //  Create Teacher Page
+    //  Teachers Page
     // ---------------------------------------------------------------------------
 
     public function create_teacher(Request $request)
@@ -281,16 +276,16 @@ class User_Management extends MainController
             ]);
 
             \Log::info('Student created successfully', [
-                'student_id' => $teacher->id,
-                'student_number' => $teacher->user,
-                'default_password' => $teacher->password,
+                'teacher id' => $teacher->id,
+                'teacher name' => $teacher->first_name . " " . $teacher->last_name,
+                'password' => $teacher->password,
             ]);
 
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Teacher created successfully!',
-                // 'redirect_url' => route('profile.teacher', ['id' => $teacherId])
             ], 201);
 
         } catch (Exception $e) {
@@ -304,19 +299,23 @@ class User_Management extends MainController
         }
     }
 
-    // ---------------------------------------------------------------------------
-    //  List Student Page
-    // ---------------------------------------------------------------------------
-
     public function list_teacher(Request $request)
     {
+        $teachers = DB::table('teachers')
+            ->select(
+                'teachers.*',
+            )
+            ->get();
 
         $data = [
             'scripts' => [
                 'user_management/list_teacher.js',
-            ]
+            ],
+
+            'teachers' => $teachers
         ];
 
         return view('admin.user_management.list_teacher', $data);
     }
+
 }
