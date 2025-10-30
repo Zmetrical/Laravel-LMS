@@ -4,6 +4,9 @@ use App\Http\Controllers\User_Management\Profile_Management;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
 use App\Http\Controllers\User_Management\User_Management;
+use App\Http\Controllers\Class_Management\Class_Management;
+
+
 use App\Http\Controllers\Admin;
 
 
@@ -35,10 +38,12 @@ Route::get('/login', function () {
 //  Admin Page
 // ---------------------------------------------------------------------------
 
-Route::get('/', [Admin::class, 'index'])
+Route::get('/admin', [Admin::class, 'index'])
     ->name('admin.home');
 
-
+Route::get('/admin/login', [Admin::class, 'login'])
+    ->name('admin.login');
+    
 // ---------------------------------------------------------------------------
 //  User Management - Admin 
 // ---------------------------------------------------------------------------
@@ -96,6 +101,33 @@ Route::get('/profile/teacher/{id}', [Profile_Management::class, 'show_teacher'])
 Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_teacher']); 
 
 
+
+
+
+
+
+// ---------------------------------------------------------------------------
+//  Class Management - Admin
+// ---------------------------------------------------------------------------
+
+
+
+
+
+Route::post('/class_management/insert_class', [Class_Management::class, 'insert_class'])
+    ->name('admin.insert_class');
+
+Route::get('/class_management/list_class', [Class_Management::class, 'list_class'])
+    ->name('admin.list_class');
+
+Route::get('/class_management/list_strand', [Class_Management::class, 'list_strand'])
+    ->name('admin.list_strand');
+
+Route::get('/class_management/list_section', [Class_Management::class, 'list_section'])
+    ->name('admin.list_section');
+
+Route::get('/class_management/list_schoolyear', [Class_Management::class, 'list_schoolyear'])
+    ->name('admin.list_schoolyear');
 
 
 // ---------------------------------------------------------------------------

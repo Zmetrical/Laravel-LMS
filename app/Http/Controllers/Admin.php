@@ -21,4 +21,17 @@ class Admin extends Controller
 
         return view('admin.dashboard', $data);
     }
+
+    public function login()
+    {
+
+        $data = [
+            'scripts' => [
+                'admin/login.js',
+            ],
+        ];
+
+        return view('admin.login', $data);
+    }
+
 }
