@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\Enrollment_Management\Enroll_Class;
+use App\Http\Controllers\Enrollment_Management\Enroll_Section;
 use App\Http\Controllers\User_Management\Profile_Management;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
 use App\Http\Controllers\User_Management\User_Management;
 use App\Http\Controllers\Class_Management\Class_Management;
-
+use App\Http\Controllers\Class_Management\Class_List;
+use App\Http\Controllers\StudentController;
 
 use App\Http\Controllers\Admin;
 
@@ -43,7 +46,7 @@ Route::get('/admin', [Admin::class, 'index'])
 
 Route::get('/admin/login', [Admin::class, 'login'])
     ->name('admin.login');
-    
+
 // ---------------------------------------------------------------------------
 //  User Management - Admin 
 // ---------------------------------------------------------------------------
@@ -77,6 +80,17 @@ Route::get('/user_management/list_teacher', [User_Management::class, 'list_teach
 
 
 // ---------------------------------------------------------------------------
+//  Enrollment Management 
+// ---------------------------------------------------------------------------
+
+Route::get('/enrollment_management/enroll_class', [Enroll_Class::class, 'index'])
+    ->name('admin.enroll_class');
+
+Route::get('/enrollment_management/enroll_section', [Enroll_Section::class, 'index'])
+    ->name('admin.enroll_section');
+
+
+// ---------------------------------------------------------------------------
 //  Profile 
 // ---------------------------------------------------------------------------
 
@@ -102,17 +116,9 @@ Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_
 
 
 
-
-
-
-
 // ---------------------------------------------------------------------------
 //  Class Management - Admin
 // ---------------------------------------------------------------------------
-
-
-
-
 
 Route::post('/class_management/insert_class', [Class_Management::class, 'insert_class'])
     ->name('admin.insert_class');
@@ -131,8 +137,27 @@ Route::get('/class_management/list_schoolyear', [Class_Management::class, 'list_
 
 
 // ---------------------------------------------------------------------------
+//  Student 
+// ---------------------------------------------------------------------------
+
+Route::get('/student', [StudentController::class, 'index'])
+    ->name('student.home');
+
+
+Route::get('/student/login', [StudentController::class, 'login'])
+    ->name('student.login');
+
+
+Route::get('/student/list_class', [Class_List::class, 'student_class_list'])
+    ->name('student.list_class');
+
+
+
+// ---------------------------------------------------------------------------
 //  Sample UI
 // ---------------------------------------------------------------------------
+
+
 Route::get('/calendar', function () {
     return view('calendar');
 });

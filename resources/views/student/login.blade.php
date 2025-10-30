@@ -5,8 +5,8 @@
 @section('head')
 <style>
     :root {
-        --primary-color: #343a40;
-        --primary-hover: #4b545c;
+        --primary-color: #141d5c;
+        --primary-hover: #0d133d;
         --text-dark: #2c3e50;
         --text-muted: #6c757d;
         --border-color: #d1d5db;
