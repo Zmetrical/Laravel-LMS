@@ -11,9 +11,11 @@ use App\Http\Controllers\Class_Management\Class_List;
 use App\Http\Controllers\StudentController;
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\DeveloperController;
+use App\Http\Controllers\TeacherController;
 
+Route::get('/', [DeveloperController::class, 'index']);
 
-Route::get('/', [User_Management::class, 'index']);
 
 Route::get('/login', function () {
     return view('auth/login');
@@ -151,6 +153,13 @@ Route::get('/student/login', [StudentController::class, 'login'])
 Route::get('/student/list_class', [Class_List::class, 'student_class_list'])
     ->name('student.list_class');
 
+
+// ---------------------------------------------------------------------------
+//  Student 
+// ---------------------------------------------------------------------------
+
+Route::get('/teacher', [TeacherController::class, 'index'])
+    ->name('teacher.home');
 
 
 // ---------------------------------------------------------------------------
