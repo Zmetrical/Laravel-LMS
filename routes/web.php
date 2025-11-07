@@ -11,8 +11,12 @@ use App\Http\Controllers\Class_Management\Class_List;
 use App\Http\Controllers\StudentController;
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Auth\Data_Controller;
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\Auth\Login_Controller;
+
+use Illuminate\Container\Attributes\Auth;
 
 Route::get('/', [DeveloperController::class, 'index']);
 
@@ -104,7 +108,7 @@ Route::get('/profile/student/{id}', [Profile_Management::class, 'show_student'])
     ->name('profile.student.show');
 
 // ===
-Route::post('/profile/student/{id}/update', [Profile_Management::class, 'update_student']); 
+Route::post('/profile/student/{id}/update', [Profile_Management::class, 'update_student']);
 
 
 // === TEACHER ===
@@ -114,9 +118,11 @@ Route::get('/profile/teacher/{id}/edit', [Profile_Management::class, 'edit_teach
 Route::get('/profile/teacher/{id}', [Profile_Management::class, 'show_teacher'])
     ->name('profile.teacher.show');
 
-Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_teacher']); 
+Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_teacher']);
 
-
+// === ADMIN ===
+Route::get('admin/data/{id}', [Data_Controller::class, 'student_data'])
+    ->name('data.student');
 
 // ---------------------------------------------------------------------------
 //  Class Management - Admin
@@ -142,20 +148,41 @@ Route::get('/class_management/list_schoolyear', [Class_Management::class, 'list_
 //  Student 
 // ---------------------------------------------------------------------------
 
-Route::get('/student', [StudentController::class, 'index'])
-    ->name('student.home');
+// Student Routes
+Route::prefix('student')->group(function () {
+
+    // Guest routes (not authenticated)
+    Route::middleware('guest:student')->group(function () {
+        // Show login page (GET)
+        Route::get('/login', [StudentController::class, 'login'])
+            ->name('student.login');
+
+        // Handle authentication (POST only)
+        Route::post('/auth', [Login_Controller::class, 'auth_student'])
+            ->name('student.auth');
+    });
+
+    // Protected routes (authenticated)
+    Route::middleware('auth:student')->group(function () {
+        // Student dashboard
+        Route::get('/', [StudentController::class, 'index'])
+            ->name('student.home');
+
+        // Logout
+        Route::post('/logout', [Login_Controller::class, 'logout_student'])
+            ->name('student.logout');
+
+        Route::get('/class', [Class_List::class, 'student_class_list'])
+            ->name('student.list_class');
+    });
+});
 
 
-Route::get('/student/login', [StudentController::class, 'login'])
-    ->name('student.login');
 
-
-Route::get('/student/list_class', [Class_List::class, 'student_class_list'])
-    ->name('student.list_class');
 
 
 // ---------------------------------------------------------------------------
-//  Student 
+//  Teacher 
 // ---------------------------------------------------------------------------
 
 Route::get('/teacher', [TeacherController::class, 'index'])
@@ -188,4 +215,3 @@ Route::get('/table', function () {
 Route::get('/test', function () {
     return view('test');
 });
-

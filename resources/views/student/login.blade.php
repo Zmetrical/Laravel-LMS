@@ -3,6 +3,11 @@
 @section('title', 'Login - Trinity Polytechnic College')
 
 @section('head')
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+
+
 <style>
     :root {
         --primary-color: #141d5c;
@@ -170,39 +175,37 @@
             </div>
             
             <div class="login-header">
-                <h1>Login</h1>
+                <h1>Student Login</h1>
             </div>
             
-            <form action="" method="POST">
+            <form id="loginForm" method="POST">
                 @csrf
                 
                 <div class="form-group">
-                    <label for="email">Email address</label>
-                    <input type="email" class="form-control @error('email') is-invalid @enderror" 
-                           id="email" name="email" value="{{ old('email') }}" required autofocus>
-                    @error('email')
-                        <span class="invalid-feedback">{{ $message }}</span>
-                    @enderror
+                    <label for="student_number">Student Number</label>
+                    <input type="text" class="form-control" 
+                           id="student_number" name="student_number" 
+                           placeholder="Enter your student number"
+                           required autofocus>
                 </div>
                 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                           id="password" name="password" required>
-                    @error('password')
-                        <span class="invalid-feedback">{{ $message }}</span>
-                    @enderror
+                    <input type="password" class="form-control" 
+                           id="password" name="password" 
+                           placeholder="Enter your password"
+                           required>
                 </div>
                 
                 <div class="remember-forgot">
                     <div class="custom-control custom-checkbox">
                         <input type="checkbox" class="custom-control-input" id="remember" name="remember">
-                        <label class="custom-control-label" for="remember">Remember Account</label>
+                        <label class="custom-control-label" for="remember">Remember Me</label>
                     </div>
-                    <a href="" class="forgot-link">Forgot password</a>
+                    <a href="#" class="forgot-link">Forgot password?</a>
                 </div>
                 
-                <button type="submit" class="btn btn-signin">Sign in</button>
+                <button type="submit" class="btn btn-signin" id="submitBtn">Sign in</button>
             </form>
         </div>
         
@@ -216,4 +219,11 @@
 @endsection
 
 @section('foot')
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+@if(isset($scripts))
+    @foreach($scripts as $script)
+        <script src="{{ asset('js/' . $script) }}"></script>
+    @endforeach
+@endif
 @endsection

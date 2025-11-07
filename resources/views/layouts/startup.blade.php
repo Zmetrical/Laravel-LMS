@@ -19,7 +19,7 @@
                                 </div>
                                 <h3 class="profile-username text-center">Admin Panel</h3>
                                 <p class="text-muted text-center">Manage system settings and users</p>
-                                <a href="{{ route('admin.home') }}" class="btn btn-primary btn-block"><i class="fas fa-cog mr-2"></i><b>Go to Admin</b></a>
+                                <a href="{{ route('admin.login') }}" class="btn btn-primary btn-block"><i class="fas fa-cog mr-2"></i><b>Go to Admin</b></a>
                             </div>
                         </div>
                     </div>
@@ -47,7 +47,7 @@
                                 </div>
                                 <h3 class="profile-username text-center">Student Portal</h3>
                                 <p class="text-muted text-center">View grades and progress</p>
-                                <a href="{{ route('student.home') }}" class="btn btn-info btn-block"><i class="fas fa-book-reader mr-2"></i><b>Go to Student</b></a>
+                                <a href="{{ route('student.login') }}" class="btn btn-info btn-block"><i class="fas fa-book-reader mr-2"></i><b>Go to Student</b></a>
                             </div>
                         </div>
                     </div>

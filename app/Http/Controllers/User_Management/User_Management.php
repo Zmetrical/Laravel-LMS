@@ -136,10 +136,20 @@ class User_Management extends MainController
             }
 
             $year = date('Y');
-            $lastCount = Student::whereYear('enrollment_date', $year)->count();
+
+            // Get the highest student number for this year
+            $lastStudent = Student::where('student_number', 'LIKE', $year . '%')
+                ->orderBy('student_number', 'DESC')
+                ->first();
+
+            // Extract the sequential number or start from 0
+            $lastCount = $lastStudent
+                ? (int)substr($lastStudent->student_number, 4)
+                : 0;
 
             // Prepare bulk insert data
             $studentsData = [];
+            $passwordMatrixData = [];
             $now = now();
 
             foreach ($request->students as $index => $studentData) {
@@ -151,16 +161,29 @@ class User_Management extends MainController
 
                 $studentsData[] = [
                     'student_number' => $studentNumber,
-                    'student_password' => Hash::make(value: $password),
+                    'student_password' => Hash::make($password),
                     'email' => $studentData['email'],
                     'first_name' => $studentData['firstName'],
                     'middle_name' => $studentData['middleInitial'] ?? null,
                     'last_name' => $studentData['lastName'],
                     'gender' => $studentData['gender'],
                     'section_id' => $request->section,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                // Prepare password matrix data
+                $passwordMatrixData[] = [
+                    'student_number' => $studentNumber,
+                    'plain_password' => $password,
                 ];
             }
+
+            // Insert students
             Student::insert($studentsData);
+
+            // Insert password matrix
+            DB::table('student_password_matrix')->insert($passwordMatrixData);
 
             DB::commit();
 
@@ -169,7 +192,6 @@ class User_Management extends MainController
                 'message' => count($studentsData) . " students created successfully!",
                 'count' => count($studentsData)
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -287,7 +309,6 @@ class User_Management extends MainController
                 'success' => true,
                 'message' => 'Teacher created successfully!',
             ], 201);
-
         } catch (Exception $e) {
             // Rollback transaction on error
             DB::rollBack();
@@ -317,5 +338,4 @@ class User_Management extends MainController
 
         return view('admin.user_management.list_teacher', $data);
     }
-
 }

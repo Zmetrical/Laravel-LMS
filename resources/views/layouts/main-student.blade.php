@@ -99,7 +99,7 @@
 
                 <!-- Logout Button at Bottom -->
                 <div class="sidebar-bottom p-3">
-                    <a href="{{ route('admin.login') }}" class="btn btn-danger btn-block">
+                    <a href="{{ route('student.login') }}" class="btn btn-danger btn-block">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </a>
                 </div>
