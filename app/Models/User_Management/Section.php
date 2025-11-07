@@ -5,4 +5,5 @@ use App\Models\ParentModel;
 class Section extends ParentModel
 {
     protected $table = 'sections';
+    
 }

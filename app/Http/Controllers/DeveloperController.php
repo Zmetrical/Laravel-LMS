@@ -11,11 +11,11 @@ class DeveloperController extends Controller
 
         $data = [
             'scripts' => [
-                'developer/startup.js',
+                'index.js',
             ]
 
         ];
 
-        return view('layouts.startup', $data);
+        return view('layouts.index', $data);
     }
 }

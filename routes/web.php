@@ -1,7 +1,6 @@
 <?php
 
-use App\Http\Controllers\Enrollment_Management\Enroll_Class;
-use App\Http\Controllers\Enrollment_Management\Enroll_Section;
+use App\Http\Controllers\Enrollment_Management\Enroll_Management;
 use App\Http\Controllers\User_Management\Profile_Management;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\View;
@@ -47,11 +46,13 @@ Route::get('/login', function () {
 //  Admin Page
 // ---------------------------------------------------------------------------
 
-Route::get('/admin', [Admin::class, 'index'])
-    ->name('admin.home');
+Route::prefix('admin')->group(function () {
+    Route::get('/', [Admin::class, 'index'])
+        ->name('admin.home');
 
-Route::get('/admin/login', [Admin::class, 'login'])
-    ->name('admin.login');
+    Route::get('/login', [Admin::class, 'login'])
+        ->name('admin.login');
+});
 
 // ---------------------------------------------------------------------------
 //  User Management - Admin 
@@ -89,11 +90,28 @@ Route::get('/user_management/list_teacher', [User_Management::class, 'list_teach
 //  Enrollment Management 
 // ---------------------------------------------------------------------------
 
-Route::get('/enrollment_management/enroll_class', [Enroll_Class::class, 'index'])
+Route::get('/enrollment_management/enroll_class', [Enroll_Management::class, 'enroll_class'])
     ->name('admin.enroll_class');
 
-Route::get('/enrollment_management/enroll_section', [Enroll_Section::class, 'index'])
-    ->name('admin.enroll_section');
+// === Section ===
+
+
+Route::prefix('enrollment_management')->group(function () {
+
+    Route::get('/enroll_section', [Enroll_Management::class, 'enroll_section'])
+        ->name('admin.enroll_section');
+
+    Route::get('/sections/data', [Enroll_Management::class, 'getSectionsData'])
+        ->name('admin.sections.data');
+
+    Route::get('/sections/{id}/details', [Enroll_Management::class, 'getDetails'])
+        ->name('admin.sections.details');
+
+    Route::get('/enroll_student', [Enroll_Management::class, 'enroll_student'])
+        ->name('admin.enroll_student');
+});
+
+
 
 
 // ---------------------------------------------------------------------------
@@ -150,12 +168,12 @@ Route::get('/class_management/list_schoolyear', [Class_Management::class, 'list_
 
 // Student Routes
 Route::prefix('student')->group(function () {
-
+    // Show login page (GET)
+    Route::get('/login', [StudentController::class, 'login'])
+        ->name('student.login');
     // Guest routes (not authenticated)
     Route::middleware('guest:student')->group(function () {
-        // Show login page (GET)
-        Route::get('/login', [StudentController::class, 'login'])
-            ->name('student.login');
+
 
         // Handle authentication (POST only)
         Route::post('/auth', [Login_Controller::class, 'auth_student'])

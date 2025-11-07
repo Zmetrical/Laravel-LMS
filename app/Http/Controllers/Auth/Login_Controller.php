@@ -58,5 +58,13 @@ class Login_Controller extends MainController
     }
 
 
-    
+    // public function auth_admin(Request $request)
+    // {
+
+    // }
+
+    // public function logout_admin(Request $request)
+    // {
+
+    // }
 }

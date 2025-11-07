@@ -184,7 +184,15 @@
                                     </li>
                                 </ul>
 
-
+                            <ul class="nav nav-treeview">
+                                <li class="nav-item">
+                                        <a href="{{ route('admin.enroll_student') }}"
+                                            class="nav-link {{ Request::routeIs('admin.enroll_student') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Student Enrollment</p>
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         </ul>
                     </nav>
