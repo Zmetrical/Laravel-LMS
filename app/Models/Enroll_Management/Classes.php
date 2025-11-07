@@ -5,6 +5,9 @@ namespace App\Models\Enroll_Management;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Models\User_Management\Teacher;
+use App\Models\User_Management\Student;
+
 class Classes extends Model
 {
     use HasFactory;

@@ -107,10 +107,27 @@ Route::prefix('enrollment_management')->group(function () {
     Route::get('/sections/{id}/details', [Enroll_Management::class, 'getDetails'])
         ->name('admin.sections.details');
 
+
+    Route::get('/section-class-enrollment', [Enroll_Management::class, 'sectionClassEnrollment'])
+        ->name('admin.section_class_enrollment');
+
+    Route::get('/sections/{id}/classes', [Enroll_Management::class, 'getSectionClasses'])
+        ->name('admin.sections.classes');
+
+    Route::post('/sections/{id}/enroll-class', [Enroll_Management::class, 'enrollClass'])
+        ->name('admin.sections.enrollClass');
+
+    Route::delete('/sections/{sectionId}/remove-class/{classId}', [Enroll_Management::class, 'removeClass'])
+        ->name('admin.sections.removeClass');
+
+    Route::get('/available-classes/{sectionId}', [Enroll_Management::class, 'getAvailableClasses'])
+        ->name('admin.sections.availableClasses');
+
+
+
     Route::get('/enroll_student', [Enroll_Management::class, 'enroll_student'])
         ->name('admin.enroll_student');
 });
-
 
 
 
