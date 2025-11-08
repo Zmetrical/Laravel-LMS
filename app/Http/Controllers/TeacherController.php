@@ -17,4 +17,17 @@ class TeacherController extends Controller
 
         return view('teacher.dashboard', $data);
     }
+
+    public function login()
+    {
+
+        $data = [
+            'scripts' => [
+                'teacher/login.js',
+            ],
+        ];
+
+        return view('admin.login', $data);
+    }
+
 }

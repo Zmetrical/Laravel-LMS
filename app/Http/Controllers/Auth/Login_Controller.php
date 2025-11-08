@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\MainController;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User_Management\Student;
 
 class Login_Controller extends MainController
 {
     // ---------------------------------------------------------------------------
-    //  Student 
+    //  Student Authentication
     // ---------------------------------------------------------------------------
 
     public function auth_student(Request $request)
@@ -19,6 +21,32 @@ class Login_Controller extends MainController
         $request->validate([
             'student_number' => 'required|string',
             'password' => 'required|string',
+        ]);
+
+        // Log attempt
+        Log::info('Student login attempt', [
+            'student_number' => $request->student_number
+        ]);
+
+        // Check if student exists
+        $student = Student::where('student_number', $request->student_number)->first();
+        
+        if (!$student) {
+            Log::warning('Student not found', [
+                'student_number' => $request->student_number
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid student number or password.'
+            ], 401);
+        }
+
+        // Debug: Check password
+        Log::info('Student found', [
+            'student_id' => $student->id,
+            'has_password' => !empty($student->student_password),
+            'password_length' => strlen($student->student_password)
         ]);
 
         // Attempt to authenticate
@@ -33,6 +61,11 @@ class Login_Controller extends MainController
             // Authentication passed
             $request->session()->regenerate();
 
+            Log::info('Student login successful', [
+                'student_id' => $student->id,
+                'student_number' => $student->student_number
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful! Redirecting...',
@@ -40,19 +73,38 @@ class Login_Controller extends MainController
             ]);
         }
 
-        // Authentication failed
+        // Authentication failed - try manual verification for debugging
+        $passwordMatch = Hash::check($request->password, $student->student_password);
+        
+        Log::warning('Student login failed', [
+            'student_number' => $request->student_number,
+            'password_match_manual' => $passwordMatch,
+            'stored_password_starts_with' => substr($student->student_password, 0, 7)
+        ]);
+
         return response()->json([
             'success' => false,
-            'message' => 'Invalid student number or password.'
+            'message' => 'Invalid student number or password.',
+            'debug' => config('app.debug') ? [
+                'student_exists' => true,
+                'password_match' => $passwordMatch,
+                'guard' => 'student'
+            ] : null
         ], 401);
     }
 
     public function logout_student(Request $request)
     {
+        $studentNumber = Auth::guard('student')->user()?->student_number;
+        
         Auth::guard('student')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        Log::info('Student logged out', [
+            'student_number' => $studentNumber
+        ]);
 
         return redirect()->route('student.login');
     }

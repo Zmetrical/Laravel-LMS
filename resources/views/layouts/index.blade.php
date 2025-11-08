@@ -33,7 +33,7 @@
                                 </div>
                                 <h3 class="profile-username text-center">Teacher Portal</h3>
                                 <p class="text-muted text-center">Manage classes and grades</p>
-                                <a href="{{ route('teacher.home') }}" class="btn btn-success btn-block"><i class="fas fa-graduation-cap mr-2"></i><b>Go to Teacher</b></a>
+                                <a href="{{ route('teacher.login') }}" class="btn btn-success btn-block"><i class="fas fa-graduation-cap mr-2"></i><b>Go to Teacher</b></a>
                             </div>
                         </div>
                     </div>

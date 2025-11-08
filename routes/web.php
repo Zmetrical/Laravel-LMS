@@ -229,6 +229,8 @@ Route::post('/profile/teacher/{id}/update', [Profile_Management::class, 'update_
 Route::get('admin/data/{id}', [Data_Controller::class, 'student_data'])
     ->name('data.student');
 
+
+
 // ---------------------------------------------------------------------------
 //  Class Management - Admin
 // ---------------------------------------------------------------------------
@@ -277,8 +279,16 @@ Route::prefix('student')->group(function () {
         Route::post('/logout', [Login_Controller::class, 'logout_student'])
             ->name('student.logout');
 
+        // Class Management
         Route::get('/class', [Class_List::class, 'student_class_list'])
             ->name('student.list_class');
+        
+        // API Routes for Classes
+        Route::get('/classes/list', [Class_List::class, 'getStudentClasses'])
+            ->name('student.classes.list');
+        
+        Route::get('/classes/{id}/details', [Class_List::class, 'getClassDetails'])
+            ->name('student.classes.details');
     });
 });
 
@@ -293,6 +303,8 @@ Route::prefix('student')->group(function () {
 Route::get('/teacher', [TeacherController::class, 'index'])
     ->name('teacher.home');
 
+Route::get('/teacher/login', [TeacherController::class, 'login'])
+    ->name('teacher.login');
 
 // ---------------------------------------------------------------------------
 //  Sample UI
