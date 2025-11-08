@@ -16,6 +16,7 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\Auth\Login_Controller;
 
 use Illuminate\Container\Attributes\Auth;
+use Illuminate\Support\Facades\DB;
 
 Route::get('/', [DeveloperController::class, 'index']);
 
@@ -127,6 +128,38 @@ Route::prefix('enrollment_management')->group(function () {
 
     Route::get('/enroll_student', [Enroll_Management::class, 'enroll_student'])
         ->name('admin.enroll_student');
+
+
+       // Irregular Students Management
+    Route::get('/irregular-students', [Enroll_Management::class, 'enroll_student'])
+        ->name('admin.irregular.students');
+    
+    Route::get('/irregular-students/data', [Enroll_Management::class, 'getStudentsData'])
+        ->name('admin.irregular.students.data');
+    
+    Route::get('/irregular-students/{id}/classes', [Enroll_Management::class, 'getStudentClasses'])
+        ->name('admin.irregular.student.classes');
+    
+    Route::post('/irregular-students/enroll', [Enroll_Management::class, 'enrollStudentClass'])
+        ->name('admin.irregular.enroll.class');
+    
+    Route::post('/irregular-students/unenroll', [Enroll_Management::class, 'removeStudentClass'])
+        ->name('admin.irregular.unenroll.class');
+
+    // Helper routes for filters (if not already defined)
+    Route::get('/levels/data', function() {
+        return response()->json([
+            'success' => true,
+            'data' => DB::table('levels')->get()
+        ]);
+    })->name('admin.levels.data');
+
+    Route::get('/strands/data', function() {
+        return response()->json([
+            'success' => true,
+            'data' => DB::table('strands')->where('status', 1)->get()
+        ]);
+    })->name('admin.strands.data');
 });
 
 

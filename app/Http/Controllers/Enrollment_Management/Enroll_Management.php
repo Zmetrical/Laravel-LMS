@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 
 use App\Models\Enroll_Management\Section;
 use App\Models\Enroll_Management\Classes;
-
+use Illuminate\Support\Facades\DB;
+use Exception;
 
 class Enroll_Management extends MainController
 {
@@ -281,6 +282,15 @@ class Enroll_Management extends MainController
         }
     }
 
+
+
+    // ---------------------------------------------------------------------------
+    //  Student Enroll
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Display irregular students page
+     */
     public function enroll_student()
     {
 
@@ -289,5 +299,210 @@ class Enroll_Management extends MainController
         ];
 
         return view('admin.enroll_management.enroll_student', $data);
+    }
+
+    /**
+     * Get irregular students data
+     */
+    public function getStudentsData()
+    {
+        try {
+            $students = DB::table('students as s')
+                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+                ->leftJoin('student_class_matrix as scm', function($join) {
+                    $join->on(DB::raw('s.student_number COLLATE utf8mb4_general_ci'), '=', DB::raw('scm.student_number COLLATE utf8mb4_general_ci'));
+                })
+                ->select(
+                    's.id',
+                    's.student_number',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.section_id',
+                    'sec.name as section_name',
+                    'str.id as strand_id',
+                    'str.name as strand_name',
+                    'l.id as level_id',
+                    'l.name as level_name',
+                    DB::raw('COUNT(DISTINCT scm.class_code) as class_count')
+                )
+                ->groupBy(
+                    's.id',
+                    's.student_number',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.section_id',
+                    'sec.name',
+                    'str.id',
+                    'str.name',
+                    'l.id',
+                    'l.name'
+                )
+                ->orderBy('s.last_name')
+                ->orderBy('s.first_name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $students
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load students: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get student's classes (enrolled and available)
+     */
+    public function getStudentClasses($studentId)
+    {
+        try {
+            $student = DB::table('students')->find($studentId);
+            
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found'
+                ], 404);
+            }
+
+            // Get enrolled classes
+            $enrolled = DB::table('student_class_matrix as scm')
+                ->join('classes as c', function($join) {
+                    $join->on(DB::raw('scm.class_code COLLATE utf8mb4_general_ci'), '=', DB::raw('c.class_code COLLATE utf8mb4_general_ci'));
+                })
+                ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
+                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+                ->where('scm.student_number', $student->student_number)
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name',
+                    DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name")
+                )
+                ->distinct()
+                ->get();
+
+            // Get enrolled class IDs
+            $enrolledClassIds = $enrolled->pluck('id')->toArray();
+
+            // Get available classes (all classes not enrolled)
+            $availableQuery = DB::table('classes as c')
+                ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
+                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name',
+                    DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name")
+                );
+
+            if (!empty($enrolledClassIds)) {
+                $availableQuery->whereNotIn('c.id', $enrolledClassIds);
+            }
+
+            $available = $availableQuery->orderBy('c.class_code')->get();
+
+            return response()->json([
+                'success' => true,
+                'enrolled' => $enrolled,
+                'available' => $available
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load classes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enroll student to classes
+     */
+    public function enrollStudentClass(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'class_ids' => 'required|array',
+            'class_ids.*' => 'exists:classes,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $student = DB::table('students')->find($request->student_id);
+            
+            foreach ($request->class_ids as $classId) {
+                $class = DB::table('classes')->find($classId);
+                
+                // Check if already enrolled
+                $exists = DB::table('student_class_matrix')
+                    ->where('student_number', $student->student_number)
+                    ->where('class_code', $class->class_code)
+                    ->exists();
+
+                if (!$exists) {
+                    DB::table('student_class_matrix')->insert([
+                        'student_number' => $student->student_number,
+                        'class_code' => $class->class_code
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Student enrolled successfully'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Enrollment failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * removeClass student from a class
+     */
+    public function removeStudentClass(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'class_id' => 'required|exists:classes,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $student = DB::table('students')->find($request->student_id);
+            $class = DB::table('classes')->find($request->class_id);
+
+            DB::table('student_class_matrix')
+                ->where('student_number', $student->student_number)
+                ->where('class_code', $class->class_code)
+                ->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Class removed successfully'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Unenrollment failed: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
