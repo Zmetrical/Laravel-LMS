@@ -300,12 +300,28 @@ Route::prefix('student')->group(function () {
 //  Teacher 
 // ---------------------------------------------------------------------------
 
-Route::get('/teacher', [TeacherController::class, 'index'])
-    ->name('teacher.home');
 
-Route::get('/teacher/login', [TeacherController::class, 'login'])
-    ->name('teacher.login');
+// Teacher routes
+Route::prefix('teacher')->name('teacher.')->group(function () {
+    Route::get('/login', [TeacherController::class, 'login'])->name('login');
+    Route::post('/auth', [Login_Controller::class, 'auth_teacher'])->name('auth');
+    
+    Route::middleware(['auth:teacher'])->group(function () {
+        Route::get('/home', [TeacherController::class, 'index'])->name('home');
+        Route::post('/logout', [Login_Controller::class, 'logout_teacher'])->name('logout');
+    
+            // Class Management
+        Route::get('/list_class', [Class_List::class, 'teacher_class_list'])->name('list_class');
+        
+        // Class API endpoints
+        Route::prefix('classes')->name('classes.')->group(function () {
+            Route::get('/list', [Class_List::class, 'getTeacherClasses'])->name('list');
+        });
+    
+    });
 
+
+});
 // ---------------------------------------------------------------------------
 //  Sample UI
 // ---------------------------------------------------------------------------

@@ -1,4 +1,15 @@
-@extends('layouts.main-student')
+@php
+    $userType = $userType ?? 'student'; // Default to student if not set
+    $isTeacher = $userType === 'teacher';
+    $homeRoute = $isTeacher ? 'teacher.home' : 'student.home';
+    $mainLayout = $isTeacher ? 'layouts.main-teacher' : 'layouts.main-student';
+    $icon = $isTeacher ? 'fas fa-chalkboard-teacher' : 'fas fa-book';
+    $emptyIcon = $isTeacher ? 'fas fa-chalkboard-teacher' : 'fas fa-book-open';
+    $emptyTitle = $isTeacher ? 'No Classes Assigned' : 'No Classes Yet';
+    $emptyMessage = $isTeacher ? "You don't have any classes assigned yet." : 'You are not enrolled in any classes at the moment.';
+@endphp
+
+@extends($mainLayout)
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
@@ -9,12 +20,12 @@
     <div class="row mb-2">
         <div class="col-sm-6">
             <h1>
-                <i class="fas fa-book"></i> My Classes
+                <i class="{{ $icon }}"></i> My Classes
             </h1>
         </div>
         <div class="col-sm-6">
             <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('student.home') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ route($homeRoute) }}">Home</a></li>
                 <li class="breadcrumb-item active">My Classes</li>
             </ol>
         </div>
@@ -35,14 +46,14 @@
         <div id="emptyState" style="display: none;">
             <div class="card">
                 <div class="card-body text-center py-5">
-                    <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
-                    <h4>No Classes Yet</h4>
-                    <p class="text-muted">You are not enrolled in any classes at the moment.</p>
+                    <i class="{{ $emptyIcon }} fa-4x text-muted mb-3"></i>
+                    <h4>{{ $emptyTitle }}</h4>
+                    <p class="text-muted">{{ $emptyMessage }}</p>
                 </div>
             </div>
         </div>
 
-        <!-- Classes Grid -->
+        <!-- Classes Grid (Cards) - Both Teacher and Student -->
         <div id="classesGrid" class="row" style="display: none;"></div>
     </div>
 @endsection
@@ -51,8 +62,9 @@
     <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
     
     <script>
+        const USER_TYPE = "{{ $userType }}";
         const API_ROUTES = {
-            getClasses: "{{ route('student.classes.list') }}"
+            getClasses: "{{ $isTeacher ? route('teacher.classes.list') : route('student.classes.list') }}"
         };
     </script>
     

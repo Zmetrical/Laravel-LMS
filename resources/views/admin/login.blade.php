@@ -3,6 +3,11 @@
 @section('title', 'Login - Trinity Polytechnic College')
 
 @section('head')
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+
+
 <style>
     :root {
         --primary-color: #343a40;
@@ -173,7 +178,7 @@
                 <h1>Login</h1>
             </div>
             
-            <form action="" method="POST">
+            <form id="loginForm" action="" method="POST">
                 @csrf
                 
                 <div class="form-group">
@@ -216,4 +221,11 @@
 @endsection
 
 @section('foot')
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    @if(isset($scripts))
+        @foreach($scripts as $script)
+            <script src="{{ asset('js/' . $script) }}"></script>
+        @endforeach
+    @endif
 @endsection

@@ -2,11 +2,17 @@
 
 namespace App\Models\User_Management;
 
-use App\Models\ParentModel;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Teacher extends ParentModel
+
+class Teacher extends Authenticatable
 {
-    protected $table = 'teachers';    
+    use Notifiable;
+
+    protected $guard = 'teacher';
+    protected $table = 'teachers';
+
     protected $fillable = [
         'first_name',
         'middle_name',
@@ -14,11 +20,31 @@ class Teacher extends ParentModel
         'gender',
         'email',
         'phone',
-
         'user',
         'password',
+        'profile_image',
         'status',
-        'created_at',
-        'updated_at'
     ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    // Get full name
+    public function getFullNameAttribute()
+    {
+        return $this->first_name . ' ' . $this->middle_name . ' ' . $this->last_name;
+    }
+
+    public function username()
+    {
+        return 'email';
+    }
+
+    // Override the password field
+    public function getAuthPassword()
+    {
+        return $this->password;
+    }
 }

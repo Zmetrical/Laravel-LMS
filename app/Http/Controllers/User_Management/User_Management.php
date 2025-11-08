@@ -271,8 +271,9 @@ class User_Management extends MainController
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'email' => 'required|email|unique:users,email|max:255',
+            'email' => 'required|email|unique:teachers,email|max:255',
             'phone' => 'required|string|max:20',
+            'gender' => 'required|string|in:Male,Female',
         ]);
 
         try {
@@ -282,7 +283,7 @@ class User_Management extends MainController
             // Generate default password (you can customize this)
             $defaultPassword = 'Teacher@' . date('Y');
 
-            // Insert teacher into users table
+            // Insert teacher into teachers table
             $teacher = Teacher::create([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -290,17 +291,25 @@ class User_Management extends MainController
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'gender' => $request->gender,
-
                 'user' => $request->first_name . " " . $request->last_name,
                 'password' => Hash::make($defaultPassword),
+                'profile_image' => '', // Default empty or handle file upload
+                'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            \Log::info('Student created successfully', [
-                'teacher id' => $teacher->id,
-                'teacher name' => $teacher->first_name . " " . $teacher->last_name,
-                'password' => $teacher->password,
+            // Insert plain password into teacher_password_matrix
+            DB::table('teacher_password_matrix')->insert([
+                'teacher_id' => $teacher->id,
+                'plain_password' => $defaultPassword,
+            ]);
+
+            \Log::info('Teacher created successfully', [
+                'teacher_id' => $teacher->id,
+                'teacher_name' => $teacher->first_name . " " . $teacher->last_name,
+                'email' => $teacher->email,
+                'default_password' => $defaultPassword,
             ]);
 
             DB::commit();
@@ -308,10 +317,21 @@ class User_Management extends MainController
             return response()->json([
                 'success' => true,
                 'message' => 'Teacher created successfully!',
+                'data' => [
+                    'teacher_id' => $teacher->id,
+                    'name' => $teacher->first_name . " " . $teacher->last_name,
+                    'email' => $teacher->email,
+                    'default_password' => $defaultPassword, // Send this to show in UI
+                ]
             ], 201);
         } catch (Exception $e) {
             // Rollback transaction on error
             DB::rollBack();
+
+            \Log::error('Failed to create teacher', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,

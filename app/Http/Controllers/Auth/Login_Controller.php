@@ -110,13 +110,52 @@ class Login_Controller extends MainController
     }
 
 
-    // public function auth_admin(Request $request)
-    // {
+    // ---------------------------------------------------------------------------
+    //  Teacher
+    // ---------------------------------------------------------------------------
 
-    // }
+    public function auth_teacher(Request $request)
+    {
+        // Validate the incoming request
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
 
-    // public function logout_admin(Request $request)
-    // {
+        // Attempt to authenticate
+        $credentials = [
+            'email' => $request->email,
+            'password' => $request->password,
+            'status' => 1, // Only active teachers can login
+        ];
 
-    // }
+        $remember = $request->has('remember') && $request->remember == 1;
+
+        if (Auth::guard('teacher')->attempt($credentials, $remember)) {
+            // Authentication passed
+            $request->session()->regenerate();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful! Redirecting...',
+                'redirect' => route('teacher.home')
+            ]);
+        }
+
+        // Authentication failed
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid email or password.'
+        ], 401);
+    }
+
+    public function logout_teacher(Request $request)
+    {
+        Auth::guard('teacher')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('teacher.login');
+    }
 }

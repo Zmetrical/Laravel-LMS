@@ -17,9 +17,11 @@ class Class_List extends MainController
     public function student_class_list()
     {
         $data = [
-            'scripts' => ['student_class_page/list_class.js'],
+            'scripts' => ['student/list_class.js'],
+            'userType' => 'student',
+
         ];
-        return view('student.class_management.list_class', $data);
+        return view('modules.class.list_class', $data);
     }
 
     /**
@@ -29,7 +31,7 @@ class Class_List extends MainController
     {
         try {
             $student = Auth::guard('student')->user();
-            
+
             if (!$student) {
                 return response()->json([
                     'success' => false,
@@ -51,7 +53,6 @@ class Class_List extends MainController
                 'data' => $classes,
                 'student_type' => $student->student_type
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -95,7 +96,7 @@ class Class_List extends MainController
     private function getIrregularStudentClasses($student)
     {
         return DB::table('student_class_matrix as scm')
-            ->join('classes as c', function($join) {
+            ->join('classes as c', function ($join) {
                 $join->on(
                     DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
                     '=',
@@ -127,7 +128,7 @@ class Class_List extends MainController
     {
         try {
             $student = Auth::guard('student')->user();
-            
+
             if (!$student) {
                 return response()->json([
                     'success' => false,
@@ -137,7 +138,7 @@ class Class_List extends MainController
 
             // Verify student is enrolled in this class
             $isEnrolled = $this->verifyStudentEnrollment($student, $classId);
-            
+
             if (!$isEnrolled) {
                 return response()->json([
                     'success' => false,
@@ -175,7 +176,6 @@ class Class_List extends MainController
                     'students_count' => $studentsCount
                 ]
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -198,7 +198,7 @@ class Class_List extends MainController
         } else {
             // Check through student_class_matrix
             return DB::table('student_class_matrix as scm')
-                ->join('classes as c', function($join) {
+                ->join('classes as c', function ($join) {
                     $join->on(
                         DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
                         '=',
@@ -225,14 +225,14 @@ class Class_List extends MainController
 
         // Irregular students directly enrolled
         $irregularCount = DB::table('student_class_matrix as scm')
-            ->join('classes as c', function($join) {
+            ->join('classes as c', function ($join) {
                 $join->on(
                     DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
                     '=',
                     DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
                 );
             })
-            ->join('students as s', function($join) {
+            ->join('students as s', function ($join) {
                 $join->on(
                     DB::raw('scm.student_number COLLATE utf8mb4_unicode_ci'),
                     '=',
@@ -244,5 +244,59 @@ class Class_List extends MainController
             ->count();
 
         return $regularCount + $irregularCount;
+    }
+
+
+
+
+
+    /**
+     * Show teacher class list page
+     */
+    public function teacher_class_list()
+    {
+        $data = [
+            'userType' => 'teacher',
+            'scripts' => ['teacher/list_class.js'],
+        ];
+        return view('modules.class.list_class', $data);
+    }
+
+    /**
+     * Get teacher's assigned classes
+     */
+    public function getTeacherClasses()
+    {
+        try {
+            $teacher = Auth::guard('teacher')->user();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $classes = DB::table('teacher_class_matrix as tcm')
+                ->join('classes as c', 'tcm.class_id', '=', 'c.id')
+                ->where('tcm.teacher_id', $teacher->id)
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name'
+                )
+                ->orderBy('c.class_code')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $classes
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load classes: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

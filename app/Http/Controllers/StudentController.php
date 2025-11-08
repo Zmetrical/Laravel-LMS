@@ -23,7 +23,6 @@ class StudentController extends Controller
 
     public function login()
     {
-
         $data = [
             'scripts' => [
                 'student/login.js',
