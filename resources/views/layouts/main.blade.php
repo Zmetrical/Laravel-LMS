@@ -176,15 +176,6 @@
 
                                 <ul class="nav nav-treeview">
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.enroll_section') }}"
-                                            class="nav-link {{ Request::routeIs('admin.enroll_section') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Sections</p>
-                                        </a>
-                                    </li>
-                                </ul>
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
                                         <a href="{{ route('admin.section_class_enrollment') }}"
                                             class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>

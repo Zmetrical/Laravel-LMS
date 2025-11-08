@@ -99,8 +99,10 @@ Route::get('/enrollment_management/enroll_class', [Enroll_Management::class, 'en
 
 Route::prefix('enrollment_management')->group(function () {
 
-    Route::get('/enroll_section', [Enroll_Management::class, 'enroll_section'])
-        ->name('admin.enroll_section');
+
+    // ---------------------------------------------------------------------------
+    //  Section
+    // ---------------------------------------------------------------------------
 
     Route::get('/sections/data', [Enroll_Management::class, 'getSectionsData'])
         ->name('admin.sections.data');
@@ -126,25 +128,33 @@ Route::prefix('enrollment_management')->group(function () {
 
 
 
+    // ---------------------------------------------------------------------------
+    //  Student
+    // ---------------------------------------------------------------------------
+
+
+    // Students List
     Route::get('/enroll_student', [Enroll_Management::class, 'enroll_student'])
         ->name('admin.enroll_student');
-
-
-       // Irregular Students Management
-    Route::get('/irregular-students', [Enroll_Management::class, 'enroll_student'])
-        ->name('admin.irregular.students');
     
-    Route::get('/irregular-students/data', [Enroll_Management::class, 'getStudentsData'])
-        ->name('admin.irregular.students.data');
+    Route::get('/enroll_student/data', [Enroll_Management::class, 'getStudentsData'])
+        ->name('admin.students.data');
     
-    Route::get('/irregular-students/{id}/classes', [Enroll_Management::class, 'getStudentClasses'])
-        ->name('admin.irregular.student.classes');
+    // Student Enrollment Page
+    Route::get('/students/{id}/enrollment', [Enroll_Management::class, 'studentClassEnrollment'])
+        ->name('admin.student_class_enrollment');
     
-    Route::post('/irregular-students/enroll', [Enroll_Management::class, 'enrollStudentClass'])
-        ->name('admin.irregular.enroll.class');
+    Route::get('/students/{id}/info', [Enroll_Management::class, 'getStudentInfo'])
+        ->name('admin.student.info');
     
-    Route::post('/irregular-students/unenroll', [Enroll_Management::class, 'removeStudentClass'])
-        ->name('admin.irregular.unenroll.class');
+    Route::get('/students/{id}/classes', [Enroll_Management::class, 'getStudentClasses'])
+        ->name('admin.student.classes');
+    
+    Route::post('/students/enroll', [Enroll_Management::class, 'enrollStudentClass'])
+        ->name('admin.enroll.class');
+    
+    Route::post('/students/unenroll', [Enroll_Management::class, 'removeStudentClass'])
+        ->name('admin.unenroll.class');
 
     // Helper routes for filters (if not already defined)
     Route::get('/levels/data', function() {
@@ -152,14 +162,41 @@ Route::prefix('enrollment_management')->group(function () {
             'success' => true,
             'data' => DB::table('levels')->get()
         ]);
-    })->name('admin.levels.data');
+    })->name('levels.data');
 
     Route::get('/strands/data', function() {
         return response()->json([
             'success' => true,
             'data' => DB::table('strands')->where('status', 1)->get()
         ]);
-    })->name('admin.strands.data');
+    })->name('strands.data');
+
+
+    // ---------------------------------------------------------------------------
+    //  Teacher
+    // ---------------------------------------------------------------------------
+    // Class Students View
+    Route::get('/class-students', [Enroll_Management::class, 'classes_enrollment'])
+        ->name('admin.classes.students.index');
+    
+    Route::get('/classes/list', [Enroll_Management::class, 'getClassesList'])
+        ->name('admin.classes.list');
+    
+    Route::get('/classes/{id}/details', [Enroll_Management::class, 'getClassDetails'])
+        ->name('admin.classes.details');
+    
+    Route::get('/classes/{id}/students', [Enroll_Management::class, 'getClassStudents'])
+        ->name('admin.classes.students');
+    
+    // Teacher Management
+    Route::get('/teachers/list', [Enroll_Management::class, 'getTeachersList'])
+        ->name('admin.teachers.list');
+    
+    Route::post('/classes/assign-teacher', [Enroll_Management::class, 'assignTeacher'])
+        ->name('admin.classes.assign-teacher');
+    
+    Route::post('/classes/remove-teacher', [Enroll_Management::class, 'removeTeacher'])
+        ->name('admin.classes.remove-teacher');
 });
 
 

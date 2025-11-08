@@ -16,19 +16,9 @@ class Enroll_Management extends MainController
     public function enroll_class()
     {
         $data = [
-            'scripts' => ['enroll_management/enroll_class.js'],
+            'scripts' => ['enroll_management/teacher_enroll_class.js'],
         ];
-        return view('admin.enroll_management.enroll_class', $data);
-    }
-
-    public function enroll_section()
-    {
-
-        $data = [
-            'scripts' => ['enroll_management/enroll_section.js'],
-        ];
-
-        return view('admin.enroll_management.enroll_section', $data);
+        return view('admin.enroll_management.teacher_enroll_class', $data);
     }
 
     /**
@@ -293,12 +283,64 @@ class Enroll_Management extends MainController
      */
     public function enroll_student()
     {
-
         $data = [
             'scripts' => ['enroll_management/enroll_student.js'],
         ];
 
         return view('admin.enroll_management.enroll_student', $data);
+    }
+
+    public function studentClassEnrollment($studentId)
+    {
+        $student = DB::table('students')->find($studentId);
+
+        if (!$student) {
+            return redirect()->route('admin.enroll_management.enroll_student')
+                ->with('error', 'Student not found');
+        }
+
+        $data = [
+            'studentId' => $studentId,
+            'scripts' => ['enroll_management/student_enroll_class.js'],
+        ];
+        return view('admin.enroll_management.student_enroll_class', $data);
+    }
+    /**
+     * Get student information
+     */
+    public function getStudentInfo($studentId)
+    {
+        try {
+            $student = DB::table('students as s')
+                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+                ->where('s.id', $studentId)
+                ->select(
+                    's.*',
+                    'sec.name as section_name',
+                    'str.name as strand_name',
+                    'l.name as level_name'
+                )
+                ->first();
+
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $student
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load student: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -311,9 +353,10 @@ class Enroll_Management extends MainController
                 ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
                 ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
                 ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
-                ->leftJoin('student_class_matrix as scm', function($join) {
+                ->leftJoin('student_class_matrix as scm', function ($join) {
                     $join->on(DB::raw('s.student_number COLLATE utf8mb4_general_ci'), '=', DB::raw('scm.student_number COLLATE utf8mb4_general_ci'));
                 })
+                ->where('s.student_type', 'irregular') // Filter only irregular students
                 ->select(
                     's.id',
                     's.student_number',
@@ -364,7 +407,7 @@ class Enroll_Management extends MainController
     {
         try {
             $student = DB::table('students')->find($studentId);
-            
+
             if (!$student) {
                 return response()->json([
                     'success' => false,
@@ -374,7 +417,7 @@ class Enroll_Management extends MainController
 
             // Get enrolled classes
             $enrolled = DB::table('student_class_matrix as scm')
-                ->join('classes as c', function($join) {
+                ->join('classes as c', function ($join) {
                     $join->on(DB::raw('scm.class_code COLLATE utf8mb4_general_ci'), '=', DB::raw('c.class_code COLLATE utf8mb4_general_ci'));
                 })
                 ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
@@ -437,10 +480,10 @@ class Enroll_Management extends MainController
             DB::beginTransaction();
 
             $student = DB::table('students')->find($request->student_id);
-            
+
             foreach ($request->class_ids as $classId) {
                 $class = DB::table('classes')->find($classId);
-                
+
                 // Check if already enrolled
                 $exists = DB::table('student_class_matrix')
                     ->where('student_number', $student->student_number)
@@ -471,7 +514,7 @@ class Enroll_Management extends MainController
     }
 
     /**
-     * removeClass student from a class
+     * Unenroll student from a class
      */
     public function removeStudentClass(Request $request)
     {
@@ -502,6 +545,275 @@ class Enroll_Management extends MainController
             return response()->json([
                 'success' => false,
                 'message' => 'Unenrollment failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    //  Teacher Enroll
+    // ---------------------------------------------------------------------------
+
+    public function classes_enrollment()
+    {
+        $data = [
+            'scripts' => ['enroll_management/teacher_enroll_class.js'],
+        ];
+
+        return view('admin.enroll_management.teacher_enroll_class', $data);
+    }
+    /**
+     * Get all classes with section count and teacher info
+     */
+    public function getClassesList()
+    {
+        try {
+            $classes = DB::table('classes as c')
+                ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
+                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+                ->leftJoin('section_class_matrix as scm', 'c.id', '=', 'scm.class_id')
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name',
+                    DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
+                    DB::raw('COUNT(DISTINCT scm.section_id) as section_count')
+                )
+                ->groupBy('c.id', 'c.class_code', 'c.class_name', 't.first_name', 't.last_name')
+                ->orderBy('c.class_code')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $classes
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load classes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get class details (teacher and enrolled sections)
+     */
+    public function getClassDetails($classId)
+    {
+        try {
+            // Get assigned teacher
+            $teacher = DB::table('teacher_class_matrix as tcm')
+                ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
+                ->where('tcm.class_id', $classId)
+                ->select('t.*')
+                ->first();
+
+            // Get enrolled sections with student count
+            $sections = DB::table('section_class_matrix as scm')
+                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+                ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
+                ->where('scm.class_id', $classId)
+                ->select(
+                    'sec.id',
+                    'sec.name',
+                    'sec.code',
+                    DB::raw('COUNT(s.id) as student_count')
+                )
+                ->groupBy('sec.id', 'sec.name', 'sec.code')
+                ->orderBy('sec.name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'teacher' => $teacher,
+                'sections' => $sections
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load class details: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getClassStudents($classId)
+    {
+        try {
+            $class = DB::table('classes')->find($classId);
+
+            if (!$class) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class not found'
+                ], 404);
+            }
+
+            // Get students from sections enrolled in this class (Regular students)
+            $regularStudents = DB::table('section_class_matrix as scm')
+                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+                ->join('students as s', 'sec.id', '=', 's.section_id')
+                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+                ->where('scm.class_id', $classId)
+                ->select(
+                    's.id',
+                    's.student_number',
+                    's.first_name',
+                    's.last_name',
+                    's.student_type',
+                    's.section_id',
+                    'sec.name as section_name',
+                    'str.name as strand_name',
+                    'l.name as level_name'
+                )
+                ->get();
+
+            // Get irregular students directly enrolled in this class
+            // FIX: Add COLLATE to the JOINs
+            $irregularStudents = DB::table('student_class_matrix as scm')
+                ->join('students as s', function ($join) {
+                    $join->on(
+                        DB::raw('scm.student_number COLLATE utf8mb4_unicode_ci'),
+                        '=',
+                        DB::raw('s.student_number COLLATE utf8mb4_unicode_ci')
+                    );
+                })
+                ->join('classes as c', function ($join) {
+                    $join->on(
+                        DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
+                        '=',
+                        DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
+                    );
+                })
+                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+                ->where('c.id', $classId)
+                ->select(
+                    's.id',
+                    's.student_number',
+                    's.first_name',
+                    's.last_name',
+                    's.student_type',
+                    's.section_id',
+                    'sec.name as section_name',
+                    'str.name as strand_name',
+                    'l.name as level_name'
+                )
+                ->get();
+
+            // Merge both collections and remove duplicates
+            $allStudents = $regularStudents->merge($irregularStudents)
+                ->unique('id')
+                ->sortBy('last_name')
+                ->values();
+
+            // Get sections for filter
+            $sections = DB::table('section_class_matrix as scm')
+                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+                ->where('scm.class_id', $classId)
+                ->select('sec.id', 'sec.name')
+                ->orderBy('sec.name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $allStudents,
+                'sections' => $sections
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load students: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all teachers
+     */
+    public function getTeachersList()
+    {
+        try {
+            $teachers = DB::table('teachers')
+                ->where('status', 1)
+                ->select('id', 'first_name', 'last_name', 'email', 'phone')
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $teachers
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load teachers: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Assign teacher to class
+     */
+    public function assignTeacher(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'required|exists:classes,id',
+            'teacher_id' => 'required|exists:teachers,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Remove existing teacher assignment
+            DB::table('teacher_class_matrix')
+                ->where('class_id', $request->class_id)
+                ->delete();
+
+            // Assign new teacher
+            DB::table('teacher_class_matrix')->insert([
+                'teacher_id' => $request->teacher_id,
+                'class_id' => $request->class_id
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Teacher assigned successfully'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to assign teacher: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove teacher from class
+     */
+    public function removeTeacher(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'required|exists:classes,id'
+        ]);
+
+        try {
+            DB::table('teacher_class_matrix')
+                ->where('class_id', $request->class_id)
+                ->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Teacher removed successfully'
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove teacher: ' . $e->getMessage()
             ], 500);
         }
     }
