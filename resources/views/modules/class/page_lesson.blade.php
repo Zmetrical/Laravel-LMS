@@ -1,4 +1,7 @@
-@extends('modules.class.main', ['activeTab' => 'lessons', 'userType' => $userType, 'class' => $class])
+@extends('modules.class.main', [
+    'activeTab' => 'lessons', 
+    'userType' => $userType, 
+    'class' => $class])
 
 @section('page-styles')
 <style>

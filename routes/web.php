@@ -298,20 +298,20 @@ Route::prefix('student')->group(function () {
         // Class Lessons Routes
         Route::prefix('class/{classId}')->group(function () {
             // View Pages
-            Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('class.lessons');
+            Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('student.class.lessons');
             
             Route::get('/quizzes', function ($classId) {
                 $class = DB::table('classes')->where('id', $classId)->first();
-                return view('class.quizzes', ['userType' => 'student', 'class' => $class]);
-            })->name('class.quizzes');
+                return view('modules.class.page_quiz', ['userType' => 'student', 'class' => $class]);
+            })->name('student.class.quizzes');
             
             Route::get('/grades', function ($classId) {
                 $class = DB::table('classes')->where('id', $classId)->first();
-                return view('class.grades', ['userType' => 'student', 'class' => $class]);
-            })->name('class.grades');
+                return view('modules.class.page_grade', ['userType' => 'student', 'class' => $class]);
+            })->name('student.class.grades');
 
             // API Routes for Lessons
-            Route::get('/lessons/list', [Page_Lesson::class, 'studentList'])->name('class.lessons.list');
+            Route::get('/lessons/list', [Page_Lesson::class, 'studentList'])->name('student.class.lessons.list');
         });
     });
 });

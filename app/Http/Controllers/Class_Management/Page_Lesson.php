@@ -22,7 +22,8 @@ class Page_Lesson extends MainController
         $data = [
             'scripts' => ['class/teacher_lesson.js'],
             'userType' => 'teacher',
-            'class' => $class
+            'class' => $class,
+            
         ];
 
         return view('modules.class.page_lesson', $data);

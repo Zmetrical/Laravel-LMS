@@ -4,6 +4,8 @@
     $mainLayout = $isTeacher ? 'layouts.main-teacher' : 'layouts.main-student';
     $homeRoute = $isTeacher ? 'teacher.home' : 'student.home';
     $classListRoute = $isTeacher ? 'teacher.list_class' : 'student.list_class';
+    $activeTab = $activeTab ?? 'lessons'; // Default to lessons if not set
+
 @endphp
 
 @extends($mainLayout)
