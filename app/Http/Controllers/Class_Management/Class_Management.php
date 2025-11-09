@@ -5,6 +5,7 @@ use App\Http\Controllers\MainController;
 use App\Models\User_Management\Section;
 use App\Models\User_Management\Strand;
 use Illuminate\Http\Request;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\Class_Management\Classes;

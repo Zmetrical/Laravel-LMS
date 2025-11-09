@@ -18,13 +18,12 @@ $(document).ready(function() {
     loadClasses();
 
     /**
-     * Load classes based on user type
+     * Load teacher classes
      */
     function loadClasses() {
         $('#loadingState').show();
         $('#emptyState').hide();
         $('#classesGrid').hide();
-        $('#classesList').hide();
 
         $.ajax({
             url: API_ROUTES.getClasses,
@@ -35,11 +34,7 @@ $(document).ready(function() {
                     if (response.data.length === 0) {
                         showEmptyState();
                     } else {
-                        if (USER_TYPE === 'teacher') {
-                            displayTeacherClasses(response.data);
-                        } else {
-                            displayStudentClasses(response.data);
-                        }
+                        displayClasses(response.data);
                     }
                 } else {
                     showError('Failed to load classes');
@@ -55,7 +50,7 @@ $(document).ready(function() {
                 if (xhr.status === 401) {
                     toastr.error('Please log in again');
                     setTimeout(() => {
-                        window.location.href = USER_TYPE === 'teacher' ? '/teacher/login' : '/student/login';
+                        window.location.href = '/teacher/login';
                     }, 2000);
                 } else {
                     toastr.error(message);
@@ -67,7 +62,7 @@ $(document).ready(function() {
     /**
      * Display classes for teacher (card grid view)
      */
-    function displayTeacherClasses(classes) {
+    function displayClasses(classes) {
         $('#loadingState').hide();
         $('#emptyState').hide();
         $('#classesGrid').show();
@@ -76,61 +71,24 @@ $(document).ready(function() {
         grid.empty();
 
         classes.forEach(function(classData) {
-            let card = `
-                <div class="col-md-4 col-sm-6 mb-4">
-                    <div class="card card-primary card-outline h-100">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-book"></i> ${escapeHtml(classData.class_code)}
-                            </h3>
+            // Calculate statistics (placeholder - can be populated from backend)
+            let studentCount = classData.student_count || 0;
+            let lessonCount = classData.lesson_count || 0;
+            
+            let statsHtml = `
+                <div class="row text-center mt-3">
+                    <div class="col-6">
+                        <div class="border-right">
+                            <h5 class="mb-0 text-primary">${studentCount}</h5>
+                            <small class="text-muted">Students</small>
                         </div>
-                        <div class="card-body">
-                            <h6 class="mb-3">${escapeHtml(classData.class_name)}</h6>
-                        </div>
-                        <div class="card-footer">
-                            <button class="btn btn-primary btn-sm btn-block view-class-btn" 
-                                    data-class-id="${classData.id}"
-                                    data-class-name="${escapeHtml(classData.class_name)}">
-                                <i class="fas fa-eye"></i> View Details
-                            </button>
-                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="mb-0 text-info">${lessonCount}</h5>
+                        <small class="text-muted">Lessons</small>
                     </div>
                 </div>
             `;
-            grid.append(card);
-        });
-    }
-
-    /**
-     * Display classes for student (card grid view with teacher info)
-     */
-    function displayStudentClasses(classes) {
-        $('#loadingState').hide();
-        $('#emptyState').hide();
-        $('#classesGrid').show();
-
-        let grid = $('#classesGrid');
-        grid.empty();
-
-        classes.forEach(function(classData) {
-            let teacherInfo = '';
-            if (classData.teacher_name && classData.teacher_name.trim() !== '') {
-                teacherInfo = `
-                    <div class="mb-3">
-                        <p class="mb-1">
-                            <i class="fas fa-chalkboard-teacher"></i> ${escapeHtml(classData.teacher_name)}
-                        </p>
-                    </div>
-                `;
-            } else {
-                teacherInfo = `
-                    <div class="mb-3">
-                        <p class="mb-1 text-muted">
-                            <i class="fas fa-user-slash"></i> No teacher assigned
-                        </p>
-                    </div>
-                `;
-            }
             
             let card = `
                 <div class="col-md-4 col-sm-6 mb-4">
@@ -142,14 +100,18 @@ $(document).ready(function() {
                         </div>
                         <div class="card-body">
                             <h6 class="mb-3">${escapeHtml(classData.class_name)}</h6>
-                            ${teacherInfo}
+                            ${statsHtml}
                         </div>
                         <div class="card-footer">
-                            <button class="btn btn-primary btn-sm btn-block view-class-btn" 
-                                    data-class-id="${classData.id}"
-                                    data-class-name="${escapeHtml(classData.class_name)}">
-                                <i class="fas fa-eye"></i> View Details
-                            </button>
+                            <div class="btn-group btn-block" role="group">
+                                <button class="btn btn-primary btn-sm view-class-btn" 
+                                        data-class-id="${classData.id}"
+                                        data-class-code="${escapeHtml(classData.class_code)}"
+                                        data-class-name="${escapeHtml(classData.class_name)}"
+                                        style="flex: 1;">
+                                    <i class="fas fa-book-open"></i> View Lessons
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -163,24 +125,22 @@ $(document).ready(function() {
      */
     function showEmptyState() {
         $('#loadingState').hide();
-        $('#classesList').hide();
         $('#classesGrid').hide();
         $('#emptyState').show();
     }
 
     /**
-     * Handle view class button click
+     * Handle view class button click - Redirect to lessons page
      */
     $(document).on('click', '.view-class-btn', function() {
         let classId = $(this).data('class-id');
         let className = $(this).data('class-name');
         
-        // Placeholder for future implementation
-        toastr.info(`Opening class: ${className}`, 'Coming Soon');
+        // Show loading feedback
+        $(this).html('<i class="fas fa-spinner fa-spin"></i> Loading...').prop('disabled', true);
         
-        // Future routes will be:
-        // Teacher: window.location.href = `/teacher/class/${classId}`;
-        // Student: window.location.href = `/student/class/${classId}`;
+        // Redirect to teacher lessons page
+        window.location.href = `/teacher/class/${classId}/lessons`;
     });
 
     /**

@@ -1,5 +1,10 @@
 $(document).ready(function() {
-    let allClasses = [];
+    // CSRF token setup
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
 
     // Configure toastr
     toastr.options = {
@@ -12,9 +17,9 @@ $(document).ready(function() {
     // Load classes on page load
     loadClasses();
 
-    // ========================================================================
-    // LOAD CLASSES
-    // ========================================================================
+    /**
+     * Load student classes
+     */
     function loadClasses() {
         $('#loadingState').show();
         $('#emptyState').hide();
@@ -22,95 +27,157 @@ $(document).ready(function() {
 
         $.ajax({
             url: API_ROUTES.getClasses,
-            method: 'GET',
+            type: 'GET',
+            dataType: 'json',
             success: function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    allClasses = response.data;
-                    renderClasses(allClasses);
+                if (response.success) {
+                    if (response.data.length === 0) {
+                        showEmptyState();
+                    } else {
+                        displayClasses(response.data);
+                    }
                 } else {
-                    showEmptyState();
+                    showError('Failed to load classes');
                 }
             },
             error: function(xhr) {
                 showEmptyState();
+                let message = 'Failed to load classes';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                
                 if (xhr.status === 401) {
                     toastr.error('Please log in again');
                     setTimeout(() => {
                         window.location.href = '/student/login';
                     }, 2000);
                 } else {
-                    toastr.error('Failed to load classes. Please refresh the page.');
+                    toastr.error(message);
                 }
             }
         });
     }
 
-    // ========================================================================
-    // RENDER CLASSES
-    // ========================================================================
-    function renderClasses(classes) {
+    /**
+     * Display classes for student (card grid view with teacher info)
+     */
+    function displayClasses(classes) {
         $('#loadingState').hide();
         $('#emptyState').hide();
-        
-        const grid = $('#classesGrid');
-        grid.empty().show();
+        $('#classesGrid').show();
 
-        classes.forEach(cls => {
-            const teacherInfo = cls.teacher_name && cls.teacher_name.trim() !== ''
-                ? `<p class="mb-1"><i class="fas fa-chalkboard-teacher"></i> ${cls.teacher_name}</p>`
-                : `<p class="mb-1 text-muted"><i class="fas fa-user-slash"></i> No teacher assigned</p>`;
+        let grid = $('#classesGrid');
+        grid.empty();
 
-            const card = `
-                <div class="col-md-4 col-sm-6 mb-4">
-                    <div class="card card-primary card-outline h-100">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-book"></i> ${cls.class_code}
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            <h6 class="mb-3">${cls.class_name}</h6>
-                            
-                            <div class="mb-3">
-                                ${teacherInfo}
-                            </div>
-                            
-                            <div class="mt-auto">
-                                <small class="text-muted d-block mb-2">
-                                    <i class="fas fa-chart-line"></i> Progress placeholder
-                                </small>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-primary" role="progressbar" 
-                                         style="width: 0%" 
-                                         aria-valuenow="0" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-footer">
-                            <button class="btn btn-primary btn-sm btn-block view-details-btn" 
-                                    data-class-id="${cls.id}"
-                                    data-class-name="${cls.class_name}">
-                                <i class="fas fa-eye"></i> View Details
-                            </button>
+        classes.forEach(function(classData) {
+            let teacherInfo = '';
+            if (classData.teacher_name && classData.teacher_name.trim() !== '') {
+                teacherInfo = `
+                    <div class="mb-3">
+                        <p class="mb-1">
+                            <i class="fas fa-chalkboard-teacher"></i> ${escapeHtml(classData.teacher_name)}
+                        </p>
+                    </div>
+                `;
+            } else {
+                teacherInfo = `
+                    <div class="mb-3">
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-user-slash"></i> No teacher assigned
+                        </p>
+                    </div>
+                `;
+            }
+            
+            // Progress placeholder (can be calculated from actual data later)
+            let progressHtml = `
+                <div class="mt-auto">
+                    <small class="text-muted d-block mb-2">
+                        <i class="fas fa-chart-line"></i> Progress
+                    </small>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" role="progressbar" 
+                             style="width: 0%" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
                         </div>
                     </div>
                 </div>
             `;
             
+            let card = `
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="card card-primary card-outline h-100">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-book"></i> ${escapeHtml(classData.class_code)}
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="mb-3">${escapeHtml(classData.class_name)}</h6>
+                            ${teacherInfo}
+                            ${progressHtml}
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary btn-sm btn-block view-class-btn" 
+                                    data-class-id="${classData.id}"
+                                    data-class-code="${escapeHtml(classData.class_code)}"
+                                    data-class-name="${escapeHtml(classData.class_name)}">
+                                <i class="fas fa-book-open"></i> View Lessons
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
             grid.append(card);
         });
     }
 
-    // ========================================================================
-    // SHOW EMPTY STATE
-    // ========================================================================
+    /**
+     * Show empty state
+     */
     function showEmptyState() {
         $('#loadingState').hide();
         $('#classesGrid').hide();
         $('#emptyState').show();
     }
 
+    /**
+     * Handle view class button click - Redirect to lessons page
+     */
+    $(document).on('click', '.view-class-btn', function() {
+        let classId = $(this).data('class-id');
+        let className = $(this).data('class-name');
+        
+        // Show loading feedback
+        $(this).html('<i class="fas fa-spinner fa-spin"></i> Loading...').prop('disabled', true);
+        
+        // Redirect to student lessons page
+        window.location.href = `/student/class/${classId}/lessons`;
+    });
+
+    /**
+     * Show error message
+     */
+    function showError(message) {
+        $('#loadingState').hide();
+        toastr.error(message, 'Error');
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        if (!text) return '';
+        let map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 });

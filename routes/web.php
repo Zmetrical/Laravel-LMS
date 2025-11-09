@@ -14,6 +14,10 @@ use App\Http\Controllers\Auth\Data_Controller;
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\Auth\Login_Controller;
+use App\Http\Controllers\Class_Management\Page_Lesson;
+use App\Http\Controllers\Class_Management\Page_Quiz;
+use App\Http\Controllers\Class_Management\Page_Grade;
+use App\Http\Controllers\Class_Management\Page_Participant;
 
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Support\Facades\DB;
@@ -136,35 +140,35 @@ Route::prefix('enrollment_management')->group(function () {
     // Students List
     Route::get('/enroll_student', [Enroll_Management::class, 'enroll_student'])
         ->name('admin.enroll_student');
-    
+
     Route::get('/enroll_student/data', [Enroll_Management::class, 'getStudentsData'])
         ->name('admin.students.data');
-    
+
     // Student Enrollment Page
     Route::get('/students/{id}/enrollment', [Enroll_Management::class, 'studentClassEnrollment'])
         ->name('admin.student_class_enrollment');
-    
+
     Route::get('/students/{id}/info', [Enroll_Management::class, 'getStudentInfo'])
         ->name('admin.student.info');
-    
+
     Route::get('/students/{id}/classes', [Enroll_Management::class, 'getStudentClasses'])
         ->name('admin.student.classes');
-    
+
     Route::post('/students/enroll', [Enroll_Management::class, 'enrollStudentClass'])
         ->name('admin.enroll.class');
-    
+
     Route::post('/students/unenroll', [Enroll_Management::class, 'removeStudentClass'])
         ->name('admin.unenroll.class');
 
     // Helper routes for filters (if not already defined)
-    Route::get('/levels/data', function() {
+    Route::get('/levels/data', function () {
         return response()->json([
             'success' => true,
             'data' => DB::table('levels')->get()
         ]);
     })->name('levels.data');
 
-    Route::get('/strands/data', function() {
+    Route::get('/strands/data', function () {
         return response()->json([
             'success' => true,
             'data' => DB::table('strands')->where('status', 1)->get()
@@ -178,23 +182,23 @@ Route::prefix('enrollment_management')->group(function () {
     // Class Students View
     Route::get('/class-students', [Enroll_Management::class, 'classes_enrollment'])
         ->name('admin.classes.students.index');
-    
+
     Route::get('/classes/list', [Enroll_Management::class, 'getClassesList'])
         ->name('admin.classes.list');
-    
+
     Route::get('/classes/{id}/details', [Enroll_Management::class, 'getClassDetails'])
         ->name('admin.classes.details');
-    
+
     Route::get('/classes/{id}/students', [Enroll_Management::class, 'getClassStudents'])
         ->name('admin.classes.students');
-    
+
     // Teacher Management
     Route::get('/teachers/list', [Enroll_Management::class, 'getTeachersList'])
         ->name('admin.teachers.list');
-    
+
     Route::post('/classes/assign-teacher', [Enroll_Management::class, 'assignTeacher'])
         ->name('admin.classes.assign-teacher');
-    
+
     Route::post('/classes/remove-teacher', [Enroll_Management::class, 'removeTeacher'])
         ->name('admin.classes.remove-teacher');
 });
@@ -282,13 +286,33 @@ Route::prefix('student')->group(function () {
         // Class Management
         Route::get('/class', [Class_List::class, 'student_class_list'])
             ->name('student.list_class');
-        
+
         // API Routes for Classes
         Route::get('/classes/list', [Class_List::class, 'getStudentClasses'])
             ->name('student.classes.list');
-        
+
         Route::get('/classes/{id}/details', [Class_List::class, 'getClassDetails'])
             ->name('student.classes.details');
+
+
+        // Class Lessons Routes
+        Route::prefix('class/{classId}')->group(function () {
+            // View Pages
+            Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('class.lessons');
+            
+            Route::get('/quizzes', function ($classId) {
+                $class = DB::table('classes')->where('id', $classId)->first();
+                return view('class.quizzes', ['userType' => 'student', 'class' => $class]);
+            })->name('class.quizzes');
+            
+            Route::get('/grades', function ($classId) {
+                $class = DB::table('classes')->where('id', $classId)->first();
+                return view('class.grades', ['userType' => 'student', 'class' => $class]);
+            })->name('class.grades');
+
+            // API Routes for Lessons
+            Route::get('/lessons/list', [Page_Lesson::class, 'studentList'])->name('class.lessons.list');
+        });
     });
 });
 
@@ -305,22 +329,36 @@ Route::prefix('student')->group(function () {
 Route::prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/login', [TeacherController::class, 'login'])->name('login');
     Route::post('/auth', [Login_Controller::class, 'auth_teacher'])->name('auth');
-    
+
     Route::middleware(['auth:teacher'])->group(function () {
         Route::get('/home', [TeacherController::class, 'index'])->name('home');
         Route::post('/logout', [Login_Controller::class, 'logout_teacher'])->name('logout');
-    
-            // Class Management
+
+        // Class Management
         Route::get('/list_class', [Class_List::class, 'teacher_class_list'])->name('list_class');
-        
+
         // Class API endpoints
         Route::prefix('classes')->name('classes.')->group(function () {
             Route::get('/list', [Class_List::class, 'getTeacherClasses'])->name('list');
         });
-    
+
+        // Class Lessons Routes
+        Route::prefix('class/{classId}')->group(function () {
+            // View Pages
+            Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('class.lessons');
+
+            Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('class.lessons');
+            Route::get('/quizzes', [Page_Quiz::class, 'teacherIndex'])->name('class.quizzes');
+            Route::get('/grades', [Page_Grade::class, 'teacherIndex'])->name('class.grades');
+            Route::get('/participants', [Page_Participant::class, 'teacherIndex'])->name('class.participants');
+
+            // API Routes for Lessons
+            Route::get('/lessons/list', [Page_Lesson::class, 'teacherList'])->name('class.lessons.list');
+            Route::post('/lessons', [Page_Lesson::class, 'store'])->name('class.lessons.store');
+            Route::put('/lessons/{lessonId}', [Page_Lesson::class, 'update'])->name('class.lessons.update');
+            Route::delete('/lessons/{lessonId}', [Page_Lesson::class, 'destroy'])->name('class.lessons.delete');
+        });
     });
-
-
 });
 // ---------------------------------------------------------------------------
 //  Sample UI

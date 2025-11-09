@@ -60,7 +60,7 @@
 
 @section('scripts')
     <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
-    
+
     <script>
         const USER_TYPE = "{{ $userType }}";
         const API_ROUTES = {
