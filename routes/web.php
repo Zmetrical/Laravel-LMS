@@ -18,6 +18,7 @@ use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Page_Grade;
 use App\Http\Controllers\Class_Management\Page_Participant;
+use App\Http\Controllers\Class_Management\Lecture;
 
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Support\Facades\DB;
@@ -299,12 +300,12 @@ Route::prefix('student')->group(function () {
         Route::prefix('class/{classId}')->group(function () {
             // View Pages
             Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('student.class.lessons');
-            
+
             Route::get('/quizzes', function ($classId) {
                 $class = DB::table('classes')->where('id', $classId)->first();
                 return view('modules.class.page_quiz', ['userType' => 'student', 'class' => $class]);
             })->name('student.class.quizzes');
-            
+
             Route::get('/grades', function ($classId) {
                 $class = DB::table('classes')->where('id', $classId)->first();
                 return view('modules.class.page_grade', ['userType' => 'student', 'class' => $class]);
@@ -347,7 +348,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             // View Pages
             Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('class.lessons');
 
-            Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('class.lessons');
             Route::get('/quizzes', [Page_Quiz::class, 'teacherIndex'])->name('class.quizzes');
             Route::get('/grades', [Page_Grade::class, 'teacherIndex'])->name('class.grades');
             Route::get('/participants', [Page_Participant::class, 'teacherIndex'])->name('class.participants');
@@ -358,8 +358,35 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::put('/lessons/{lessonId}', [Page_Lesson::class, 'update'])->name('class.lessons.update');
             Route::delete('/lessons/{lessonId}', [Page_Lesson::class, 'destroy'])->name('class.lessons.delete');
         });
+
+        // Lecture Management Routes
+        Route::prefix('class/{classId}/lesson/{lessonId}/lecture')->group(function () {
+            // Create
+            Route::get('/create', [Lecture::class, 'create'])
+                ->name('class.lectures.create');
+            Route::post('/', [Lecture::class, 'store'])
+                ->name('class.lectures.store');
+
+            // Edit
+            Route::get('/{lectureId}/edit', [Lecture::class, 'edit'])
+                ->name('class.lectures.edit');
+            Route::post('/{lectureId}', [Lecture::class, 'update'])
+                ->name('class.lectures.update');
+
+            // Delete (soft delete)
+            Route::delete('/{lectureId}', [Lecture::class, 'destroy'])
+                ->name('class.lectures.delete');
+
+            Route::get('/storage/lectures/{filename}', [Lecture::class, 'download'])
+                ->name('lecture.file.download');
+            Route::get('/storage/lectures/{filename}', [Lecture::class, 'stream'])
+                ->name('lecture.file.stream');
+        });
     });
 });
+
+
+
 // ---------------------------------------------------------------------------
 //  Sample UI
 // ---------------------------------------------------------------------------

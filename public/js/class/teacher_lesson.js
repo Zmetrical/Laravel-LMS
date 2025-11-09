@@ -404,14 +404,18 @@ function editLesson(lessonId) {
     });
 }
 
-// Placeholder functions for future implementation
+// Replace the addLecture function
 function addLecture(lessonId) {
-    toastr.info('Add Lecture functionality - To be implemented');
+    window.location.href = API_ROUTES.createLecture.replace(':lessonId', lessonId);
 }
 
+// Replace the editLecture function
 function editLecture(lessonId, lectureId) {
-    toastr.info('Edit Lecture functionality - To be implemented');
+    window.location.href = API_ROUTES.editLecture
+        .replace(':lessonId', lessonId)
+        .replace(':lectureId', lectureId);
 }
+
 
 function viewLecture(lessonId, lectureId) {
     toastr.info('View Lecture functionality - To be implemented');
