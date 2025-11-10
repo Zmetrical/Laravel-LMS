@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Class_Management;
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainController;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class Page_Grade extends MainController
 {
@@ -30,30 +31,27 @@ class Page_Grade extends MainController
             abort(404, 'Class not found');
         }
 
-        // Get student number from session
-        $studentNumber = session('student_number');
+        $studentNumber = Auth::guard('student')->user()->student_number;
 
         return view('modules.class.page_grade', [
             'userType' => 'student',
             'class' => $class,
-            'studentNumber' => json_encode($studentNumber),
+            'studentNumber' => $studentNumber,
         ]);
     }
 
     public function getStudents($classId)
     {
         $students = DB::table('students as s')
-            ->join('student_class_matrix as scm', DB::raw('BINARY s.student_number'), '=', DB::raw('BINARY scm.student_number'))
-            ->join('classes as c', DB::raw('BINARY scm.class_code'), '=', DB::raw('BINARY c.class_code'))
+            ->leftJoin('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
+            ->leftJoin('section_class_matrix as secm', 's.section_id', '=', 'secm.section_id')
+            ->leftJoin('classes as c', function ($join) {
+                $join->on('c.class_code', '=', 'scm.class_code')
+                     ->orOn('c.id', '=', 'secm.class_id');
+            })
             ->where('c.id', $classId)
-            ->select(
-                's.id',
-                's.student_number',
-                's.first_name',
-                's.middle_name',
-                's.last_name',
-                's.gender'
-            )
+            ->select('s.id', 's.student_number', 's.first_name', 's.middle_name', 's.last_name', 's.gender')
+            ->distinct()
             ->orderBy('s.last_name')
             ->orderBy('s.first_name')
             ->get();
@@ -83,27 +81,29 @@ class Page_Grade extends MainController
     public function getGrades($classId)
     {
         $class = DB::table('classes')->where('id', $classId)->first();
-        
-        // Get all students in class
+
         $students = DB::table('students as s')
-            ->join('student_class_matrix as scm', DB::raw('BINARY s.student_number'), '=', DB::raw('BINARY scm.student_number'))
-            ->join('classes as c', DB::raw('BINARY scm.class_code'), '=', DB::raw('BINARY c.class_code'))
+            ->leftJoin('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
+            ->leftJoin('section_class_matrix as secm', 's.section_id', '=', 'secm.section_id')
+            ->leftJoin('classes as c', function ($join) {
+                $join->on('c.class_code', '=', 'scm.class_code')
+                     ->orOn('c.id', '=', 'secm.class_id');
+            })
             ->where('c.id', $classId)
             ->select('s.student_number', 's.first_name', 's.middle_name', 's.last_name')
+            ->distinct()
             ->orderBy('s.last_name')
             ->get();
 
-        // Get all quizzes for this class
         $quizzes = DB::table('quizzes as q')
             ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
             ->where('l.class_id', $classId)
             ->where('q.status', 1)
-            ->select('q.id', 'q.title', 'l.title as lesson_title')
+            ->select('q.id', 'q.title', 'l.title as lesson_title', 'l.order_number')
             ->orderBy('l.order_number')
             ->get();
 
-        // Get quiz attempts for all students
-        $attempts = DB::table('student_quiz_attempts as sqa')
+        $attemptsRaw = DB::table('student_quiz_attempts as sqa')
             ->join('quizzes as q', 'sqa.quiz_id', '=', 'q.id')
             ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
             ->where('l.class_id', $classId)
@@ -115,10 +115,10 @@ class Page_Grade extends MainController
                 DB::raw('MAX(sqa.total_points) as total_points')
             )
             ->groupBy('sqa.student_number', 'sqa.quiz_id')
-            ->get()
-            ->groupBy('student_number');
+            ->get();
 
-        // Build grade matrix
+        $attempts = $attemptsRaw->groupBy('student_number');
+
         $grades = [];
         foreach ($students as $student) {
             $studentGrades = [
@@ -130,7 +130,7 @@ class Page_Grade extends MainController
             foreach ($quizzes as $quiz) {
                 $score = null;
                 $total = null;
-                
+
                 if (isset($attempts[$student->student_number])) {
                     $quizAttempt = $attempts[$student->student_number]->firstWhere('quiz_id', $quiz->id);
                     if ($quizAttempt) {
@@ -159,13 +159,12 @@ class Page_Grade extends MainController
     public function getStudentGrades($classId, $studentNumber)
     {
         $class = DB::table('classes')->where('id', $classId)->first();
-        
-        // Get student quiz attempts with details
+
         $attempts = DB::table('student_quiz_attempts as sqa')
             ->join('quizzes as q', 'sqa.quiz_id', '=', 'q.id')
             ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
             ->where('l.class_id', $classId)
-            ->where(DB::raw('BINARY sqa.student_number'), '=', $studentNumber)
+            ->where('sqa.student_number', $studentNumber)
             ->where('sqa.status', 'graded')
             ->select(
                 'q.id as quiz_id',
@@ -176,14 +175,13 @@ class Page_Grade extends MainController
                 'sqa.total_points',
                 'sqa.submitted_at',
                 'sqa.attempt_number',
-                DB::raw('(sqa.score / sqa.total_points * 100) as percentage')
+                DB::raw('ROUND((sqa.score / sqa.total_points * 100), 2) as percentage')
             )
             ->orderBy('l.order_number')
             ->orderBy('sqa.submitted_at', 'desc')
             ->get()
             ->groupBy('quiz_id');
 
-        // Get best attempts
         $grades = [];
         foreach ($attempts as $quizId => $quizAttempts) {
             $best = $quizAttempts->sortByDesc('score')->first();
@@ -191,17 +189,16 @@ class Page_Grade extends MainController
                 'quiz_id' => $best->quiz_id,
                 'quiz_title' => $best->quiz_title,
                 'lesson_title' => $best->lesson_title,
-                'score' => $best->score,
-                'total_points' => $best->total_points,
-                'percentage' => round($best->percentage, 2),
-                'passing_score' => $best->passing_score,
+                'score' => floatval($best->score),
+                'total_points' => floatval($best->total_points),
+                'percentage' => floatval($best->percentage),
+                'passing_score' => floatval($best->passing_score),
                 'passed' => $best->percentage >= $best->passing_score,
                 'attempt_count' => $quizAttempts->count(),
                 'submitted_at' => $best->submitted_at
             ];
         }
 
-        // Calculate summary
         $totalScore = collect($grades)->sum('score');
         $totalPoints = collect($grades)->sum('total_points');
         $averagePercentage = $totalPoints > 0 ? round(($totalScore / $totalPoints) * 100, 2) : 0;

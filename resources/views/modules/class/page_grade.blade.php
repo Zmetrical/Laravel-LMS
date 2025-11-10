@@ -131,35 +131,46 @@
 <script>
 $(document).ready(function() {
     const classId = {{ $class->id }};
-    const studentNumber = {{ $studentNumber }};
+    const studentNumber = "{{ $studentNumber }}";
     
-    function loadGrades() {
-        $('#loadingState').show();
-        $('#gradeTableContainer').hide();
-        $('#emptyState').hide();
-        
-        $.ajax({
-            url: `/class/${classId}/student/${studentNumber}/grades`,
-            method: 'GET',
-            success: function(response) {
-                $('#loadingState').hide();
-                
-                if (response.grades.length === 0) {
-                    $('#emptyState').show();
-                    updateSummary(response.summary);
-                    return;
-                }
-                
-                renderGrades(response.grades, response.summary);
-                $('#gradeTableContainer').show();
-            },
-            error: function(xhr) {
-                $('#loadingState').hide();
-                toastr.error('Failed to load grades');
-                console.error(xhr);
+function loadGrades() {
+    $('#loadingState').show();
+    $('#gradeTableContainer').hide();
+    $('#emptyState').hide();
+    
+    console.log('Loading grades for class:', classId, 'student:', studentNumber);
+    
+    $.ajax({
+        url: `/class/${classId}/student/${studentNumber}/grades`,
+        method: 'GET',
+        success: function(response) {
+            console.log('Full Response:', response);
+            console.log('Grades:', response.grades);
+            console.log('Grades Length:', response.grades.length);
+            console.log('Summary:', response.summary);
+            
+            $('#loadingState').hide();
+            
+            if (!response.grades || response.grades.length === 0) {
+                console.log('No grades found - showing empty state');
+                $('#emptyState').show();
+                updateSummary(response.summary);
+                return;
             }
-        });
-    }
+            
+            console.log('Rendering grades...');
+            renderGrades(response.grades, response.summary);
+            $('#gradeTableContainer').show();
+        },
+        error: function(xhr) {
+            console.error('Error loading grades:', xhr);
+            console.error('Status:', xhr.status);
+            console.error('Response:', xhr.responseText);
+            $('#loadingState').hide();
+            toastr.error('Failed to load grades');
+        }
+    });
+}
     
     function renderGrades(grades, summary) {
         const $tbody = $('#gradeTableBody');

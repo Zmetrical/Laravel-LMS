@@ -97,25 +97,37 @@ $(document).ready(function() {
         $('#gradeTableContainer').hide();
         $('#emptyState').hide();
         
+        console.log('Loading grades for class:', classId);
+        
         $.ajax({
-            url: `/class/${classId}/grades`,
+            url: `/class/${classId}/get_grades`,
             method: 'GET',
             success: function(response) {
+                console.log('Full Response:', response);
+                console.log('Grades:', response.grades);
+                console.log('Grades Length:', response.grades.length);
+                console.log('Quizzes:', response.quizzes);
+                console.log('Quizzes Length:', response.quizzes.length);
+                
                 $('#loadingState').hide();
                 
-                if (response.grades.length === 0 || response.quizzes.length === 0) {
+                if (!response.grades || response.grades.length === 0 || !response.quizzes || response.quizzes.length === 0) {
+                    console.log('No data found - showing empty state');
                     $('#emptyState').show();
                     updateSummary(0, 0, 0, 0);
                     return;
                 }
                 
+                console.log('Rendering grade table...');
                 renderGradeTable(response.grades, response.quizzes, response.class);
                 $('#gradeTableContainer').show();
             },
             error: function(xhr) {
+                console.error('Error loading grades:', xhr);
+                console.error('Status:', xhr.status);
+                console.error('Response:', xhr.responseText);
                 $('#loadingState').hide();
                 toastr.error('Failed to load grades');
-                console.error(xhr);
             }
         });
     }

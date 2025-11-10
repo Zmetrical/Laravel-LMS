@@ -262,13 +262,13 @@ Route::get('/class_management/list_schoolyear', [Class_Management::class, 'list_
 // Grade Management Routes
 Route::prefix('class/{classId}')->group(function () {
     // Get all grades for a class (Teacher)
-    Route::get('/grades', [Page_Grade::class, 'getGrades']);
+    Route::get('/get_grades', [Page_Grade::class, 'getGrades']);
     
     // Get students in a class
-    Route::get('/students', [Page_Grade::class, 'getStudents']);
+    Route::get('/get_students', [Page_Grade::class, 'getStudents']);
     
     // Get quizzes in a class
-    Route::get('/quizzes', [Page_Grade::class, 'getQuizzes']);
+    Route::get('/get_quizzes', [Page_Grade::class, 'getQuizzes']);
     
     // Get specific student grades (Student)
     Route::get('/student/{studentNumber}/grades', [Page_Grade::class, 'getStudentGrades']);
@@ -405,6 +405,7 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/grades', [Page_Grade::class, 'teacherIndex'])
                 ->name('class.grades');
             Route::get('/participants', [Page_Participant::class, 'teacherIndex'])->name('class.participants');
+            Route::get('/participants/list', [Page_Participant::class, 'getParticipants'])->name('class.participants.list');
 
             // API Routes for Lessons
             Route::get('/lessons/list', [Page_Lesson::class, 'teacherList'])->name('class.lessons.list');
