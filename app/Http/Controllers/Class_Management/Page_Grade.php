@@ -36,15 +36,15 @@ class Page_Grade extends MainController
         return view('modules.class.page_grade', [
             'userType' => 'student',
             'class' => $class,
-            'studentNumber' => $studentNumber,
+            'studentNumber' => json_encode($studentNumber),
         ]);
     }
 
     public function getStudents($classId)
     {
         $students = DB::table('students as s')
-            ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
-            ->join('classes as c', 'scm.class_code', '=', 'c.class_code')
+            ->join('student_class_matrix as scm', DB::raw('BINARY s.student_number'), '=', DB::raw('BINARY scm.student_number'))
+            ->join('classes as c', DB::raw('BINARY scm.class_code'), '=', DB::raw('BINARY c.class_code'))
             ->where('c.id', $classId)
             ->select(
                 's.id',
@@ -86,8 +86,8 @@ class Page_Grade extends MainController
         
         // Get all students in class
         $students = DB::table('students as s')
-            ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
-            ->join('classes as c', 'scm.class_code', '=', 'c.class_code')
+            ->join('student_class_matrix as scm', DB::raw('BINARY s.student_number'), '=', DB::raw('BINARY scm.student_number'))
+            ->join('classes as c', DB::raw('BINARY scm.class_code'), '=', DB::raw('BINARY c.class_code'))
             ->where('c.id', $classId)
             ->select('s.student_number', 's.first_name', 's.middle_name', 's.last_name')
             ->orderBy('s.last_name')
@@ -123,11 +123,8 @@ class Page_Grade extends MainController
         foreach ($students as $student) {
             $studentGrades = [
                 'student_number' => $student->student_number,
-                'full_name' => $student->last_name . ', ' . $student->first_name . ' ' . $student->middle_name,
+                'full_name' => trim($student->last_name . ', ' . $student->first_name . ' ' . $student->middle_name),
                 'quizzes' => [],
-                'ww_total' => 0,
-                'pt_total' => 0,
-                'qa_total' => 0,
             ];
 
             foreach ($quizzes as $quiz) {
@@ -168,7 +165,7 @@ class Page_Grade extends MainController
             ->join('quizzes as q', 'sqa.quiz_id', '=', 'q.id')
             ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
             ->where('l.class_id', $classId)
-            ->where('sqa.student_number', $studentNumber)
+            ->where(DB::raw('BINARY sqa.student_number'), '=', $studentNumber)
             ->where('sqa.status', 'graded')
             ->select(
                 'q.id as quiz_id',

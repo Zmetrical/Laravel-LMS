@@ -228,8 +228,10 @@
 @endsection
 
 @section('page-scripts')
-<script>
+
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+<script>
 
     const QUIZ_ID = {{ $quiz->id }};
     const LESSON_ID = {{ $lesson->id }};
