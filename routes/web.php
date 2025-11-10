@@ -331,6 +331,23 @@ Route::prefix('student')->group(function () {
 
             // API Routes for Lessons
             Route::get('/lessons/list', [Page_Lesson::class, 'studentList'])->name('student.class.lessons.list');
+
+
+            // View quiz details and attempts
+            Route::get('/lesson/{lessonId}/quiz/{quizId}', [Page_Quiz::class, 'studentViewQuiz'])
+                ->name('student.class.quiz.view');
+
+            // Start quiz attempt
+            Route::get('/lesson/{lessonId}/quiz/{quizId}/start', [Page_Quiz::class, 'studentStartQuiz'])
+                ->name('student.class.quiz.start');
+
+            // Submit quiz attempt
+            Route::post('/lesson/{lessonId}/quiz/{quizId}/submit', [Page_Quiz::class, 'studentSubmitQuiz'])
+                ->name('student.class.quiz.submit');
+
+            // View attempt results
+            Route::get('/lesson/{lessonId}/quiz/{quizId}/results/{attemptId}', [Page_Quiz::class, 'studentGetResults'])
+                ->name('student.class.quiz.results');
         });
     });
 });

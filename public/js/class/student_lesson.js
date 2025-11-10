@@ -250,6 +250,7 @@ function viewLecture(lessonId, lectureId) {
         .replace(':lectureId', lectureId);
 }
 
+
 function takeQuiz(lessonId, quizId) {
     toastr.info('Take Quiz functionality - To be implemented');
 }
