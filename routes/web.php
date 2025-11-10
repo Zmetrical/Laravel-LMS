@@ -256,6 +256,26 @@ Route::get('/class_management/list_schoolyear', [Class_Management::class, 'list_
 
 
 // ---------------------------------------------------------------------------
+//  Grade Management
+// ---------------------------------------------------------------------------
+
+// Grade Management Routes
+Route::prefix('class/{classId}')->group(function () {
+    // Get all grades for a class (Teacher)
+    Route::get('/grades', [Page_Grade::class, 'getGrades']);
+    
+    // Get students in a class
+    Route::get('/students', [Page_Grade::class, 'getStudents']);
+    
+    // Get quizzes in a class
+    Route::get('/quizzes', [Page_Grade::class, 'getQuizzes']);
+    
+    // Get specific student grades (Student)
+    Route::get('/student/{studentNumber}/grades', [Page_Grade::class, 'getStudentGrades']);
+});
+
+
+// ---------------------------------------------------------------------------
 //  Student 
 // ---------------------------------------------------------------------------
 
@@ -324,10 +344,8 @@ Route::prefix('student')->group(function () {
                 return view('modules.class.page_quiz', ['userType' => 'student', 'class' => $class]);
             })->name('student.class.quizzes');
 
-            Route::get('/grades', function ($classId) {
-                $class = DB::table('classes')->where('id', $classId)->first();
-                return view('modules.class.page_grade', ['userType' => 'student', 'class' => $class]);
-            })->name('student.class.grades');
+            Route::get('/grades', [Page_Grade::class, 'studentIndex'])
+                ->name('student.class.grades');
 
             // API Routes for Lessons
             Route::get('/lessons/list', [Page_Lesson::class, 'studentList'])->name('student.class.lessons.list');
@@ -383,7 +401,9 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             // View Pages
             Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('class.lessons');
             Route::get('/quizzes', [Page_Quiz::class, 'teacherIndex'])->name('class.quizzes');
-            Route::get('/grades', [Page_Grade::class, 'teacherIndex'])->name('class.grades');
+
+            Route::get('/grades', [Page_Grade::class, 'teacherIndex'])
+                ->name('class.grades');
             Route::get('/participants', [Page_Participant::class, 'teacherIndex'])->name('class.participants');
 
             // API Routes for Lessons
@@ -391,6 +411,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::post('/lessons', [Page_Lesson::class, 'store'])->name('class.lessons.store');
             Route::put('/lessons/{lessonId}', [Page_Lesson::class, 'update'])->name('class.lessons.update');
             Route::delete('/lessons/{lessonId}', [Page_Lesson::class, 'destroy'])->name('class.lessons.delete');
+        
+
         });
 
         // Lecture Management Routes - CORRECTED
