@@ -18,7 +18,7 @@ use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Page_Grade;
 use App\Http\Controllers\Class_Management\Page_Participant;
-use App\Http\Controllers\Class_Management\Lecture;
+use App\Http\Controllers\Class_Management\Page_Lecture;
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -303,19 +303,19 @@ Route::prefix('student')->group(function () {
 
             Route::prefix('lesson/{lessonId}')->group(function () {
                 // View lecture page
-                Route::get('lecture/{lectureId}', [Lecture::class, 'view'])
+                Route::get('lecture/{lectureId}', [Page_Lecture::class, 'view'])
                     ->name('student.class.lectures.view');
 
                 // Get lecture data (AJAX)
-                Route::get('lecture/{lectureId}/data', [Lecture::class, 'getData'])
+                Route::get('lecture/{lectureId}/data', [Page_Lecture::class, 'getData'])
                     ->name('student.class.lectures.view.data');
 
                 // Download file
-                Route::get('/{lectureId}/download/{filename}', [App\Http\Controllers\Class_Management\Lecture::class, 'download'])
+                Route::get('/{lectureId}/download/{filename}', [Page_Lecture::class, 'download'])
                     ->name('download');
 
                 // Stream file
-                Route::get('/{lectureId}/stream/{filename}', [App\Http\Controllers\Class_Management\Lecture::class, 'stream'])
+                Route::get('/{lectureId}/stream/{filename}', [Page_Lecture::class, 'stream'])
                     ->name('stream');
             });
 
@@ -379,19 +379,29 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         // Lecture Management Routes - CORRECTED
         Route::prefix('class/{classId}/lesson/{lessonId}/lecture')->name('class.lectures.')->group(function () {
             // Create
-            Route::get('/create', [Lecture::class, 'create'])->name('create');
-            Route::post('/', [Lecture::class, 'store'])->name('store');
+            Route::get('/create', [Page_Lecture::class, 'create'])->name('create');
+            Route::post('/', [Page_Lecture::class, 'store'])->name('store');
 
             // Edit
-            Route::get('/{lectureId}/edit', [Lecture::class, 'edit'])->name('edit');
-            Route::put('/{lectureId}', [Lecture::class, 'update'])->name('update');
+            Route::get('/{lectureId}/edit', [Page_Lecture::class, 'edit'])->name('edit');
+            Route::put('/{lectureId}', [Page_Lecture::class, 'update'])->name('update');
 
             // Delete (soft delete) - MUST use DELETE method
-            Route::delete('/{lectureId}', [Lecture::class, 'destroy'])->name('destroy');
-            
+            Route::delete('/{lectureId}', [Page_Lecture::class, 'destroy'])->name('destroy');
+
             // Download/Stream files
-            Route::get('/{lectureId}/download/{filename}', [Lecture::class, 'download'])->name('download');
-            Route::get('/{lectureId}/stream/{filename}', [Lecture::class, 'stream'])->name('stream');
+            Route::get('/{lectureId}/download/{filename}', [Page_Lecture::class, 'download'])->name('download');
+            Route::get('/{lectureId}/stream/{filename}', [Page_Lecture::class, 'stream'])->name('stream');
+        });
+
+        // Quiz routes for teachers
+        Route::prefix('teacher/class/{classId}/lesson/{lessonId}/quiz')->name('class.quiz.')->group(function () {
+            Route::get('/create', [Page_Quiz::class, 'teacherCreate'])->name('create');
+            Route::post('/store', [Page_Quiz::class, 'store'])->name('store');
+            Route::get('/{quizId}/edit', [Page_Quiz::class, 'teacherEdit'])->name('edit');
+            Route::get('/{quizId}/data', [Page_Quiz::class, 'getQuizData'])->name('data');
+            Route::put('/{quizId}/update', [Page_Quiz::class, 'update'])->name('update');
+            Route::delete('/{quizId}/delete', [Page_Quiz::class, 'destroy'])->name('delete');
         });
     });
 });

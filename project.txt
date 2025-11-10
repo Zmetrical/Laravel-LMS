@@ -13,12 +13,6 @@ CREATE TABLE `admins` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `classes`
---
-
 CREATE TABLE `classes` (
   `id` int(11) NOT NULL,
   `class_code` varchar(100) NOT NULL,
@@ -29,12 +23,6 @@ CREATE TABLE `classes` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `lectures`
---
 
 CREATE TABLE `lectures` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -49,12 +37,6 @@ CREATE TABLE `lectures` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `lessons`
---
-
 CREATE TABLE `lessons` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `class_id` int(11) NOT NULL,
@@ -66,12 +48,6 @@ CREATE TABLE `lessons` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `levels`
---
-
 CREATE TABLE `levels` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -79,23 +55,11 @@ CREATE TABLE `levels` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `migrations`
---
-
 CREATE TABLE `migrations` (
   `id` int(10) UNSIGNED NOT NULL,
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `quizzes`
---
 
 CREATE TABLE `quizzes` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -112,12 +76,6 @@ CREATE TABLE `quizzes` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `quiz_questions`
---
-
 CREATE TABLE `quiz_questions` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `quiz_id` bigint(20) UNSIGNED NOT NULL,
@@ -129,12 +87,6 @@ CREATE TABLE `quiz_questions` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `quiz_question_options`
---
-
 CREATE TABLE `quiz_question_options` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `question_id` bigint(20) UNSIGNED NOT NULL,
@@ -144,12 +96,6 @@ CREATE TABLE `quiz_question_options` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sections`
---
 
 CREATE TABLE `sections` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -162,23 +108,11 @@ CREATE TABLE `sections` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `section_class_matrix`
---
-
 CREATE TABLE `section_class_matrix` (
   `id` int(11) NOT NULL,
   `section_id` int(11) NOT NULL,
   `class_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sessions`
---
 
 CREATE TABLE `sessions` (
   `id` varchar(255) NOT NULL,
@@ -189,12 +123,6 @@ CREATE TABLE `sessions` (
   `last_activity` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `strands`
---
-
 CREATE TABLE `strands` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `code` varchar(100) NOT NULL,
@@ -203,12 +131,6 @@ CREATE TABLE `strands` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `students`
---
 
 CREATE TABLE `students` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -228,35 +150,17 @@ CREATE TABLE `students` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `student_class_matrix`
---
-
 CREATE TABLE `student_class_matrix` (
   `id` int(11) NOT NULL,
   `student_number` varchar(100) NOT NULL,
   `class_code` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `student_password_matrix`
---
-
 CREATE TABLE `student_password_matrix` (
   `id` int(11) NOT NULL,
   `student_number` varchar(100) NOT NULL,
   `plain_password` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `student_quiz_answers`
---
 
 CREATE TABLE `student_quiz_answers` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -269,12 +173,6 @@ CREATE TABLE `student_quiz_answers` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `student_quiz_attempts`
---
 
 CREATE TABLE `student_quiz_attempts` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -289,12 +187,6 @@ CREATE TABLE `student_quiz_attempts` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `teachers`
---
 
 CREATE TABLE `teachers` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -312,35 +204,17 @@ CREATE TABLE `teachers` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `teacher_class_matrix`
---
-
 CREATE TABLE `teacher_class_matrix` (
   `id` int(11) NOT NULL,
   `teacher_id` int(11) NOT NULL,
   `class_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `teacher_password_matrix`
---
-
 CREATE TABLE `teacher_password_matrix` (
   `id` int(11) NOT NULL,
   `teacher_id` int(11) NOT NULL,
   `plain_password` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `users`
---
 
 CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,

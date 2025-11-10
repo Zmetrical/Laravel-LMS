@@ -170,11 +170,16 @@
         getLessons: "{{ route($userType === 'teacher' ? 'teacher.class.lessons.list' : 'student.class.lessons.list', $class->id ?? 0) }}",
         
         @if($userType === 'teacher')
+        // Lesson
             createLesson: "{{ route('teacher.class.lessons.store', $class->id ?? 0) }}",
             updateLesson: "{{ route('teacher.class.lessons.update', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
             deleteLesson: "{{ route('teacher.class.lessons.delete', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
+        // Lecture 
             createLecture: "{{ route('teacher.class.lectures.create', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
-            editLecture: "{{ route('teacher.class.lectures.edit', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}"
+            editLecture: "{{ route('teacher.class.lectures.edit', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}",
+        // Quiz
+            createQuiz: "{{ route('teacher.class.quiz.create', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
+            editQuiz: "{{ route('teacher.class.quiz.edit', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'quizId' => ':quizId']) }}"
         @else
             viewLecture: "{{ route('student.class.lectures.view', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}"
         @endif
