@@ -137,7 +137,6 @@
                             <th>Score</th>
                             <th>Percentage</th>
                             <th>Status</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -164,16 +163,6 @@
                                         @endif
                                     @else
                                         <span class="badge badge-pending">Pending Review</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($quiz->show_results && $attempt->status === 'graded')
-                                        <button class="btn btn-sm btn-info view-results-btn" 
-                                                data-attempt-id="{{ $attempt->id }}">
-                                            <i class="fas fa-eye"></i> View Results
-                                        </button>
-                                    @else
-                                        <span class="text-muted">-</span>
                                     @endif
                                 </td>
                             </tr>
@@ -234,33 +223,7 @@
     </div>
 </div>
 
-<!-- Results Modal -->
-<div class="modal fade" id="resultsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info">
-                <h5 class="modal-title text-white">
-                    <i class="fas fa-chart-bar"></i> Quiz Results
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="resultsContent">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="sr-only">Loading...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+
 @endsection
 
 @section('page-scripts')

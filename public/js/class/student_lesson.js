@@ -252,5 +252,15 @@ function viewLecture(lessonId, lectureId) {
 
 
 function takeQuiz(lessonId, quizId) {
-    toastr.info('Take Quiz functionality - To be implemented');
+    // Check if route is defined
+    if (typeof API_ROUTES.viewQuiz === 'undefined') {
+        console.error('viewQuiz route is not defined');
+        toastr.error('Navigation route not configured');
+        return;
+    }
+    
+    // Redirect to quiz view page
+    window.location.href = API_ROUTES.viewQuiz
+        .replace(':lessonId', lessonId)
+        .replace(':quizId', quizId);
 }

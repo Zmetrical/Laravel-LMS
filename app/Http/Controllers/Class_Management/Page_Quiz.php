@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Class_Management;
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainController;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class Page_Quiz extends MainController
 {
@@ -360,7 +361,7 @@ class Page_Quiz extends MainController
      */
     public function studentViewQuiz($classId, $lessonId, $quizId)
     {
-        $studentNumber = session('student_number');
+        $studentNumber = Auth::guard('student')->user()->student_number;
         
         $class = DB::table('classes')->where('id', $classId)->first();
         $lesson = DB::table('lessons')
@@ -395,7 +396,7 @@ class Page_Quiz extends MainController
             ->sum('points');
 
         $data = [
-            'scripts' => ['class_quiz/student_view_quiz.js'],
+            'scripts' => ['class_quiz/student_view.js'],
             'userType' => 'student',
             'class' => $class,
             'lesson' => $lesson,
@@ -406,7 +407,7 @@ class Page_Quiz extends MainController
             'canAttempt' => $attempts->count() < $quiz->max_attempts
         ];
 
-        return view('modules.class.student_view_quiz', $data);
+        return view('modules.class.view_quiz', $data);
     }
 
     /**
@@ -414,7 +415,7 @@ class Page_Quiz extends MainController
      */
     public function studentStartQuiz($classId, $lessonId, $quizId)
     {
-        $studentNumber = session('student_number');
+        $studentNumber = Auth::guard('student')->user()->student_number;
         
         $class = DB::table('classes')->where('id', $classId)->first();
         $lesson = DB::table('lessons')
@@ -473,7 +474,7 @@ class Page_Quiz extends MainController
         }
 
         $data = [
-            'scripts' => ['class_quiz/student_take_quiz.js'],
+            'scripts' => ['class_quiz/student_view_active.js'],
             'userType' => 'student',
             'class' => $class,
             'lesson' => $lesson,
@@ -482,7 +483,7 @@ class Page_Quiz extends MainController
             'attemptNumber' => $attemptCount + 1
         ];
 
-        return view('modules.class.student_take_quiz', $data);
+        return view('modules.class.view_quiz_active', $data);
     }
 
     /**
@@ -490,7 +491,7 @@ class Page_Quiz extends MainController
      */
     public function studentSubmitQuiz(Request $request, $classId, $lessonId, $quizId)
     {
-        $studentNumber = session('student_number');
+        $studentNumber = Auth::guard('student')->user()->student_number;
         
         DB::beginTransaction();
         try {
@@ -622,7 +623,7 @@ class Page_Quiz extends MainController
     public function studentGetResults($classId, $lessonId, $quizId, $attemptId)
     {
         try {
-            $studentNumber = session('student_number');
+        $studentNumber = Auth::guard('student')->user()->student_number;
             
             $attempt = DB::table('student_quiz_attempts')
                 ->where('id', $attemptId)

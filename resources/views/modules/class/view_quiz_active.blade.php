@@ -4,6 +4,8 @@
     'class' => $class])
 
 @section('page-styles')
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+
 <style>
     .quiz-timer {
         position: fixed;
@@ -227,16 +229,19 @@
 
 @section('page-scripts')
 <script>
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
     const QUIZ_ID = {{ $quiz->id }};
-    const CLASS_ID = {{ $class->id }};
     const LESSON_ID = {{ $lesson->id }};
     const TIME_LIMIT = {{ $quiz->time_limit ?? 0 }};
+    const PASSING_SCORE = {{ $quiz->passing_score ?? 75 }};
     const QUESTIONS = @json($questions);
     
     const API_ROUTES = {
         submitQuiz: "{{ route('student.class.quiz.submit', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id]) }}",
         backToQuiz: "{{ route('student.class.quiz.view', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id]) }}"
     };
+
 </script>
 @if(isset($scripts))
     @foreach($scripts as $script)
