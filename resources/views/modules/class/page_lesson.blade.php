@@ -173,11 +173,13 @@
             createLesson: "{{ route('teacher.class.lessons.store', $class->id ?? 0) }}",
             updateLesson: "{{ route('teacher.class.lessons.update', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
             deleteLesson: "{{ route('teacher.class.lessons.delete', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
-
             createLecture: "{{ route('teacher.class.lectures.create', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
-            editLecture: "{{ route('teacher.class.lectures.edit', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}",
+            editLecture: "{{ route('teacher.class.lectures.edit', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}"
+        @else
+            viewLecture: "{{ route('student.class.lectures.view', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}"
         @endif
     };
+    
 </script>
     @if(isset($scripts))
         @foreach($scripts as $script)

@@ -19,7 +19,6 @@ use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Page_Grade;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Lecture;
-
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -301,6 +300,21 @@ Route::prefix('student')->group(function () {
             // View Pages
             Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('student.class.lessons');
 
+
+            Route::prefix('lesson/{lessonId}')->group(function () {
+                // View lecture page
+                Route::get('lecture/{lectureId}', [Lecture::class, 'view'])
+                    ->name('student.class.lectures.view');
+
+                // Get lecture data (AJAX)
+                Route::get('lecture/{lectureId}/data', [Lecture::class, 'getData'])
+                    ->name('student.class.lectures.view.data');
+
+                // Download lecture file
+                Route::get('lecture/download', [Lecture::class, 'download'])
+                    ->name('student.class.lectures.download');
+            });
+
             Route::get('/quizzes', function ($classId) {
                 $class = DB::table('classes')->where('id', $classId)->first();
                 return view('modules.class.page_quiz', ['userType' => 'student', 'class' => $class]);
@@ -376,11 +390,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             // Delete (soft delete)
             Route::delete('/{lectureId}', [Lecture::class, 'destroy'])
                 ->name('class.lectures.delete');
-
-            Route::get('/storage/lectures/{filename}', [Lecture::class, 'download'])
-                ->name('lecture.file.download');
-            Route::get('/storage/lectures/{filename}', [Lecture::class, 'stream'])
-                ->name('lecture.file.stream');
         });
     });
 });

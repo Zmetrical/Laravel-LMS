@@ -322,4 +322,179 @@ class Lecture extends MainController
             'Content-Disposition' => 'inline; filename="' . $filename . '"'
         ]);
     }
+
+/**
+ * Show lecture view for student
+ */
+public function view($classId, $lessonId, $lectureId)
+{
+    // Get class info
+    $class = DB::table('classes')->where('id', $classId)->first();
+    
+    if (!$class) {
+        abort(404, 'Class not found');
+    }
+
+    // Get lecture with lesson info
+    $lecture = DB::table('lectures')
+        ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+        ->where('lectures.id', $lectureId)
+        ->where('lessons.id', $lessonId)
+        ->where('lessons.class_id', $classId)
+        ->where('lectures.status', 1)
+        ->where('lessons.status', 1)
+        ->select(
+            'lectures.*',
+            'lessons.title as lesson_title',
+            'lessons.description as lesson_description',
+            'lessons.class_id'
+        )
+        ->first();
+
+    if (!$lecture) {
+        abort(404, 'Lecture not found or not available');
+    }
+
+    // Get all lectures in this lesson for navigation
+    $allLectures = DB::table('lectures')
+        ->where('lesson_id', $lessonId)
+        ->where('status', 1)
+        ->orderBy('order_number', 'asc')
+        ->orderBy('created_at', 'asc')
+        ->get();
+
+    // Find previous and next lectures
+    $currentIndex = $allLectures->search(function($item) use ($lectureId) {
+        return $item->id == $lectureId;
+    });
+
+    $previousLecture = $currentIndex > 0 ? $allLectures[$currentIndex - 1] : null;
+    $nextLecture = $currentIndex < $allLectures->count() - 1 ? $allLectures[$currentIndex + 1] : null;
+
+    return view('modules.class.lecture_view', [
+        'class' => $class,
+        'lessonId' => $lessonId,  // Add this
+        'lectureId' => $lectureId, // Add this
+        'lecture' => $lecture,
+        'allLectures' => $allLectures,
+        'previousLecture' => $previousLecture,
+        'nextLecture' => $nextLecture,
+        'currentIndex' => $currentIndex + 1,
+        'totalLectures' => $allLectures->count(),
+        'userType' => 'student', // Add this for consistency
+        'scripts' => ['class/student_lecture.js']
+    ]);
+}
+
+/**
+ * Get lecture content via AJAX
+ */
+public function getContent($classId, $lessonId, $lectureId)
+{
+    try {
+        $lecture = DB::table('lectures')
+            ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+            ->where('lectures.id', $lectureId)
+            ->where('lessons.id', $lessonId)
+            ->where('lessons.class_id', $classId)
+            ->where('lectures.status', 1)
+            ->where('lessons.status', 1)
+            ->select('lectures.*')
+            ->first();
+
+        if (!$lecture) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lecture not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $lecture->id,
+                'title' => $lecture->title,
+                'content_type' => $lecture->content_type,
+                'content' => $lecture->content,
+                'file_path' => $lecture->file_path,
+                'file_name' => $lecture->file_path ? basename($lecture->file_path) : null
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load lecture: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get lecture data via AJAX (for student view)
+ */
+public function getData($classId, $lessonId, $lectureId)
+{
+    try {
+        // Get class info
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        if (!$class) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Get lecture with lesson info
+        $lecture = DB::table('lectures')
+            ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+            ->where('lectures.id', $lectureId)
+            ->where('lessons.id', $lessonId)
+            ->where('lessons.class_id', $classId)
+            ->where('lectures.status', 1)
+            ->where('lessons.status', 1)
+            ->select(
+                'lectures.*',
+                'lessons.title as lesson_title',
+                'lessons.description as lesson_description'
+            )
+            ->first();
+
+        if (!$lecture) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lecture not found or not available'
+            ], 404);
+        }
+
+        // Get all lectures in this lesson for navigation
+        $allLectures = DB::table('lectures')
+            ->where('lesson_id', $lessonId)
+            ->where('status', 1)
+            ->orderBy('order_number', 'asc')
+            ->orderBy('created_at', 'asc')
+            ->select('id', 'title', 'content_type', 'order_number')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'lecture_id' => $lecture->id,
+                'lesson_id' => $lessonId,
+                'title' => $lecture->title,
+                'lesson_title' => $lecture->lesson_title,
+                'content_type' => $lecture->content_type,
+                'content' => $lecture->content,
+                'file_path' => $lecture->file_path,
+                'file_name' => $lecture->file_path ? basename($lecture->file_path) : null,
+                'all_lectures' => $allLectures
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load lecture: ' . $e->getMessage()
+        ], 500);
+    }
+}
+    
 }

@@ -201,13 +201,12 @@
     };
     
     const IS_EDIT = {{ isset($lecture) ? 'true' : 'false' }};
-
-    
+    const CSRF_TOKEN = "{{ csrf_token() }}";
 </script>
 
-    @if(isset($scripts))
-        @foreach($scripts as $script)
-            <script src="{{ asset('js/' . $script) }}"></script>
-        @endforeach
-    @endif
+@if(isset($scripts))
+    @foreach($scripts as $script)
+        <script src="{{ asset('js/' . $script) }}"></script>
+    @endforeach
+@endif
 @endsection
