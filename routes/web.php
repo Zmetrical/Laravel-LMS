@@ -310,9 +310,13 @@ Route::prefix('student')->group(function () {
                 Route::get('lecture/{lectureId}/data', [Lecture::class, 'getData'])
                     ->name('student.class.lectures.view.data');
 
-                // Download lecture file
-                Route::get('lecture/download', [Lecture::class, 'download'])
-                    ->name('student.class.lectures.download');
+                // Download file
+                Route::get('/{lectureId}/download/{filename}', [App\Http\Controllers\Class_Management\Lecture::class, 'download'])
+                    ->name('download');
+
+                // Stream file
+                Route::get('/{lectureId}/stream/{filename}', [App\Http\Controllers\Class_Management\Lecture::class, 'stream'])
+                    ->name('stream');
             });
 
             Route::get('/quizzes', function ($classId) {
@@ -361,7 +365,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::prefix('class/{classId}')->group(function () {
             // View Pages
             Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('class.lessons');
-
             Route::get('/quizzes', [Page_Quiz::class, 'teacherIndex'])->name('class.quizzes');
             Route::get('/grades', [Page_Grade::class, 'teacherIndex'])->name('class.grades');
             Route::get('/participants', [Page_Participant::class, 'teacherIndex'])->name('class.participants');
@@ -373,23 +376,22 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::delete('/lessons/{lessonId}', [Page_Lesson::class, 'destroy'])->name('class.lessons.delete');
         });
 
-        // Lecture Management Routes
-        Route::prefix('class/{classId}/lesson/{lessonId}/lecture')->group(function () {
+        // Lecture Management Routes - CORRECTED
+        Route::prefix('class/{classId}/lesson/{lessonId}/lecture')->name('class.lectures.')->group(function () {
             // Create
-            Route::get('/create', [Lecture::class, 'create'])
-                ->name('class.lectures.create');
-            Route::post('/', [Lecture::class, 'store'])
-                ->name('class.lectures.store');
+            Route::get('/create', [Lecture::class, 'create'])->name('create');
+            Route::post('/', [Lecture::class, 'store'])->name('store');
 
             // Edit
-            Route::get('/{lectureId}/edit', [Lecture::class, 'edit'])
-                ->name('class.lectures.edit');
-            Route::post('/{lectureId}', [Lecture::class, 'update'])
-                ->name('class.lectures.update');
+            Route::get('/{lectureId}/edit', [Lecture::class, 'edit'])->name('edit');
+            Route::put('/{lectureId}', [Lecture::class, 'update'])->name('update');
 
-            // Delete (soft delete)
-            Route::delete('/{lectureId}', [Lecture::class, 'destroy'])
-                ->name('class.lectures.delete');
+            // Delete (soft delete) - MUST use DELETE method
+            Route::delete('/{lectureId}', [Lecture::class, 'destroy'])->name('destroy');
+            
+            // Download/Stream files
+            Route::get('/{lectureId}/download/{filename}', [Lecture::class, 'download'])->name('download');
+            Route::get('/{lectureId}/stream/{filename}', [Lecture::class, 'stream'])->name('stream');
         });
     });
 });

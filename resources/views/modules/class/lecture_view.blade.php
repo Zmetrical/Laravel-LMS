@@ -56,22 +56,7 @@
             </div>
         </div>
 
-        <!-- Study Tips Card -->
-        <div class="card card-outline card-info mt-3">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-lightbulb"></i> Study Tips
-                </h3>
-            </div>
-            <div class="card-body">
-                <ul class="mb-0 pl-3">
-                    <li><small>Take notes while studying</small></li>
-                    <li><small>Review material regularly</small></li>
-                    <li><small>Complete all lectures before quizzes</small></li>
-                    <li><small>Ask questions if unclear</small></li>
-                </ul>
-            </div>
-        </div>
+
     </div>
 </div>
 @endsection
@@ -128,13 +113,14 @@
 
 @section('page-scripts')
 <script>
+    // Lecture-specific constants
     const API_ROUTES = {
         getLectureData: "{{ route('student.class.lectures.view.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
-        downloadFile: "{{ route('student.class.lectures.download', ['classId' => $class->id]) }}",
         backToLessons: "{{ route('student.class.lessons', $class->id) }}"
     };
     
-    const CSRF_TOKEN = "{{ csrf_token() }}";
+    const LESSON_ID = {{ $lessonId }};
+    const LECTURE_ID = {{ $lectureId }};
     const BASE_URL = "{{ url('/') }}";
 </script>
 

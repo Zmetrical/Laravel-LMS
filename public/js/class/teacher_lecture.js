@@ -60,6 +60,11 @@ function submitLecture() {
     formData.append('order_number', $('#orderNumber').val() || 0);
     formData.append('status', $('#status').is(':checked') ? 1 : 0);
     
+    // Add _method for Laravel method spoofing if editing
+    if (IS_EDIT) {
+        formData.append('_method', 'PUT');
+    }
+    
     // Content based on type
     if (contentType === 'text') {
         formData.append('content', $('#textContent').val());
@@ -98,7 +103,7 @@ function submitLecture() {
     
     $.ajax({
         url: API_ROUTES.submitUrl,
-        method: IS_EDIT ? 'POST' : 'POST',
+        method: 'POST', // Always use POST for file uploads, Laravel handles _method
         headers: {
             'X-CSRF-TOKEN': CSRF_TOKEN
         },
@@ -140,11 +145,18 @@ function deleteLecture() {
         return;
     }
     
+    const deleteBtn = $('#deleteLectureBtn');
+    const originalHtml = deleteBtn.html();
+    deleteBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+    
     $.ajax({
         url: API_ROUTES.deleteUrl,
-        method: 'DELETE',
+        method: 'POST', // Use POST for compatibility
         headers: {
             'X-CSRF-TOKEN': CSRF_TOKEN
+        },
+        data: {
+            _method: 'DELETE' // Laravel method spoofing
         },
         success: function(response) {
             if (response.success) {
@@ -154,11 +166,13 @@ function deleteLecture() {
                 }, 1000);
             } else {
                 toastr.error(response.message || 'Failed to delete lecture');
+                deleteBtn.prop('disabled', false).html(originalHtml);
             }
         },
         error: function(xhr) {
             console.error('Error deleting lecture:', xhr);
             toastr.error('Failed to delete lecture');
+            deleteBtn.prop('disabled', false).html(originalHtml);
         }
     });
 }

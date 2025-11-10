@@ -190,10 +190,11 @@
 
 @section('page-scripts')
 <script>
+    // Lecture-specific constants
     const API_ROUTES = {
         @if(isset($lecture))
             submitUrl: "{{ route('teacher.class.lectures.update', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
-            deleteUrl: "{{ route('teacher.class.lectures.delete', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
+            deleteUrl: "{{ route('teacher.class.lectures.destroy', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
         @else
             submitUrl: "{{ route('teacher.class.lectures.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}",
         @endif
@@ -201,7 +202,6 @@
     };
     
     const IS_EDIT = {{ isset($lecture) ? 'true' : 'false' }};
-    const CSRF_TOKEN = "{{ csrf_token() }}";
 </script>
 
 @if(isset($scripts))

@@ -198,7 +198,7 @@ function buildNavigation(lectures, currentLectureId, lessonId) {
     lectures.forEach((lecture, index) => {
         const isActive = lecture.id == currentLectureId;
         const icon = getContentTypeIcon(lecture.content_type);
-        const viewUrl = API_ROUTES.backToLessons.replace('/lessons', `/lesson/${lessonId}/lecture/${lecture.id}`);
+        const viewUrl = `${BASE_URL}/student/class/${CLASS_ID}/lesson/${lessonId}/lecture/${lecture.id}`;
         
         html += `
             <a href="${viewUrl}" 
