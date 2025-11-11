@@ -58,6 +58,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('procedure.insert_teacher');
     });
 
+    Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');
+
+
     // Strand Management Routes
     Route::prefix('strands')->group(function () {
         // Get strands data (AJAX)
@@ -71,9 +74,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/{id}/sections', [Class_Management::class, 'getStrandSections'])->name('strands.sections');
     });
 
+    Route::prefix('sections')->group(function () {
+        Route::get('/data', [Class_Management::class, 'getSectionsData'])->name('sections.data');
+
+        Route::post('/create', [Class_Management::class, 'createSection'])->name('sections.create');
+        Route::put('/{id}', [Class_Management::class, 'updateSection'])->name('sections.update');
+        Route::get('/{id}/classes', [Class_Management::class, 'getSectionClasses'])->name('sections.classes');
+    });
+
     // Enroll Management API
-    Route::prefix('users')->name('users.')->group(function () {
-        // Students
         Route::get('/students', [Enroll_Management::class, 'getStudentsData'])->name('students.list');
         Route::get('/students/{id}/info', [Enroll_Management::class, 'getStudentInfo'])->name('students.info');
         Route::get('/students/{id}/classes', [Enroll_Management::class, 'getStudentClasses'])->name('students.classes');
@@ -82,13 +91,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         
         // Teachers
         Route::get('/teachers', [Enroll_Management::class, 'getTeachersList'])->name('teachers.list');
-    });
 
     // Section Management API
     Route::prefix('sections')->name('sections.')->group(function () {
         Route::get('/', [Enroll_Management::class, 'getSectionsData'])->name('list');
         Route::get('/{id}/details', [Enroll_Management::class, 'getDetails'])->name('details');
         Route::get('/{id}/classes', [Enroll_Management::class, 'getSectionClasses'])->name('classes');
+        
         Route::post('/{id}/enroll-class', [Enroll_Management::class, 'enrollClass'])->name('enroll');
         Route::delete('/{sectionId}/remove-class/{classId}', [Enroll_Management::class, 'removeClass'])->name('remove-class');
     });
@@ -102,6 +111,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/assign-teacher', [Enroll_Management::class, 'assignTeacher'])->name('assign-teacher');
         Route::post('/remove-teacher', [Enroll_Management::class, 'removeTeacher'])->name('remove-teacher');
     });
+
 });
 
 // ===========================================================================

@@ -282,43 +282,325 @@ class Class_Management extends MainController
             ], 500);
         }
     }
-/**
- * Get sections for a specific strand
- */
-public function getStrandSections($id)
-{
-    try {
-        $sections = DB::table('sections')
-            ->join('levels', 'sections.level_id', '=', 'levels.id')
-            ->where('sections.strand_id', $id)
-            ->select(
-                'sections.id',
-                'sections.code',
-                'sections.name',
-                'sections.status',
-                'levels.name as level_name'
-            )
-            ->orderBy('levels.id', 'asc')
-            ->orderBy('sections.code', 'asc')
-            ->get();
+    /**
+     * Get sections for a specific strand
+     */
+    public function getStrandSections($id)
+    {
+        try {
+            $sections = DB::table('sections')
+                ->join('levels', 'sections.level_id', '=', 'levels.id')
+                ->where('sections.strand_id', $id)
+                ->select(
+                    'sections.id',
+                    'sections.code',
+                    'sections.name',
+                    'sections.status',
+                    'levels.name as level_name'
+                )
+                ->orderBy('levels.id', 'asc')
+                ->orderBy('sections.code', 'asc')
+                ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $sections
-        ]);
-    } catch (Exception $e) {
-        \Log::error('Failed to get strand sections', [
-            'strand_id' => $id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $sections
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get strand sections', [
+                'strand_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load sections data.'
-        ], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load sections data.'
+            ], 500);
+        }
     }
-}
+
+    /**
+     * Get sections data with filters (AJAX)
+     */
+    public function getSectionsData(Request $request)
+    {
+        try {
+            $query = DB::table('sections')
+                ->join('levels', 'sections.level_id', '=', 'levels.id')
+                ->join('strands', 'sections.strand_id', '=', 'strands.id')
+                ->select(
+                    'sections.id',
+                    'sections.code',
+                    'sections.name',
+                    'sections.status',
+                    'sections.created_at',
+                    'sections.updated_at',
+                    'levels.id as level_id',
+                    'levels.name as level_name',
+                    'strands.id as strand_id',
+                    'strands.code as strand_code',
+                    'strands.name as strand_name'
+                );
+
+            // Apply filters
+            if ($request->has('strand') && $request->strand != '') {
+                $query->where('strands.code', $request->strand);
+            }
+
+            if ($request->has('level') && $request->level != '') {
+                $query->where('levels.id', $request->level);
+            }
+
+            if ($request->has('search') && $request->search != '') {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('sections.name', 'like', "%{$search}%")
+                        ->orWhere('sections.code', 'like', "%{$search}%");
+                });
+            }
+
+            $sections = $query->orderBy('strands.code', 'asc')
+                ->orderBy('levels.id', 'asc')
+                ->orderBy('sections.name', 'asc')
+                ->get();
+
+            // Get enrolled classes count for each section
+            foreach ($sections as $section) {
+                $section->classes_count = DB::table('section_class_matrix')
+                    ->where('section_id', $section->id)
+                    ->count();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $sections
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get sections data', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load sections data.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get levels data (AJAX)
+     */
+    public function getLevelsData()
+    {
+        try {
+            $levels = DB::table('levels')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $levels
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get levels data', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load levels data.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Create section
+     */
+    public function createSection(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'strand_id' => 'required|exists:strands,id',
+            'level_id' => 'required|exists:levels,id',
+        ]);
+
+        try {
+            // Generate section code
+            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
+            $level = DB::table('levels')->where('id', $request->level_id)->first();
+
+            // Create code format: STRAND-LEVEL-NAME (e.g., STEM-11-VIRGO)
+            $code = strtoupper($strand->code . '-' . $level->name . '-' . $request->name);
+
+            // Check if code already exists
+            $exists = DB::table('sections')->where('code', $code)->exists();
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A section with this combination already exists.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            $sectionId = DB::table('sections')->insertGetId([
+                'code' => $code,
+                'name' => strtoupper($request->name),
+                'strand_id' => $request->strand_id,
+                'level_id' => $request->level_id,
+                'status' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            \Log::info('Section created successfully', [
+                'section_id' => $sectionId,
+                'code' => $code,
+                'name' => $request->name,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Section created successfully!',
+                'section_id' => $sectionId
+            ], 201);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Failed to create section', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update section
+     */
+    public function updateSection(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'strand_id' => 'required|exists:strands,id',
+            'level_id' => 'required|exists:levels,id',
+        ]);
+
+        try {
+            // Check if section exists
+            $section = DB::table('sections')->where('id', $id)->first();
+
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found.'
+                ], 404);
+            }
+
+            // Generate new section code
+            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
+            $level = DB::table('levels')->where('id', $request->level_id)->first();
+
+            $code = strtoupper($strand->code . '-' . $level->name . '-' . $request->name);
+
+            // Check if code already exists (excluding current section)
+            $exists = DB::table('sections')
+                ->where('code', $code)
+                ->where('id', '!=', $id)
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A section with this combination already exists.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            DB::table('sections')
+                ->where('id', $id)
+                ->update([
+                    'code' => $code,
+                    'name' => strtoupper($request->name),
+                    'strand_id' => $request->strand_id,
+                    'level_id' => $request->level_id,
+                    'updated_at' => now(),
+                ]);
+
+            \Log::info('Section updated successfully', [
+                'section_id' => $id,
+                'code' => $code,
+                'name' => $request->name,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Section updated successfully!'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Failed to update section', [
+                'section_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get section classes (enrolled classes for a section)
+     */
+    public function getSectionClasses($id)
+    {
+        try {
+            $classes = DB::table('section_class_matrix')
+                ->join('classes', 'section_class_matrix.class_id', '=', 'classes.id')
+                ->where('section_class_matrix.section_id', $id)
+                ->select(
+                    'classes.id',
+                    'classes.class_code',
+                    'classes.class_name',
+                    'classes.ww_perc',
+                    'classes.pt_perc',
+                    'classes.qa_perce'
+                )
+                ->orderBy('classes.class_code', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $classes
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get section classes', [
+                'section_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load classes data.'
+            ], 500);
+        }
+    }
+
     public function list_schoolyear()
     {
         $data = [

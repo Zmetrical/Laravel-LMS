@@ -174,9 +174,9 @@
         const API_ROUTES = {
             getSections: "{{ route('admin.sections.data') }}",
             getSectionClasses: "{{ route('admin.sections.classes', ['id' => ':id']) }}",
-            getAvailableClasses: "{{ route('admin.sections.availableClasses', ['sectionId' => ':id']) }}",
-            enrollClass: "{{ route('admin.sections.enrollClass', ['id' => ':id']) }}",
-            removeClass: "{{ route('admin.sections.removeClass', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}"
+            getAvailableClasses: "{{ route('admin.classes.available', ['sectionId' => ':id']) }}",
+            enrollClass: "{{ route('admin.sections.enroll', ['id' => ':id']) }}",
+            removeClass: "{{ route('admin.sections.remove-class', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}"
         };
     </script>
     @if(isset($scripts))
