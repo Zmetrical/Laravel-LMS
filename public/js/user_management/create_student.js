@@ -19,7 +19,7 @@ $(document).ready(function () {
 
         if (Object.keys(params).length > 0) {
             $.ajax({
-                url: '/procedure/get_sections',
+                url: API_ROUTES.getSections,
                 method: 'GET',
                 data: params,
                 success: function (data) {
@@ -154,7 +154,6 @@ $(document).ready(function () {
     $('#insert_students').on('submit', function (e) {
         e.preventDefault();
 
-
         const students = collectStudentData();
         const section = $('#section').val();
 
@@ -177,11 +176,8 @@ $(document).ready(function () {
             }
         });
 
-        const submitUrl = $(this).data('submit-url');
-        const redirectUrl = $(this).data('redirect-url');
-
         $.ajax({
-            url: submitUrl,
+            url: API_ROUTES.insertStudents,
             method: 'POST',
             data: {
                 _token: $('input[name="_token"]').val(),
@@ -196,21 +192,18 @@ $(document).ready(function () {
                         text: response.message,
                         confirmButtonText: 'OK'
                     }).then(() => {
-                        window.location.href = redirectUrl;
+                        window.location.href = API_ROUTES.redirectAfterSubmit;
                     });
-                }
-                else {
+                } else {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error!',
                         text: response.message,
-
                         confirmButtonText: 'OK'
                     }).then(() => {
-                        window.location.href = redirectUrl;
+                        window.location.href = API_ROUTES.redirectAfterSubmit;
                     });
                 }
-
             },
             error: function (xhr) {
                 if (xhr.status === 422) {

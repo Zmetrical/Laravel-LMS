@@ -50,10 +50,7 @@
         </div>
 
         <div class="bs-stepper-content">
-            <form id="insert_students" method="POST" 
-                data-submit-url="{{ route('admin.insert_Students') }}"
-                data-redirect-url="{{ route('admin.create_student') }}">
-                
+            <form id="insert_students" method="POST" >
                 @csrf
 
                 <!-- Step 1: Academic Info -->
@@ -253,6 +250,15 @@
     <!-- JSGrid -->
     <script src="{{ asset('plugins/jsgrid/jsgrid.min.js') }}"></script>
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    <!-- API Routes Configuration -->
+    <script>
+        const API_ROUTES = {
+            getSections: "{{ route('sections.data') }}",
+            insertStudents: "{{ route('admin.insert_Students') }}",
+            redirectAfterSubmit: "{{ route('admin.create_student') }}"
+        };
+    </script>
 
     @if(isset($scripts))
         @foreach($scripts as $script)

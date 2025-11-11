@@ -56,7 +56,7 @@ class User_Management extends MainController
         return response()->json($query->get());
     }
 
-    public function insert_Student(Request $request)
+    public function insert_student(Request $request)
     {
         // Validate the form data to match the view fields
         $validated = $request->validate([
@@ -107,7 +107,7 @@ class User_Management extends MainController
         }
     }
 
-    public function insert_Students(Request $request)
+    public function insert_students(Request $request)
     {
         // Validate the request
         $request->validate([
@@ -216,7 +216,7 @@ class User_Management extends MainController
         return $password;
     }
 
-    public function list_Students(Request $request)
+    public function list_students(Request $request)
     {
         $strands = Strand::all();
         $levels = Level::all();
