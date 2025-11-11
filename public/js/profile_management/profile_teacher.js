@@ -40,7 +40,7 @@ $(document).ready(function () {
         $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
 
         $.ajax({
-            url: `/profile/teacher/${id}/update`,
+            url: API_ROUTES.updateTeacherProfile,
             type: 'POST',
             data: formData,
             processData: false,
@@ -55,7 +55,7 @@ $(document).ready(function () {
                         timer: 1500
                     }).then(() => {
                         // Redirect to view mode
-                        // window.location.href = `/profile/teacher/${id}`;
+                        window.location.href =  API_ROUTES.redirectBack;
                     });
                 } else {
                     Swal.fire({

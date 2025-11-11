@@ -44,13 +44,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Student Pages
         Route::get('/create_student', [User_Management::class, 'create_student'])->name('create_student');
         Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
-        Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_Student');
-        Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_Students');
+        Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_student');
+        Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_students');
         
         // Teacher Pages
         Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
         Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
-        Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('procedure.insert_teacher');
+        Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('insert_teacher');
     });
 
     // ---------------------------------------------------------------------------
@@ -92,14 +92,14 @@ Route::prefix('profile')->name('profile.')->group(function () {
     Route::prefix('student/{id}')->group(function () {
         Route::get('/', [Profile_Management::class, 'show_student'])->name('student.show');
         Route::get('/edit', [Profile_Management::class, 'edit_student'])->name('student.edit');
-        Route::post('/update', [Profile_Management::class, 'update_student']);
+        Route::post('/update', [Profile_Management::class, 'update_student'])->name('student.update');
     });
 
     // Teacher Profiles
     Route::prefix('teacher/{id}')->group(function () {
         Route::get('/', [Profile_Management::class, 'show_teacher'])->name('teacher.show');
         Route::get('/edit', [Profile_Management::class, 'edit_teacher'])->name('teacher.edit');
-        Route::post('/update', [Profile_Management::class, 'update_teacher']);
+        Route::post('/update', [Profile_Management::class, 'update_teacher'])->name('teacher.update');
     });
 });
 

@@ -13,28 +13,18 @@
     <!-- CSS - use <link> tag -->
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
 
-    <style>
-
-    </style>
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> Teacher Page
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route(name: 'admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Teacher Page</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('admin.list_teacher') }}">Teacher List</a></li>
+        <li class="breadcrumb-item active">Profile</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <div class="container-fluid">
         <div class="row">
             <!-- Left Column - Profile Card -->
@@ -89,7 +79,7 @@
 
             <!-- Right Column - Update Information -->
             <div class="col-md-8">
-                <div class="card card-primary">
+                <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title">Personal Information</h3>
                         <div class="card-tools">
@@ -254,7 +244,13 @@
 
     <!-- JS - use <script> tag -->
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+    <script>
+        const API_ROUTES = {
+            updateTeacherProfile: "{{ route('profile.teacher.update', ['id' => $teacher->id]) }}",
+            redirectBack: "{{ route('profile.teacher.show', ['id' => $teacher->id]) }}"
 
+        };
+    </script>
 
     @if(isset($scripts))
         @foreach($scripts as $script)

@@ -1,6 +1,5 @@
 @extends('layouts.root')
 
-
 @section('head')
     @yield('styles')
     <style>
@@ -17,25 +16,76 @@
             padding-bottom: 80px;
         }
 
-        /* Optional: active item style */
         .nav-sidebar>.nav-item.menu-open>.nav-link,
         .nav-sidebar>.nav-item>.nav-link.active {
             background-color: #4b545c !important;
-            /* Blue header color */
             color: #fff !important;
         }
 
-
-        /* Optional: active sub-item style */
         .nav-treeview>.nav-item>.nav-link.active {
             background-color: #fff !important;
             color: #343a40 !important;
+        }
+
+        /* Google Classroom style breadcrumb */
+        .main-header.navbar {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .breadcrumb-custom {
+            background-color: transparent;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .breadcrumb-custom .breadcrumb-item {
+            font-size: 20px;
+            font-weight: 400;
+            color: #202124;
+        }
+
+        .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            font-size: 20px;
+            color: #5f6368;
+            padding: 0 8px;
+        }
+
+        .breadcrumb-custom .breadcrumb-item a {
+            color: #5f6368;
+            text-decoration: none;
+        }
+
+        .breadcrumb-custom .breadcrumb-item a:hover {
+            color: #202124;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-custom .breadcrumb-item.active {
+            color: #202124;
+            font-weight: 500;
+        }
+
+        .breadcrumb-icon {
+            font-size: 24px;
+            color: #5f6368;
+            margin-right: 12px;
+        }
+
+        .content-wrapper {
+            padding-top: 0;
+        }
+
+        .content-header {
+            padding: 0;
+            margin-bottom: 20px;
         }
     </style>
 @endsection
 
 @section('body')
-
     <body class="hold-transition sidebar-mini layout-fixed">
         <div class="wrapper">
 
@@ -47,20 +97,30 @@
                     </li>
                 </ul>
 
+                <!-- Breadcrumb in Navbar -->
+                <ul class="navbar-nav ml-3 flex-grow-1">
+                    <li class="nav-item d-flex align-items-center">
+                        @yield('breadcrumb')
+                    </li>
+                </ul>
+
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link" data-toggle="dropdown" href="#">
                             <i class="far fa-user"></i>
                         </a>
                         <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                            <a href="#" class="dropdown-item">Profile</a>
+                            <a href="#" class="dropdown-item">
+                                <i class="fas fa-user mr-2"></i> Profile
+                            </a>
                             <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item">Logout</a>
+                            <a href="{{ route('admin.login') }}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </a>
                         </div>
                     </li>
                 </ul>
             </nav>
-
 
             <!-- Main Sidebar -->
             <aside class="main-sidebar sidebar-dark-primary elevation-4">
@@ -158,7 +218,7 @@
                             <!-- Enrollment Menu -->
                             <li class="nav-item {{ Request::is('enrollment_management/*') ? 'menu-open' : '' }}">
                                 <a href="#" class="nav-link {{ Request::is('enrollment_management/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-chalkboard-teacher"></i>
+                                    <i class="nav-icon fas fa-user-plus"></i>
                                     <p>
                                         Enrollment Management
                                         <i class="right fas fa-angle-left"></i>
@@ -172,20 +232,14 @@
                                             <p>Class Enrollment</p>
                                         </a>
                                     </li>
-                                </ul>
-
-                                <ul class="nav nav-treeview">
                                     <li class="nav-item">
                                         <a href="{{ route('admin.section_class_enrollment') }}"
                                             class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Section-Class Enrollment</p>
-
                                         </a>
                                     </li>
-                                </ul>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
+                                    <li class="nav-item">
                                         <a href="{{ route('admin.enroll_student') }}"
                                             class="nav-link {{ Request::routeIs('admin.enroll_student') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
@@ -208,12 +262,6 @@
 
             <!-- Content Wrapper -->
             <div class="content-wrapper">
-                <div class="content-header">
-                    <div class="container-fluid">
-                        @yield('breadcrumb')
-                    </div>
-                </div>
-
                 <section class="content">
                     <div class="container-fluid">
                         @yield('content')
@@ -222,19 +270,15 @@
             </div>
         </div>
     </body>
-
 @endsection
 
 @section('foot')
     <script>
-        // Keep sidebar state persistent across pages
         $(document).ready(function () {
-            // Restore sidebar state from localStorage
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 $('body').addClass('sidebar-collapse');
             }
 
-            // Save sidebar state when toggled
             $('[data-widget="pushmenu"]').on('collapsed.lte.pushmenu', function () {
                 localStorage.setItem('sidebar-collapsed', 'true');
             });

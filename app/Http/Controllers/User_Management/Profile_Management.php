@@ -6,10 +6,13 @@ use App\Http\Controllers\MainController;
 use Illuminate\Http\Request;
 
 use App\Models\User_Management\Student;
-use Illuminate\Support\Facades\DB;
+use App\Models\User_Management\Teacher;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
+use Exception;
 class Profile_Management extends MainController
 {
     // ---------------------------------------------------------------------------
@@ -36,10 +39,10 @@ class Profile_Management extends MainController
         $data = [
             'student' => $student,
             'mode' => 'view',
-            'scripts' => ['user_management/profile_student.js']
+            'scripts' => ['profile_management/profile_student.js']
         ];
 
-        return view('profile.profile_student', $data);
+        return view('modules.profile.profile_student', $data);
     }
 
     // Edit form
@@ -62,10 +65,10 @@ class Profile_Management extends MainController
         $data = [
             'student' => $student,
             'mode' => 'edit',
-            'scripts' => ['user_management/profile_student.js']
+            'scripts' => ['profile_management/profile_student.js']
         ];
 
-        return view('profile.profile_student', $data);
+        return view('modules.profile.profile_student', $data);
     }
     public function update_student(Request $request, $id)
     {
@@ -142,11 +145,11 @@ class Profile_Management extends MainController
 
         $data = [
             'mode' => 'view',
-            'scripts' => ['user_management/profile_teacher.js'],
+            'scripts' => ['profile_management/profile_teacher.js'],
             'teacher' => $teacher
         ];
 
-        return view('profile.profile_teacher', $data);
+        return view('modules.profile.profile_teacher', $data);
     }
 
     public function edit_teacher($id)
@@ -162,11 +165,11 @@ class Profile_Management extends MainController
 
         $data = [
             'mode' => 'edit',
-            'scripts' => ['user_management/profile_teacher.js'],
+            'scripts' => ['profile_management/profile_teacher.js'],
             'teacher' => $teacher
         ];
 
-        return view('profile.profile_teacher', $data);
+        return view('modules.profile.profile_teacher', $data);
     }
 
     public function update_teacher(Request $request, $id)

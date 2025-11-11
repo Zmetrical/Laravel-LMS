@@ -12,31 +12,18 @@
 
 <!-- CSS - use <link> tag -->
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
-
-    <style>
-
-    </style>
-
-
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> Student Page
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route(name: 'admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Student Page</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('admin.list_student') }}">Student List</a></li>
+        <li class="breadcrumb-item active">Profile</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <div class="container-fluid">
         <!-- Profile Card - Horizontal Layout -->
         <div class="card card-primary card-outline">
@@ -190,7 +177,12 @@
 
 <!-- JS - use <script> tag -->
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
+<script>
+    const API_ROUTES = {
+        updateStudentProfile: "{{ route('profile.student.update', ['id' => $student->id]) }}",
+        redirectBack: "{{ route('profile.student.show', ['id' => $student->id]) }}",
+    };
+</script>
 
     @if(isset($scripts))
         @foreach($scripts as $script)

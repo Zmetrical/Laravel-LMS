@@ -13,30 +13,17 @@
 <!-- CSS - use <link> tag -->
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
 
-    <style>
-
-    </style>
-
-
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> Student Profile
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route(name: 'admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Student Profile</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">Student Profile</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <div class="container-fluid">
         <!-- Profile Card -->
         <div class="card card-primary card-outline">

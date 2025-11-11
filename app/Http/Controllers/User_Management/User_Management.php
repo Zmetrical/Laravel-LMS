@@ -118,6 +118,7 @@ class User_Management extends MainController
             'students.*.lastName' => 'required|string|max:255',
             'students.*.middleInitial' => 'nullable|string|max:2',
             'students.*.gender' => 'required|in:Male,Female',
+            'students.*.studentType' => 'required|in:regular,irregular',
         ]);
 
         try {
@@ -162,12 +163,15 @@ class User_Management extends MainController
                 $studentsData[] = [
                     'student_number' => $studentNumber,
                     'student_password' => Hash::make($password),
+                    'rememberToken' => \Str::random(60),
                     'email' => $studentData['email'],
                     'first_name' => $studentData['firstName'],
                     'middle_name' => $studentData['middleInitial'] ?? null,
                     'last_name' => $studentData['lastName'],
                     'gender' => $studentData['gender'],
                     'section_id' => $request->section,
+                    'student_type' => $studentData['studentType'],
+                    'enrollment_date' => now(),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
@@ -189,11 +193,17 @@ class User_Management extends MainController
 
             return response()->json([
                 'success' => true,
-                'message' => count($studentsData) . " students created successfully!",
+                'message' => count($studentsData) . " student(s) created successfully!",
                 'count' => count($studentsData)
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            \Log::error('Failed to create students', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred: ' . $e->getMessage()

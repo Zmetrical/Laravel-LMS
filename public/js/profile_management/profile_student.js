@@ -68,7 +68,7 @@ $(document).ready(function () {
         });
 
         $.ajax({
-            url: `/profile/student/${id}/update`,
+            url: API_ROUTES.updateStudentProfile,
             type: 'POST',
             data: formData,
             processData: false,
@@ -87,7 +87,7 @@ $(document).ready(function () {
                         showConfirmButton: false
                     }).then(() => {
                         // === Redirect  ===
-                        window.location.href = `/profile/student/${id}`;
+                        window.location.href = API_ROUTES.redirectBack;
                     });
                 }
             },

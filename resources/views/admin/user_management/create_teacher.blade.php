@@ -10,24 +10,16 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> Teacher Information
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route(name: 'admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Teacher Registration</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">Teacher Registration</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <div class="container-fluid">
-        <div class="card card-primary">
+        <div class="card card-primary card-outline">
             <div class="card-header">
                 <h3 class="card-title">Teacher Registration Form</h3>
             </div>

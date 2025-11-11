@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Route;
 // ===========================================================================
 
 // Helper/Lookup Routes - Keep original route names
-Route::get('/get_sections', [User_Management::class, 'get_Sections'])->name('sections.data');
+Route::get('sections/data', [User_Management::class, 'get_Sections'])->name('sections.data');
 
 Route::get('/levels/data', function () {
     return response()->json([
