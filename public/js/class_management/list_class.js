@@ -89,7 +89,7 @@ $(document).ready(function() {
         });
 
         $.ajax({
-            url: '/class_management/insert_class',
+            url: API_ROUTES.insertClass,
             method: 'POST',
             data: formData,
             processData: false,

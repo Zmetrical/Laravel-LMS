@@ -6,32 +6,27 @@
             <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
         @endforeach
     @endif
+
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-users"></i> List of Sections
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">List Sections</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">Section List</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <div class="container-fluid">
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Section List</h3>
                 <div class="card-tools">
-                    <button class="btn btn-sm" data-toggle="modal" data-target="#createSectionModal">
-                        <i class="fas fa-plus-circle"></i> Create Section
+                    <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#createSectionModal">
+                        <i class="fas fa-plus"></i> Create Section
                     </button>
                 </div>
             </div>
@@ -57,9 +52,8 @@
                         <thead>
                             <tr>
                                 <th >#</th>
-                                <th >Code</th>
-                                <th >Name</th>
                                 <th >Strand</th>
+                                <th >Name</th>
                                 <th >Year Level</th>
                                 <th  class="text-center">Actions</th>
                             </tr>
@@ -69,12 +63,10 @@
                                 @foreach ($sections as $section)
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $section->code }}</td>
-                                        <td>{{ $section->name }}</td>
                                         <td>{{ $section->strand }}</td>
 
+                                        <td>{{ $section->name }}</td>
                                         <td>{{ $section->level }}</td>
-
 
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-info" onclick="editStrand(${strand.id})" title="Edit">
@@ -190,7 +182,15 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    <script>
+    const API_ROUTES = {
+        getStrands: "{{ route('admin.strands.data') }}",
+
+    };
+    </script>
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>

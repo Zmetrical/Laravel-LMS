@@ -58,6 +58,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('procedure.insert_teacher');
     });
 
+    // Strand Management Routes
+    Route::prefix('strands')->group(function () {
+        // Get strands data (AJAX)
+        Route::get('/data', [Class_Management::class, 'getStrandsData'])->name('strands.data');
+        
+        // Create strand
+        Route::post('/', [Class_Management::class, 'createStrand'])->name('strands.store');
+        
+        // Update strand
+        Route::put('/{id}', [Class_Management::class, 'updateStrand'])->name('strands.update');
+        Route::get('/{id}/sections', [Class_Management::class, 'getStrandSections'])->name('strands.sections');
+    });
+
     // Enroll Management API
     Route::prefix('users')->name('users.')->group(function () {
         // Students

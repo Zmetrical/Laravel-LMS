@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'AdminLTE Dashboard')</title>
+    <title>@yield('title', 'Trinity LMS')</title>
+    <link rel="icon" type="image/png" href="{{ asset('img/logo/trinity_logo.png') }}">
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="{{ asset('plugins/fontawesome-free/css/all.min.css') }}">

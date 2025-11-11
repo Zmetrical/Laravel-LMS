@@ -12,27 +12,19 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> List of Class
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">List Class</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">List Class</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <!-- Content Wrapper -->
     <div class="container-fluid">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Course List</h3>
+                <h3 class="card-title">Class List</h3>
                 <div class="card-tools">
                     <button type="button" class="btn btn-primary btn-sm" data-toggle="modal"
                         data-target="#createClassModal">
@@ -114,7 +106,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <div class="modal-header bg-primary">
+                <div class="modal-header">
                     <h5 class="modal-title" id="createClassModalLabel">
                         <i class="fas fa-plus"></i> Create New Class
                     </h5>
@@ -142,9 +134,6 @@
                             </div>
                         </div>
 
-                        <hr>
-
-                        <h5 class="mb-3"><i class="fas fa-chart-pie"></i> Grade Weight Distribution</h5>
 
                         <div class="row">
                             <div class="col-md-4">
@@ -212,6 +201,11 @@
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
+    <script>
+        const API_ROUTES = {
+            insertClass: "{{ route('admin.insert_class') }}"
+        };
+    </script>
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>
