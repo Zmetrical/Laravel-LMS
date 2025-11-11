@@ -18,44 +18,7 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <div class="info-box bg-info">
-                            <span class="info-box-icon"><i class="fas fa-users"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Total Students</span>
-                                <span class="info-box-number" id="totalStudents">0</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="info-box bg-primary">
-                            <span class="info-box-icon"><i class="fas fa-clipboard-list"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Total Quizzes</span>
-                                <span class="info-box-number" id="totalQuizzes">0</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="info-box bg-info">
-                            <span class="info-box-icon"><i class="fas fa-percent"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Class Average</span>
-                                <span class="info-box-number" id="classAverage">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="info-box bg-primary">
-                            <span class="info-box-icon"><i class="fas fa-chart-line"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Passing Rate</span>
-                                <span class="info-box-number" id="passingRate">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
 
                 <div class="table-responsive" id="gradeTableContainer" style="display: none;">
                     <table class="table table-bordered table-hover" id="gradeTable">
@@ -114,7 +77,6 @@ $(document).ready(function() {
                 if (!response.grades || response.grades.length === 0 || !response.quizzes || response.quizzes.length === 0) {
                     console.log('No data found - showing empty state');
                     $('#emptyState').show();
-                    updateSummary(0, 0, 0, 0);
                     return;
                 }
                 
@@ -229,15 +191,9 @@ $(document).ready(function() {
         const classAverage = classCount > 0 ? (classTotal / classCount).toFixed(2) : 0;
         const passingRate = classCount > 0 ? ((passingCount / classCount) * 100).toFixed(2) : 0;
         
-        updateSummary(totalStudents, totalQuizzes, classAverage, passingRate);
     }
     
-    function updateSummary(students, quizzes, average, passingRate) {
-        $('#totalStudents').text(students);
-        $('#totalQuizzes').text(quizzes);
-        $('#classAverage').text(average + '%');
-        $('#passingRate').text(passingRate + '%');
-    }
+
     
     $('#refreshGrades').click(function() {
         loadGrades();

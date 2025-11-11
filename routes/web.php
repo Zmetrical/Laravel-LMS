@@ -448,22 +448,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
 
 
-// ---------------------------------------------------------------------------
-//  Sample UI
-// ---------------------------------------------------------------------------
-
-
-Route::get('/calendar', function () {
-    return view('calendar');
-});
-
-Route::get('/feedback', function () {
-    return view('feedback');
-});
-
-Route::get('/container', function () {
-    return view('container');
-});
 
 Route::get('/form', function () {
     return view('form');
