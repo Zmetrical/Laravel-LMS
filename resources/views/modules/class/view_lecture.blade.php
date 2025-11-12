@@ -115,7 +115,7 @@
 <script>
     // Lecture-specific constants
     const API_ROUTES = {
-        getLectureData: "{{ route('student.class.lectures.view.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
+        getLectureData: "{{ route('student.class.lecture.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
         backToLessons: "{{ route('student.class.lessons', $class->id) }}"
     };
     
