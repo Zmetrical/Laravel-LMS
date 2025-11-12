@@ -20,6 +20,8 @@ class Page_Grade extends MainController
         return view('modules.class.page_gradebook', [
             'userType' => 'teacher',
             'class' => $class,
+            'scripts' => ['class_grade/page_gradebook.js']
+
         ]);
     }
 
@@ -37,6 +39,7 @@ class Page_Grade extends MainController
             'userType' => 'student',
             'class' => $class,
             'studentNumber' => $studentNumber,
+            'scripts' => ['class_grade/page_grade.js']
         ]);
     }
 

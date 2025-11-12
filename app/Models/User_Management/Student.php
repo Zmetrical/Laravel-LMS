@@ -79,7 +79,7 @@ class Student extends Authenticatable
      */
     public function getRememberTokenName()
     {
-        return 'remember_token';
+        return 'rememberToken';
     }
 
     // Relationships

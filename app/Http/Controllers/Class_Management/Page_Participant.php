@@ -22,6 +22,7 @@ class Page_Participant extends MainController
         return view('modules.class.page_participant', [
             'userType' => 'teacher',
             'class' => $class,
+            'scripts' => ['class_participant/page_participants.js']
         ]);
     }
 

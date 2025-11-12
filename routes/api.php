@@ -118,7 +118,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // STUDENT API ROUTES
 // ===========================================================================
 
-Route::prefix('student')->name('student.')->middleware('auth:student')->group(function () {
+Route::prefix('student')->name('student.')->middleware(['web', 'auth:student'])->group(function () {
     
     // Classes
     Route::get('/classes', [Class_List::class, 'getStudentClasses'])->name('classes.list');
@@ -150,7 +150,7 @@ Route::prefix('student')->name('student.')->middleware('auth:student')->group(fu
 // TEACHER API ROUTES
 // ===========================================================================
 
-Route::prefix('teacher')->name('teacher.')->middleware('auth:teacher')->group(function () {
+Route::prefix('teacher')->name('teacher.')->middleware(['web', 'auth:teacher'])->group(function () {
     
     // Classes
     Route::get('/classes', [Class_List::class, 'getTeacherClasses'])->name('classes.list');
