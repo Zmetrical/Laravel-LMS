@@ -114,7 +114,7 @@
         const STUDENT_ID = {{ $studentId }};
         const API_ROUTES = {
             getStudentInfo: "{{ route('admin.students.info', ['id' => $studentId]) }}",
-            getStudentClasses: "{{ route('admin.students.classes', ['id' => $studentId]) }}",
+            getStudentClasses: "{{ route('admin.students.classes.details', ['id' => $studentId]) }}",
             enrollClass: "{{ route('admin.students.enroll') }}",
             unenrollClass: "{{ route('admin.students.unenroll') }}"
         };

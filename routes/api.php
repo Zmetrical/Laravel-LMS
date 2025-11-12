@@ -96,7 +96,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::prefix('sections')->name('sections.')->group(function () {
         Route::get('/', [Enroll_Management::class, 'getSectionsData'])->name('list');
         Route::get('/{id}/details', [Enroll_Management::class, 'getDetails'])->name('details');
-        Route::get('/{id}/classes', [Enroll_Management::class, 'getSectionClasses'])->name('classes');
+        Route::get('/{id}/classes/details', [Enroll_Management::class, 'getSectionClasses'])->name('classes.details');
         
         Route::post('/{id}/enroll-class', [Enroll_Management::class, 'enrollClass'])->name('enroll');
         Route::delete('/{sectionId}/remove-class/{classId}', [Enroll_Management::class, 'removeClass'])->name('remove-class');
