@@ -10,6 +10,9 @@ copy .env.example .env
 
 composer install
 
+create database trinity_lms
+
+import trinity_lms.sql
 
 php artisan key:generate
 
