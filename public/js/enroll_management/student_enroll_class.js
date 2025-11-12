@@ -86,7 +86,7 @@ $(document).ready(function() {
 
         availableClasses.forEach(cls => {
             const card = `
-                <div class="card card-outline card-success mb-2 available-class-item" 
+                <div class="card card-outline mb-2 available-class-item" 
                      data-class-id="${cls.id}"
                      data-class-name="${cls.class_name}"
                      data-class-code="${cls.class_code}">
@@ -99,7 +99,7 @@ $(document).ready(function() {
                                     <i class="fas fa-user"></i> ${cls.teacher_name || 'No teacher'}
                                 </small>
                             </div>
-                            <button class="btn btn-sm btn-success enroll-class-btn" 
+                            <button class="btn btn-sm btn-primary enroll-class-btn" 
                                     data-class-id="${cls.id}">
                                 <i class="fas fa-plus"></i> Enroll
                             </button>

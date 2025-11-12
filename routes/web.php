@@ -63,7 +63,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/section-class-enrollment', [Enroll_Management::class, 'sectionClassEnrollment'])->name('section_class_enrollment');
         
         // Student Pages
-        Route::get('/enroll_student', [Enroll_Management::class, 'enroll_student'])->name('enroll_student');
+        Route::get('/student_irreg_enroll', [Enroll_Management::class, 'studentIrregEnrollment'])->name('student_irreg_class_enrollment');
         Route::get('/students/{id}/enrollment', [Enroll_Management::class, 'studentClassEnrollment'])->name('student_class_enrollment');
         
         // Class Pages

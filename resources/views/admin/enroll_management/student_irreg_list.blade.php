@@ -7,26 +7,17 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-clock"></i> Irregular Students
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Irregular Students</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">Irregular Student List</li>
+    </ol>
 @endsection
 
 @section('content')
-    <section class="content">
+<br>
         <div class="container-fluid">
             <!-- School Year Info -->
-            <div class="alert alert-info alert-dismissible">
+            <div class="alert alert-dark alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
                 <h5><i class="icon fas fa-calendar-alt"></i> School Year 2024-2025</h5>
                 Manage custom class enrollments for irregular students.
@@ -56,7 +47,6 @@
                 </div>
             </div>
         </div>
-    </section>
 @endsection
 
 @section('scripts')
@@ -67,7 +57,7 @@
     
     <script>
         const API_ROUTES = {
-            getStudents: "{{ route('admin.students.data') }}",
+            getStudents: "{{ route('admin.students.list') }}",
             enrollmentPage: "{{ route('admin.student_class_enrollment', ['id' => ':id']) }}"
         };
     </script>

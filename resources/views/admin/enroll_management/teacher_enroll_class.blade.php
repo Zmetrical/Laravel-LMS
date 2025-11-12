@@ -6,23 +6,20 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> Class Students
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Class Students</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">Classes</li>
+    </ol>
 @endsection
 
 @section('content')
+<br>
     <div class="container-fluid">
+        <div class="alert alert-dark alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <h5><i class="icon fas fa-calendar-alt"></i> School Year 2024-2025</h5>
+            Manage class assignment for teacher in the current academic year.
+        </div>
         <div class="row">
             <!-- Left Sidebar - Class List -->
             <div class="col-md-3">
@@ -49,7 +46,7 @@
 
             <!-- Main Content - Students -->
             <div class="col-md-9">
-                <div id="noClassSelected" class="card card-info card-outline">
+                <div id="noClassSelected" class="card card-primary card-outline">
                     <div class="card-body text-center py-5">
                         <h5>No Class Selected</h5>
                         <p class="text-muted">Please select a class from the left sidebar to view enrolled students.</p>
@@ -66,7 +63,7 @@
                                     <p class="text-muted mb-0" id="selectedClassCode"></p>
                                 </div>
                                 <div class="col-md-3 text-right">
-                                    <button class="btn btn-info" id="assignTeacherBtn">
+                                    <button class="btn btn-primary" id="assignTeacherBtn">
                                         <i class="fas fa-user-tie"></i> Manage Teacher
                                     </button>
                                 </div>
@@ -183,7 +180,7 @@
     <div class="modal fade" id="assignTeacherModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-info">
+                <div class="modal-header bg-primary">
                     <h5 class="modal-title">
                         <i class="fas fa-user-tie"></i> Manage Teacher Assignment
                     </h5>
@@ -194,25 +191,32 @@
                 <div class="modal-body">
                     <!-- Current Teacher Display -->
                     <div id="currentTeacherSection" style="display:none;">
-                        <div class="alert alert-info">
-                            <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Currently Assigned</h6>
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <h5 class="mb-1" id="currentTeacherNameModal"></h5>
-                                    <p class="mb-0 small">
-                                        <i class="fas fa-envelope"></i> <span id="currentTeacherEmail"></span><br>
-                                        <i class="fas fa-phone"></i> <span id="currentTeacherPhone"></span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4 text-right">
-                                    <button class="btn btn-danger btn-sm" id="removeTeacherBtn">
-                                        <i class="fas fa-times"></i> Remove Teacher
-                                    </button>
+                        <div class="card card-outline card-primary">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-user-circle"></i> Currently Assigned
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h5 class="mb-1" id="currentTeacherNameModal"></h5>
+                                        <p class="mb-0 small">
+                                            <i class="fas fa-envelope"></i> <span id="currentTeacherEmail"></span><br>
+                                            <i class="fas fa-phone"></i> <span id="currentTeacherPhone"></span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-right">
+                                        <button class="btn btn-danger btn-sm" id="removeTeacherBtn">
+                                            <i class="fas fa-times"></i> Remove Teacher
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <hr>
                     </div>
+
 
                     <!-- Teacher Selection -->
                     <div class="form-group">
@@ -226,7 +230,7 @@
                     <button type="button" class="btn btn-default" data-dismiss="modal">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="button" class="btn btn-info" id="confirmAssignBtn">
+                    <button type="button" class="btn btn-primary" id="confirmAssignBtn">
                         <i class="fas fa-check"></i> Assign Teacher
                     </button>
                 </div>

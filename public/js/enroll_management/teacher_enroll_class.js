@@ -237,8 +237,8 @@ $(document).ready(function() {
 
         students.forEach(student => {
             const typeBadge = student.student_type === 'irregular' 
-                ? '<span class="badge badge-warning">Irregular</span>'
-                : '<span class="badge badge-info">Regular</span>';
+                ? '<span class="badge badge-secondary">Irregular</span>'
+                : '<span class="badge badge-primary">Regular</span>';
             
             const row = `
                 <tr>

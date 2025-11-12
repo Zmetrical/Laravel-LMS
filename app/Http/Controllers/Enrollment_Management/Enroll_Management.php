@@ -281,13 +281,13 @@ class Enroll_Management extends MainController
     /**
      * Display irregular students page
      */
-    public function enroll_student()
+    public function studentIrregEnrollment()
     {
         $data = [
-            'scripts' => ['enroll_management/enroll_student.js'],
+            'scripts' => ['enroll_management/student_irreg_list.js'],
         ];
 
-        return view('admin.enroll_management.enroll_student', $data);
+        return view('admin.enroll_management.student_irreg_list', $data);
     }
 
     public function studentClassEnrollment($studentId)
@@ -295,7 +295,7 @@ class Enroll_Management extends MainController
         $student = DB::table('students')->find($studentId);
 
         if (!$student) {
-            return redirect()->route('admin.enroll_management.enroll_student')
+            return redirect()->route('admin.enroll_management.student_irreg_list')
                 ->with('error', 'Student not found');
         }
 

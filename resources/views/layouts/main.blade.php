@@ -240,8 +240,8 @@
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.enroll_student') }}"
-                                            class="nav-link {{ Request::routeIs('admin.enroll_student') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.student_irreg_class_enrollment') }}"
+                                            class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Student Enrollment</p>
                                         </a>

@@ -1,5 +1,5 @@
 No custom css just admin lte bootstrap and its plugins for ui
-primary and info color is enough
+dark(primary color) primary(secondary color) and seconday(tertiary) color is enough
 
 this is in laravel, make use of its built it system for efficiency
 make use ajax and jquery 

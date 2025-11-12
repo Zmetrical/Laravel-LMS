@@ -118,7 +118,7 @@ function renderSectionsTable() {
                 <td>${section.strand_code}</td>
                 <td>${section.level_name}</td>
                 <td class="text-center">
-                    <button class="btn btn-xs btn-info" onclick="viewSectionClasses(${section.id}, '${section.code}')">
+                    <button class="btn btn-xs btn-secondary" onclick="viewSectionClasses(${section.id}, '${section.code}')">
                         <i class="fas fa-eye"></i> ${section.classes_count}
                     </button>
                 </td>

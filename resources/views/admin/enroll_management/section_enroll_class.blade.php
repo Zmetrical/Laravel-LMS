@@ -14,26 +14,17 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-chalkboard-teacher"></i> Section-Class Enrollment
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-                <li class="breadcrumb-item active">Section-Class Enrollment</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+        <li class="breadcrumb-item active">Section Enrollment</li>
+    </ol>
 @endsection
 
 @section('content')
-    <section class="content">
+<br>
         <div class="container-fluid">
             <!-- School Year Info -->
-            <div class="alert alert-info alert-dismissible">
+            <div class="alert alert-dark alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
                 <h5><i class="icon fas fa-calendar-alt"></i> School Year 2024-2025</h5>
                 Manage class enrollments for sections in the current academic year.
@@ -77,7 +68,7 @@
 
                 <!-- Enrolled Classes -->
                 <div class="col-md-8">
-                    <div class="card card-info card-outline">
+                    <div class="card card-primary card-outline">
                         <div class="card-header">
                             <h3 class="card-title">
                                 <i class="fas fa-book"></i> Enrolled Classes
@@ -103,12 +94,12 @@
 
                             <div id="enrolledClassesContainer" style="display: none;">
                                 <div id="classesLoadingIndicator" class="text-center py-4">
-                                    <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
                                     <p class="mt-2">Loading classes...</p>
                                 </div>
                                 <div id="classesTableContainer" style="display: none;">
                                     <table class="table table-bordered table-hover" id="enrolledClassesTable">
-                                        <thead class="bg-info">
+                                        <thead class="bg-primary">
                                             <tr>
                                                 <th>Class Code</th>
                                                 <th>Class Name</th>
@@ -130,7 +121,6 @@
                 </div>
             </div>
         </div>
-    </section>
 
     <!-- Enroll Class Modal -->
     <div class="modal fade" id="enrollClassModal" tabindex="-1">
@@ -172,7 +162,7 @@
 @section('scripts')
     <script>
         const API_ROUTES = {
-            getSections: "{{ route('admin.sections.data') }}",
+            getSections: "{{ route('admin.sections.list') }}",
             getSectionClasses: "{{ route('admin.sections.classes', ['id' => ':id']) }}",
             getAvailableClasses: "{{ route('admin.classes.available', ['sectionId' => ':id']) }}",
             enrollClass: "{{ route('admin.sections.enroll', ['id' => ':id']) }}",

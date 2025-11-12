@@ -163,7 +163,6 @@ class User_Management extends MainController
                 $studentsData[] = [
                     'student_number' => $studentNumber,
                     'student_password' => Hash::make($password),
-                    'rememberToken' => \Str::random(60),
                     'email' => $studentData['email'],
                     'first_name' => $studentData['firstName'],
                     'middle_name' => $studentData['middleInitial'] ?? null,

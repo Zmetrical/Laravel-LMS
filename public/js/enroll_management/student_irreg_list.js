@@ -26,7 +26,7 @@ $(document).ready(function () {
             {
                 data: 'class_count',
                 render: function (data) {
-                    const badgeClass = data > 0 ? 'badge-info' : 'badge-secondary';
+                    const badgeClass = data > 0 ? 'badge-primary' : 'badge-secondary';
                     return `<span class="badge ${badgeClass}">${data} Classes</span>`;
                 }
             },
@@ -36,7 +36,7 @@ $(document).ready(function () {
                 render: function (data) {
                     const url = API_ROUTES.enrollmentPage.replace(':id', data.id);
                     return `
-                                <a href="${url}" class="btn btn-sm btn-info" title="Manage Classes">
+                                <a href="${url}" class="btn btn-sm btn-primary" title="Manage Classes">
                                     <i class="fas fa-book"></i> Enroll
                                 </a>
                             `;

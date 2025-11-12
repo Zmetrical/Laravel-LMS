@@ -48,7 +48,7 @@
                         <div class="input-group input-group-sm">
                             <input type="text" class="form-control" id="searchSection" placeholder="Search by section name or code...">
                             <div class="input-group-append">
-                                <button class="btn btn-info" type="button" onclick="loadSections()">
+                                <button class="btn btn-primary" type="button" onclick="loadSections()">
                                     <i class="fas fa-search"></i>
                                 </button>
                             </div>
@@ -88,11 +88,11 @@
     <div class="modal fade" id="sectionModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <div class="modal-header bg-primary">
-                    <h5 class="modal-title text-white" id="sectionModalTitle">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sectionModalTitle">
                         <i class="fas fa-plus-circle"></i> Create New Section
                     </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
+                    <button type="button" class="close" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
                 </div>
@@ -156,11 +156,11 @@
     <div class="modal fade" id="viewClassesModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <div class="modal-header bg-info">
-                    <h5 class="modal-title text-white">
+                <div class="modal-header modal-outline">
+                    <h5 class="modal-title">
                         <i class="fas fa-book"></i> Enrolled Classes - <span id="sectionNameDisplay"></span>
                     </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
+                    <button type="button" class="close" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
                 </div>

@@ -71,7 +71,7 @@ $(document).ready(function () {
                                 <strong>${section.code}</strong>
                                 <div class="small text-muted">${section.full_name}</div>
                             </div>
-                            <span class="badge badge-info">${section.class_count} classes</span>
+                            <span class="badge badge-primary">${section.class_count} classes</span>
                         </div>
                     </div>
                 `;
