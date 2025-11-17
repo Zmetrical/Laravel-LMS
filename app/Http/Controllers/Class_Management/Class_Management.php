@@ -601,12 +601,5 @@ class Class_Management extends MainController
         }
     }
 
-    public function list_schoolyear()
-    {
-        $data = [
-            'scripts' => ['class_management/list_schoolyear.js'],
-        ];
 
-        return view('admin.class_management.list_schoolyear', $data);
-    }
 }

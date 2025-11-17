@@ -79,7 +79,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/list_class', [Class_Management::class, 'list_class'])->name('list_class');
         Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');
         Route::get('/list_section', [Class_Management::class, 'list_section'])->name('list_section');
-        Route::get('/list_schoolyear', [Class_Management::class, 'list_schoolyear'])->name('list_schoolyear');
     });
 });
 

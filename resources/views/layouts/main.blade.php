@@ -206,7 +206,7 @@
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.list_schoolyear') }}"
+                                        <a href="{{ route('admin.schoolyears.index') }}"
                                             class="nav-link {{ Request::routeIs('admin.list_schoolyear') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>List School Year</p>

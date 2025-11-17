@@ -3,7 +3,6 @@ dark(primary color) primary(secondary color) and seconday(tertiary) color is eno
 
 this is in laravel, make use of its built it system for efficiency
 make use ajax and jquery 
-
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
   `admin_name` varchar(100) NOT NULL,
@@ -24,12 +23,46 @@ CREATE TABLE `classes` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `grades_final` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `ww_score` decimal(5,2) DEFAULT NULL,
+  `ww_percentage` int(11) NOT NULL,
+  `pt_score` decimal(5,2) DEFAULT NULL,
+  `pt_percentage` int(11) NOT NULL,
+  `qa_score` decimal(5,2) DEFAULT NULL,
+  `qa_percentage` int(11) NOT NULL,
+  `final_grade` decimal(5,2) NOT NULL,
+  `remarks` enum('PASSED','FAILED','INC','DRP','W') NOT NULL,
+  `is_locked` tinyint(1) DEFAULT 0,
+  `computed_by` int(11) DEFAULT NULL,
+  `computed_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `grade_components` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `component_type` enum('WW','PT','QA') NOT NULL,
+  `score` decimal(5,2) DEFAULT NULL,
+  `max_score` decimal(5,2) NOT NULL,
+  `item_name` varchar(255) DEFAULT NULL,
+  `recorded_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE `lectures` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `lesson_id` bigint(20) UNSIGNED NOT NULL,
   `title` varchar(255) NOT NULL,
   `content` longtext DEFAULT NULL,
-  `content_type` enum('text','video','pdf','file') NOT NULL DEFAULT 'text',
+  `content_type` enum('text','image','pdf','file') NOT NULL DEFAULT 'text',
   `file_path` varchar(500) DEFAULT NULL,
   `order_number` int(11) NOT NULL DEFAULT 0,
   `status` tinyint(1) NOT NULL DEFAULT 1,
@@ -97,12 +130,23 @@ CREATE TABLE `quiz_question_options` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `school_years` (
+  `id` int(11) NOT NULL,
+  `year_start` year(4) NOT NULL,
+  `year_end` year(4) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE `sections` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `code` varchar(100) NOT NULL,
   `name` varchar(255) NOT NULL,
   `strand_id` bigint(20) UNSIGNED NOT NULL,
   `level_id` int(11) NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
   `status` int(11) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -111,7 +155,20 @@ CREATE TABLE `sections` (
 CREATE TABLE `section_class_matrix` (
   `id` int(11) NOT NULL,
   `section_id` int(11) NOT NULL,
-  `class_id` int(11) NOT NULL
+  `class_id` int(11) NOT NULL,
+  `semester_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `semesters` (
+  `id` int(11) NOT NULL,
+  `school_year_id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `sessions` (
@@ -134,9 +191,9 @@ CREATE TABLE `strands` (
 
 CREATE TABLE `students` (
   `id` bigint(20) UNSIGNED NOT NULL,
-  `student_number` varchar(255) NOT NULL,
+  `student_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `student_password` varchar(100) NOT NULL,
-  `rememberToken` varchar(100) NOT NULL,
+  `rememberToken` varchar(100) DEFAULT NULL,
   `email` varchar(100) NOT NULL,
   `first_name` varchar(100) NOT NULL,
   `middle_name` varchar(100) NOT NULL,
@@ -144,6 +201,7 @@ CREATE TABLE `students` (
   `gender` varchar(10) NOT NULL,
   `profile_image` varchar(255) DEFAULT NULL,
   `section_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `current_semester_id` int(11) DEFAULT NULL,
   `student_type` enum('regular','irregular') NOT NULL,
   `enrollment_date` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -153,7 +211,10 @@ CREATE TABLE `students` (
 CREATE TABLE `student_class_matrix` (
   `id` int(11) NOT NULL,
   `student_number` varchar(100) NOT NULL,
-  `class_code` varchar(100) NOT NULL
+  `class_code` varchar(100) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `enrollment_status` enum('enrolled','dropped','completed') DEFAULT 'enrolled',
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `student_password_matrix` (
@@ -178,6 +239,7 @@ CREATE TABLE `student_quiz_attempts` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `student_number` varchar(255) NOT NULL,
   `quiz_id` bigint(20) UNSIGNED NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
   `attempt_number` int(11) NOT NULL DEFAULT 1,
   `score` decimal(5,2) DEFAULT NULL,
   `total_points` decimal(5,2) NOT NULL,
