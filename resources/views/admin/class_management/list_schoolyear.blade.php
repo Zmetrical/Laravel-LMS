@@ -43,7 +43,7 @@
                                     <th>Code</th>
                                     <th width="120">Status</th>
                                     <th width="100">Semesters</th>
-                                    <th width="150">Actions</th>
+                                    <th width="200">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="schoolYearsTableBody">
@@ -113,7 +113,9 @@
             getSchoolYears: "{{ route('admin.schoolyears.list') }}",
             createSchoolYear: "{{ route('admin.schoolyears.create') }}",
             updateSchoolYear: "{{ route('admin.schoolyears.update', ['id' => ':id']) }}",
-            setActive: "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}"
+            setActive: "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}",
+            semestersPage: "{{ route('admin.semesters.index') }}" 
+
         };
     </script>
     @if(isset($scripts))

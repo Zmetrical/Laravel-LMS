@@ -1,11 +1,11 @@
-$(document).ready(function() {
+$(document).ready(function () {
     let isEditMode = false;
 
     // Load school years on page load
     loadSchoolYears();
 
     // Add School Year Button
-    $('#addSchoolYearBtn').click(function() {
+    $('#addSchoolYearBtn').click(function () {
         isEditMode = false;
         $('#modalTitle').text('Add School Year');
         $('#schoolYearId').val('');
@@ -16,7 +16,7 @@ $(document).ready(function() {
     });
 
     // Auto-fill end year when start year is entered
-    $('#yearStart').on('input', function() {
+    $('#yearStart').on('input', function () {
         const startYear = parseInt($(this).val());
         if (!isNaN(startYear)) {
             $('#yearEnd').val(startYear + 1);
@@ -24,7 +24,7 @@ $(document).ready(function() {
     });
 
     // Form Submit
-    $('#schoolYearForm').submit(function(e) {
+    $('#schoolYearForm').submit(function (e) {
         e.preventDefault();
 
         const yearStart = parseInt($('#yearStart').val());
@@ -62,12 +62,12 @@ $(document).ready(function() {
         $.ajax({
             url: API_ROUTES.getSchoolYears,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     displaySchoolYears(response.data);
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 console.error('Failed to load school years:', xhr);
                 Swal.fire({
                     icon: 'error',
@@ -81,7 +81,7 @@ $(document).ready(function() {
     // Display School Years
     function displaySchoolYears(schoolYears) {
         $('#loadingIndicator').hide();
-        
+
         if (schoolYears.length === 0) {
             $('#noDataMessage').show();
             return;
@@ -93,7 +93,7 @@ $(document).ready(function() {
 
         schoolYears.forEach((sy, index) => {
             const statusBadge = getStatusBadge(sy.status);
-            const activeBtn = sy.status !== 'active' ? 
+            const activeBtn = sy.status !== 'active' ?
                 `<button class="btn btn-success btn-xs" onclick="setActive(${sy.id})" title="Set as Active">
                     <i class="fas fa-check-circle"></i>
                 </button>` : '';
@@ -108,6 +108,9 @@ $(document).ready(function() {
                         <span class="badge badge-info">${sy.semesters_count}</span>
                     </td>
                     <td>
+                        <a href="${API_ROUTES.semestersPage}?sy=${sy.id}" class="btn btn-info btn-xs" title="View Semesters">
+                            <i class="fas fa-list"></i>
+                        </a>
                         ${activeBtn}
                         <button class="btn btn-primary btn-xs" onclick="editSchoolYear(${sy.id})" title="Edit">
                             <i class="fas fa-edit"></i>
@@ -138,7 +141,7 @@ $(document).ready(function() {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     $('#schoolYearModal').modal('hide');
                     Swal.fire({
@@ -150,7 +153,7 @@ $(document).ready(function() {
                     loadSchoolYears();
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 let errorMsg = 'Failed to create school year';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -165,11 +168,11 @@ $(document).ready(function() {
     }
 
     // Edit School Year (Global Function)
-    window.editSchoolYear = function(id) {
+    window.editSchoolYear = function (id) {
         $.ajax({
             url: API_ROUTES.getSchoolYears,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     const sy = response.data.find(item => item.id === id);
                     if (sy) {
@@ -199,7 +202,7 @@ $(document).ready(function() {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     $('#schoolYearModal').modal('hide');
                     Swal.fire({
@@ -211,7 +214,7 @@ $(document).ready(function() {
                     loadSchoolYears();
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 let errorMsg = 'Failed to update school year';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -226,7 +229,7 @@ $(document).ready(function() {
     }
 
     // Set Active (Global Function)
-    window.setActive = function(id) {
+    window.setActive = function (id) {
         Swal.fire({
             title: 'Set as Active?',
             text: 'This will deactivate all other school years',
@@ -238,14 +241,14 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 const url = API_ROUTES.setActive.replace(':id', id);
-                
+
                 $.ajax({
                     url: url,
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             Swal.fire({
                                 icon: 'success',
@@ -256,7 +259,7 @@ $(document).ready(function() {
                             loadSchoolYears();
                         }
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',

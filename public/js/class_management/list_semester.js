@@ -1,13 +1,15 @@
-$(document).ready(function() {
+$(document).ready(function () {
     let isEditMode = false;
     let selectedSchoolYearId = null;
     let schoolYearsData = [];
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const schoolYearIdFromUrl = urlParams.get('sy');
     // Load school years on page load
     loadSchoolYears();
 
     // Auto-generate code based on semester name
-    $('#semesterName').change(function() {
+    $('#semesterName').change(function () {
         const name = $(this).val();
         const codeMap = {
             '1st Semester': 'SEM1',
@@ -18,7 +20,7 @@ $(document).ready(function() {
     });
 
     // Add Semester Button
-    $('#addSemesterBtn').click(function() {
+    $('#addSemesterBtn').click(function () {
         if (!selectedSchoolYearId) {
             Swal.fire({
                 icon: 'warning',
@@ -41,7 +43,7 @@ $(document).ready(function() {
     });
 
     // Form Submit
-    $('#semesterForm').submit(function(e) {
+    $('#semesterForm').submit(function (e) {
         e.preventDefault();
 
         const startDate = new Date($('#startDate').val());
@@ -77,14 +79,14 @@ $(document).ready(function() {
         $.ajax({
             url: API_ROUTES.getSchoolYears,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     schoolYearsData = response.data;
                     displaySchoolYearsList(response.data);
                     updateSchoolYearHeader();
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 console.error('Failed to load school years:', xhr);
             }
         });
@@ -108,7 +110,7 @@ $(document).ready(function() {
         schoolYears.forEach(sy => {
             const isActive = sy.status === 'active';
             const statusBadge = getStatusBadge(sy.status);
-            
+
             const card = `
                 <div class="card mb-2 school-year-card ${isActive ? 'border-primary' : ''}" 
                      data-id="${sy.id}" style="cursor: pointer;">
@@ -130,22 +132,32 @@ $(document).ready(function() {
         });
 
         // Click handler for school year cards
-        $('.school-year-card').click(function() {
-            $('.school-year-card').removeClass('border-primary bg-light');
-            $(this).addClass('border-primary bg-light');
-            
-            selectedSchoolYearId = $(this).data('id');
-            $('#addSemesterBtn').prop('disabled', false);
-            
-            loadSemesters(selectedSchoolYearId);
-            updateSelectedSchoolYearInfo();
+        $('.school-year-card').click(function () {
+            selectSchoolYear($(this).data('id'));
         });
-    }
 
+        // Auto-select school year from URL
+        if (schoolYearIdFromUrl) {
+            setTimeout(() => {
+                selectSchoolYear(parseInt(schoolYearIdFromUrl));
+            }, 100);
+        }
+    }
+    // Select School Year
+    function selectSchoolYear(schoolYearId) {
+        $('.school-year-card').removeClass('border-primary bg-light');
+        $(`.school-year-card[data-id="${schoolYearId}"]`).addClass('border-primary bg-light');
+
+        selectedSchoolYearId = schoolYearId;
+        $('#addSemesterBtn').prop('disabled', false);
+
+        loadSemesters(selectedSchoolYearId);
+        updateSelectedSchoolYearInfo();
+    }
     // Update School Year Header
     function updateSchoolYearHeader() {
         const activeSY = schoolYearsData.find(sy => sy.status === 'active');
-        
+
         if (activeSY) {
             $('#schoolYearHeader').html(`
                 <h5><i class="icon fas fa-calendar-alt"></i> Active School Year: ${activeSY.year_start}-${activeSY.year_end}</h5>
@@ -182,12 +194,12 @@ $(document).ready(function() {
             url: API_ROUTES.getSemesters,
             method: 'GET',
             data: { school_year_id: schoolYearId },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     displaySemesters(response.data);
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 console.error('Failed to load semesters:', xhr);
                 Swal.fire({
                     icon: 'error',
@@ -213,16 +225,16 @@ $(document).ready(function() {
 
         semesters.forEach((sem, index) => {
             const statusBadge = getStatusBadge(sem.status);
-            const activeBtn = sem.status !== 'active' ? 
+            const activeBtn = sem.status !== 'active' ?
                 `<button class="btn btn-success btn-xs" onclick="setActiveSemester(${sem.id})" title="Set as Active">
                     <i class="fas fa-check-circle"></i>
                 </button>` : '';
 
-            const startDate = new Date(sem.start_date).toLocaleDateString('en-US', { 
-                year: 'numeric', month: 'short', day: 'numeric' 
+            const startDate = new Date(sem.start_date).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
             });
-            const endDate = new Date(sem.end_date).toLocaleDateString('en-US', { 
-                year: 'numeric', month: 'short', day: 'numeric' 
+            const endDate = new Date(sem.end_date).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
             });
 
             const row = `
@@ -263,7 +275,7 @@ $(document).ready(function() {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     $('#semesterModal').modal('hide');
                     Swal.fire({
@@ -276,7 +288,7 @@ $(document).ready(function() {
                     loadSchoolYears(); // Refresh count
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 let errorMsg = 'Failed to create semester';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -291,11 +303,11 @@ $(document).ready(function() {
     }
 
     // Edit Semester (Global Function)
-    window.editSemester = function(id) {
+    window.editSemester = function (id) {
         $.ajax({
             url: API_ROUTES.getSemesters,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     const sem = response.data.find(item => item.id === id);
                     if (sem) {
@@ -328,7 +340,7 @@ $(document).ready(function() {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     $('#semesterModal').modal('hide');
                     Swal.fire({
@@ -341,7 +353,7 @@ $(document).ready(function() {
                     loadSchoolYears();
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 let errorMsg = 'Failed to update semester';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -356,7 +368,7 @@ $(document).ready(function() {
     }
 
     // Set Active Semester (Global Function)
-    window.setActiveSemester = function(id) {
+    window.setActiveSemester = function (id) {
         Swal.fire({
             title: 'Set as Active?',
             text: 'This will deactivate all other semesters and set the parent school year as active',
@@ -368,14 +380,14 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 const url = API_ROUTES.setActive.replace(':id', id);
-                
+
                 $.ajax({
                     url: url,
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             Swal.fire({
                                 icon: 'success',
@@ -387,7 +399,7 @@ $(document).ready(function() {
                             loadSchoolYears();
                         }
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
