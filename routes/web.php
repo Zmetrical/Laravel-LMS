@@ -83,7 +83,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 // ===========================================================================
-// PROFILE MANAGEMENT (SHARED)
+// PROFILE MANAGEMENT 
 // ===========================================================================
 
 Route::prefix('profile')->name('profile.')->group(function () {
