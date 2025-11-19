@@ -11,7 +11,7 @@ class ViewServiceProvider extends ServiceProvider
     public function boot()
     {
         // Share active semester with admin layout
-        View::composer('layouts.main', Active_Schoolyear::class);
+        View::composer(['layouts.main', 'admin.grade_management.list_grades'], Active_Schoolyear::class);
     }
 
     public function register()

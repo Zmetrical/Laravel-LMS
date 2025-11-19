@@ -4,6 +4,7 @@ namespace App\Http\Composers;
 
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Active_Schoolyear
 {
@@ -25,12 +26,17 @@ class Active_Schoolyear
                 's.code as semester_code',
                 's.start_date',
                 's.end_date',
+                's.status as semester_status',
                 'sy.id as school_year_id',
                 'sy.year_start',
                 'sy.year_end',
-                'sy.code as school_year_code'
+                'sy.code as school_year_code',
+                'sy.status as school_year_status'
             )
             ->first();
+
+        // Debug log
+        Log::info('Active Semester Query Result:', ['semester' => $activeSemester]);
 
         // If no active semester, get the most recent one
         if (!$activeSemester) {
@@ -44,25 +50,50 @@ class Active_Schoolyear
                     's.code as semester_code',
                     's.start_date',
                     's.end_date',
+                    's.status as semester_status',
                     'sy.id as school_year_id',
                     'sy.year_start',
                     'sy.year_end',
-                    'sy.code as school_year_code'
+                    'sy.code as school_year_code',
+                    'sy.status as school_year_status'
                 )
                 ->first();
+            
+            Log::info('Fallback Semester Query Result:', ['semester' => $activeSemester]);
         }
 
-        // Get active school year (might be different from semester's school year)
+        // Get active school year separately
         $activeSchoolYear = DB::table('school_years')
             ->where('status', 'active')
             ->first();
 
+        Log::info('Active School Year Query Result:', ['school_year' => $activeSchoolYear]);
+
+        // Create a formatted object for the view
+        $semesterData = null;
+        if ($activeSemester) {
+            $semesterData = (object)[
+                'semester_id' => $activeSemester->semester_id,
+                'semester_name' => $activeSemester->semester_name,
+                'semester_code' => $activeSemester->semester_code,
+                'school_year_code' => $activeSemester->school_year_code,
+                'name' => $activeSemester->semester_name,
+                'code' => $activeSemester->semester_code,
+                'school_year' => (object)[
+                    'id' => $activeSemester->school_year_id,
+                    'code' => $activeSemester->school_year_code,
+                    'year_start' => $activeSemester->year_start,
+                    'year_end' => $activeSemester->year_end
+                ]
+            ];
+        }
+
         // Share with all views
         $view->with([
-            'activeSemester' => $activeSemester,
+            'activeSemester' => $semesterData,
             'activeSchoolYear' => $activeSchoolYear,
-            'activeSemesterDisplay' => $activeSemester ? 
-                "{$activeSemester->school_year_code} - {$activeSemester->semester_name}" : 
+            'activeSemesterDisplay' => $semesterData ? 
+                "{$semesterData->school_year_code} - {$semesterData->semester_name}" : 
                 'No Active Semester'
         ]);
     }

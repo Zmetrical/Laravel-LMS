@@ -20,8 +20,8 @@
             <button type="button" class="close" data-dismiss="alert">&times;</button>
             <h5>
                 <i class="icon fas fa-calendar-alt"></i> 
-                @if(isset($active_semester))
-                    {{ $active_semester->school_year->code ?? 'N/A' }} - {{ $active_semester->name ?? 'No Active Semester' }}
+                @if(isset($activeSemester))
+                    {{ $activeSemester->school_year->code ?? 'N/A' }} - {{ $activeSemester->name ?? 'No Active Semester' }}
                 @else
                     No Active Semester
                 @endif
@@ -292,6 +292,21 @@
             getClasses: "{{ route('admin.grades.classes') }}",
             searchGrades: "{{ route('admin.grades.search') }}",
             getGradeDetails: "{{ route('admin.grades.details', ['id' => ':id']) }}"
+        };
+
+            // Active semester and school year data
+        const activeSemester = {
+            id: {{ $activeSemester->semester_id ?? 'null' }},
+            name: "{{ $activeSemester->semester_name ?? '' }}",
+            code: "{{ $activeSemester->semester_code ?? '' }}",
+            schoolYearCode: "{{ $activeSemester->school_year_code ?? '' }}",
+        };
+        
+        const activeSchoolYear = {
+            id: {{ $activeSchoolYear->id ?? 'null' }},
+            yearStart: {{ $activeSchoolYear->year_start ?? 'null' }},
+            yearEnd: {{ $activeSchoolYear->year_end ?? 'null' }},
+            code: "{{ $activeSchoolYear->code ?? '' }}"
         };
     </script>
     

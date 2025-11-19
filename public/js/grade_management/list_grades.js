@@ -51,7 +51,8 @@ $(document).ready(function() {
      */
     function performSearch(searchData) {
         showLoading();
-        
+        searchData.semester_id = activeSemester.id;
+
         $.ajax({
             url: API_ROUTES.searchGrades,
             method: 'GET',
@@ -79,7 +80,6 @@ $(document).ready(function() {
             }
         });
     }
-
     /**
      * Display search results
      */
@@ -109,7 +109,6 @@ $(document).ready(function() {
             
             // Add light background for students without grades
             if (!grade.has_grade) {
-                row.addClass('table-warning');
             }
             
             // Student Number
@@ -126,8 +125,8 @@ $(document).ready(function() {
             // Class
             row.append(`
                 <td>
-                    <strong>${escapeHtml(grade.class_code)}</strong>
-                    <br><small class="text-muted">${escapeHtml(grade.class_name)}</small>
+                    <strong>${escapeHtml(grade.class_name)}</strong>
+                    <br><small class="text-muted">${escapeHtml(grade.class_code)}</small>
                 </td>
             `);
             

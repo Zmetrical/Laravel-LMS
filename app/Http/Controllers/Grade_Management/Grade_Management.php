@@ -54,76 +54,84 @@ class Grade_Management extends MainController
             $validated = $request->validate([
                 'search' => 'nullable|string|max:255',
                 'class_code' => 'nullable|string|exists:classes,class_code',
-                'status_filter' => 'nullable|in:all,passed,failed,inc,drp,w,no_grade'
+                'status_filter' => 'nullable|in:all,passed,failed,inc,drp,w,no_grade',
+                'semester_id' => 'required|integer|exists:semesters,id'
             ]);
 
-            // Get active semester - check multiple sources
-            $activeSemester = null;
-            
-            // First try from view shared data
-            if (view()->shared('active_semester')) {
-                $activeSemester = view()->shared('active_semester');
-            }
-            // Then try session
-            elseif (session()->has('active_semester')) {
-                $activeSemester = session('active_semester');
-            }
-            // Finally query database
-            else {
-                $activeSemester = DB::table('semesters')
-                    ->where('status', 'active')
-                    ->first();
-            }
-            
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active semester found. Please set an active semester first.'
-                ], 400);
-            }
+            $semesterId = $request->semester_id;
 
-            $semesterId = is_object($activeSemester) ? $activeSemester->id : $activeSemester['id'];
+            // Build the enrollment subquery with student type logic
+            // Regular students: get classes from section_class_matrix
+            // Irregular students: get classes from student_class_matrix
+            $enrollmentQuery = '(
+                SELECT DISTINCT 
+                    scm.student_number,
+                    scm.class_code,
+                    scm.semester_id
+                FROM student_class_matrix scm
+                INNER JOIN students s_irr ON scm.student_number = s_irr.student_number
+                WHERE scm.semester_id = ' . $semesterId . '
+                AND scm.enrollment_status = "enrolled"
+                AND s_irr.student_type = "irregular"';
+            
+            if ($request->filled('class_code')) {
+                $classCode = DB::connection()->getPdo()->quote($request->class_code);
+                $enrollmentQuery .= ' AND scm.class_code = ' . $classCode;
+            }
+            
+            $enrollmentQuery .= '
+                UNION
+                
+                SELECT DISTINCT 
+                    s_reg.student_number,
+                    c.class_code,
+                    sccm.semester_id
+                FROM students s_reg
+                INNER JOIN section_class_matrix sccm ON s_reg.section_id = sccm.section_id
+                INNER JOIN classes c ON sccm.class_id = c.id
+                WHERE sccm.semester_id = ' . $semesterId . '
+                AND s_reg.student_type = "regular"';
+            
+            if ($request->filled('class_code')) {
+                $classCode = DB::connection()->getPdo()->quote($request->class_code);
+                $enrollmentQuery .= ' AND c.class_code = ' . $classCode;
+            }
+            
+            $enrollmentQuery .= ') as enrollment';
 
-            // Start with student_class_matrix to get all enrolled students
-            $query = DB::table('student_class_matrix as scm')
-                ->join('students as s', function ($join) {
+            // Start with students and their enrollment data
+            $query = DB::table('students as s')
+                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                ->join(DB::raw($enrollmentQuery), function($join) {
                     $join->on(
-                        DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
+                        DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
                         '=',
-                        DB::raw('s.student_number COLLATE utf8mb4_general_ci')
+                        DB::raw('enrollment.student_number COLLATE utf8mb4_general_ci')
                     );
                 })
                 ->join('classes as c', function ($join) {
                     $join->on(
-                        DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
+                        DB::raw('enrollment.class_code COLLATE utf8mb4_general_ci'),
                         '=',
                         DB::raw('c.class_code COLLATE utf8mb4_general_ci')
                     );
                 })
                 ->leftJoin('grades_final as gf', function ($join) use ($semesterId) {
                     $join->on(
-                        DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
+                        DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
                         '=',
                         DB::raw('gf.student_number COLLATE utf8mb4_general_ci')
                     )
                     ->on(
-                        DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
+                        DB::raw('enrollment.class_code COLLATE utf8mb4_general_ci'),
                         '=',
                         DB::raw('gf.class_code COLLATE utf8mb4_general_ci')
                     )
                     ->where('gf.semester_id', '=', $semesterId);
                 })
-                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
-                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
-                ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
-                ->leftJoin('admins as comp', 'gf.computed_by', '=', 'comp.id')
-                ->where('scm.semester_id', $semesterId)
-                ->where('scm.enrollment_status', 'enrolled');
-
-            // Filter by class if specified
-            if ($request->filled('class_code')) {
-                $query->where('scm.class_code', $request->class_code);
-            }
+                ->leftJoin('admins as comp', 'gf.computed_by', '=', 'comp.id');
 
             // Search by student name or number
             if ($request->filled('search')) {
@@ -146,8 +154,8 @@ class Grade_Management extends MainController
 
             $grades = $query->select(
                 'gf.id as grade_id',
-                'scm.student_number',
-                'scm.class_code',
+                'enrollment.student_number',
+                'enrollment.class_code',
                 's.first_name',
                 's.middle_name',
                 's.last_name',
