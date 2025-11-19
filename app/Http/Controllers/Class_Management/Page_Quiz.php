@@ -20,7 +20,7 @@ class Page_Quiz extends MainController
         }
 
         // Return the view
-        return view('modules.class.page_quiz', [
+        return view('modules.quiz.page_quiz', [
             'userType' => 'teacher',
             'class' => $class,
         ]);
@@ -50,7 +50,7 @@ class Page_Quiz extends MainController
             'isEdit' => false
         ];
 
-        return view('modules.class.create_quiz', $data);
+        return view('modules.quiz.create_quiz', $data);
     }
 
     /**
@@ -81,7 +81,7 @@ class Page_Quiz extends MainController
             'isEdit' => true
         ];
 
-        return view('modules.class.create_quiz', $data);
+        return view('modules.quiz.create_quiz', $data);
     }
 
     /**
@@ -407,7 +407,7 @@ class Page_Quiz extends MainController
             'canAttempt' => $attempts->count() < $quiz->max_attempts
         ];
 
-        return view('modules.class.view_quiz', $data);
+        return view('modules.quiz.view_quiz', $data);
     }
 
     /**
@@ -483,7 +483,7 @@ class Page_Quiz extends MainController
             'attemptNumber' => $attemptCount + 1
         ];
 
-        return view('modules.class.view_quiz_active', $data);
+        return view('modules.quiz.view_quiz_active', $data);
     }
 
     /**

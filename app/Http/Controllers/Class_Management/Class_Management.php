@@ -138,7 +138,7 @@ class Class_Management extends MainController
 
 
     // ---------------------------------------------------------------------------
-    //  Get Strands Data (AJAX)
+    //  Get Strands Data 
     // ---------------------------------------------------------------------------
     public function getStrandsData()
     {
@@ -320,6 +320,8 @@ class Class_Management extends MainController
         }
     }
 
+
+    
     /**
      * Get sections data with filters (AJAX)
      */

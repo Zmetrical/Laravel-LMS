@@ -257,10 +257,16 @@ class User_Management extends MainController
         return view('admin.user_management.list_student', $data);
     }
 
+
+
+
+
     // ---------------------------------------------------------------------------
     //  Teachers Page
     // ---------------------------------------------------------------------------
 
+
+    
     public function create_teacher(Request $request)
     {
         $data = [

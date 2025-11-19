@@ -42,7 +42,7 @@ $(document).ready(function () {
         });
 
         $.ajax({
-            url: '/user_management/insert_teacher',
+            url: API_ROUTES.insertTeacher,
             method: 'POST',
             data: formData,
             processData: false,
@@ -55,8 +55,7 @@ $(document).ready(function () {
                         text: response.message,
                         confirmButtonText: 'OK'
                     }).then(() => {
-                        // Redirect to appropriate page
-                        // window.location.href = '/user_management/create_teacher';
+                        window.location.href = API_ROUTES.redirectAfterSubmit;
                     });
                 } else {
                     Swal.fire({

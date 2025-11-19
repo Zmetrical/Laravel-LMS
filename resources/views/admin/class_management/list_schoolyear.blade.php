@@ -115,7 +115,6 @@
             updateSchoolYear: "{{ route('admin.schoolyears.update', ['id' => ':id']) }}",
             setActive: "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}",
             semestersPage: "{{ route('admin.semesters.index') }}" 
-
         };
     </script>
     @if(isset($scripts))

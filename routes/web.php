@@ -44,13 +44,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Student Pages
         Route::get('/create_student', [User_Management::class, 'create_student'])->name('create_student');
         Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
-        Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_student');
-        Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_students');
         
         // Teacher Pages
         Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
         Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
-        Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('insert_teacher');
     });
 
     // ---------------------------------------------------------------------------

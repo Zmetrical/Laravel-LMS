@@ -23,11 +23,6 @@ class Login_Controller extends MainController
             'password' => 'required|string',
         ]);
 
-        // Log attempt
-        Log::info('Student login attempt', [
-            'student_number' => $request->student_number
-        ]);
-
         // Check if student exists
         $student = Student::where('student_number', $request->student_number)->first();
         
@@ -41,13 +36,6 @@ class Login_Controller extends MainController
                 'message' => 'Invalid student number or password.'
             ], 401);
         }
-
-        // Debug: Check password
-        Log::info('Student found', [
-            'student_id' => $student->id,
-            'has_password' => !empty($student->student_password),
-            'password_length' => strlen($student->student_password)
-        ]);
 
         // Attempt to authenticate
         $credentials = [

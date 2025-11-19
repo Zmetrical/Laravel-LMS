@@ -668,7 +668,6 @@ class Enroll_Management extends MainController
                 ->get();
 
             // Get irregular students directly enrolled in this class
-            // FIX: Add COLLATE to the JOINs
             $irregularStudents = DB::table('student_class_matrix as scm')
                 ->join('students as s', function ($join) {
                     $join->on(

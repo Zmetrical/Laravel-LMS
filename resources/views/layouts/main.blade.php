@@ -82,6 +82,21 @@
             padding: 0;
             margin-bottom: 20px;
         }
+
+        .nav-section-title {
+            padding: 10px 15px 5px 15px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background-color: rgba(255,255,255,0.1);
+            margin: 10px 15px;
+        }
     </style>
 @endsection
 
@@ -106,18 +121,7 @@
 
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item dropdown">
-                        <a class="nav-link" data-toggle="dropdown" href="#">
-                            <i class="far fa-user"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                            <a href="#" class="dropdown-item">
-                                <i class="fas fa-user mr-2"></i> Profile
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="{{ route('admin.login') }}" class="dropdown-item">
-                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                            </a>
-                        </div>
+                        <i class="fas fa-user mr-2"></i> Admin
                     </li>
                 </ul>
             </nav>
@@ -126,13 +130,65 @@
             <aside class="main-sidebar sidebar-dark-primary elevation-4">
                 <a href="{{ route('admin.home') }}" class="brand-link text-center" style="padding: 20px 0;">
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
-                        style="width: 80px; height: 80px; display: block; margin: 0 auto;">
-                    <span class="brand-text font-weight-light d-block mt-2">Admin</span>
+                        style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
+                <!-- School Year -->
+                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="text-white font-weight-bold mb-1" style="font-size: 14px;">
+                                    @if($activeSemester)
+                                        </i>SY {{ $activeSemester->school_year_code }}
+                                    @else
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>No Active Semester</span>
+                                    @endif
+                                </div>
+                                <div class="text-white-50 small">
+                                    </i>{{ $activeSemester->semester_name ?? 'N/A' }}
+                                </div>
+                            </div>
+                            <div class="ml-2">
+                                <a href="{{ route('admin.schoolyears.index') }}" class="text-white-50" title="Manage School Years">
+                                    <i class="fas fa-cog"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="sidebar">
+
+                    <!-- Navigation Menu -->
                     <nav class="mt-2">
-                        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
-                            data-accordion="false">
+                        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                            
+                            <!-- School Year Specific Section -->
+                            <li class="nav-section-title">Semester Operation</li>
+                            
+                            <li class="nav-item">
+                                <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-user-plus"></i>
+                                    <p>Class Enrollment</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.section_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-users-cog"></i>
+                                    <p>Section Enrollment</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.student_irreg_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-user-graduate"></i>
+                                    <p>Student Enrollment</p>
+                                </a>
+                            </li>
+
+                            <div class="nav-divider"></div>
+
+                            <!-- Universal Section -->
+                            <li class="nav-section-title">System Operation</li>
+                            
                             <!-- User Menu -->
                             <li class="nav-item {{ Request::is('user_management/*') ? 'menu-open' : '' }}">
                                 <a href="#" class="nav-link {{ Request::is('user_management/*') ? 'active' : '' }}">
@@ -205,49 +261,9 @@
                                             <p>List Section</p>
                                         </a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a href="{{ route('admin.schoolyears.index') }}"
-                                            class="nav-link {{ Request::routeIs('admin.list_schoolyear') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>List School Year</p>
-                                        </a>
-                                    </li>
                                 </ul>
                             </li>
 
-                            <!-- Enrollment Menu -->
-                            <li class="nav-item {{ Request::is('enrollment_management/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('enrollment_management/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-user-plus"></i>
-                                    <p>
-                                        Enrollment Management
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
-                                </a>
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('admin.enroll_class') }}"
-                                            class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Class Enrollment</p>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="{{ route('admin.section_class_enrollment') }}"
-                                            class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Section-Class Enrollment</p>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="{{ route('admin.student_irreg_class_enrollment') }}"
-                                            class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Student Enrollment</p>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
                         </ul>
                     </nav>
                 </div>
@@ -275,6 +291,7 @@
 @section('foot')
     <script>
         $(document).ready(function () {
+            // Sidebar collapse persistence
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 $('body').addClass('sidebar-collapse');
             }

@@ -52,11 +52,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::prefix('user_management')->group(function () {
         // Student Pages
-        Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_Student');
-        Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_Students');
+        Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_student');
+        Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_students');
         
         // Teacher Pages
-        Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('procedure.insert_teacher');
+        Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('insert_teacher');
     });
 
     Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');

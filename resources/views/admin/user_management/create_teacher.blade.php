@@ -105,6 +105,12 @@
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
+    <script>
+        const API_ROUTES = {
+            insertTeacher: "{{ route('admin.insert_teacher') }}",
+            redirectAfterSubmit: "{{ route('admin.list_teacher') }}"
+        };
+    </script>
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>

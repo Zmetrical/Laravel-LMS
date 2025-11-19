@@ -17,7 +17,7 @@ class Page_Grade extends MainController
             abort(404, 'Class not found');
         }
 
-        return view('modules.class.page_gradebook', [
+        return view('modules.grade.page_gradebook', [
             'userType' => 'teacher',
             'class' => $class,
             'scripts' => ['class_grade/page_gradebook.js']
@@ -35,7 +35,7 @@ class Page_Grade extends MainController
 
         $studentNumber = Auth::guard('student')->user()->student_number;
 
-        return view('modules.class.page_grade', [
+        return view('modules.grade.page_grade', [
             'userType' => 'student',
             'class' => $class,
             'studentNumber' => $studentNumber,

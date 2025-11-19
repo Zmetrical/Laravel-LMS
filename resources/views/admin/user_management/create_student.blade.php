@@ -144,7 +144,7 @@
 <script>
 const API_ROUTES = {
     getSections: "{{ route('sections.data') }}",
-    insertStudents: "{{ route('admin.insert_Students') }}",
+    insertStudents: "{{ route('admin.insert_students') }}",
     redirectAfterSubmit: "{{ route('admin.list_student') }}"
 };
 </script>

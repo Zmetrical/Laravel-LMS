@@ -23,7 +23,7 @@ class Page_Lecture extends MainController
             abort(404, 'Class or Lesson not found');
         }
 
-        return view('modules.class.create_lecture', [
+        return view('modules.lecture.create_lecture', [
             'class' => $class,
             'lesson' => $lesson,
             'scripts' => ['class_lecture\teacher_lecture.js']
@@ -134,7 +134,7 @@ class Page_Lecture extends MainController
 
         $lesson = DB::table('lessons')->where('id', $lessonId)->first();
 
-        return view('modules.class.create_lecture', [
+        return view('modules.lecture.create_lecture', [
             'class' => $class,
             'lesson' => $lesson,
             'lecture' => $lecture,
@@ -376,7 +376,7 @@ public function update(Request $request, $classId, $lessonId, $lectureId)
         $previousLecture = $currentIndex > 0 ? $allLectures[$currentIndex - 1] : null;
         $nextLecture = $currentIndex < $allLectures->count() - 1 ? $allLectures[$currentIndex + 1] : null;
 
-        return view('modules.class.view_lecture', [
+        return view('modules.lecture.view_lecture', [
             'class' => $class,
             'lessonId' => $lessonId,  // Add this
             'lectureId' => $lectureId, // Add this

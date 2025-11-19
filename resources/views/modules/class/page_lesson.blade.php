@@ -184,7 +184,6 @@
         @else
             viewLecture: "{{ route('student.class.lectures.view', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}",
             viewQuiz: "{{ route('student.class.quiz.view', ['classId' => $class->id, 'lessonId' => ':lessonId', 'quizId' => ':quizId']) }}"
-
         @endif
     };
     
