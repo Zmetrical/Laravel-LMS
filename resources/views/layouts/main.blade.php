@@ -161,27 +161,55 @@
                     <!-- Navigation Menu -->
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                            
                             <!-- School Year Specific Section -->
                             <li class="nav-section-title">Semester Operation</li>
                             
-                            <li class="nav-item">
-                                <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-user-plus"></i>
-                                    <p>Class Enrollment</p>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="{{ route('admin.section_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-users-cog"></i>
-                                    <p>Section Enrollment</p>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="{{ route('admin.student_irreg_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
+                            <li class="nav-item {{ Request::is('enrollment_management/*') ? 'menu-open' : '' }}">
+                                <a href="#" class="nav-link {{ Request::is('enrollment_management/*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-user-graduate"></i>
-                                    <p>Student Enrollment</p>
+                                    <p>
+                                        Enrollment
+                                    </p>
+                                     <i class="right fas fa-angle-left"></i>
                                 </a>
+                                    <ul class="nav nav-treeview">
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                                <p>Class Enrollment</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.section_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                                <p>Section Enrollment</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.student_irreg_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                                <p>Student Enrollment</p>
+                                            </a>
+                                        </li>
+                                    </ul>
+                            </li>
+
+                            <li class="nav-item {{ Request::is('grade_management/*') ? 'menu-open' : '' }}">
+                                <a href="#" class="nav-link {{ Request::is('grade_management/*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-user-graduate"></i>
+                                    <p>
+                                        Grades
+                                    </p>
+                                     <i class="right fas fa-angle-left"></i>
+                                </a>
+                                    <ul class="nav nav-treeview">
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                                <p>Grades</p>
+                                            </a>
+                                        </li>
+                                    </ul>
                             </li>
 
                             <div class="nav-divider"></div>

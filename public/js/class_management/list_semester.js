@@ -2,6 +2,8 @@ $(document).ready(function () {
     let currentSchoolYear = null;
     let semesters = [];
     let selectedSemesterId = null;
+    let selectedClassCode = null;
+    let selectedClassName = null;
     let isEditMode = false;
 
     // Check if school year ID is provided
@@ -24,20 +26,6 @@ $(document).ready(function () {
     // Add Semester Buttons
     $('#addSemesterBtn, #addFirstSemesterBtn').click(function () {
         openSemesterModal();
-    });
-
-    // Edit Semester Button
-    $('#editSemesterBtn').click(function () {
-        if (selectedSemesterId) {
-            openSemesterModal(selectedSemesterId);
-        }
-    });
-
-    // Activate Semester Button
-    $('#activateSemBtn').click(function () {
-        if (selectedSemesterId) {
-            activateSemester(selectedSemesterId);
-        }
     });
 
     // Auto-generate semester code
@@ -186,29 +174,62 @@ $(document).ready(function () {
             const statusBadge = getStatusBadgeClass(sem.status);
             const isSelected = sem.id === selectedSemesterId ? 'active' : '';
             
+            const startDate = new Date(sem.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const endDate = new Date(sem.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            
             const item = `
                 <a href="#" class="list-group-item list-group-item-action semester-item ${isSelected}" 
                    data-semester-id="${sem.id}">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">
-                                <i class="fas fa-calendar mr-2"></i>
-                                ${sem.name}
-                            </h6>
-                            <small class="text-muted">${sem.code}</small>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    ${sem.name}
+                                </h6>
+                                <span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span>
+                            </div>
+                            <small class="text-muted d-block">${sem.code}</small>
+                            <small class="text-muted">${startDate} - ${endDate}</small>
                         </div>
-                        <span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span>
+                        <button class="btn btn-tool btn-sm ml-2 edit-semester-btn" 
+                                data-semester-id="${sem.id}" 
+                                title="Edit Semester"
+                                onclick="event.preventDefault(); event.stopPropagation();">
+                            <i class="fas fa-edit"></i>
+                        </button>
                     </div>
+                    ${sem.status !== 'active' ? `
+                        <button class="btn btn-success btn-xs btn-block mt-2 activate-semester-btn" 
+                                data-semester-id="${sem.id}"
+                                onclick="event.preventDefault(); event.stopPropagation();">
+                            <i class="fas fa-check-circle"></i> Set as Active
+                        </button>
+                    ` : ''}
                 </a>
             `;
             container.append(item);
         });
 
-        // Click handler
+        // Click handlers
         container.find('.semester-item').click(function (e) {
             e.preventDefault();
             const semesterId = $(this).data('semester-id');
             selectSemester(semesterId);
+        });
+
+        container.find('.edit-semester-btn').click(function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const semesterId = $(this).data('semester-id');
+            openSemesterModal(semesterId);
+        });
+
+        container.find('.activate-semester-btn').click(function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const semesterId = $(this).data('semester-id');
+            activateSemester(semesterId);
         });
     }
 
@@ -223,38 +244,16 @@ $(document).ready(function () {
         $('.semester-item').removeClass('active');
         $(`.semester-item[data-semester-id="${semesterId}"]`).addClass('active');
 
-        // Show details
-        $('#emptyState').hide();
-        $('#detailsContent').show();
-        $('#detailsTools').show();
+        // Reset selected class
+        selectedClassCode = null;
+        selectedClassName = null;
 
-        // Update details
-        $('#detailsTitle').html(`<i class="fas fa-info-circle"></i> ${semester.name}`);
-        
-        const startDate = new Date(semester.start_date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-        const endDate = new Date(semester.end_date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-        
-        $('#durationDisplay').text(`${startDate} - ${endDate}`);
-        $('#semCodeDisplay').text(semester.code);
-        
-        const badgeClass = getStatusBadgeClass(semester.status);
-        $('#semStatusBadge').attr('class', `badge badge-lg ${badgeClass}`)
-                           .text(semester.status.toUpperCase());
-
-        // Show/hide activate button
-        if (semester.status !== 'active') {
-            $('#activateSemBtn').show();
-        } else {
-            $('#activateSemBtn').hide();
-        }
+        // Show classes card and hide students
+        $('#classesCard').show();
+        $('#emptyState').show();
+        $('#studentsContent').hide();
+        $('#noStudents').hide();
+        $('#studentsLoading').hide();
 
         // Load classes for this semester
         loadSemesterClasses(semesterId);
@@ -294,39 +293,56 @@ $(document).ready(function () {
         tbody.empty();
 
         classes.forEach(cls => {
+            const isSelected = cls.class_code === selectedClassCode ? 'table-primary' : '';
+            
             const row = `
-                <tr>
-                    <td><code>${cls.class_code}</code></td>
-                    <td><strong>${cls.class_name}</strong></td>
+                <tr class="class-row ${isSelected}" style="cursor: pointer;" 
+                    data-class-code="${cls.class_code}" 
+                    data-class-name="${cls.class_name}">
+                    <td><strong>${cls.class_code}</strong></td>
+                    <td>${cls.class_name}</td>
                     <td class="text-center">
                         <span class="badge badge-primary">${cls.student_count || 0}</span>
-                    </td>
-                    <td class="text-center">
-                        <button class="btn btn-info btn-sm" 
-                                onclick="viewEnrollmentHistory('${cls.class_code}', '${cls.class_name}')"
-                                title="View Enrollment History">
-                            <i class="fas fa-history"></i>
-                        </button>
                     </td>
                 </tr>
             `;
             tbody.append(row);
         });
+
+        // Click handler for class rows
+        tbody.find('.class-row').click(function () {
+            const classCode = $(this).data('class-code');
+            const className = $(this).data('class-name');
+            selectClass(classCode, className);
+        });
     }
 
-    // View Enrollment History
-    window.viewEnrollmentHistory = function(classCode, className) {
-        $('#historyClassName').text(className);
-        $('#enrollmentHistoryModal').modal('show');
+    // Select Class
+    function selectClass(classCode, className) {
+        selectedClassCode = classCode;
+        selectedClassName = className;
+
+        // Update class selection highlight
+        $('.class-row').removeClass('table-primary');
+        $(`.class-row[data-class-code="${classCode}"]`).addClass('table-primary');
+
+        // Update header
+        const semester = semesters.find(s => s.id === selectedSemesterId);
+        $('#selectedClassName').text(className);
+        $('#selectedClassCode').text(classCode);
+        $('#selectedSemesterName').text(semester.name);
+
+        // Show loading and load students
+        $('#emptyState').hide();
+        $('#studentsContent').hide();
+        $('#noStudents').hide();
+        $('#studentsLoading').show();
+
         loadEnrollmentHistory(classCode);
-    };
+    }
 
     // Load Enrollment History
     function loadEnrollmentHistory(classCode) {
-        $('#historyLoading').show();
-        $('#historyContent').hide();
-        $('#noHistory').hide();
-
         const url = API_ROUTES.getEnrollmentHistory
             .replace(':semesterId', selectedSemesterId)
             .replace(':classCode', classCode);
@@ -335,25 +351,28 @@ $(document).ready(function () {
             url: url,
             method: 'GET',
             success: function (response) {
-                $('#historyLoading').hide();
+                $('#studentsLoading').hide();
                 
                 if (response.success && response.data.length > 0) {
                     displayEnrollmentHistory(response.data);
-                    $('#historyContent').show();
+                    $('#studentsContent').show();
+                    $('#studentCount').text(`${response.data.length} Student${response.data.length > 1 ? 's' : ''}`);
                 } else {
-                    $('#noHistory').show();
+                    $('#noStudents').show();
+                    $('#studentCount').text('0 Students');
                 }
             },
             error: function () {
-                $('#historyLoading').hide();
-                $('#noHistory').show();
+                $('#studentsLoading').hide();
+                $('#noStudents').show();
+                $('#studentCount').text('0 Students');
             }
         });
     }
 
     // Display Enrollment History
     function displayEnrollmentHistory(students) {
-        const tbody = $('#historyTableBody');
+        const tbody = $('#studentsTableBody');
         tbody.empty();
 
         students.forEach(student => {
@@ -365,7 +384,7 @@ $(document).ready(function () {
 
             const row = `
                 <tr>
-                    <td><code>${student.student_number}</code></td>
+                    <td><strong>${student.student_number}</strong></td>
                     <td>${student.first_name} ${student.last_name}</td>
                     <td>${student.section_name || 'N/A'}</td>
                     <td>

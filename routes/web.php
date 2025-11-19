@@ -10,6 +10,8 @@ use App\Http\Controllers\Class_Management\Page_Lecture;
 use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
+use App\Http\Controllers\Class_Management\Year_Management;
+
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
 use App\Http\Controllers\StudentController;
@@ -35,6 +37,36 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Auth Routes
     Route::get('/login', [Admin::class, 'login'])->name('login');
     Route::get('/', [Admin::class, 'index'])->name('home');
+
+
+    // ---------------------------------------------------------------------------
+    // School Year MANAGEMENT
+    // ---------------------------------------------------------------------------
+    Route::prefix('schoolyears')->group(function () {
+        Route::get('/', [Year_Management::class, 'list_schoolyear'])->name('schoolyears.index');
+        Route::get('/list', [Year_Management::class, 'getSchoolYearsData'])->name('schoolyears.list');
+        Route::post('/create', [Year_Management::class, 'createSchoolYear'])->name('schoolyears.create');
+        Route::put('/{id}/update', [Year_Management::class, 'updateSchoolYear'])->name('schoolyears.update');
+        Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
+
+    });
+
+    // Semester Management Routes
+    Route::prefix('semesters')->group(function () {
+        Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
+        Route::get('/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
+        Route::post('/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
+        Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
+        Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
+        Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
+        Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
+    });
+
+    Route::prefix('grade_management')->group(function () {
+        Route::get('/', [Year_Management::class, 'list_grades'])->name('grades.index');
+
+    });
+
 
     // ---------------------------------------------------------------------------
     // USER MANAGEMENT

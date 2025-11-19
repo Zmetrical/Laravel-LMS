@@ -62,21 +62,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');
 
 
-    Route::get('/schoolyears', [Year_Management::class, 'list_schoolyear'])->name('schoolyears.index');
-    Route::get('/schoolyears/list', [Year_Management::class, 'getSchoolYearsData'])->name('schoolyears.list');
-    Route::post('/schoolyears/create', [Year_Management::class, 'createSchoolYear'])->name('schoolyears.create');
-    Route::put('/schoolyears/{id}/update', [Year_Management::class, 'updateSchoolYear'])->name('schoolyears.update');
-    Route::post('/schoolyears/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
 
-    // Semester Management Routes
-    Route::get('/semesters', [Year_Management::class, 'list_semester'])->name('semesters.index');
-    Route::get('/semesters/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
-    Route::post('/semesters/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
-    Route::put('/semesters/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
-    Route::post('/semesters/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
-    Route::get('/semesters/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
-    Route::get('/semesters/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
-    
     // Strand Management Routes
     Route::prefix('strands')->group(function () {
         // Get strands data (AJAX)

@@ -27,7 +27,7 @@
                         <i class="fas fa-calendar-alt"></i>
                         <span id="syDisplay">-</span>
                     </h5>
-                    <small class="text-muted">Code: <code id="codeDisplay">-</code></small>
+                    <small class="text-muted">Code: <span id="codeDisplay">-</span></small>
                 </div>
                 <span class="badge badge-lg" id="statusBadge"></span>
             </div>
@@ -35,9 +35,10 @@
     </div>
 
     <div class="row">
-        <!-- Left Panel: Semesters List -->
+        <!-- Left Panel -->
         <div class="col-md-4">
-            <div class="card card-primary card-outline">
+            <!-- Semesters List -->
+            <div class="card card-primary card-outline mb-3">
                 <div class="card-header">
                     <h3 class="card-title">
                         <i class="fas fa-list"></i> Semesters
@@ -66,110 +67,103 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Enrolled Classes -->
+            <div class="card card-dark card-outline" id="classesCard" style="display: none;">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-book"></i> Enrolled Classes
+                    </h3>
+                </div>
+                <div class="card-body p-0">
+                    <div id="classesLoading" class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin"></i> Loading classes...
+                    </div>
+
+                    <div id="classesTable" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Class Code</th>
+                                        <th>Class Name</th>
+                                        <th width="60" class="text-center">Students</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="classesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="noClasses" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No classes enrolled</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Right Panel: Semester Details -->
+        <!-- Right Panel: Student Enrollment List -->
         <div class="col-md-8">
-            <div class="card card-info card-outline">
+            <div class="card card-primary card-outline">
                 <div class="card-header">
                     <h3 class="card-title" id="detailsTitle">
-                        <i class="fas fa-info-circle"></i> Semester Details
+                        <i class="fas fa-users"></i> Enrolled Students
                     </h3>
-                    <div class="card-tools" id="detailsTools" style="display: none;">
-                        <button class="btn btn-tool" id="editSemesterBtn" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                    <div class="card-tools">
+                        <span class="badge badge-primary mr-2" id="studentCount">0 Students</span>
                     </div>
                 </div>
                 <div class="card-body" style="min-height: 500px;">
                     <!-- Empty State -->
                     <div id="emptyState" class="text-center text-muted py-5">
                         <i class="fas fa-arrow-left fa-3x mb-3"></i>
-                        <h5>Select a Semester</h5>
-                        <p>Choose a semester from the list to view details and enrolled classes</p>
+                        <h5>Select a Class</h5>
+                        <p>Choose a class from the list to view enrolled students</p>
                     </div>
 
-                    <!-- Details Content -->
-                    <div id="detailsContent" style="display: none;">
-                        <!-- Semester Info -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="info-box bg-light">
-                                    <span class="info-box-icon bg-primary">
-                                        <i class="fas fa-calendar"></i>
-                                    </span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Duration</span>
-                                        <span class="info-box-number" id="durationDisplay" style="font-size: 14px;">-</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-box bg-light">
-                                    <span class="info-box-icon bg-dark">
-                                        <i class="fas fa-code"></i>
-                                    </span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Code</span>
-                                        <span class="info-box-number" id="semCodeDisplay">-</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-box bg-light">
-                                    <span class="info-box-icon bg-secondary">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Status</span>
-                                        <span class="badge badge-lg" id="semStatusBadge">-</span>
-                                    </div>
-                                </div>
+                    <!-- Students Loading -->
+                    <div id="studentsLoading" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                        <p class="mt-2">Loading students...</p>
+                    </div>
+
+                    <!-- Students Table -->
+                    <div id="studentsContent" style="display: none;">
+                        <!-- Class Info Bar -->
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                            <div>
+                                <h6 class="mb-1"><span id="selectedClassName">-</span></h6>
+                                <small class="text-muted">
+                                    <span id="selectedClassCode">-</span> | 
+                                    <span id="selectedSemesterName">-</span>
+                                </small>
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
-                        <div class="mb-3" id="actionButtons">
-                            <button class="btn btn-success btn-sm" id="activateSemBtn" style="display: none;">
-                                <i class="fas fa-check-circle"></i> Set as Active
-                            </button>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="bg-dark">
+                                    <tr>
+                                        <th width="120">Student Number</th>
+                                        <th>Name</th>
+                                        <th width="150">Section</th>
+                                        <th width="100">Status</th>
+                                        <th width="90" class="text-center">Final Grade</th>
+                                        <th width="80">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentsTableBody">
+                                </tbody>
+                            </table>
                         </div>
+                    </div>
 
-                        <!-- Enrolled Classes Section -->
-                        <div class="card">
-                            <div class="card-header bg-primary">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-book"></i> Enrolled Classes
-                                </h5>
-                            </div>
-                            <div class="card-body p-0">
-                                <div id="classesLoading" class="text-center py-3">
-                                    <i class="fas fa-spinner fa-spin"></i> Loading classes...
-                                </div>
-
-                                <div id="classesTable" style="display: none;">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover mb-0">
-                                            <thead class="bg-light">
-                                                <tr>
-                                                    <th width="120">Class Code</th>
-                                                    <th>Class Name</th>
-                                                    <th width="100" class="text-center">Students</th>
-                                                    <th width="100" class="text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="classesTableBody">
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <div id="noClasses" class="text-center py-4" style="display: none;">
-                                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted mb-0">No classes enrolled for this semester</p>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- No Students State -->
+                    <div id="noStudents" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No students enrolled in this class</p>
                     </div>
                 </div>
             </div>
@@ -246,52 +240,6 @@
         </div>
     </div>
 </div>
-
-<!-- Student Enrollment History Modal -->
-<div class="modal fade" id="enrollmentHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-info">
-                <h5 class="modal-title">
-                    <i class="fas fa-history"></i> Enrollment History - <span id="historyClassName"></span>
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="historyLoading" class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Loading enrollment history...</p>
-                </div>
-
-                <div id="historyContent" style="display: none;">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
-                            <thead class="bg-dark">
-                                <tr>
-                                    <th width="150">Student Number</th>
-                                    <th>Name</th>
-                                    <th width="150">Section</th>
-                                    <th width="120">Status</th>
-                                    <th width="100" class="text-center">Final Grade</th>
-                                    <th width="100">Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="noHistory" class="text-center py-4" style="display: none;">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No enrollment history found</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -303,8 +251,8 @@
             createSemester: "{{ route('admin.semesters.create') }}",
             updateSemester: "{{ route('admin.semesters.update', ['id' => ':id']) }}",
             setActive: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
-            getSemesterClasses: "/api/admin/semesters/:id/classes",
-            getEnrollmentHistory: "/api/admin/semesters/:semesterId/class/:classCode/history",
+            getSemesterClasses: "{{ route('admin.semesters.classes', ['id' => ':id']) }}",
+            getEnrollmentHistory: "{{ route('admin.semesters.enrollment-history', ['semesterId' => ':semesterId', 'classCode' => ':classCode']) }}",
             csrfToken: "{{ csrf_token() }}"
         };
 
