@@ -11,6 +11,7 @@ use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Year_Management;
+use App\Http\Controllers\Grade_Management\Grade_Management;
 
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
@@ -62,11 +63,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
     });
 
-    Route::prefix('grade_management')->group(function () {
-        Route::get('/', [Year_Management::class, 'list_grades'])->name('grades.index');
-
+    Route::prefix('grades')->name('grades.')->group(function () {
+        // View page
+        Route::get('/list', [Grade_Management::class, 'list_grades'])->name('list');
+        
+        // AJAX endpoints
+        Route::get('/api/classes', [Grade_Management::class, 'getClassesForFilter'])->name('classes');
+        Route::get('/api/semesters', [Grade_Management::class, 'getSemestersForFilter'])->name('semesters');
+        Route::get('/api/search', [Grade_Management::class, 'searchGrades'])->name('search');
+        Route::get('/api/details/{id}', [Grade_Management::class, 'getGradeDetails'])->name('details');
     });
-
 
     // ---------------------------------------------------------------------------
     // USER MANAGEMENT

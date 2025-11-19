@@ -194,8 +194,8 @@
                                     </ul>
                             </li>
 
-                            <li class="nav-item {{ Request::is('grade_management/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('grade_management/*') ? 'active' : '' }}">
+                            <li class="nav-item {{ Request::is('grades/*') ? 'menu-open' : '' }}">
+                                <a href="#" class="nav-link {{ Request::is('grades/*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-user-graduate"></i>
                                     <p>
                                         Grades
@@ -204,7 +204,7 @@
                                 </a>
                                     <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                            <a href="{{ route('admin.grades.list') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                                 <p>Grades</p>
                                             </a>
