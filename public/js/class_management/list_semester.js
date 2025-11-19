@@ -1,54 +1,70 @@
 $(document).ready(function () {
+    let currentSchoolYear = null;
+    let semesters = [];
+    let selectedSemesterId = null;
     let isEditMode = false;
-    let selectedSchoolYearId = null;
-    let schoolYearsData = [];
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const schoolYearIdFromUrl = urlParams.get('sy');
-    // Load school years on page load
-    loadSchoolYears();
+    // Check if school year ID is provided
+    if (!SCHOOL_YEAR_ID) {
+        Swal.fire({
+            icon: 'error',
+            title: 'No School Year Selected',
+            text: 'Please select a school year first',
+            confirmButtonText: 'Go Back'
+        }).then(() => {
+            window.location.href = '/admin/schoolyears';
+        });
+        return;
+    }
 
-    // Auto-generate code based on semester name
-    $('#semesterName').change(function () {
-        const name = $(this).val();
-        const codeMap = {
-            '1st Semester': 'SEM1',
-            '2nd Semester': 'SEM2',
-            'Summer': 'SUMMER'
-        };
-        $('#semesterCode').val(codeMap[name] || '');
+    // Initialize
+    loadSchoolYear();
+    loadSemesters();
+
+    // Add Semester Buttons
+    $('#addSemesterBtn, #addFirstSemesterBtn').click(function () {
+        openSemesterModal();
     });
 
-    // Add Semester Button
-    $('#addSemesterBtn').click(function () {
-        if (!selectedSchoolYearId) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'No School Year Selected',
-                text: 'Please select a school year first'
-            });
-            return;
+    // Edit Semester Button
+    $('#editSemesterBtn').click(function () {
+        if (selectedSemesterId) {
+            openSemesterModal(selectedSemesterId);
         }
+    });
 
-        isEditMode = false;
-        $('#modalTitle').text('Add Semester');
-        $('#semesterId').val('');
-        $('#schoolYearId').val(selectedSchoolYearId);
-        $('#semesterName').val('');
-        $('#semesterCode').val('');
-        $('#startDate').val('');
-        $('#endDate').val('');
-        $('#statusGroup').hide();
-        $('#semesterModal').modal('show');
+    // Activate Semester Button
+    $('#activateSemBtn').click(function () {
+        if (selectedSemesterId) {
+            activateSemester(selectedSemesterId);
+        }
+    });
+
+    // Auto-generate semester code
+    $('#semesterName').on('change', function () {
+        const name = $(this).val();
+        let code = '';
+        
+        if (name === '1st Semester') {
+            code = 'SEM1';
+        } else if (name === '2nd Semester') {
+            code = 'SEM2';
+        } else if (name === 'Summer') {
+            code = 'SUMMER';
+        }
+        
+        if (code && !isEditMode) {
+            $('#semesterCode').val(code);
+        }
     });
 
     // Form Submit
     $('#semesterForm').submit(function (e) {
         e.preventDefault();
-
+        
         const startDate = new Date($('#startDate').val());
         const endDate = new Date($('#endDate').val());
-
+        
         if (endDate <= startDate) {
             Swal.fire({
                 icon: 'error',
@@ -59,7 +75,7 @@ $(document).ready(function () {
         }
 
         const formData = {
-            school_year_id: $('#schoolYearId').val(),
+            school_year_id: SCHOOL_YEAR_ID,
             name: $('#semesterName').val(),
             code: $('#semesterCode').val().toUpperCase(),
             start_date: $('#startDate').val(),
@@ -74,180 +90,222 @@ $(document).ready(function () {
         }
     });
 
-    // Load School Years
-    function loadSchoolYears() {
+    // Load School Year
+    function loadSchoolYear() {
+        $('#schoolYearLoading').show();
+        $('#schoolYearInfo').hide();
+
         $.ajax({
-            url: API_ROUTES.getSchoolYears,
+            url: API_ROUTES.getSchoolYear,
             method: 'GET',
             success: function (response) {
                 if (response.success) {
-                    schoolYearsData = response.data;
-                    displaySchoolYearsList(response.data);
-                    updateSchoolYearHeader();
+                    currentSchoolYear = response.data.find(sy => sy.id == SCHOOL_YEAR_ID);
+                    
+                    if (!currentSchoolYear) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'School Year Not Found',
+                            confirmButtonText: 'Go Back'
+                        }).then(() => {
+                            window.location.href = '/admin/schoolyears';
+                        });
+                        return;
+                    }
+
+                    displaySchoolYear();
                 }
             },
-            error: function (xhr) {
-                console.error('Failed to load school years:', xhr);
-            }
-        });
-    }
-
-    // Display School Years List (Left Panel)
-    function displaySchoolYearsList(schoolYears) {
-        const container = $('#schoolYearsListContainer');
-        container.empty();
-
-        if (schoolYears.length === 0) {
-            container.html(`
-                <div class="text-center py-4">
-                    <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
-                    <p class="text-muted">No school years found</p>
-                </div>
-            `);
-            return;
-        }
-
-        schoolYears.forEach(sy => {
-            const isActive = sy.status === 'active';
-            const statusBadge = getStatusBadge(sy.status);
-
-            const card = `
-                <div class="card mb-2 school-year-card ${isActive ? 'border-primary' : ''}" 
-                     data-id="${sy.id}" style="cursor: pointer;">
-                    <div class="card-body p-3">
-                        <h6 class="mb-1">
-                            ${isActive ? '<i class="fas fa-check-circle text-primary mr-1"></i>' : ''}
-                            ${sy.year_start} - ${sy.year_end}
-                        </h6>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                <i class="fas fa-calendar-alt"></i> ${sy.semesters_count} semester(s)
-                            </small>
-                            ${statusBadge}
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.append(card);
-        });
-
-        // Click handler for school year cards
-        $('.school-year-card').click(function () {
-            selectSchoolYear($(this).data('id'));
-        });
-
-        // Auto-select school year from URL
-        if (schoolYearIdFromUrl) {
-            setTimeout(() => {
-                selectSchoolYear(parseInt(schoolYearIdFromUrl));
-            }, 100);
-        }
-    }
-    // Select School Year
-    function selectSchoolYear(schoolYearId) {
-        $('.school-year-card').removeClass('border-primary bg-light');
-        $(`.school-year-card[data-id="${schoolYearId}"]`).addClass('border-primary bg-light');
-
-        selectedSchoolYearId = schoolYearId;
-        $('#addSemesterBtn').prop('disabled', false);
-
-        loadSemesters(selectedSchoolYearId);
-        updateSelectedSchoolYearInfo();
-    }
-    // Update School Year Header
-    function updateSchoolYearHeader() {
-        const activeSY = schoolYearsData.find(sy => sy.status === 'active');
-
-        if (activeSY) {
-            $('#schoolYearHeader').html(`
-                <h5><i class="icon fas fa-calendar-alt"></i> Active School Year: ${activeSY.year_start}-${activeSY.year_end}</h5>
-                Manage semesters for the current and upcoming school years.
-            `);
-        } else {
-            $('#schoolYearHeader').html(`
-                <h5><i class="icon fas fa-exclamation-triangle"></i> No Active School Year</h5>
-                Please set an active school year in the School Year Management page.
-            `);
-        }
-    }
-
-    // Update Selected School Year Info
-    function updateSelectedSchoolYearInfo() {
-        const sy = schoolYearsData.find(item => item.id === selectedSchoolYearId);
-        if (sy) {
-            $('#selectedSchoolYearInfo').html(`
-                <h6 class="mb-1"><strong>School Year:</strong> ${sy.year_start} - ${sy.year_end}</h6>
-                <p class="mb-0"><strong>Code:</strong> ${sy.code} | <strong>Status:</strong> ${getStatusBadge(sy.status)}</p>
-            `);
-        }
-    }
-
-    // Load Semesters
-    function loadSemesters(schoolYearId) {
-        $('#noSchoolYearSelected').hide();
-        $('#semestersContainer').show();
-        $('#semestersLoadingIndicator').show();
-        $('#semestersTableContainer').hide();
-        $('#noSemestersMessage').hide();
-
-        $.ajax({
-            url: API_ROUTES.getSemesters,
-            method: 'GET',
-            data: { school_year_id: schoolYearId },
-            success: function (response) {
-                if (response.success) {
-                    displaySemesters(response.data);
-                }
-            },
-            error: function (xhr) {
-                console.error('Failed to load semesters:', xhr);
+            error: function () {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to load semesters'
+                    text: 'Failed to load school year'
                 });
             }
         });
     }
 
-    // Display Semesters
-    function displaySemesters(semesters) {
-        $('#semestersLoadingIndicator').hide();
+    // Display School Year
+    function displaySchoolYear() {
+        $('#syDisplay').text(`SY ${currentSchoolYear.year_start}-${currentSchoolYear.year_end}`);
+        $('#codeDisplay').text(currentSchoolYear.code);
+        
+        const badgeClass = getStatusBadgeClass(currentSchoolYear.status);
+        $('#statusBadge').attr('class', `badge badge-lg ${badgeClass}`)
+                        .text(currentSchoolYear.status.toUpperCase());
 
-        if (semesters.length === 0) {
-            $('#noSemestersMessage').show();
-            return;
+        $('#schoolYearLoading').hide();
+        $('#schoolYearInfo').show();
+        $('#addSemesterBtn').prop('disabled', false);
+    }
+
+    // Load Semesters
+    function loadSemesters() {
+        $('#semestersLoading').show();
+        $('#semestersList').hide();
+        $('#noSemesters').hide();
+
+        $.ajax({
+            url: API_ROUTES.getSemesters,
+            method: 'GET',
+            data: { school_year_id: SCHOOL_YEAR_ID },
+            success: function (response) {
+                $('#semestersLoading').hide();
+                
+                if (response.success && response.data.length > 0) {
+                    semesters = response.data;
+                    displaySemesters();
+                    $('#semestersList').show();
+                    
+                    // Auto-select active semester or first
+                    const activeSem = semesters.find(s => s.status === 'active');
+                    if (activeSem) {
+                        selectSemester(activeSem.id);
+                    } else if (semesters.length > 0) {
+                        selectSemester(semesters[0].id);
+                    }
+                } else {
+                    $('#noSemesters').show();
+                }
+            },
+            error: function (xhr) {
+                $('#semestersLoading').hide();
+                $('#noSemesters').show();
+                console.error('Failed to load semesters:', xhr);
+            }
+        });
+    }
+
+    // Display Semesters
+    function displaySemesters() {
+        const container = $('#semestersList');
+        container.empty();
+
+        semesters.forEach(sem => {
+            const statusBadge = getStatusBadgeClass(sem.status);
+            const isSelected = sem.id === selectedSemesterId ? 'active' : '';
+            
+            const item = `
+                <a href="#" class="list-group-item list-group-item-action semester-item ${isSelected}" 
+                   data-semester-id="${sem.id}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="fas fa-calendar mr-2"></i>
+                                ${sem.name}
+                            </h6>
+                            <small class="text-muted">${sem.code}</small>
+                        </div>
+                        <span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span>
+                    </div>
+                </a>
+            `;
+            container.append(item);
+        });
+
+        // Click handler
+        container.find('.semester-item').click(function (e) {
+            e.preventDefault();
+            const semesterId = $(this).data('semester-id');
+            selectSemester(semesterId);
+        });
+    }
+
+    // Select Semester
+    function selectSemester(semesterId) {
+        selectedSemesterId = semesterId;
+        const semester = semesters.find(s => s.id === semesterId);
+        
+        if (!semester) return;
+
+        // Update selection in list
+        $('.semester-item').removeClass('active');
+        $(`.semester-item[data-semester-id="${semesterId}"]`).addClass('active');
+
+        // Show details
+        $('#emptyState').hide();
+        $('#detailsContent').show();
+        $('#detailsTools').show();
+
+        // Update details
+        $('#detailsTitle').html(`<i class="fas fa-info-circle"></i> ${semester.name}`);
+        
+        const startDate = new Date(semester.start_date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        const endDate = new Date(semester.end_date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        $('#durationDisplay').text(`${startDate} - ${endDate}`);
+        $('#semCodeDisplay').text(semester.code);
+        
+        const badgeClass = getStatusBadgeClass(semester.status);
+        $('#semStatusBadge').attr('class', `badge badge-lg ${badgeClass}`)
+                           .text(semester.status.toUpperCase());
+
+        // Show/hide activate button
+        if (semester.status !== 'active') {
+            $('#activateSemBtn').show();
+        } else {
+            $('#activateSemBtn').hide();
         }
 
-        $('#semestersTableContainer').show();
-        const tbody = $('#semestersTableBody');
+        // Load classes for this semester
+        loadSemesterClasses(semesterId);
+    }
+
+    // Load Semester Classes
+    function loadSemesterClasses(semesterId) {
+        $('#classesLoading').show();
+        $('#classesTable').hide();
+        $('#noClasses').hide();
+
+        const url = API_ROUTES.getSemesterClasses.replace(':id', semesterId);
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+                $('#classesLoading').hide();
+                
+                if (response.success && response.data.length > 0) {
+                    displayClasses(response.data);
+                    $('#classesTable').show();
+                } else {
+                    $('#noClasses').show();
+                }
+            },
+            error: function () {
+                $('#classesLoading').hide();
+                $('#noClasses').show();
+            }
+        });
+    }
+
+    // Display Classes
+    function displayClasses(classes) {
+        const tbody = $('#classesTableBody');
         tbody.empty();
 
-        semesters.forEach((sem, index) => {
-            const statusBadge = getStatusBadge(sem.status);
-            const activeBtn = sem.status !== 'active' ?
-                `<button class="btn btn-success btn-xs" onclick="setActiveSemester(${sem.id})" title="Set as Active">
-                    <i class="fas fa-check-circle"></i>
-                </button>` : '';
-
-            const startDate = new Date(sem.start_date).toLocaleDateString('en-US', {
-                year: 'numeric', month: 'short', day: 'numeric'
-            });
-            const endDate = new Date(sem.end_date).toLocaleDateString('en-US', {
-                year: 'numeric', month: 'short', day: 'numeric'
-            });
-
+        classes.forEach(cls => {
             const row = `
                 <tr>
-                    <td>${index + 1}</td>
-                    <td><strong>${sem.name}</strong></td>
-                    <td><span class="badge badge-secondary">${sem.code}</span></td>
-                    <td><small>${startDate} - ${endDate}</small></td>
-                    <td>${statusBadge}</td>
-                    <td>
-                        ${activeBtn}
-                        <button class="btn btn-primary btn-xs" onclick="editSemester(${sem.id})" title="Edit">
-                            <i class="fas fa-edit"></i>
+                    <td><code>${cls.class_code}</code></td>
+                    <td><strong>${cls.class_name}</strong></td>
+                    <td class="text-center">
+                        <span class="badge badge-primary">${cls.student_count || 0}</span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-info btn-sm" 
+                                onclick="viewEnrollmentHistory('${cls.class_code}', '${cls.class_name}')"
+                                title="View Enrollment History">
+                            <i class="fas fa-history"></i>
                         </button>
                     </td>
                 </tr>
@@ -256,14 +314,100 @@ $(document).ready(function () {
         });
     }
 
-    // Get Status Badge
-    function getStatusBadge(status) {
-        const badges = {
-            'active': '<span class="badge badge-success">Active</span>',
-            'completed': '<span class="badge badge-secondary">Completed</span>',
-            'upcoming': '<span class="badge badge-warning">Upcoming</span>'
-        };
-        return badges[status] || '<span class="badge badge-light">Unknown</span>';
+    // View Enrollment History
+    window.viewEnrollmentHistory = function(classCode, className) {
+        $('#historyClassName').text(className);
+        $('#enrollmentHistoryModal').modal('show');
+        loadEnrollmentHistory(classCode);
+    };
+
+    // Load Enrollment History
+    function loadEnrollmentHistory(classCode) {
+        $('#historyLoading').show();
+        $('#historyContent').hide();
+        $('#noHistory').hide();
+
+        const url = API_ROUTES.getEnrollmentHistory
+            .replace(':semesterId', selectedSemesterId)
+            .replace(':classCode', classCode);
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+                $('#historyLoading').hide();
+                
+                if (response.success && response.data.length > 0) {
+                    displayEnrollmentHistory(response.data);
+                    $('#historyContent').show();
+                } else {
+                    $('#noHistory').show();
+                }
+            },
+            error: function () {
+                $('#historyLoading').hide();
+                $('#noHistory').show();
+            }
+        });
+    }
+
+    // Display Enrollment History
+    function displayEnrollmentHistory(students) {
+        const tbody = $('#historyTableBody');
+        tbody.empty();
+
+        students.forEach(student => {
+            const statusBadge = student.enrollment_status === 'enrolled' ? 'badge-success' :
+                              student.enrollment_status === 'dropped' ? 'badge-danger' : 'badge-secondary';
+            
+            const remarksBadge = student.remarks === 'PASSED' ? 'badge-success' :
+                               student.remarks === 'FAILED' ? 'badge-danger' : 'badge-warning';
+
+            const row = `
+                <tr>
+                    <td><code>${student.student_number}</code></td>
+                    <td>${student.first_name} ${student.last_name}</td>
+                    <td>${student.section_name || 'N/A'}</td>
+                    <td>
+                        <span class="badge ${statusBadge}">${student.enrollment_status}</span>
+                    </td>
+                    <td class="text-center">
+                        ${student.final_grade ? `<strong>${student.final_grade}</strong>` : '-'}
+                    </td>
+                    <td>
+                        ${student.remarks ? `<span class="badge ${remarksBadge}">${student.remarks}</span>` : '-'}
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+
+    // Open Semester Modal
+    function openSemesterModal(semesterId = null) {
+        isEditMode = !!semesterId;
+        
+        if (isEditMode) {
+            const semester = semesters.find(s => s.id === semesterId);
+            if (!semester) return;
+
+            $('#modalTitle').text('Edit Semester');
+            $('#semesterId').val(semester.id);
+            $('#semesterName').val(semester.name);
+            $('#semesterCode').val(semester.code);
+            $('#startDate').val(semester.start_date);
+            $('#endDate').val(semester.end_date);
+            $('#status').val(semester.status);
+            $('#statusGroup').show();
+        } else {
+            $('#modalTitle').text('Add Semester');
+            $('#semesterForm')[0].reset();
+            $('#semesterId').val('');
+            $('#statusGroup').hide();
+        }
+
+        $('#schoolYearId').val(SCHOOL_YEAR_ID);
+        $('#semesterModal').modal('show');
     }
 
     // Create Semester
@@ -273,7 +417,7 @@ $(document).ready(function () {
             method: 'POST',
             data: formData,
             headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                'X-CSRF-TOKEN': API_ROUTES.csrfToken
             },
             success: function (response) {
                 if (response.success) {
@@ -282,10 +426,10 @@ $(document).ready(function () {
                         icon: 'success',
                         title: 'Success',
                         text: response.message,
-                        timer: 2000
+                        timer: 2000,
+                        showConfirmButton: false
                     });
-                    loadSemesters(selectedSchoolYearId);
-                    loadSchoolYears(); // Refresh count
+                    loadSemesters();
                 }
             },
             error: function (xhr) {
@@ -302,32 +446,6 @@ $(document).ready(function () {
         });
     }
 
-    // Edit Semester (Global Function)
-    window.editSemester = function (id) {
-        $.ajax({
-            url: API_ROUTES.getSemesters,
-            method: 'GET',
-            success: function (response) {
-                if (response.success) {
-                    const sem = response.data.find(item => item.id === id);
-                    if (sem) {
-                        isEditMode = true;
-                        $('#modalTitle').text('Edit Semester');
-                        $('#semesterId').val(sem.id);
-                        $('#schoolYearId').val(sem.school_year_id);
-                        $('#semesterName').val(sem.name);
-                        $('#semesterCode').val(sem.code);
-                        $('#startDate').val(sem.start_date);
-                        $('#endDate').val(sem.end_date);
-                        $('#status').val(sem.status);
-                        $('#statusGroup').show();
-                        $('#semesterModal').modal('show');
-                    }
-                }
-            }
-        });
-    };
-
     // Update Semester
     function updateSemester(formData) {
         const id = $('#semesterId').val();
@@ -338,7 +456,7 @@ $(document).ready(function () {
             method: 'PUT',
             data: formData,
             headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                'X-CSRF-TOKEN': API_ROUTES.csrfToken
             },
             success: function (response) {
                 if (response.success) {
@@ -347,10 +465,10 @@ $(document).ready(function () {
                         icon: 'success',
                         title: 'Success',
                         text: response.message,
-                        timer: 2000
+                        timer: 2000,
+                        showConfirmButton: false
                     });
-                    loadSemesters(selectedSchoolYearId);
-                    loadSchoolYears();
+                    loadSemesters();
                 }
             },
             error: function (xhr) {
@@ -367,16 +485,19 @@ $(document).ready(function () {
         });
     }
 
-    // Set Active Semester (Global Function)
-    window.setActiveSemester = function (id) {
+    // Activate Semester
+    function activateSemester(id) {
+        const semester = semesters.find(s => s.id === id);
+        
         Swal.fire({
-            title: 'Set as Active?',
-            text: 'This will deactivate all other semesters and set the parent school year as active',
+            title: 'Activate Semester?',
+            html: `Set <strong>${semester.name}</strong> as active?<br><small class="text-muted">This will deactivate all other semesters</small>`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, activate it'
+            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate it',
+            cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
                 const url = API_ROUTES.setActive.replace(':id', id);
@@ -385,7 +506,7 @@ $(document).ready(function () {
                     url: url,
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        'X-CSRF-TOKEN': API_ROUTES.csrfToken
                     },
                     success: function (response) {
                         if (response.success) {
@@ -393,13 +514,13 @@ $(document).ready(function () {
                                 icon: 'success',
                                 title: 'Activated',
                                 text: response.message,
-                                timer: 2000
+                                timer: 2000,
+                                showConfirmButton: false
                             });
-                            loadSemesters(selectedSchoolYearId);
-                            loadSchoolYears();
+                            loadSemesters();
                         }
                     },
-                    error: function (xhr) {
+                    error: function () {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
@@ -409,5 +530,15 @@ $(document).ready(function () {
                 });
             }
         });
-    };
+    }
+
+    // Get Status Badge Class
+    function getStatusBadgeClass(status) {
+        const badges = {
+            'active': 'badge-success',
+            'completed': 'badge-secondary',
+            'upcoming': 'badge-warning'
+        };
+        return badges[status] || 'badge-light';
+    }
 });

@@ -74,7 +74,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/semesters/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
     Route::put('/semesters/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
     Route::post('/semesters/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
-
+    Route::get('/semesters/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
+    Route::get('/semesters/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
+    
     // Strand Management Routes
     Route::prefix('strands')->group(function () {
         // Get strands data (AJAX)

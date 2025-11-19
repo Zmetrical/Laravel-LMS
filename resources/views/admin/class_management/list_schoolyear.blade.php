@@ -229,7 +229,7 @@
             createSchoolYear: "{{ route('admin.schoolyears.create') }}",
             updateSchoolYear: "{{ route('admin.schoolyears.update', ['id' => ':id']) }}",
             setActive: "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}",
-            getSemesters: "/admin/semesters/list",
+            getSemesters: "{{ route('admin.semesters.list') }}",
             semestersPage: "{{ route('admin.semesters.index') }}",
             csrfToken: "{{ csrf_token() }}"
         };

@@ -480,7 +480,106 @@ class Year_Management extends MainController
             ], 500);
         }
     }
+/**
+ * Get classes enrolled in a specific semester
+ */
+public function getSemesterClasses($id)
+{
+    try {
+        $semester = DB::table('semesters')->find($id);
 
+        if (!$semester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Semester not found'
+            ], 404);
+        }
+
+        // Get all classes enrolled in this semester through student_class_matrix
+        $classes = DB::table('student_class_matrix as scm')
+            ->join('classes as c', function ($join) {
+                $join->on(
+                    DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
+                    '=',
+                    DB::raw('c.class_code COLLATE utf8mb4_general_ci')
+                );
+            })
+            ->where('scm.semester_id', $id)
+            ->select(
+                'c.id',
+                'c.class_code',
+                'c.class_name',
+                DB::raw('COUNT(DISTINCT scm.student_number) as student_count')
+            )
+            ->groupBy('c.id', 'c.class_code', 'c.class_name')
+            ->orderBy('c.class_code')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $classes
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load semester classes: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get enrollment history for a specific class in a semester
+ */
+public function getEnrollmentHistory($semesterId, $classCode)
+{
+    try {
+        // Get enrolled students
+        $enrolledStudents = DB::table('student_class_matrix as scm')
+            ->join('students as s', function ($join) {
+                $join->on(
+                    DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
+                    '=',
+                    DB::raw('s.student_number COLLATE utf8mb4_general_ci')
+                );
+            })
+            ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+            ->leftJoin('grades_final as gf', function ($join) use ($classCode) {
+                $join->on(
+                    DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
+                    '=',
+                    DB::raw('gf.student_number COLLATE utf8mb4_general_ci')
+                )
+                ->where('gf.class_code', $classCode);
+            })
+            ->where('scm.semester_id', $semesterId)
+            ->where('scm.class_code', $classCode)
+            ->select(
+                's.student_number',
+                's.first_name',
+                's.middle_name',
+                's.last_name',
+                's.student_type',
+                'sec.name as section_name',
+                'scm.enrollment_status',
+                'gf.final_grade',
+                'gf.remarks',
+                'gf.is_locked'
+            )
+            ->orderBy('s.last_name')
+            ->orderBy('s.first_name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $enrolledStudents
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load enrollment history: ' . $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Set active semester
      */
