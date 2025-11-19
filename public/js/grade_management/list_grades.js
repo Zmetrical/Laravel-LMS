@@ -2,44 +2,7 @@ $(document).ready(function() {
     let currentGradesData = [];
 
     // Load initial data
-    loadSemesters();
     loadClasses();
-
-    /**
-     * Load semesters for filter
-     */
-    function loadSemesters() {
-        $.ajax({
-            url: API_ROUTES.getSemesters,
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    const select = $('#semesterFilter');
-                    select.empty().append('<option value="">-- Select Semester --</option>');
-                    
-                    response.data.forEach(function(semester) {
-                        const label = `${semester.school_year_code} - ${semester.name}`;
-                        const isActive = semester.status === 'active';
-                        const option = $('<option>')
-                            .val(semester.id)
-                            .text(label + (isActive ? ' (Active)' : ''));
-                        
-                        if (isActive) {
-                            option.attr('selected', true);
-                            updateActiveSemesterDisplay(label);
-                        }
-                        
-                        select.append(option);
-                    });
-                    
-                    select.trigger('change');
-                }
-            },
-            error: function() {
-                toastr.error('Failed to load semesters');
-            }
-        });
-    }
 
     /**
      * Load classes for filter
@@ -69,27 +32,12 @@ $(document).ready(function() {
     }
 
     /**
-     * Update active semester display
-     */
-    function updateActiveSemesterDisplay(semesterLabel) {
-        $('#activeSemesterDisplay').text(semesterLabel);
-    }
-
-    /**
      * Search grades
      */
     $('#searchForm').on('submit', function(e) {
         e.preventDefault();
         
-        const semesterId = $('#semesterFilter').val();
-        
-        if (!semesterId) {
-            toastr.warning('Please select a semester');
-            return;
-        }
-
         const searchData = {
-            semester_id: semesterId,
             class_code: $('#classFilter').val(),
             status_filter: $('#statusFilter').val(),
             search: $('#searchInput').val().trim()
@@ -112,13 +60,15 @@ $(document).ready(function() {
                 if (response.success) {
                     currentGradesData = response.data;
                     displayResults(response.data);
-                    updateStatistics(response.stats);
+                    updateAverageGrade(response.stats.average_grade);
                     
                     // Enable export button if data exists
                     $('#exportBtn').prop('disabled', response.data.length === 0);
                     
                     if (response.data.length === 0) {
                         toastr.info('No records found matching your search criteria');
+                    } else {
+                        toastr.success(`Found ${response.data.length} student(s)`);
                     }
                 }
             },
@@ -136,7 +86,6 @@ $(document).ready(function() {
     function displayResults(data) {
         $('#noSearchYet').hide();
         $('#resultsSection').show();
-        $('#statsCards').show();
         
         const tbody = $('#gradesTableBody');
         tbody.empty();
@@ -146,16 +95,22 @@ $(document).ready(function() {
                 <tr>
                     <td colspan="11" class="text-center py-4 text-muted">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
-                        <p>No grade records found</p>
+                        <p>No students found</p>
                     </td>
                 </tr>
             `);
             $('#recordsCount').text('No records');
+            $('#gradesTableFooter').hide();
             return;
         }
 
         data.forEach(function(grade) {
             const row = $('<tr>');
+            
+            // Add light background for students without grades
+            if (!grade.has_grade) {
+                row.addClass('table-warning');
+            }
             
             // Student Number
             row.append(`<td>${escapeHtml(grade.student_number)}</td>`);
@@ -193,54 +148,82 @@ $(document).ready(function() {
             `);
             
             // Component Scores
-            row.append(`<td class="text-center">${grade.ww_score || '-'}</td>`);
-            row.append(`<td class="text-center">${grade.pt_score || '-'}</td>`);
-            row.append(`<td class="text-center">${grade.qa_score || '-'}</td>`);
-            
-            // Final Grade
-            const gradeClass = getGradeClass(grade.final_grade);
-            row.append(`
-                <td class="text-center">
-                    <strong class="text-${gradeClass}">${grade.final_grade}</strong>
-                    ${grade.is_locked ? '<br><i class="fas fa-lock text-muted" title="Locked"></i>' : ''}
-                </td>
-            `);
-            
-            // Remarks
-            const remarksClass = getRemarksClass(grade.remarks);
-            row.append(`
-                <td class="text-center">
-                    <span class="badge badge-${remarksClass}">
-                        ${grade.remarks}
-                    </span>
-                </td>
-            `);
-            
-            // Actions
-            row.append(`
-                <td class="text-center">
-                    <button class="btn btn-sm btn-info view-details-btn" data-id="${grade.id}">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            `);
+            if (grade.has_grade) {
+                row.append(`<td class="text-center">${grade.ww_score || '-'}</td>`);
+                row.append(`<td class="text-center">${grade.pt_score || '-'}</td>`);
+                row.append(`<td class="text-center">${grade.qa_score || '-'}</td>`);
+                
+                // Final Grade
+                const gradeClass = getGradeClass(grade.final_grade);
+                row.append(`
+                    <td class="text-center">
+                        <strong class="text-${gradeClass}">${grade.final_grade}</strong>
+                        ${grade.is_locked ? '<br><i class="fas fa-lock text-muted" title="Locked"></i>' : ''}
+                    </td>
+                `);
+                
+                // Remarks
+                const remarksClass = getRemarksClass(grade.remarks);
+                row.append(`
+                    <td class="text-center">
+                        <span class="badge badge-${remarksClass}">
+                            ${grade.remarks}
+                        </span>
+                    </td>
+                `);
+                
+                // Actions
+                row.append(`
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-info view-details-btn" data-id="${grade.grade_id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `);
+            } else {
+                // No grade yet
+                row.append(`<td class="text-center text-muted">-</td>`);
+                row.append(`<td class="text-center text-muted">-</td>`);
+                row.append(`<td class="text-center text-muted">-</td>`);
+                row.append(`
+                    <td class="text-center">
+                        <span class="text-muted">-</span>
+                    </td>
+                `);
+                row.append(`
+                    <td class="text-center">
+                        <span class="badge badge-secondary">NO GRADE</span>
+                    </td>
+                `);
+                row.append(`
+                    <td class="text-center">
+                        <span class="text-muted">-</span>
+                    </td>
+                `);
+            }
             
             tbody.append(row);
         });
 
-        $('#recordsCount').text(`${data.length} record${data.length !== 1 ? 's' : ''}`);
+        $('#recordsCount').text(`${data.length} student${data.length !== 1 ? 's' : ''}`);
+        $('#gradesTableFooter').show();
     }
 
     /**
-     * Update statistics cards
+     * Update average grade display
      */
-    function updateStatistics(stats) {
-        $('#totalRecords').text(stats.total_records);
-        $('#passedCount').text(stats.passed);
-        $('#failedCount').text(stats.failed);
-        $('#incCount').text(stats.inc);
-        $('#drpCount').text(stats.drp + stats.w);
-        $('#averageGrade').text(stats.average_grade);
+    function updateAverageGrade(average) {
+        const avgDisplay = $('#averageGradeDisplay');
+        avgDisplay.text(average > 0 ? average : 'N/A');
+        
+        if (average > 0) {
+            const gradeClass = getGradeClass(average);
+            avgDisplay.removeClass('text-primary text-success text-danger');
+            avgDisplay.addClass(`text-${gradeClass}`);
+        } else {
+            avgDisplay.removeClass('text-success text-danger');
+            avgDisplay.addClass('text-primary');
+        }
     }
 
     /**
@@ -357,7 +340,6 @@ $(document).ready(function() {
         // Hide results
         $('#noSearchYet').show();
         $('#resultsSection').hide();
-        $('#statsCards').hide();
         $('#exportBtn').prop('disabled', true);
     });
 
@@ -365,12 +347,14 @@ $(document).ready(function() {
      * Helper functions
      */
     function getGradeClass(grade) {
+        if (!grade) return 'muted';
         if (grade >= 90) return 'success';
         if (grade >= 75) return 'primary';
         return 'danger';
     }
 
     function getRemarksClass(remarks) {
+        if (!remarks) return 'secondary';
         switch(remarks) {
             case 'PASSED': return 'success';
             case 'FAILED': return 'danger';
@@ -412,10 +396,11 @@ $(document).ready(function() {
                     <div class="spinner-border text-primary" role="status">
                         <span class="sr-only">Loading...</span>
                     </div>
-                    <p class="mt-2 mb-0">Loading grade records...</p>
+                    <p class="mt-2 mb-0">Loading student records...</p>
                 </td>
             </tr>
         `);
+        $('#gradesTableFooter').hide();
     }
 
     function hideLoading() {

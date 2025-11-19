@@ -18,8 +18,15 @@
         <!-- Active Semester Display -->
         <div class="alert alert-dark alert-dismissible">
             <button type="button" class="close" data-dismiss="alert">&times;</button>
-            <h5><i class="icon fas fa-calendar-alt"></i> <span id="activeSemesterDisplay">Loading...</span></h5>
-            View and manage final grades for students across all classes.
+            <h5>
+                <i class="icon fas fa-calendar-alt"></i> 
+                @if(isset($active_semester))
+                    {{ $active_semester->school_year->code ?? 'N/A' }} - {{ $active_semester->name ?? 'No Active Semester' }}
+                @else
+                    No Active Semester
+                @endif
+            </h5>
+            View and manage final grades for students across all classes in the current semester.
         </div>
 
         <!-- Search & Filter Card -->
@@ -30,18 +37,8 @@
             <div class="card-body">
                 <form id="searchForm">
                     <div class="row">
-                        <!-- Semester Filter -->
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label><i class="fas fa-calendar"></i> Semester *</label>
-                                <select class="form-control" id="semesterFilter" required>
-                                    <option value="">-- Select Semester --</option>
-                                </select>
-                            </div>
-                        </div>
-
                         <!-- Class Filter -->
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label><i class="fas fa-book"></i> Class</label>
                                 <select class="form-control" id="classFilter">
@@ -51,7 +48,7 @@
                         </div>
 
                         <!-- Status Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label><i class="fas fa-flag"></i> Status</label>
                                 <select class="form-control" id="statusFilter">
@@ -61,12 +58,13 @@
                                     <option value="inc">INC</option>
                                     <option value="drp">Dropped</option>
                                     <option value="w">Withdrawn</option>
+                                    <option value="no_grade">No Grade Yet</option>
                                 </select>
                             </div>
                         </div>
 
                         <!-- Search Input -->
-                        <div class="col-md-4">
+                        <div class="col-md-5">
                             <div class="form-group">
                                 <label><i class="fas fa-user"></i> Student Search</label>
                                 <div class="input-group">
@@ -96,76 +94,6 @@
             </div>
         </div>
 
-        <!-- Statistics Cards -->
-        <div class="row" id="statsCards" style="display: none;">
-            <div class="col-lg-2 col-6">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3 id="totalRecords">0</h3>
-                        <p>Total Records</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        <h3 id="passedCount">0</h3>
-                        <p>Passed</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="small-box bg-danger">
-                    <div class="inner">
-                        <h3 id="failedCount">0</h3>
-                        <p>Failed</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-times-circle"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        <h3 id="incCount">0</h3>
-                        <p>Incomplete</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        <h3 id="drpCount">0</h3>
-                        <p>Dropped</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-minus"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="small-box bg-primary">
-                    <div class="inner">
-                        <h3 id="averageGrade">0</h3>
-                        <p>Average Grade</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Results Card -->
         <div class="card card-primary">
             <div class="card-header">
@@ -178,7 +106,7 @@
                 <div id="noSearchYet" class="text-center py-5">
                     <i class="fas fa-search fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No Search Performed</h5>
-                    <p class="text-muted">Please select a semester and click Search to view grade records.</p>
+                    <p class="text-muted">Click Search to view all enrolled students and their grades for the current semester.</p>
                 </div>
 
                 <div id="resultsSection" style="display: none;">
@@ -202,6 +130,15 @@
                             <tbody id="gradesTableBody">
                                 <!-- Populated via AJAX -->
                             </tbody>
+                            <tfoot id="gradesTableFooter" style="display: none; position: sticky; bottom: 0; background: #f8f9fa; border-top: 2px solid #dee2e6;">
+                                <tr>
+                                    <th colspan="8" class="text-right">Class Average:</th>
+                                    <th class="text-center">
+                                        <strong id="averageGradeDisplay" class="text-primary">0.00</strong>
+                                    </th>
+                                    <th colspan="2"></th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -353,7 +290,6 @@
     <script>
         const API_ROUTES = {
             getClasses: "{{ route('admin.grades.classes') }}",
-            getSemesters: "{{ route('admin.grades.semesters') }}",
             searchGrades: "{{ route('admin.grades.search') }}",
             getGradeDetails: "{{ route('admin.grades.details', ['id' => ':id']) }}"
         };
