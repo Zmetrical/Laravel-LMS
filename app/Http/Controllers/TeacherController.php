@@ -17,7 +17,10 @@ class TeacherController extends Controller
         ];
 
         return view('teacher.dashboard', $data);
+
     }
+
+
 
     public function login()
     {

@@ -24,21 +24,13 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-book-open"></i> Class Management
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route($homeRoute) }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route($classListRoute) }}">Classes</a></li>
-                <li class="breadcrumb-item active">{{ $class->class_name ?? 'Class Details' }}</li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route($homeRoute) }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ route($classListRoute) }}">Classes</a></li>
+        <li class="breadcrumb-item active">{{ $class->class_name ?? 'Class Details' }}</li>    
+    </ol>
 @endsection
+
 
 @section('content')
     <div class="container-fluid">

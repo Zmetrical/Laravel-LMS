@@ -17,19 +17,86 @@
             padding-bottom: 80px;
         }
 
-        /* Optional: active item style */
         .nav-sidebar>.nav-item.menu-open>.nav-link,
         .nav-sidebar>.nav-item>.nav-link.active {
             background-color: #4b545c !important;
-            /* Blue header color */
             color: #fff !important;
         }
 
-
-        /* Optional: active sub-item style */
         .nav-treeview>.nav-item>.nav-link.active {
             background-color: #fff !important;
             color: #343a40 !important;
+        }
+
+        /* Google Classroom style breadcrumb */
+        .main-header.navbar {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .breadcrumb-custom {
+            background-color: transparent;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .breadcrumb-custom .breadcrumb-item {
+            font-size: 20px;
+            font-weight: 400;
+            color: #202124;
+        }
+
+        .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            font-size: 20px;
+            color: #5f6368;
+            padding: 0 8px;
+        }
+
+        .breadcrumb-custom .breadcrumb-item a {
+            color: #5f6368;
+            text-decoration: none;
+        }
+
+        .breadcrumb-custom .breadcrumb-item a:hover {
+            color: #202124;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-custom .breadcrumb-item.active {
+            color: #202124;
+            font-weight: 500;
+        }
+
+        .breadcrumb-icon {
+            font-size: 24px;
+            color: #5f6368;
+            margin-right: 12px;
+        }
+
+        .content-wrapper {
+            padding-top: 0;
+        }
+
+        .content-header {
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .nav-section-title {
+            padding: 10px 15px 5px 15px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background-color: rgba(255,255,255,0.1);
+            margin: 10px 15px;
         }
     </style>
 @endsection
@@ -47,16 +114,16 @@
                     </li>
                 </ul>
 
+                <!-- Breadcrumb in Navbar -->
+                <ul class="navbar-nav ml-3 flex-grow-1">
+                    <li class="nav-item d-flex align-items-center">
+                        @yield('breadcrumb')
+                    </li>
+                </ul>
+
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item dropdown">
-                        <a class="nav-link" data-toggle="dropdown" href="#">
-                            <i class="far fa-user"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                            <a href="#" class="dropdown-item">Profile</a>
-                            <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item">Logout</a>
-                        </div>
+                        <i class="fas fa-user mr-2"></i> Teacher
                     </li>
                 </ul>
             </nav>
@@ -91,43 +158,12 @@
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
                             data-accordion="false">
-                            <!-- User Menu -->
-                            <li class="nav-item {{ Request::is('class/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('class/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-users"></i>
-                                    <p>
-                                        Class
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                            <li class="nav-item">
+                                <a href="{{ route('teacher.list_class') }}"
+                                    class="nav-link {{ Request::routeIs('teacher.list_class') ? 'active' : '' }}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>My Classes</p>
                                 </a>
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('teacher.list_class') }}"
-                                            class="nav-link {{ Request::routeIs('teacher.list_class') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Class List</p>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-
-                            <li class="nav-item {{ Request::is('gradebook/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('gradebook/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-users"></i>
-                                    <p>
-                                        Gradebook
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
-                                </a>
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('teacher.list_class') }}"
-                                            class="nav-link {{ Request::routeIs('teacher.list_class') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Class List</p>
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
                         </ul>
                     </nav>
@@ -143,12 +179,7 @@
 
             <!-- Content Wrapper -->
             <div class="content-wrapper">
-                <div class="content-header">
-                    <div class="container-fluid">
-                        @yield('breadcrumb')
-                    </div>
-                </div>
-
+                <br>
                 <section class="content">
                     <div class="container-fluid">
                         @yield('content')

@@ -9,19 +9,11 @@
 @endsection
 
 @section('breadcrumb')
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1>
-                <i class="fas fa-user-graduate"></i> Teacher
-            </h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route(name: 'student.home') }}">Home</a></li>
-            </ol>
-        </div>
-    </div>
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{{ route('teacher.home') }}">Home</a></li>
+    </ol>
 @endsection
+
 
 @section('content')
 
