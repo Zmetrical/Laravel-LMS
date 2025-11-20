@@ -17,6 +17,7 @@ $(document).ready(function() {
     let pendingChanges = {};
     let wwGrid, ptGrid, qaGrid;
     let selectedFile = null;
+    let availableSheets = [];
 
     loadGradebook();
 
@@ -467,12 +468,15 @@ $(document).ready(function() {
     $('#excelFileInput').change(function() {
         const file = this.files[0];
         if (!file) return;
+        console.log('File selected:', file.name);  // ADD THIS
 
         selectedFile = file;
-        
+
         // First, get available sheets from the file
         const formData = new FormData();
         formData.append('file', file);
+    console.log('Sending AJAX to:', API_ROUTES.getSheets);  // ADD THIS
+    console.log('Route should be:', "{{ route('teacher.gradebook.sheets', ['classId' => $classId]) }}");  // ADD THIS
 
         const btn = $('#importExcelBtn');
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Reading file...');
@@ -484,6 +488,8 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success: function(response) {
+                            console.log('Success:', response);  // ADD THIS
+
                 if (response.success && response.sheets) {
                     availableSheets = response.sheets;
                     showSheetSelectionModal();
@@ -493,6 +499,9 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const msg = xhr.responseJSON?.message || 'Failed to read Excel file';
+                    console.log('Error:', xhr);  // ADD THIS
+                    console.log('Status:', xhr.status);  // ADD THIS
+                    console.log('Response:', xhr.responseText);  // ADD THIS
                 toastr.error(msg);
             },
             complete: function() {
