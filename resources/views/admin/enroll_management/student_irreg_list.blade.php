@@ -1,63 +1,65 @@
-@extends('layouts.main')
+@php
+    $userType = $userType ?? 'student'; // Default to student if not set
+    $isTeacher = $userType === 'teacher';
+    $homeRoute = $isTeacher ? 'teacher.home' : 'student.home';
+    $mainLayout = $isTeacher ? 'layouts.main-teacher' : 'layouts.main-student';
+    $icon = $isTeacher ? 'fas fa-chalkboard-teacher' : 'fas fa-book';
+    $emptyIcon = $isTeacher ? 'fas fa-chalkboard-teacher' : 'fas fa-book-open';
+    $emptyTitle = $isTeacher ? 'No Classes Assigned' : 'No Classes Yet';
+    $emptyMessage = $isTeacher ? "You don't have any classes assigned yet." : 'You are not enrolled in any classes at the moment.';
+@endphp
+
+@extends($mainLayout)
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
-        <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-        <li class="breadcrumb-item active">Irregular Student List</li>
+        <li class="breadcrumb-item"><a href="{{ route($homeRoute) }}">Home</a></li>
+        <li class="breadcrumb-item active">Classes</li>
     </ol>
 @endsection
 
 @section('content')
-<br>
-        <div class="container-fluid">
-            <!-- School Year Info -->
-            <div class="alert alert-dark alert-dismissible">
-                <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <h5><i class="icon fas fa-calendar-alt"></i> {{ $activeSemesterDisplay ?? 'No Active Semester' }}</h5>
+    <div class="container-fluid">
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="sr-only">Loading...</span>
             </div>
+            <p class="mt-3 text-muted">Loading your classes...</p>
+        </div>
 
-            <!-- Students Table Card -->
-            <div class="card card-primary card-outline">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-users"></i> Irregular Students List</h3>
-                </div>
-                <div class="card-body">
-                    <table id="irregularStudentsTable" class="table table-bordered table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Student Number</th>
-                                <th>Full Name</th>
-                                <th>Grade Level</th>
-                                <th>Strand</th>
-                                <th>Section</th>
-                                <th>Enrolled Classes</th>
-                                <th width="120">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+        <!-- Empty State -->
+        <div id="emptyState" style="display: none;">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="{{ $emptyIcon }} fa-4x text-muted mb-3"></i>
+                    <h4>{{ $emptyTitle }}</h4>
+                    <p class="text-muted">{{ $emptyMessage }}</p>
                 </div>
             </div>
         </div>
+
+        <!-- Classes Grid (Cards) - Both Teacher and Student -->
+        <div id="classesGrid" class="row" style="display: none;"></div>
+    </div>
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    
+    <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
+
     <script>
+        const USER_TYPE = "{{ $userType }}";
         const API_ROUTES = {
-            getStudents: "{{ route('admin.students.list') }}",
-            enrollmentPage: "{{ route('admin.student_class_enrollment', ['id' => ':id']) }}"
+            getClasses: "{{ $isTeacher ? route('teacher.classes.list') : route('student.classes.list') }}"
+            @if($isTeacher)
+            ,
+            gradebook: "{{ route('teacher.gradebook', ['classId' => ':classId']) }}"
+            @endif
         };
     </script>
     

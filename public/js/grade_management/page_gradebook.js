@@ -1,12 +1,10 @@
 $(document).ready(function() {
-    // CSRF setup
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
 
-    // Toastr config
     toastr.options = {
         closeButton: true,
         progressBar: true,
@@ -16,13 +14,12 @@ $(document).ready(function() {
 
     let gradebookData = null;
     let classInfo = null;
+    let pendingChanges = {};
+    let wwGrid, ptGrid, qaGrid;
+    let selectedFile = null;
 
-    // Load gradebook on page load
     loadGradebook();
 
-    /**
-     * Load gradebook data
-     */
     function loadGradebook() {
         $.ajax({
             url: API_ROUTES.getGradebook,
@@ -31,14 +28,12 @@ $(document).ready(function() {
                 if (response.success) {
                     gradebookData = response.data;
                     classInfo = response.data.class;
+                    pendingChanges = {};
                     
-                    $('#className').text(classInfo.class_name);
-                    $('#wwPercLabel').text(`(${classInfo.ww_perc}%)`);
-                    $('#ptPercLabel').text(`(${classInfo.pt_perc}%)`);
-                    $('#qaPercLabel').text(`(${classInfo.qa_perce}%)`);
-                    
-                    renderGradebook();
+                    initializeGrids();
                     calculateSummary();
+                    updateSaveButton();
+                    updateColumnCounts();
                 } else {
                     toastr.error('Failed to load gradebook');
                 }
@@ -50,155 +45,388 @@ $(document).ready(function() {
         });
     }
 
-    /**
-     * Render gradebook tables
-     */
-    function renderGradebook() {
-        renderComponentTable('WW', gradebookData.columns.WW || [], '#wwHeaderRow', '#wwTableBody');
-        renderComponentTable('PT', gradebookData.columns.PT || [], '#ptHeaderRow', '#ptTableBody');
-        renderComponentTable('QA', gradebookData.columns.QA || [], '#qaHeaderRow', '#qaTableBody');
+    function updateColumnCounts() {
+        ['WW', 'PT', 'QA'].forEach(type => {
+            const count = (gradebookData.columns[type] || []).length;
+            $(`#${type.toLowerCase()}ColumnCount`).text(`${count}/${MAX_COLUMNS} columns`);
+        });
     }
 
-    /**
-     * Render component table (WW, PT, or QA)
-     */
-    function renderComponentTable(componentType, columns, headerSelector, bodySelector) {
-        // Render header
-        let headerHtml = `
-            <th class="sticky-col">USN</th>
-            <th class="sticky-col-2">Student Name</th>
-        `;
+    function initializeGrids() {
+        initGrid('WW', '#wwGrid');
+        initGrid('PT', '#ptGrid');
+        initGrid('QA', '#qaGrid');
+    }
+
+    function initGrid(componentType, selector) {
+        const columns = gradebookData.columns[componentType] || [];
+        
+        let fields = [
+            { 
+                name: "student_number", 
+                title: "USN", 
+                type: "text", 
+                width: 100,
+                editing: false
+            },
+            { 
+                name: "full_name", 
+                title: "Student Name", 
+                type: "text", 
+                width: 200,
+                editing: false
+            }
+        ];
 
         let totalMaxPoints = 0;
+
         columns.forEach(col => {
             totalMaxPoints += parseFloat(col.max_points);
-            let sourceIcon = col.source_type === 'online' ? 
-                '<i class="fas fa-wifi text-info" title="Online Quiz"></i> ' : '';
+            const isOnline = col.source_type === 'online';
             
-            headerHtml += `
-                <th class="text-center">
-                    ${sourceIcon}${escapeHtml(col.column_name)}
-                    <br><small>(${col.max_points}pts)</small>
-                </th>
-            `;
+            fields.push({
+                name: col.column_name,
+                title: createColumnHeader(col),
+                type: "number",
+                width: 90,
+                editing: !isOnline,
+                itemTemplate: function(value, item) {
+                    const cellId = `cell_${col.id}_${item.student_number}`;
+                    const val = value !== null && value !== undefined ? value : '';
+                    const key = `${col.id}_${item.student_number}`;
+                    const isChanged = pendingChanges.hasOwnProperty(key);
+                    
+                    if (isOnline) {
+                        return `<span class="badge badge-info">${val}</span>`;
+                    }
+                    
+                    const changedClass = isChanged ? 'changed-cell-value' : '';
+                    return `<span id="${cellId}" class="${changedClass}">${val}</span>`;
+                },
+                editTemplate: function(value, item) {
+                    if (isOnline) {
+                        return `<span class="badge badge-info">${value !== null && value !== undefined ? value : ''}</span>`;
+                    }
+                    
+                    const cellId = `cell_${col.id}_${item.student_number}`;
+                    const input = $('<input>')
+                        .attr('type', 'number')
+                        .attr('min', '0')
+                        .attr('max', col.max_points)
+                        .attr('step', '0.01')
+                        .attr('data-cell-id', cellId)
+                        .attr('data-column-id', col.id)
+                        .attr('data-student', item.student_number)
+                        .addClass('form-control form-control-sm')
+                        .val(value !== null && value !== undefined ? value : '')
+                        .on('input', function() {
+                            const val = parseFloat($(this).val());
+                            if (val < 0) $(this).val(0);
+                            if (val > col.max_points) $(this).val(col.max_points);
+                        })
+                        .on('blur', function() {
+                            const newVal = $(this).val();
+                            const oldVal = value !== null && value !== undefined ? value : '';
+                            
+                            if (newVal !== oldVal.toString()) {
+                                markChanged(col.id, item.student_number, newVal, cellId);
+                                
+                                // Update the item data immediately
+                                item[col.column_name] = newVal === '' ? null : parseFloat(newVal);
+                                
+                                // Refresh the grid to show updated totals and highlight
+                                $(selector).jsGrid("refresh");
+                            }
+                        })
+                        .on('keypress', function(e) {
+                            if (e.which === 13) { // Enter key
+                                $(this).blur();
+                            }
+                        });
+                    
+                    return input;
+                },
+                headerCss: isOnline ? 'online-column' : ''
+            });
         });
 
-        headerHtml += `
-            <th class="text-center">Total<br><small>(${totalMaxPoints}pts)</small></th>
-            <th class="text-center bg-light">Score<br><small>(%)</small></th>
-        `;
+        fields.push(
+            {
+                name: "total",
+                title: `<div class="column-header"><span class="column-title">Total</span><span class="column-points">${totalMaxPoints}pts</span></div>`,
+                type: "text",
+                width: 80,
+                editing: false,
+                itemTemplate: function(value, item) {
+                    let total = 0;
+                    columns.forEach(col => {
+                        const score = item[col.column_name];
+                        if (score !== null && score !== undefined && score !== '') {
+                            total += parseFloat(score);
+                        }
+                    });
+                    return `<strong>${total.toFixed(2)}</strong>`;
+                }
+            },
+            {
+                name: "percentage",
+                title: `<div class="column-header"><span class="column-title">Score</span><span class="column-points">%</span></div>`,
+                type: "text",
+                width: 80,
+                editing: false,
+                itemTemplate: function(value, item) {
+                    let total = 0;
+                    columns.forEach(col => {
+                        const score = item[col.column_name];
+                        if (score !== null && score !== undefined && score !== '') {
+                            total += parseFloat(score);
+                        }
+                    });
+                    const perc = totalMaxPoints > 0 ? (total / totalMaxPoints * 100).toFixed(2) : '0.00';
+                    return `<strong>${perc}%</strong>`;
+                }
+            }
+        );
 
-        $(headerSelector).html(headerHtml);
+        const gridData = gradebookData.students.map(student => {
+            const row = {
+                student_number: student.student_number,
+                full_name: student.full_name
+            };
 
-        // Render body
-        let bodyHtml = '';
-        if (gradebookData.students.length === 0) {
-            bodyHtml = `
-                <tr>
-                    <td colspan="${columns.length + 4}" class="text-center text-muted">
-                        <i class="fas fa-users"></i> No students enrolled
-                    </td>
-                </tr>
-            `;
-        } else {
-            gradebookData.students.forEach(student => {
-                let rowHtml = `
-                    <tr>
-                        <td class="sticky-col">${escapeHtml(student.student_number)}</td>
-                        <td class="sticky-col-2">${escapeHtml(student.full_name)}</td>
-                `;
-
-                let total = 0;
-                let studentScores = student[componentType.toLowerCase()] || {};
-
-                columns.forEach(col => {
-                    let scoreData = studentScores[col.column_name] || {};
-                    let score = scoreData.score !== null ? scoreData.score : '';
-                    let isOnline = scoreData.source === 'online';
-                    
-                    if (score !== '') {
-                        total += parseFloat(score);
-                    }
-
-                    let badge = isOnline ? 
-                        '<span class="badge badge-info badge-sm online-badge">Online</span>' : '';
-
-                    rowHtml += `
-                        <td class="text-center score-cell">
-                            ${badge}
-                            <input type="number" 
-                                   class="form-control form-control-sm gradebook-input score-input" 
-                                   data-column-id="${col.id}"
-                                   data-student="${escapeHtml(student.student_number)}"
-                                   data-max="${col.max_points}"
-                                   value="${score}"
-                                   step="0.01"
-                                   min="0"
-                                   max="${col.max_points}"
-                                   ${isOnline ? 'readonly title="Score from online quiz"' : ''}>
-                        </td>
-                    `;
-                });
-
-                let percentage = totalMaxPoints > 0 ? (total / totalMaxPoints * 100).toFixed(2) : '0.00';
-
-                rowHtml += `
-                        <td class="text-center"><strong>${total.toFixed(2)}</strong></td>
-                        <td class="text-center bg-light"><strong>${percentage}%</strong></td>
-                    </tr>
-                `;
-
-                bodyHtml += rowHtml;
+            columns.forEach(col => {
+                const scoreData = student[componentType.toLowerCase()][col.column_name] || {};
+                row[col.column_name] = scoreData.score !== null ? parseFloat(scoreData.score) : null;
             });
-        }
 
-        $(bodySelector).html(bodyHtml);
+            return row;
+        });
+
+        $(selector).jsGrid({
+            width: "100%",
+            height: "auto",
+            editing: true,
+            sorting: false,
+            paging: false,
+            autoload: true,
+            data: gridData,
+            fields: fields
+        });
+
+        if (componentType === 'WW') wwGrid = $(selector).data('JSGrid');
+        if (componentType === 'PT') ptGrid = $(selector).data('JSGrid');
+        if (componentType === 'QA') qaGrid = $(selector).data('JSGrid');
     }
 
-    /**
-     * Calculate and render summary
-     */
+    function createColumnHeader(col) {
+        const icon = col.source_type === 'online' ? '<i class="fas fa-wifi text-info"></i> ' : '';
+        const editIcon = col.source_type === 'manual' ? `<i class="fas fa-edit edit-column-btn" data-column-id="${col.id}" title="Edit column"></i>` : '';
+        
+        return `<div class="column-header">
+            ${icon}<span class="column-title">${col.column_name}</span>
+            <span class="column-points">${col.max_points}pts</span>
+            ${editIcon}
+        </div>`;
+    }
+
+    function markChanged(columnId, studentNumber, score, cellId) {
+        const key = `${columnId}_${studentNumber}`;
+        pendingChanges[key] = {
+            column_id: columnId,
+            student_number: studentNumber,
+            score: score === '' ? null : parseFloat(score)
+        };
+        
+        updateSaveButton();
+    }
+
+    function updateSaveButton() {
+        const count = Object.keys(pendingChanges).length;
+        if (count > 0) {
+            $('#saveChangesBtn').show();
+            $('#saveChangesText').text(`Save ${count} Change${count > 1 ? 's' : ''}`);
+        } else {
+            $('#saveChangesBtn').hide();
+        }
+    }
+
+    $(document).on('click', '.edit-column-btn', function(e) {
+        e.stopPropagation();
+        const columnId = $(this).data('column-id');
+        openEditColumnModal(columnId);
+    });
+
+    function openEditColumnModal(columnId) {
+        const column = findColumnById(columnId);
+        if (!column) return;
+
+        $('#editColumnId').val(column.id);
+        $('#editColumnName').val(column.column_name);
+        $('#editMaxPoints').val(column.max_points);
+        
+        loadQuizzesForEdit(column.quiz_id);
+        $('#editColumnModal').modal('show');
+    }
+
+    function findColumnById(columnId) {
+        for (let type of ['WW', 'PT', 'QA']) {
+            const cols = gradebookData.columns[type] || [];
+            const found = cols.find(c => c.id == columnId);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    function loadQuizzesForEdit(currentQuizId) {
+        $.ajax({
+            url: API_ROUTES.getQuizzes,
+            type: 'GET',
+            success: function(response) {
+                let options = '<option value="">Manual Entry</option>';
+                if (response.success && response.data) {
+                    response.data.forEach(quiz => {
+                        const selected = quiz.id == currentQuizId ? 'selected' : '';
+                        options += `<option value="${quiz.id}" ${selected} data-points="${quiz.total_points}">
+                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${quiz.total_points}pts)
+                        </option>`;
+                    });
+                }
+                $('#editQuizId').html(options);
+            }
+        });
+    }
+
+    $('#editQuizId').change(function() {
+        const selected = $(this).find('option:selected');
+        if (selected.val()) {
+            const points = selected.data('points');
+            if (points) {
+                $('#editMaxPoints').val(points);
+            }
+        }
+    });
+
+    $('#editColumnForm').submit(function(e) {
+        e.preventDefault();
+        
+        const columnId = $('#editColumnId').val();
+        const maxPoints = parseInt($('#editMaxPoints').val());
+        const quizId = $('#editQuizId').val();
+
+        $.ajax({
+            url: API_ROUTES.updateColumn.replace('__COLUMN_ID__', columnId),
+            type: 'PUT',
+            data: {
+                max_points: maxPoints,
+                quiz_id: quizId || null
+            },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success('Column updated successfully');
+                    $('#editColumnModal').modal('hide');
+                    loadGradebook();
+                } else {
+                    toastr.error(response.message || 'Failed to update column');
+                }
+            },
+            error: function() {
+                toastr.error('Failed to update column');
+            }
+        });
+    });
+
+    $('#saveChangesBtn').click(function() {
+        if (Object.keys(pendingChanges).length === 0) return;
+
+        const scores = Object.values(pendingChanges);
+        const btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        
+        $.ajax({
+            url: API_ROUTES.batchUpdate,
+            type: 'POST',
+            data: { scores: scores },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success('All changes saved successfully');
+                    loadGradebook();
+                } else {
+                    toastr.error('Failed to save changes');
+                    btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
+                }
+            },
+            error: function() {
+                toastr.error('Failed to save changes');
+                btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
+            }
+        });
+    });
+
+    $('.add-column-btn').click(function() {
+        const type = $(this).data('type');
+        const currentCount = (gradebookData.columns[type] || []).length;
+        
+        if (currentCount >= MAX_COLUMNS) {
+            toastr.warning(`Maximum of ${MAX_COLUMNS} columns reached for ${type}`);
+            return;
+        }
+        
+        $.ajax({
+            url: API_ROUTES.addColumn,
+            type: 'POST',
+            data: { component_type: type },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success('Column added successfully');
+                    loadGradebook();
+                } else {
+                    toastr.error(response.message || 'Failed to add column');
+                }
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || 'Failed to add column';
+                toastr.error(msg);
+            }
+        });
+    });
+
     function calculateSummary() {
         let summaryHtml = '';
         let grades = [];
 
         gradebookData.students.forEach(student => {
-            // Calculate WW score
             let wwTotal = 0, wwMax = 0;
             Object.values(student.ww || {}).forEach(item => {
-                if (item.score !== null) {
+                if (item.score !== null && item.score !== undefined) {
                     wwTotal += parseFloat(item.score);
                 }
                 wwMax += parseFloat(item.max_points);
             });
-            let wwPerc = wwMax > 0 ? (wwTotal / wwMax * 100) : 0;
-            let wwWeighted = wwPerc * (classInfo.ww_perc / 100);
+            const wwPerc = wwMax > 0 ? (wwTotal / wwMax * 100) : 0;
+            const wwWeighted = wwPerc * (classInfo.ww_perc / 100);
 
-            // Calculate PT score
             let ptTotal = 0, ptMax = 0;
             Object.values(student.pt || {}).forEach(item => {
-                if (item.score !== null) {
+                if (item.score !== null && item.score !== undefined) {
                     ptTotal += parseFloat(item.score);
                 }
                 ptMax += parseFloat(item.max_points);
             });
-            let ptPerc = ptMax > 0 ? (ptTotal / ptMax * 100) : 0;
-            let ptWeighted = ptPerc * (classInfo.pt_perc / 100);
+            const ptPerc = ptMax > 0 ? (ptTotal / ptMax * 100) : 0;
+            const ptWeighted = ptPerc * (classInfo.pt_perc / 100);
 
-            // Calculate QA score
             let qaTotal = 0, qaMax = 0;
             Object.values(student.qa || {}).forEach(item => {
-                if (item.score !== null) {
+                if (item.score !== null && item.score !== undefined) {
                     qaTotal += parseFloat(item.score);
                 }
                 qaMax += parseFloat(item.max_points);
             });
-            let qaPerc = qaMax > 0 ? (qaTotal / qaMax * 100) : 0;
-            let qaWeighted = qaPerc * (classInfo.qa_perce / 100);
+            const qaPerc = qaMax > 0 ? (qaTotal / qaMax * 100) : 0;
+            const qaWeighted = qaPerc * (classInfo.qa_perce / 100);
 
-            // Calculate initial and quarterly grade
-            let initialGrade = wwWeighted + ptWeighted + qaWeighted;
-            let quarterlyGrade = Math.round(initialGrade);
+            const initialGrade = wwWeighted + ptWeighted + qaWeighted;
+            const quarterlyGrade = Math.round(initialGrade);
 
             grades.push(quarterlyGrade);
 
@@ -210,20 +438,19 @@ $(document).ready(function() {
                     <td class="text-center">${ptWeighted.toFixed(2)}</td>
                     <td class="text-center">${qaWeighted.toFixed(2)}</td>
                     <td class="text-center">${initialGrade.toFixed(2)}</td>
-                    <td class="text-center bg-primary"><strong>${quarterlyGrade}</strong></td>
+                    <td class="text-center bg-info"><strong>${quarterlyGrade}</strong></td>
                 </tr>
             `;
         });
 
-        $('#summaryTableBody').html(summaryHtml);
+        $('#summaryTableBody').html(summaryHtml || '<tr><td colspan="7" class="text-center">No data available</td></tr>');
 
-        // Calculate statistics
         if (grades.length > 0) {
-            let avg = grades.reduce((a, b) => a + b, 0) / grades.length;
-            let highest = Math.max(...grades);
-            let lowest = Math.min(...grades);
-            let passing = grades.filter(g => g >= 75).length;
-            let passingRate = (passing / grades.length * 100).toFixed(0);
+            const avg = grades.reduce((a, b) => a + b, 0) / grades.length;
+            const highest = Math.max(...grades);
+            const lowest = Math.min(...grades);
+            const passing = grades.filter(g => g >= 75).length;
+            const passingRate = (passing / grades.length * 100).toFixed(0);
 
             $('#avgGrade').text(avg.toFixed(2));
             $('#highestGrade').text(highest.toFixed(2));
@@ -232,155 +459,52 @@ $(document).ready(function() {
         }
     }
 
-    /**
-     * Handle score input change with debounce
-     */
-    let scoreUpdateTimeout;
-    $(document).on('change', '.score-input', function() {
-        let input = $(this);
-        let columnId = input.data('column-id');
-        let studentNumber = input.data('student');
-        let maxPoints = parseFloat(input.data('max'));
-        let score = input.val();
-
-        // Validate score
-        if (score !== '' && (parseFloat(score) < 0 || parseFloat(score) > maxPoints)) {
-            toastr.warning(`Score must be between 0 and ${maxPoints}`);
-            input.val('');
-            return;
-        }
-
-        // Update score
-        clearTimeout(scoreUpdateTimeout);
-        scoreUpdateTimeout = setTimeout(function() {
-            updateScore(columnId, studentNumber, score);
-        }, 500);
-    });
-
-    /**
-     * Update score via AJAX
-     */
-    function updateScore(columnId, studentNumber, score) {
-        $.ajax({
-            url: API_ROUTES.updateScore,
-            type: 'POST',
-            data: {
-                column_id: columnId,
-                student_number: studentNumber,
-                score: score === '' ? null : score
-            },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success('Score updated');
-                    loadGradebook(); // Reload to recalculate
-                } else {
-                    toastr.error('Failed to update score');
-                }
-            },
-            error: function() {
-                toastr.error('Failed to update score');
-            }
-        });
-    }
-
-    /**
-     * Add Column button
-     */
-    $('#addColumnBtn').click(function() {
-        $('#addColumnModal').modal('show');
-        loadAvailableQuizzes();
-    });
-
-    /**
-     * Source type change
-     */
-    $('#sourceType').change(function() {
-        if ($(this).val() === 'online') {
-            $('#quizSelectGroup').show();
-            $('#quizSelect').prop('required', true);
-        } else {
-            $('#quizSelectGroup').hide();
-            $('#quizSelect').prop('required', false);
-        }
-    });
-
-    /**
-     * Load available quizzes
-     */
-    function loadAvailableQuizzes() {
-        $.ajax({
-            url: API_ROUTES.getQuizzes,
-            type: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    let options = '<option value="">Select Quiz</option>';
-                    response.data.forEach(quiz => {
-                        options += `<option value="${quiz.id}">
-                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)}
-                        </option>`;
-                    });
-                    $('#quizSelect').html(options);
-                } else {
-                    $('#quizSelect').html('<option value="">No quizzes available</option>');
-                }
-            },
-            error: function() {
-                $('#quizSelect').html('<option value="">Failed to load quizzes</option>');
-            }
-        });
-    }
-
-    /**
-     * Add column form submit
-     */
-    $('#addColumnForm').submit(function(e) {
-        e.preventDefault();
-        
-        let formData = {
-            component_type: $('[name="component_type"]').val(),
-            column_name: $('[name="column_name"]').val(),
-            max_points: $('[name="max_points"]').val(),
-            source_type: $('[name="source_type"]').val(),
-            quiz_id: $('[name="quiz_id"]').val()
-        };
-
-        $.ajax({
-            url: API_ROUTES.addColumn,
-            type: 'POST',
-            data: formData,
-            success: function(response) {
-                if (response.success) {
-                    toastr.success('Column added successfully');
-                    $('#addColumnModal').modal('hide');
-                    $('#addColumnForm')[0].reset();
-                    loadGradebook();
-                } else {
-                    toastr.error(response.message || 'Failed to add column');
-                }
-            },
-            error: function(xhr) {
-                let msg = 'Failed to add column';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    msg = xhr.responseJSON.message;
-                }
-                toastr.error(msg);
-            }
-        });
-    });
-
-    /**
-     * Import Excel
-     */
+    // Import functionality
     $('#importExcelBtn').click(function() {
         $('#excelFileInput').click();
     });
 
     $('#excelFileInput').change(function() {
-        let file = this.files[0];
+        const file = this.files[0];
         if (!file) return;
 
-        let formData = new FormData();
-        formData.append('file', file);
+        selectedFile = file;
+        
+        // Check if gradebook has existing data
+        let hasData = false;
+        ['WW', 'PT', 'QA'].forEach(type => {
+            const cols = gradebookData.columns[type] || [];
+            if (cols.length > 0) hasData = true;
+        });
+
+        if (hasData) {
+            $('#importConfirmModal').modal('show');
+        } else {
+            performImport('keep');
+        }
+
+        $(this).val('');
+    });
+
+    $('#replaceDataBtn').click(function() {
+        $('#importConfirmModal').modal('hide');
+        performImport('replace');
+    });
+
+    $('#keepDataBtn').click(function() {
+        $('#importConfirmModal').modal('hide');
+        performImport('keep');
+    });
+
+    function performImport(action) {
+        if (!selectedFile) return;
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('action', action);
+
+        const btn = $('#importExcelBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
 
         $.ajax({
             url: API_ROUTES.importGradebook,
@@ -390,33 +514,32 @@ $(document).ready(function() {
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    toastr.success('Gradebook imported successfully');
+                    toastr.success(response.message);
+                    
+                    if (response.errors && response.errors.length > 0) {
+                        console.warn('Import errors:', response.errors);
+                        toastr.warning(`${response.errors.length} row(s) had errors. Check console for details.`);
+                    }
+                    
                     loadGradebook();
                 } else {
                     toastr.error(response.message || 'Import failed');
                 }
             },
-            error: function() {
-                toastr.error('Failed to import gradebook');
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || 'Failed to import gradebook';
+                toastr.error(msg);
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import from Excel');
+                selectedFile = null;
             }
         });
+    }
 
-        $(this).val('');
-    });
-
-    /**
-     * Export Excel
-     */
-    $('#exportGradebookBtn').click(function() {
-        window.location.href = API_ROUTES.exportGradebook;
-    });
-
-    /**
-     * Escape HTML
-     */
     function escapeHtml(text) {
         if (!text) return '';
-        let map = {
+        const map = {
             '&': '&amp;',
             '<': '&lt;',
             '>': '&gt;',

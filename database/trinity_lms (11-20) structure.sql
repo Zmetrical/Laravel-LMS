@@ -1,8 +1,12 @@
-No custom css just admin lte bootstrap and its plugins for ui
-dark(primary color) primary(secondary color) and seconday(tertiary) color is enough
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
-this is in laravel, make use of its built it system for efficiency
-make use ajax and jquery 
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
 
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
@@ -330,3 +334,212 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+ALTER TABLE `admins`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `classes`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `gradebook_columns`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `class_code` (`class_code`,`component_type`,`column_name`);
+
+ALTER TABLE `gradebook_imports`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `gradebook_scores`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `column_id` (`column_id`,`student_number`);
+
+ALTER TABLE `grades_final`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_final_grade` (`student_number`,`class_code`,`semester_id`);
+
+ALTER TABLE `grade_components`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `lectures`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_lesson_id` (`lesson_id`),
+  ADD KEY `idx_order` (`order_number`);
+
+ALTER TABLE `lessons`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_class_id` (`class_id`),
+  ADD KEY `idx_order` (`order_number`);
+
+ALTER TABLE `levels`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `migrations`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `quizzes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_lesson_id` (`lesson_id`);
+
+ALTER TABLE `quiz_questions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_quiz_id` (`quiz_id`),
+  ADD KEY `idx_order` (`order_number`);
+
+ALTER TABLE `quiz_question_options`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_question_id` (`question_id`);
+
+ALTER TABLE `school_years`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`);
+
+ALTER TABLE `sections`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `semester_id` (`semester_id`);
+
+ALTER TABLE `section_class_matrix`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_section_class_semester` (`section_id`,`class_id`,`semester_id`);
+
+ALTER TABLE `semesters`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `school_year_id` (`school_year_id`);
+
+ALTER TABLE `sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `sessions_user_id_index` (`user_id`),
+  ADD KEY `sessions_last_activity_index` (`last_activity`);
+
+ALTER TABLE `strands`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `students`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `students_student_number_unique` (`student_number`);
+
+ALTER TABLE `student_class_matrix`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_student_class_semester` (`student_number`,`class_code`,`semester_id`);
+
+ALTER TABLE `student_password_matrix`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `student_quiz_answers`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_attempt_id` (`attempt_id`),
+  ADD KEY `idx_question_id` (`question_id`);
+
+ALTER TABLE `student_quiz_attempts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_student_quiz` (`student_number`,`quiz_id`),
+  ADD KEY `idx_quiz_id` (`quiz_id`);
+
+ALTER TABLE `teachers`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `teacher_class_matrix`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `teacher_password_matrix`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `users_email_unique` (`email`);
+
+
+ALTER TABLE `admins`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `classes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `gradebook_columns`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `gradebook_imports`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `gradebook_scores`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `grades_final`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `grade_components`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `lectures`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `lessons`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `levels`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `migrations`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `quizzes`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `quiz_questions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `quiz_question_options`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `school_years`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `sections`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `section_class_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `semesters`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `strands`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `students`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `student_class_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `student_password_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `student_quiz_answers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `student_quiz_attempts`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `teachers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `teacher_class_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `teacher_password_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `users`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+
+ALTER TABLE `sections`
+  ADD CONSTRAINT `sections_ibfk_1` FOREIGN KEY (`semester_id`) REFERENCES `semesters` (`id`);
+
+ALTER TABLE `semesters`
+  ADD CONSTRAINT `semesters_ibfk_1` FOREIGN KEY (`school_year_id`) REFERENCES `school_years` (`id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

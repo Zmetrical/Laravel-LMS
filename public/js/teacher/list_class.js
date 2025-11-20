@@ -111,6 +111,13 @@ $(document).ready(function() {
                                         style="flex: 1;">
                                     <i class="fas fa-book-open"></i> View Lessons
                                 </button>
+                                <button class="btn btn-secondary btn-sm view-gradebook-btn" 
+                                        data-class-id="${classData.id}"
+                                        data-class-code="${escapeHtml(classData.class_code)}"
+                                        data-class-name="${escapeHtml(classData.class_name)}"
+                                        style="flex: 1;">
+                                    <i class="fas fa-table"></i> Gradebook
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -141,6 +148,25 @@ $(document).ready(function() {
         
         // Redirect to teacher lessons page
         window.location.href = `/teacher/class/${classId}/lessons`;
+    });
+
+    /**
+     * Handle view gradebook button click - Redirect to gradebook page
+     */
+    $(document).on('click', '.view-gradebook-btn', function() {
+        let classId = $(this).data('class-id');
+        let className = $(this).data('class-name');
+        
+        // Show loading feedback
+        $(this).html('<i class="fas fa-spinner fa-spin"></i> Loading...').prop('disabled', true);
+        
+        // Redirect to gradebook page using API_ROUTES
+        if (API_ROUTES.gradebook) {
+            window.location.href = API_ROUTES.gradebook.replace(':classId', classId);
+        } else {
+            toastr.error('Gradebook access not available');
+            $(this).html('<i class="fas fa-table"></i> Gradebook').prop('disabled', false);
+        }
     });
 
     /**

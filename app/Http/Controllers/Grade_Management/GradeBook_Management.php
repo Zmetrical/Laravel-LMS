@@ -8,16 +8,15 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class GradeBook_Management extends MainController
 {
+    const MAX_COLUMNS_PER_TYPE = 10;
+    
     public function list_gradebook($classId) 
     {
         $teacher = Auth::guard('teacher')->user();
         
-        // Verify teacher has access to this class
         $hasAccess = DB::table('teacher_class_matrix')
             ->where('teacher_id', $teacher->id)
             ->where('class_id', $classId)
@@ -27,7 +26,6 @@ class GradeBook_Management extends MainController
             abort(403, 'Unauthorized access to this class');
         }
 
-        // Get class details
         $class = DB::table('classes')->where('id', $classId)->first();
 
         $data = [
@@ -47,7 +45,6 @@ class GradeBook_Management extends MainController
         try {
             $teacher = Auth::guard('teacher')->user();
             
-            // Verify access
             $hasAccess = DB::table('teacher_class_matrix')
                 ->where('teacher_id', $teacher->id)
                 ->where('class_id', $classId)
@@ -59,7 +56,6 @@ class GradeBook_Management extends MainController
 
             $class = DB::table('classes')->where('id', $classId)->first();
 
-            // Get columns configuration
             $columns = DB::table('gradebook_columns')
                 ->where('class_code', $class->class_code)
                 ->where('is_active', true)
@@ -68,10 +64,8 @@ class GradeBook_Management extends MainController
                 ->get()
                 ->groupBy('component_type');
 
-            // Get enrolled students
             $students = $this->getEnrolledStudents($classId);
 
-            // Get all scores
             $scores = DB::table('gradebook_scores as gs')
                 ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
                 ->where('gc.class_code', $class->class_code)
@@ -79,7 +73,9 @@ class GradeBook_Management extends MainController
                 ->get()
                 ->groupBy('student_number');
 
-            // Build gradebook data
+            // Get quiz scores for online columns
+            $quizScores = $this->getQuizScores($columns, $students);
+
             $gradebookData = [];
             foreach ($students as $student) {
                 $studentScores = $scores->get($student->student_number, collect());
@@ -92,15 +88,22 @@ class GradeBook_Management extends MainController
                     'qa' => []
                 ];
 
-                // Populate scores
                 foreach (['WW', 'PT', 'QA'] as $type) {
                     $typeColumns = $columns->get($type, collect());
                     foreach ($typeColumns as $col) {
                         $score = $studentScores->firstWhere('column_name', $col->column_name);
+                        
+                        // Check if this column has quiz data
+                        $quizScore = null;
+                        if ($col->quiz_id && isset($quizScores[$col->quiz_id][$student->student_number])) {
+                            $quizScore = $quizScores[$col->quiz_id][$student->student_number];
+                        }
+                        
                         $row[strtolower($type)][$col->column_name] = [
-                            'score' => $score ? $score->score : null,
+                            'score' => $quizScore ?? ($score ? $score->score : null),
                             'max_points' => $col->max_points,
-                            'source' => $score ? $score->source : 'manual'
+                            'source' => $col->source_type,
+                            'column_id' => $col->id
                         ];
                     }
                 }
@@ -131,108 +134,188 @@ class GradeBook_Management extends MainController
     }
 
     /**
-     * Add new column to gradebook
+     * Get quiz scores properly calculated
      */
-    public function addColumn(Request $request, $classId)
+    private function getQuizScores($columns, $students)
+    {
+        $quizScores = [];
+        
+        foreach (['WW', 'PT', 'QA'] as $type) {
+            $typeColumns = $columns->get($type, collect());
+            
+            foreach ($typeColumns as $col) {
+                if (!$col->quiz_id) continue;
+                
+                $attempts = DB::table('student_quiz_attempts as sqa')
+                    ->where('quiz_id', $col->quiz_id)
+                    ->where('status', 'graded')
+                    ->select(
+                        'student_number',
+                        DB::raw('MAX(score) as best_score'),
+                        DB::raw('MAX(total_points) as total_points')
+                    )
+                    ->groupBy('student_number')
+                    ->get();
+                
+                foreach ($attempts as $attempt) {
+                    if ($attempt->total_points > 0) {
+                        $percentage = ($attempt->best_score / $attempt->total_points) * 100;
+                        $adjustedScore = round(($percentage / 100) * $col->max_points, 2);
+                        
+                        $quizScores[$col->quiz_id][$attempt->student_number] = $adjustedScore;
+                    }
+                }
+            }
+        }
+        
+        return $quizScores;
+    }
+
+    /**
+     * Update column configuration
+     */
+    public function updateColumn(Request $request, $columnId)
     {
         try {
             $validated = $request->validate([
-                'component_type' => 'required|in:WW,PT,QA',
-                'column_name' => 'required|string|max:50',
-                'max_points' => 'required|numeric|min:0',
-                'source_type' => 'required|in:manual,online',
+                'max_points' => 'required|integer|min:1',
                 'quiz_id' => 'nullable|exists:quizzes,id'
             ]);
 
-            $class = DB::table('classes')->where('id', $classId)->first();
+            $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
 
-            // Check if column name already exists
-            $exists = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('component_type', $validated['component_type'])
-                ->where('column_name', $validated['column_name'])
-                ->exists();
-
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Column name already exists'
-                ], 422);
-            }
-
-            // Get max order number
-            $maxOrder = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('component_type', $validated['component_type'])
-                ->max('order_number');
-
-            $columnId = DB::table('gradebook_columns')->insertGetId([
-                'class_code' => $class->class_code,
-                'component_type' => $validated['component_type'],
-                'column_name' => $validated['column_name'],
+            $updateData = [
                 'max_points' => $validated['max_points'],
-                'order_number' => ($maxOrder ?? 0) + 1,
-                'source_type' => $validated['source_type'],
-                'quiz_id' => $validated['quiz_id'],
-                'created_at' => now(),
                 'updated_at' => now()
-            ]);
+            ];
 
-            // If online source, sync quiz scores
-            if ($validated['source_type'] === 'online' && $validated['quiz_id']) {
-                $this->syncQuizScores($columnId, $validated['quiz_id']);
+            if (isset($validated['quiz_id']) && $validated['quiz_id']) {
+                $updateData['quiz_id'] = $validated['quiz_id'];
+                $updateData['source_type'] = 'online';
+            } else {
+                $updateData['quiz_id'] = null;
+                $updateData['source_type'] = 'manual';
             }
+
+            DB::table('gradebook_columns')
+                ->where('id', $columnId)
+                ->update($updateData);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Column added successfully'
+                'message' => 'Column updated successfully'
             ]);
 
         } catch (Exception $e) {
-            \Log::error('Failed to add column', [
-                'error' => $e->getMessage()
-            ]);
-
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to add column'
+                'message' => 'Failed to update column: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Update score
+     * Add new column
      */
-    public function updateScore(Request $request)
+    public function addColumn(Request $request, $classId)
     {
         try {
             $validated = $request->validate([
-                'column_id' => 'required|exists:gradebook_columns,id',
-                'student_number' => 'required|exists:students,student_number',
-                'score' => 'nullable|numeric|min:0'
+                'component_type' => 'required|in:WW,PT,QA'
             ]);
 
-            DB::table('gradebook_scores')->updateOrInsert(
-                [
-                    'column_id' => $validated['column_id'],
-                    'student_number' => $validated['student_number']
-                ],
-                [
-                    'score' => $validated['score'],
-                    'source' => 'manual',
-                    'updated_at' => now()
-                ]
-            );
+            $class = DB::table('classes')->where('id', $classId)->first();
+
+            // Check column limit
+            $currentCount = DB::table('gradebook_columns')
+                ->where('class_code', $class->class_code)
+                ->where('component_type', $validated['component_type'])
+                ->where('is_active', 1)
+                ->count();
+
+            if ($currentCount >= self::MAX_COLUMNS_PER_TYPE) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Maximum of " . self::MAX_COLUMNS_PER_TYPE . " columns reached for this component type"
+                ], 400);
+            }
+
+            $maxOrder = DB::table('gradebook_columns')
+                ->where('class_code', $class->class_code)
+                ->where('component_type', $validated['component_type'])
+                ->max('order_number');
+
+            $nextNumber = $maxOrder + 1;
+            $columnName = $validated['component_type'] . $nextNumber;
+
+            $columnId = DB::table('gradebook_columns')->insertGetId([
+                'class_code' => $class->class_code,
+                'component_type' => $validated['component_type'],
+                'column_name' => $columnName,
+                'max_points' => $validated['component_type'] === 'QA' ? 50 : 10,
+                'order_number' => $nextNumber,
+                'source_type' => 'manual',
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Score updated successfully'
+                'message' => 'Column added successfully',
+                'data' => DB::table('gradebook_columns')->find($columnId)
             ]);
 
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update score'
+                'message' => 'Failed to add column: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Batch update scores
+     */
+    public function batchUpdateScores(Request $request, $classId)
+    {
+        try {
+            $validated = $request->validate([
+                'scores' => 'required|array',
+                'scores.*.column_id' => 'required|exists:gradebook_columns,id',
+                'scores.*.student_number' => 'required|exists:students,student_number',
+                'scores.*.score' => 'nullable|numeric|min:0'
+            ]);
+
+            DB::beginTransaction();
+
+            foreach ($validated['scores'] as $scoreData) {
+                DB::table('gradebook_scores')->updateOrInsert(
+                    [
+                        'column_id' => $scoreData['column_id'],
+                        'student_number' => $scoreData['student_number']
+                    ],
+                    [
+                        'score' => $scoreData['score'],
+                        'source' => 'manual',
+                        'updated_at' => now()
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Scores updated successfully'
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update scores: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -254,7 +337,12 @@ class GradeBook_Management extends MainController
                         ->where('class_code', $class->class_code)
                         ->whereNotNull('quiz_id');
                 })
-                ->select('q.id', 'q.title', 'l.title as lesson_title')
+                ->select(
+                    'q.id', 
+                    'q.title', 
+                    'l.title as lesson_title',
+                    DB::raw('(SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id) as total_points')
+                )
                 ->get();
 
             return response()->json([
@@ -271,43 +359,333 @@ class GradeBook_Management extends MainController
     }
 
     /**
-     * Sync quiz scores to gradebook
+     * Import gradebook from Excel
      */
-    private function syncQuizScores($columnId, $quizId)
+    public function importGradebook(Request $request, $classId)
     {
-        // Get best attempts for each student
-        $scores = DB::table('student_quiz_attempts as sqa')
-            ->where('quiz_id', $quizId)
-            ->where('status', 'graded')
-            ->select(
-                'student_number',
-                DB::raw('MAX(score) as best_score'),
-                DB::raw('MAX(total_points) as total_points')
-            )
-            ->groupBy('student_number')
-            ->get();
+        try {
+            $request->validate([
+                'file' => 'required|mimes:xlsx,xls|max:5120',
+                'action' => 'required|in:replace,keep'
+            ]);
 
-        foreach ($scores as $score) {
-            $percentage = $score->total_points > 0 ? 
-                ($score->best_score / $score->total_points) * 100 : 0;
+            $teacher = Auth::guard('teacher')->user();
+            $class = DB::table('classes')->where('id', $classId)->first();
 
-            $column = DB::table('gradebook_columns')->find($columnId);
-            $adjustedScore = ($percentage / 100) * $column->max_points;
+            $file = $request->file('file');
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $data = $sheet->toArray();
 
-            DB::table('gradebook_scores')->updateOrInsert(
-                [
-                    'column_id' => $columnId,
-                    'student_number' => $score->student_number
-                ],
-                [
-                    'score' => round($adjustedScore, 2),
-                    'source' => 'online',
-                    'updated_at' => now()
-                ]
+            if (count($data) < 3) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid file format. File must contain proper template structure.'
+                ], 400);
+            }
+
+            // Find the header rows
+            $componentRow = null;
+            $columnNumberRow = null;
+            $dataStartRow = null;
+            $studentNameCol = null;
+
+            // Scan for "WRITTEN WORK", "PERFORMANCE TASK", "QUARTERLY ASSESSMENT" headers
+            for ($i = 0; $i < count($data); $i++) {
+                $rowText = implode('|', array_map('strtoupper', $data[$i]));
+                
+                // Find row with component headers (WRITTEN WORK, PERFORMANCE TASK, etc)
+                if (stripos($rowText, 'WRITTEN WORK') !== false || 
+                    stripos($rowText, 'PERFORMANCE TASK') !== false ||
+                    stripos($rowText, 'QUARTERLY ASSESSMENT') !== false) {
+                    $componentRow = $i;
+                    continue;
+                }
+                
+                // Find row with column numbers (1, 2, 3, 4...)
+                if ($componentRow !== null && $columnNumberRow === null) {
+                    $hasNumbers = false;
+                    foreach ($data[$i] as $cell) {
+                        if (is_numeric($cell) && intval($cell) > 0 && intval($cell) <= 10) {
+                            $hasNumbers = true;
+                            break;
+                        }
+                    }
+                    if ($hasNumbers) {
+                        $columnNumberRow = $i;
+                        $dataStartRow = $i + 1;
+                        break;
+                    }
+                }
+            }
+
+            if ($componentRow === null || $columnNumberRow === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not find gradebook structure. Please use the correct template.'
+                ], 400);
+            }
+
+            // Find student name column (LEARNERS' NAMES)
+            foreach ($data[$componentRow] as $colIndex => $cell) {
+                if (stripos($cell, "LEARNER") !== false || stripos($cell, "NAME") !== false) {
+                    $studentNameCol = $colIndex;
+                    break;
+                }
+            }
+
+            if ($studentNameCol === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not find student names column.'
+                ], 400);
+            }
+
+            // Parse column structure
+            $columnMapping = $this->parseTemplateColumns(
+                $data[$componentRow], 
+                $data[$columnNumberRow], 
+                $class->class_code, 
+                $request->action,
+                $studentNameCol
             );
+
+            if (!$columnMapping['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $columnMapping['message']
+                ], 400);
+            }
+
+            DB::beginTransaction();
+
+            $imported = 0;
+            $errors = [];
+
+            // Process data rows
+            for ($i = $dataStartRow; $i < count($data); $i++) {
+                $row = $data[$i];
+                $studentName = trim($row[$studentNameCol] ?? '');
+
+                if (empty($studentName)) continue;
+
+                // Try to match student by name (last name, first name pattern)
+                $nameParts = $this->parseStudentName($studentName);
+                
+                $student = DB::table('students')
+                    ->join('student_class_matrix', 'students.student_number', '=', 'student_class_matrix.student_number')
+                    ->where('student_class_matrix.class_code', $class->class_code)
+                    ->where(function($query) use ($nameParts) {
+                        if (!empty($nameParts['last'])) {
+                            $query->where('students.last_name', 'LIKE', '%' . $nameParts['last'] . '%');
+                        }
+                        if (!empty($nameParts['first'])) {
+                            $query->where('students.first_name', 'LIKE', '%' . $nameParts['first'] . '%');
+                        }
+                    })
+                    ->select('students.student_number')
+                    ->first();
+
+                if (!$student) {
+                    $errors[] = "Row " . ($i + 1) . ": Could not match student '$studentName'";
+                    continue;
+                }
+
+                // Import scores for each mapped column
+                foreach ($columnMapping['columns'] as $excelColIndex => $dbColumnId) {
+                    $score = $row[$excelColIndex] ?? null;
+                    
+                    if ($score !== null && $score !== '' && is_numeric($score)) {
+                        if ($request->action === 'replace') {
+                            DB::table('gradebook_scores')->updateOrInsert(
+                                [
+                                    'column_id' => $dbColumnId,
+                                    'student_number' => $student->student_number
+                                ],
+                                [
+                                    'score' => floatval($score),
+                                    'source' => 'imported',
+                                    'updated_at' => now()
+                                ]
+                            );
+                        } else {
+                            // Only insert if no score exists
+                            $existing = DB::table('gradebook_scores')
+                                ->where('column_id', $dbColumnId)
+                                ->where('student_number', $student->student_number)
+                                ->first();
+                            
+                            if (!$existing || $existing->score === null) {
+                                DB::table('gradebook_scores')->updateOrInsert(
+                                    [
+                                        'column_id' => $dbColumnId,
+                                        'student_number' => $student->student_number
+                                    ],
+                                    [
+                                        'score' => floatval($score),
+                                        'source' => 'imported',
+                                        'updated_at' => now()
+                                    ]
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $imported++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported scores for $imported students",
+                'errors' => $errors,
+                'new_columns' => $columnMapping['new_columns'] ?? []
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            
+            \Log::error('Import failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to import: ' . $e->getMessage()
+            ], 500);
         }
     }
 
+    /**
+     * Parse template columns based on position
+     */
+    private function parseTemplateColumns($componentRow, $numberRow, $classCode, $action, $studentNameCol)
+    {
+        $columnMapping = [];
+        $newColumns = [];
+        $currentComponent = null;
+
+        foreach ($componentRow as $colIndex => $header) {
+            if ($colIndex <= $studentNameCol) continue; // Skip before student names
+
+            $headerUpper = strtoupper(trim($header));
+            
+            // Detect component type
+            if (stripos($headerUpper, 'WRITTEN WORK') !== false) {
+                $currentComponent = 'WW';
+            } elseif (stripos($headerUpper, 'PERFORMANCE TASK') !== false) {
+                $currentComponent = 'PT';
+            } elseif (stripos($headerUpper, 'QUARTERLY ASSESSMENT') !== false) {
+                $currentComponent = 'QA';
+            }
+
+            // Check if this column has a number in the number row
+            $columnNumber = $numberRow[$colIndex] ?? null;
+            
+            if ($currentComponent && is_numeric($columnNumber) && intval($columnNumber) > 0) {
+                $orderNumber = intval($columnNumber);
+
+                // Find or create column in database
+                $column = DB::table('gradebook_columns')
+                    ->where('class_code', $classCode)
+                    ->where('component_type', $currentComponent)
+                    ->where('order_number', $orderNumber)
+                    ->first();
+
+                if ($column) {
+                    if ($action === 'replace') {
+                        // Clear existing scores for this column
+                        DB::table('gradebook_scores')
+                            ->where('column_id', $column->id)
+                            ->where('source', '!=', 'online') // Don't delete online quiz scores
+                            ->delete();
+                    }
+                    $columnMapping[$colIndex] = $column->id;
+                } else {
+                    // Create new column
+                    $columnName = $currentComponent . $orderNumber;
+                    
+                    // Check column limit
+                    $currentCount = DB::table('gradebook_columns')
+                        ->where('class_code', $classCode)
+                        ->where('component_type', $currentComponent)
+                        ->count();
+
+                    if ($currentCount >= self::MAX_COLUMNS_PER_TYPE) {
+                        return [
+                            'success' => false,
+                            'message' => "Cannot create $columnName: Maximum columns reached for $currentComponent"
+                        ];
+                    }
+
+                    // Determine default max points based on component type
+                    $maxPoints = match($currentComponent) {
+                        'WW' => 10,
+                        'PT' => 20,
+                        'QA' => 50,
+                        default => 10
+                    };
+
+                    $columnId = DB::table('gradebook_columns')->insertGetId([
+                        'class_code' => $classCode,
+                        'component_type' => $currentComponent,
+                        'column_name' => $columnName,
+                        'max_points' => $maxPoints,
+                        'order_number' => $orderNumber,
+                        'source_type' => 'imported',
+                        'is_active' => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+
+                    $columnMapping[$colIndex] = $columnId;
+                    $newColumns[] = $columnName;
+                }
+            }
+        }
+
+        if (empty($columnMapping)) {
+            return [
+                'success' => false,
+                'message' => 'No valid gradebook columns found in the template'
+            ];
+        }
+
+        return [
+            'success' => true,
+            'columns' => $columnMapping,
+            'new_columns' => $newColumns
+        ];
+    }
+
+    /**
+     * Parse student name from Excel (handles "Last Name, First Name" format)
+     */
+    private function parseStudentName($fullName)
+    {
+        $parts = ['first' => '', 'last' => ''];
+        
+        if (strpos($fullName, ',') !== false) {
+            // Format: "Last Name, First Name"
+            $nameParts = explode(',', $fullName);
+            $parts['last'] = trim($nameParts[0]);
+            $parts['first'] = trim($nameParts[1] ?? '');
+        } else {
+            // Try to split by space
+            $nameParts = explode(' ', $fullName);
+            if (count($nameParts) >= 2) {
+                $parts['first'] = trim($nameParts[0]);
+                $parts['last'] = trim(implode(' ', array_slice($nameParts, 1)));
+            } else {
+                $parts['last'] = trim($fullName);
+            }
+        }
+        
+        return $parts;
+    }
     /**
      * Get enrolled students
      */
@@ -315,7 +693,6 @@ class GradeBook_Management extends MainController
     {
         $class = DB::table('classes')->where('id', $classId)->first();
 
-        // Regular students
         $regular = DB::table('students as s')
             ->join('section_class_matrix as scm', 's.section_id', '=', 'scm.section_id')
             ->where('scm.class_id', $classId)
@@ -325,7 +702,6 @@ class GradeBook_Management extends MainController
                 DB::raw("CONCAT(s.first_name, ' ', s.last_name) as full_name")
             );
 
-        // Irregular students
         $irregular = DB::table('students as s')
             ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
             ->where('scm.class_code', $class->class_code)
@@ -338,50 +714,5 @@ class GradeBook_Management extends MainController
         return $regular->union($irregular)
             ->orderBy('full_name')
             ->get();
-    }
-
-    /**
-     * Export gradebook to Excel
-     */
-    public function exportGradebook($classId)
-    {
-        try {
-            // Get gradebook data (similar to getGradebookData but formatted for Excel)
-            // Implementation here...
-            
-            return response()->download($filePath)->deleteFileAfterSend(true);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to export gradebook'
-            ], 500);
-        }
-    }
-
-    /**
-     * Import gradebook from Excel
-     */
-    public function importGradebook(Request $request, $classId)
-    {
-        try {
-            $request->validate([
-                'file' => 'required|mimes:xlsx,xls|max:5120'
-            ]);
-
-            // Process Excel file
-            // Implementation here...
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Gradebook imported successfully'
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to import gradebook'
-            ], 500);
-        }
     }
 }

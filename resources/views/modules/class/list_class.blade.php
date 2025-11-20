@@ -18,7 +18,7 @@
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
-        <li class="breadcrumb-item"><a href="{{ route('student.home') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ route($homeRoute) }}">Home</a></li>
         <li class="breadcrumb-item active">Classes</li>
     </ol>
 @endsection
@@ -56,6 +56,10 @@
         const USER_TYPE = "{{ $userType }}";
         const API_ROUTES = {
             getClasses: "{{ $isTeacher ? route('teacher.classes.list') : route('student.classes.list') }}"
+            @if($isTeacher)
+            ,
+            gradebook: "{{ route('teacher.gradebook.view', ['classId' => ':classId']) }}"
+            @endif
         };
     </script>
     

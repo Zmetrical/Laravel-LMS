@@ -12,6 +12,7 @@ use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Grade_Management\Grade_Management;
+use App\Http\Controllers\Grade_Management\GradeBook_Management;
 
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
@@ -224,6 +225,35 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
                 Route::get('/create', [Page_Quiz::class, 'teacherCreate'])->name('create');
                 Route::get('/{quizId}/edit', [Page_Quiz::class, 'teacherEdit'])->name('edit');
             });
+        });
+
+        Route::prefix('gradebook')->name('gradebook.')->group(function() {
+            Route::get('/{classId}', [GradeBook_Management::class, 'list_gradebook'])
+                ->name('view');
+            
+            Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
+                ->name('data');
+            
+            Route::post('/{classId}/initialize', [GradeBook_Management::class, 'initializeDefaultColumns'])
+                ->name('init');
+            
+            Route::post('/{classId}/column/add', [GradeBook_Management::class, 'addColumn'])
+                ->name('column.add');
+            
+            Route::put('/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
+                ->name('column.update');
+            
+            Route::post('/{classId}/scores/batch', [GradeBook_Management::class, 'batchUpdateScores'])
+                ->name('scores.batch');
+            
+            Route::get('/{classId}/quizzes', [GradeBook_Management::class, 'getAvailableQuizzes'])
+                ->name('quizzes');
+            
+            Route::get('/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
+                ->name('export');
+            
+            Route::post('/{classId}/import', [GradeBook_Management::class, 'importGradebook'])
+                ->name('import');
         });
     });
 });
