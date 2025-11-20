@@ -18,6 +18,7 @@ $(document).ready(function() {
     let wwGrid, ptGrid, qaGrid;
     let selectedFile = null;
     let availableSheets = [];
+    let importData = null;
 
     loadGradebook();
 
@@ -131,16 +132,12 @@ $(document).ready(function() {
                             
                             if (newVal !== oldVal.toString()) {
                                 markChanged(col.id, item.student_number, newVal, cellId);
-                                
-                                // Update the item data immediately
                                 item[col.column_name] = newVal === '' ? null : parseFloat(newVal);
-                                
-                                // Refresh the grid to show updated totals and highlight
                                 $(selector).jsGrid("refresh");
                             }
                         })
                         .on('keypress', function(e) {
-                            if (e.which === 13) { // Enter key
+                            if (e.which === 13) {
                                 $(this).blur();
                             }
                         });
@@ -460,7 +457,10 @@ $(document).ready(function() {
         }
     }
 
-    // Import functionality
+    // ============================================================================
+    // IMPORT FUNCTIONALITY - COMPLETE REWRITE
+    // ============================================================================
+
     $('#importExcelBtn').click(function() {
         $('#excelFileInput').click();
     });
@@ -468,15 +468,11 @@ $(document).ready(function() {
     $('#excelFileInput').change(function() {
         const file = this.files[0];
         if (!file) return;
-        console.log('File selected:', file.name);  // ADD THIS
 
         selectedFile = file;
 
-        // First, get available sheets from the file
         const formData = new FormData();
         formData.append('file', file);
-    console.log('Sending AJAX to:', API_ROUTES.getSheets);  // ADD THIS
-    console.log('Route should be:', "{{ route('teacher.gradebook.sheets', ['classId' => $classId]) }}");  // ADD THIS
 
         const btn = $('#importExcelBtn');
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Reading file...');
@@ -488,8 +484,6 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success: function(response) {
-                            console.log('Success:', response);  // ADD THIS
-
                 if (response.success && response.sheets) {
                     availableSheets = response.sheets;
                     showSheetSelectionModal();
@@ -499,9 +493,6 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const msg = xhr.responseJSON?.message || 'Failed to read Excel file';
-                    console.log('Error:', xhr);  // ADD THIS
-                    console.log('Status:', xhr.status);  // ADD THIS
-                    console.log('Response:', xhr.responseText);  // ADD THIS
                 toastr.error(msg);
             },
             complete: function() {
@@ -518,7 +509,6 @@ $(document).ready(function() {
             return;
         }
 
-        // Populate sheet selection dropdown
         let options = '';
         availableSheets.forEach(sheet => {
             options += `<option value="${sheet.index}">
@@ -527,50 +517,24 @@ $(document).ready(function() {
         });
         $('#sheetSelect').html(options);
 
-        // Show the sheet selection modal
         $('#sheetSelectionModal').modal('show');
     }
 
     $('#confirmSheetBtn').click(function() {
         const selectedSheetIndex = parseInt($('#sheetSelect').val());
         $('#sheetSelectionModal').modal('hide');
-
-        // Check if gradebook has existing data
-        let hasData = false;
-        ['WW', 'PT', 'QA'].forEach(type => {
-            const cols = gradebookData.columns[type] || [];
-            if (cols.length > 0) hasData = true;
-        });
-
-        if (hasData) {
-            $('#importConfirmModal').modal('show');
-        } else {
-            performImport('keep', selectedSheetIndex);
-        }
+        parseImportFile(selectedSheetIndex);
     });
 
-    $('#replaceDataBtn').click(function() {
-        const selectedSheetIndex = parseInt($('#sheetSelect').val());
-        $('#importConfirmModal').modal('hide');
-        performImport('replace', selectedSheetIndex);
-    });
-
-    $('#keepDataBtn').click(function() {
-        const selectedSheetIndex = parseInt($('#sheetSelect').val());
-        $('#importConfirmModal').modal('hide');
-        performImport('keep', selectedSheetIndex);
-    });
-
-    function performImport(action, sheetIndex) {
+    function parseImportFile(sheetIndex) {
         if (!selectedFile) return;
 
         const formData = new FormData();
         formData.append('file', selectedFile);
-        formData.append('action', action);
         formData.append('sheet_index', sheetIndex);
 
         const btn = $('#importExcelBtn');
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Parsing...');
 
         $.ajax({
             url: API_ROUTES.importGradebook,
@@ -580,32 +544,250 @@ $(document).ready(function() {
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    toastr.success(response.message);
-                    
-                    if (response.errors && response.errors.length > 0) {
-                        console.warn('Import errors:', response.errors);
-                        toastr.warning(`${response.errors.length} row(s) had errors. Check console for details.`);
-                    }
-                    
-                    if (response.new_columns && response.new_columns.length > 0) {
-                        toastr.info(`Created ${response.new_columns.length} new columns: ${response.new_columns.join(', ')}`);
-                    }
-                    
-                    loadGradebook();
+                    importData = response;
+                    showImportPreview(response);
                 } else {
-                    toastr.error(response.message || 'Import failed');
+                    toastr.error(response.message || 'Failed to parse file');
                 }
             },
             error: function(xhr) {
-                const msg = xhr.responseJSON?.message || 'Failed to import gradebook';
+                const msg = xhr.responseJSON?.message || 'Failed to parse Excel file';
                 toastr.error(msg);
             },
             complete: function() {
                 btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import from Excel');
-                selectedFile = null;
-                availableSheets = [];
             }
         });
+    }
+
+    function showImportPreview(data) {
+        let columnsHtml = '<div class="list-group mb-3">';
+        
+        data.columns.forEach(col => {
+            const statusBadge = col.exists_in_db 
+                ? `<span class="badge badge-info">Exists (${col.db_max_points}pts)</span>`
+                : `<span class="badge badge-success">New Column</span>`;
+            
+            const checked = col.needs_creation || col.max_points === col.db_max_points ? 'checked' : '';
+            
+            let warning = '';
+            if (col.exists_in_db && col.max_points !== col.db_max_points) {
+                warning = `<br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Max points mismatch: Excel has ${col.max_points}pts, Database has ${col.db_max_points}pts</small>`;
+            }
+            
+            columnsHtml += `
+                <div class="list-group-item">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input import-column-check" 
+                               id="col_${col.excel_col_index}" 
+                               data-col-index="${col.excel_col_index}"
+                               ${checked}>
+                        <label class="custom-control-label w-100" for="col_${col.excel_col_index}">
+                            <strong>${col.column_name}</strong> (${col.max_points}pts) ${statusBadge}
+                            ${warning}
+                        </label>
+                    </div>
+                </div>
+            `;
+        });
+        
+        columnsHtml += '</div>';
+        
+        const errorsHtml = data.errors.length > 0 
+            ? `<div class="alert alert-warning">
+                   <strong><i class="fas fa-exclamation-triangle"></i> Warnings (${data.errors.length}):</strong>
+                   <ul class="mb-0 mt-2">${data.errors.slice(0, 10).map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>
+                   ${data.errors.length > 10 ? `<small class="text-muted">... and ${data.errors.length - 10} more warnings</small>` : ''}
+               </div>`
+            : '';
+        
+        const previewHtml = `
+            <div class="modal fade" id="importPreviewModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info">
+                            <h5 class="modal-title">
+                                <i class="fas fa-file-import"></i> Import Preview - ${data.sheet_name}
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                Found <strong>${data.students.length} students</strong> and <strong>${data.columns.length} columns</strong>.
+                                Select which columns to import into the gradebook.
+                            </div>
+                            
+                            ${errorsHtml}
+                            
+                            <h6><strong>Select Columns to Import:</strong></h6>
+                            <p class="text-muted small">Check the columns you want to add to the gradebook. Scores will be loaded into the grid.</p>
+                            ${columnsHtml}
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-info-circle"></i> <strong>Important:</strong> 
+                                Scores will be loaded into the gradebook grids. Click <strong>"Save Changes"</strong> button to persist them to the database.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button type="button" class="btn btn-info" id="applyImportBtn">
+                                <i class="fas fa-check"></i> Apply to Gradebook
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#importPreviewModal').remove();
+        $('body').append(previewHtml);
+        
+        $('#importPreviewModal').modal('show');
+    }
+
+    $(document).on('click', '#applyImportBtn', function() {
+        const selectedColumns = [];
+        $('.import-column-check:checked').each(function() {
+            const colIndex = parseInt($(this).data('col-index'));
+            const column = importData.columns.find(c => c.excel_col_index === colIndex);
+            if (column) selectedColumns.push(column);
+        });
+        
+        if (selectedColumns.length === 0) {
+            toastr.warning('Please select at least one column to import');
+            return;
+        }
+        
+        $('#importPreviewModal').modal('hide');
+        applyImportToGrid(selectedColumns, importData.students);
+    });
+
+    function applyImportToGrid(columns, students) {
+        let appliedCount = 0;
+        let createdColumns = [];
+        
+        columns.forEach(col => {
+            // If column needs creation, we need to create it first
+            if (col.needs_creation) {
+                createdColumns.push(col);
+            }
+            
+            students.forEach(studentData => {
+                if (studentData.scores[col.column_name] !== undefined) {
+                    const score = studentData.scores[col.column_name];
+                    
+                    // Find the appropriate grid
+                    let grid;
+                    if (col.component_type === 'WW') grid = wwGrid;
+                    else if (col.component_type === 'PT') grid = ptGrid;
+                    else if (col.component_type === 'QA') grid = qaGrid;
+                    
+                    if (grid) {
+                        const rowIndex = grid.data.findIndex(r => r.student_number === studentData.student_number);
+                        if (rowIndex !== -1) {
+                            grid.data[rowIndex][col.column_name] = score;
+                            
+                            // Mark as changed for save (only if column exists in DB)
+                            if (col.db_column_id) {
+                                markChanged(col.db_column_id, studentData.student_number, score, `cell_${col.db_column_id}_${studentData.student_number}`);
+                            }
+                            
+                            appliedCount++;
+                        }
+                    }
+                }
+            });
+        });
+        
+        if (createdColumns.length > 0) {
+            // Need to create columns first, then reload
+            createImportedColumns(createdColumns, columns, students);
+        } else {
+            // Just refresh grids
+            initializeGrids();
+            calculateSummary();
+            
+            toastr.success(`Applied ${appliedCount} scores from Excel. Click "Save Changes" to persist to database.`);
+            cleanupImport();
+        }
+    }
+
+    function createImportedColumns(columnsToCreate, allColumns, students) {
+        const btn = $('#importExcelBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creating columns...');
+        
+        const requests = columnsToCreate.map(col => {
+            return $.ajax({
+                url: API_ROUTES.addColumn,
+                type: 'POST',
+                data: {
+                    component_type: col.component_type,
+                    column_name: col.column_name,
+                    max_points: col.max_points,
+                    order_number: col.order_number
+                }
+            });
+        });
+        
+        $.when.apply($, requests).done(function() {
+            toastr.success(`Created ${columnsToCreate.length} new column(s)`);
+            
+            // Reload gradebook to get new column IDs
+            $.ajax({
+                url: API_ROUTES.getGradebook,
+                type: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        gradebookData = response.data;
+                        classInfo = response.data.class;
+                        
+                        // Now map imported scores to the newly created columns
+                        allColumns.forEach(col => {
+                            const dbColumn = findColumnByName(col.column_name, col.component_type);
+                            if (dbColumn) {
+                                col.db_column_id = dbColumn.id;
+                                
+                                students.forEach(studentData => {
+                                    if (studentData.scores[col.column_name] !== undefined) {
+                                        const score = studentData.scores[col.column_name];
+                                        markChanged(dbColumn.id, studentData.student_number, score, `cell_${dbColumn.id}_${studentData.student_number}`);
+                                    }
+                                });
+                            }
+                        });
+                        
+                        initializeGrids();
+                        calculateSummary();
+                        updateColumnCounts();
+                        
+                        toastr.info('Scores loaded into gradebook. Click "Save Changes" to save to database.');
+                        cleanupImport();
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import from Excel');
+                }
+            });
+        }).fail(function() {
+            toastr.error('Failed to create some columns');
+            btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import from Excel');
+        });
+    }
+
+    function findColumnByName(columnName, componentType) {
+        const columns = gradebookData.columns[componentType] || [];
+        return columns.find(c => c.column_name === columnName);
+    }
+
+    function cleanupImport() {
+        selectedFile = null;
+        availableSheets = [];
+        importData = null;
     }
 
     function escapeHtml(text) {
