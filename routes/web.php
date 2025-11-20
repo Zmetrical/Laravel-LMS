@@ -233,10 +233,7 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             
             Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
                 ->name('data');
-            
-            Route::post('/{classId}/initialize', [GradeBook_Management::class, 'initializeDefaultColumns'])
-                ->name('init');
-            
+                
             Route::post('/{classId}/column/add', [GradeBook_Management::class, 'addColumn'])
                 ->name('column.add');
             
@@ -249,13 +246,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/{classId}/quizzes', [GradeBook_Management::class, 'getAvailableQuizzes'])
                 ->name('quizzes');
             
-            Route::get('/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
-                ->name('export');
-            
-            Route::post('/{classId}/import', [GradeBook_Management::class, 'importGradebook'])
-                ->name('import');
-            Route::post('/{classId}/sheets', [GradeBook_Management::class, 'getExcelSheets'])
-                ->name('sheets');
         });
     });
 });

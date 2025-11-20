@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        /* Previous styles remain the same */
         .jsgrid-header-row > .jsgrid-header-cell {
             background-color: #343a40;
             color: #fff;
@@ -122,16 +121,6 @@
             padding: 4px 8px;
             font-size: 12px;
         }
-
-        .sheet-info-icon {
-            color: #17a2b8;
-            margin-left: 5px;
-        }
-
-        #sheetSelect {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-        }
     </style>
 @endsection
 
@@ -147,17 +136,11 @@
     <div class="card card-dark card-outline">
         <div class="card-body">
             <div class="row align-items-center">
-                <div class="col-md-8">
+                <div class="col-md-12">
                     <h3 class="mb-1">
                         <i class="fas fa-book"></i> <span id="className">{{ $class->class_name }}</span>
                     </h3>
                     <p class="text-muted mb-0">{{ $class->class_code }}</p>
-                </div>
-                <div class="col-md-4 text-right">
-                    <button class="btn btn-info btn-sm" id="importExcelBtn">
-                        <i class="fas fa-upload"></i> Import from Excel
-                    </button>
-                    <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display: none;">
                 </div>
             </div>
         </div>
@@ -168,7 +151,6 @@
         <i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>
     </button>
 
-    <!-- Tabs and content remain the same -->
     <div class="card card-dark card-outline card-tabs">
         <div class="card-header p-0 pt-1 border-bottom-0">
             <ul class="nav nav-tabs" id="custom-tabs" role="tablist">
@@ -243,7 +225,7 @@
                                     <th class="text-center">Performance Task<br><small id="ptPercLabel">({{ $class->pt_perc }}%)</small></th>
                                     <th class="text-center">Quarterly Assessment<br><small id="qaPercLabel">({{ $class->qa_perce }}%)</small></th>
                                     <th class="text-center">Initial Grade</th>
-                                    <th class="text-center bg-info">Quarterly Grade</th>
+                                    <th class="text-center ">Quarterly Grade</th>
                                 </tr>
                             </thead>
                             <tbody id="summaryTableBody">
@@ -255,107 +237,16 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <div class="row mt-4">
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-secondary stats-box">
-                                <div class="inner">
-                                    <h3 id="avgGrade">0.00</h3>
-                                    <p>Class Average</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-chart-line"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-info stats-box">
-                                <div class="inner">
-                                    <h3 id="highestGrade">0.00</h3>
-                                    <p>Highest Grade</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-trophy"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-warning stats-box">
-                                <div class="inner">
-                                    <h3 id="lowestGrade">0.00</h3>
-                                    <p>Lowest Grade</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-success stats-box">
-                                <div class="inner">
-                                    <h3 id="passingRate">0%</h3>
-                                    <p>Passing Rate (≥75)</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sheet Selection Modal -->
-    <div class="modal fade" id="sheetSelectionModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-info">
-                    <h5 class="modal-title">
-                        <i class="fas fa-file-excel"></i> Select Excel Sheet to Import
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
-                        Your Excel file contains multiple sheets. Please select which sheet contains the gradebook data.
-                    </div>
-                    <div class="form-group">
-                        <label for="sheetSelect">
-                            <strong>Available Sheets:</strong>
-                            <i class="fas fa-question-circle sheet-info-icon" 
-                               title="Select the sheet that contains student grades" 
-                               data-toggle="tooltip"></i>
-                        </label>
-                        <select class="form-control form-control-lg" id="sheetSelect">
-                            <!-- Options will be populated dynamically -->
-                        </select>
-                        <small class="text-muted">
-                            The number in parentheses shows how many rows each sheet contains.
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="button" class="btn btn-info" id="confirmSheetBtn">
-                        <i class="fas fa-check"></i> Continue with Selected Sheet
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Column Modal (remains the same) -->
+    <!-- Edit Column Modal -->
     <div class="modal fade" id="editColumnModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-dark">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Column</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">
                         <span>&times;</span>
@@ -390,36 +281,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Import Confirmation Modal (remains the same) -->
-    <div class="modal fade" id="importConfirmModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Existing Data Found</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Some columns already contain data. What would you like to do?</p>
-                    <div class="alert alert-info">
-                        <strong>Replace:</strong> Existing scores will be deleted and replaced with imported data<br>
-                        <strong>Keep:</strong> Only empty cells will be filled with imported data
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" id="keepDataBtn">
-                        <i class="fas fa-layer-group"></i> Keep Existing
-                    </button>
-                    <button type="button" class="btn btn-danger" id="replaceDataBtn">
-                        <i class="fas fa-sync"></i> Replace All
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @section('scripts')
@@ -433,15 +294,8 @@
             addColumn: "{{ route('teacher.gradebook.column.add', ['classId' => $classId]) }}",
             updateColumn: "{{ route('teacher.gradebook.column.update', ['columnId' => '__COLUMN_ID__']) }}",
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
-            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
-            getSheets: "{{ route('teacher.gradebook.sheets', ['classId' => $classId]) }}",
-            importGradebook: "{{ route('teacher.gradebook.import', ['classId' => $classId]) }}"
+            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}"
         };
-
-        // Initialize tooltips
-        $(function () {
-            $('[data-toggle="tooltip"]').tooltip();
-        });
     </script>
     
     @if(isset($scripts))
