@@ -64,7 +64,7 @@
 
             <!-- Main Sidebar -->
             <aside class="main-sidebar sidebar-dark-primary  elevation-4">
-                <a href="{{ route('admin.home') }}" class="brand-link text-center" style="padding: 20px 0;">
+                <a href="{{ route('teacher.home') }}" class="brand-link text-center" style="padding: 20px 0;">
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
                         style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
@@ -111,6 +111,24 @@
                                 </ul>
                             </li>
 
+                            <li class="nav-item {{ Request::is('gradebook/*') ? 'menu-open' : '' }}">
+                                <a href="#" class="nav-link {{ Request::is('gradebook/*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-users"></i>
+                                    <p>
+                                        Gradebook
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    <li class="nav-item">
+                                        <a href="{{ route('teacher.list_class') }}"
+                                            class="nav-link {{ Request::routeIs('teacher.list_class') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Class List</p>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
                         </ul>
                     </nav>
                 </div>
