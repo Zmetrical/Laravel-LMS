@@ -16,6 +16,7 @@
 @section('content')
 <br>
     <div class="container-fluid">
+
         <!-- School Year Info -->
         <div class="alert alert-dark alert-dismissible">
             <button type="button" class="close" data-dismiss="alert">&times;</button>

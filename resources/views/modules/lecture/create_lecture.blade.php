@@ -6,7 +6,8 @@
 
 @section('tab-content')
 <div class="row">
-    <div class="col-md-12">
+    <!-- Main Content Area -->
+    <div class="col-md-9">
         <!-- Breadcrumb -->
         <div class="mb-3">
             <a href="{{ route('teacher.class.lessons', $class->id) }}" class="btn btn-default btn-sm">
@@ -14,42 +15,47 @@
             </a>
         </div>
 
-        <!-- Main Card -->
-        <div class="card card-primary">
+        <!-- Lesson Context Card -->
+        <div class="card card-primary card-outline mb-3">
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-book"></i> Lesson
+                    </small>
+                </div>
+                <h4 class="mb-1">{{ $lesson->title }}</h4>
+                @if($lesson->description)
+                <p class="text-muted mb-0"><small>{{ $lesson->description }}</small></p>
+                @endif
+            </div>
+        </div>
+
+        <!-- Main Form Card -->
+        <div class="card">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-{{ isset($lecture) ? 'edit' : 'plus-circle' }}"></i>
-                    {{ isset($lecture) ? 'Edit Lecture' : 'Add New Lecture' }}
+                    {{ isset($lecture) ? 'Edit Lecture' : 'New Lecture' }}
                 </h3>
             </div>
+            
             <form id="lectureForm">
                 <input type="hidden" id="lectureId" value="{{ $lecture->id ?? '' }}">
                 <input type="hidden" id="lessonId" value="{{ $lesson->id }}">
                 
                 <div class="card-body">
-                    <!-- Lesson Info -->
-                    <div class="alert alert-info">
-                        <h5><i class="fas fa-book"></i> Lesson: {{ $lesson->title }}</h5>
-                        @if($lesson->description)
-                        <p class="mb-0"><small>{{ $lesson->description }}</small></p>
-                        @endif
-                    </div>
-
                     <!-- Lecture Title -->
                     <div class="form-group">
                         <label for="title">
                             Lecture Title <span class="text-danger">*</span>
                         </label>
                         <input type="text" 
-                               class="form-control" 
+                               class="form-control form-control-lg" 
                                id="title" 
                                name="title"
                                value="{{ $lecture->title ?? '' }}"
-                               placeholder="e.g., Introduction to Essay Structure"
+                               placeholder="Enter lecture title"
                                required>
-                        <small class="form-text text-muted">
-                            Enter a clear and descriptive title for this lecture
-                        </small>
                     </div>
 
                     <!-- Content Type -->
@@ -59,36 +65,42 @@
                         </label>
                         <select class="form-control" id="contentType" name="content_type" required>
                             <option value="text" {{ (isset($lecture) && $lecture->content_type === 'text') ? 'selected' : '' }}>
-                                Text Content
+                                <i class="fas fa-file-alt"></i> Text Content
                             </option>
                             <option value="video" {{ (isset($lecture) && $lecture->content_type === 'video') ? 'selected' : '' }}>
-                                Video (YouTube/Vimeo URL)
+                                <i class="fas fa-video"></i> Video (YouTube/Vimeo)
                             </option>
                             <option value="pdf" {{ (isset($lecture) && $lecture->content_type === 'pdf') ? 'selected' : '' }}>
-                                PDF Document
+                                <i class="fas fa-file-pdf"></i> PDF Document
                             </option>
                             <option value="file" {{ (isset($lecture) && $lecture->content_type === 'file') ? 'selected' : '' }}>
-                                Other File
+                                <i class="fas fa-file"></i> Other File
                             </option>
                         </select>
                     </div>
 
-                    <!-- Text Content (shown when content_type is text) -->
+                    <hr class="my-4">
+
+                    <!-- Text Content -->
                     <div class="form-group" id="textContentGroup" style="display: none;">
-                        <label for="textContent">Text Content</label>
+                        <label for="textContent">
+                            <i class="fas fa-align-left"></i> Text Content
+                        </label>
                         <textarea class="form-control" 
                                   id="textContent" 
                                   name="content" 
-                                  rows="10"
+                                  rows="15"
                                   placeholder="Enter your lecture content here...">{{ isset($lecture) && $lecture->content_type === 'text' ? $lecture->content : '' }}</textarea>
                         <small class="form-text text-muted">
-                            You can format this text with markdown or HTML
+                            Write your lecture content. You can use HTML for formatting.
                         </small>
                     </div>
 
-                    <!-- Video URL (shown when content_type is video) -->
+                    <!-- Video URL -->
                     <div class="form-group" id="videoUrlGroup" style="display: none;">
-                        <label for="videoUrl">Video URL</label>
+                        <label for="videoUrl">
+                            <i class="fas fa-video"></i> Video URL
+                        </label>
                         <input type="url" 
                                class="form-control" 
                                id="videoUrl" 
@@ -96,26 +108,34 @@
                                value="{{ isset($lecture) && $lecture->content_type === 'video' ? $lecture->content : '' }}"
                                placeholder="https://www.youtube.com/watch?v=...">
                         <small class="form-text text-muted">
-                            Paste a YouTube or Vimeo URL
+                            Paste a YouTube or Vimeo URL. The video will be embedded for students.
                         </small>
                     </div>
 
-                    <!-- File Upload (shown when content_type is pdf or file) -->
+                    <!-- File Upload -->
                     <div class="form-group" id="fileUploadGroup" style="display: none;">
-                        <label for="fileUpload">Upload File</label>
+                        <label for="fileUpload">
+                            <i class="fas fa-upload"></i> Upload File
+                        </label>
                         
                         @if(isset($lecture) && $lecture->file_path)
-                        <div class="alert alert-success mb-2">
-                            <i class="fas fa-file"></i> Current file: 
-                            <strong>{{ basename($lecture->file_path) }}</strong>
-                            <a href="{{ asset('storage/' . $lecture->file_path) }}" 
-                               target="_blank" 
-                               class="btn btn-sm btn-outline-primary ml-2">
-                                <i class="fas fa-download"></i> Download
-                            </a>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-file text-primary"></i>
+                                        <strong>{{ basename($lecture->file_path) }}</strong>
+                                    </div>
+                                    <a href="{{ asset('storage/' . $lecture->file_path) }}" 
+                                       target="_blank" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                         <small class="form-text text-muted mb-2">
-                            Upload a new file to replace the existing one (optional)
+                            Upload a new file to replace the current one (optional)
                         </small>
                         @endif
                         
@@ -128,56 +148,26 @@
                             <label class="custom-file-label" for="fileUpload">Choose file</label>
                         </div>
                         <small class="form-text text-muted">
-                            Max file size: 10MB. Accepted formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ZIP
+                            Max 10MB • PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ZIP
                         </small>
-                    </div>
-
-                    <!-- Order Number -->
-                    <div class="form-group">
-                        <label for="orderNumber">
-                            Display Order
-                        </label>
-                        <input type="number" 
-                               class="form-control" 
-                               id="orderNumber" 
-                               name="order_number"
-                               value="{{ $lecture->order_number ?? 0 }}"
-                               min="0">
-                        <small class="form-text text-muted">
-                            Lower numbers appear first (0 = first)
-                        </small>
-                    </div>
-
-                    <!-- Status -->
-                    <div class="form-group">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" 
-                                   class="custom-control-input" 
-                                   id="status" 
-                                   name="status"
-                                   {{ !isset($lecture) || $lecture->status ? 'checked' : '' }}>
-                            <label class="custom-control-label" for="status">
-                                Active (visible to students)
-                            </label>
-                        </div>
                     </div>
                 </div>
 
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between">
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
                         <div>
                             @if(isset($lecture))
-                            <button type="button" class="btn btn-danger" id="deleteLectureBtn">
-                                <i class="fas fa-trash-alt"></i> Delete Lecture
+                            <button type="button" class="btn btn-outline-danger" id="deleteLectureBtn">
+                                <i class="fas fa-trash-alt"></i> Delete
                             </button>
                             @endif
                         </div>
                         <div>
                             <a href="{{ route('teacher.class.lessons', $class->id) }}" class="btn btn-default">
-                                <i class="fas fa-times"></i> Cancel
+                                Cancel
                             </a>
                             <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <i class="fas fa-save"></i> {{ isset($lecture) ? 'Update' : 'Create' }} Lecture
+                                <i class="fas fa-save"></i> {{ isset($lecture) ? 'Update' : 'Create' }}
                             </button>
                         </div>
                     </div>
@@ -185,7 +175,81 @@
             </form>
         </div>
     </div>
+
+    <!-- Settings Sidebar -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-cog"></i> Settings
+                </h3>
+            </div>
+            <div class="card-body">
+                <!-- Display Order -->
+                <div class="form-group">
+                    <label for="orderNumber">
+                        <i class="fas fa-sort"></i> Display Order
+                    </label>
+                    <input type="number" 
+                           class="form-control" 
+                           id="orderNumber" 
+                           name="order_number"
+                           value="{{ $lecture->order_number ?? 0 }}"
+                           min="0">
+                    <small class="form-text text-muted">
+                        Lower numbers appear first
+                    </small>
+                </div>
+
+                <hr>
+
+                <!-- Status -->
+                <div class="form-group mb-0">
+                    <label class="d-block mb-3">
+                        <i class="fas fa-eye"></i> Visibility
+                    </label>
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" 
+                               class="custom-control-input" 
+                               id="status" 
+                               name="status"
+                               {{ !isset($lecture) || $lecture->status ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="status">
+                            <span id="statusLabel">{{ !isset($lecture) || $lecture->status ? 'Visible to students' : 'Hidden from students' }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
+@endsection
+
+@section('page-styles')
+<style>
+.card-body {
+    padding: 1.5rem;
+}
+
+.form-control-lg {
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+#textContent {
+    font-family: 'Courier New', monospace;
+    font-size: 0.95rem;
+}
+
+.custom-file-label::after {
+    content: "Browse";
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+</style>
 @endsection
 
 @section('page-scripts')
@@ -209,4 +273,14 @@
         <script src="{{ asset('js/' . $script) }}"></script>
     @endforeach
 @endif
+
+<script>
+$(document).ready(function() {
+    // Update status label when toggle changes
+    $('#status').on('change', function() {
+        const label = $(this).is(':checked') ? 'Visible to students' : 'Hidden from students';
+        $('#statusLabel').text(label);
+    });
+});
+</script>
 @endsection

@@ -64,11 +64,29 @@
 
             <!-- Main Sidebar -->
             <aside class="main-sidebar sidebar-dark-primary  elevation-4">
-                <a href="{{ route('teacher.home') }}" class="brand-link text-center" style="padding: 20px 0;">
+                <a href="{{ route('admin.home') }}" class="brand-link text-center" style="padding: 20px 0;">
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
-                        style="width: 80px; height: 80px; display: block; margin: 0 auto;">
-                    <span class="brand-text font-weight-light d-block mt-2">Teacher</span>
+                        style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
+                <!-- School Year -->
+                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-center align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="text-white font-weight-bold mb-1" style="font-size: 14px;">
+                                    @if($activeSemester)
+                                        </i>SY {{ $activeSemester->school_year_code }}
+                                    @else
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>No Active Semester</span>
+                                    @endif
+                                </div>
+                                <div class="text-white-50 small">
+                                    </i>{{ $activeSemester->semester_name ?? 'N/A' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="sidebar">
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"

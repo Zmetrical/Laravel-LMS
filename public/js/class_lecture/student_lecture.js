@@ -68,7 +68,7 @@ function renderContent(data) {
 
 function renderTextContent(content, container) {
     if (!content || !content.trim()) {
-        container.html('<div class="alert alert-info">No content available</div>');
+        container.html('<div class="alert alert-primary">No content available</div>');
         return;
     }
     
@@ -140,7 +140,7 @@ function renderPdfContent(filePath, fileName, container) {
                         <i class="fas fa-file-pdf text-danger"></i>
                         <strong>${escapeHtml(fileName)}</strong>
                     </div>
-                    <a href="${fileUrl}" class="btn btn-info btn-sm" download>
+                    <a href="${fileUrl}" class="btn btn-primary btn-sm" download>
                         <i class="fas fa-download"></i> Download PDF
                     </a>
                 </div>
@@ -175,7 +175,7 @@ function renderFileContent(filePath, fileName, container) {
                 </div>
                 <h4 class="mb-3">${escapeHtml(fileName)}</h4>
                 <p class="text-muted mb-4">
-                    File Type: <span class="badge badge-info">${fileExt.toUpperCase()}</span>
+                    File Type: <span class="badge badge-primary">${fileExt.toUpperCase()}</span>
                 </p>
                 <a href="${fileUrl}" class="btn btn-primary btn-lg" download>
                     <i class="fas fa-download"></i> Download File

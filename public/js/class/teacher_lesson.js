@@ -64,10 +64,6 @@ $(document).ready(function() {
 });
 
 function loadLessons() {
-    $('#loadingState').show();
-    $('#emptyState').hide();
-    $('#lessonsContainer').empty();
-
     $.ajax({
         url: API_ROUTES.getLessons,
         method: 'GET',
@@ -75,171 +71,243 @@ function loadLessons() {
             'X-CSRF-TOKEN': CSRF_TOKEN
         },
         success: function(response) {
-            $('#loadingState').hide();
-            
-            if (response.success && response.data.length > 0) {
+            if (response.success) {
                 renderLessons(response.data);
-                buildNavigation(response.data);
+                updateCounts(response.data);
             } else {
-                $('#emptyState').show();
+                toastr.error(response.message || 'Failed to load lessons');
+                showEmptyState();
             }
         },
         error: function(xhr) {
-            $('#loadingState').hide();
             console.error('Error loading lessons:', xhr);
             toastr.error('Failed to load lessons');
+            showEmptyState();
         }
     });
 }
 
 function renderLessons(lessons) {
+    $('#loadingState').hide();
+    
+    if (!lessons || lessons.length === 0) {
+        showEmptyState();
+        return;
+    }
+    
+    $('#emptyState').hide();
     const container = $('#lessonsContainer');
+    const navigation = $('#lessonNavigation');
     container.empty();
-
+    navigation.empty();
+    
+    // Build navigation
+    let navHtml = '<div class="list-group list-group-flush">';
     lessons.forEach((lesson, index) => {
-        const lessonHtml = `
-            <div class="card card-outline card-primary" id="lesson-${lesson.id}">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-book"></i> 
-                        <strong>Lesson ${index + 1}:</strong> ${escapeHtml(lesson.title)}
-                    </h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-sm btn-primary edit-lesson-btn" 
-                                data-id="${lesson.id}" 
-                                data-title="${escapeHtml(lesson.title)}" 
-                                data-description="${escapeHtml(lesson.description || '')}">
+        const lessonNumber = index + 1;
+        const lectureCount = lesson.lectures ? lesson.lectures.length : 0;
+        const quizCount = lesson.quizzes ? lesson.quizzes.length : 0;
+        
+        navHtml += `
+            <a href="#lesson-${lesson.id}" class="list-group-item list-group-item-action lesson-nav-link" data-lesson-id="${lesson.id}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge badge-primary badge-sm mr-2">${lessonNumber}</span>
+                        <small>${escapeHtml(lesson.title)}</small>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+                <div class="mt-1">
+                    <span class="badge badge-light badge-sm mr-1">
+                        <i class="fas fa-chalkboard-teacher"></i> ${lectureCount}
+                    </span>
+                    <span class="badge badge-light badge-sm">
+                        <i class="fas fa-clipboard-check"></i> ${quizCount}
+                    </span>
+                </div>
+            </a>
+        `;
+    });
+    navHtml += '</div>';
+    navigation.html(navHtml);
+    
+    // Add smooth scroll behavior
+    $('.lesson-nav-link').on('click', function(e) {
+        e.preventDefault();
+        const targetId = $(this).attr('href');
+        $('.lesson-nav-link').removeClass('active');
+        $(this).addClass('active');
+        $('html, body').animate({
+            scrollTop: $(targetId).offset().top - 100
+        }, 500);
+    });
+    
+    // Render lesson cards
+    lessons.forEach((lesson, index) => {
+        const lessonNumber = index + 1;
+        const lectureCount = lesson.lectures ? lesson.lectures.length : 0;
+        const quizCount = lesson.quizzes ? lesson.quizzes.length : 0;
+        
+        let lecturesHtml = '';
+        if (lesson.lectures && lesson.lectures.length > 0) {
+            lesson.lectures.forEach(lecture => {
+                const iconClass = getContentTypeIcon(lecture.content_type);
+                lecturesHtml += `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <i class="fas fa-${iconClass} text-primary mr-2"></i>
+                            <span>${escapeHtml(lecture.title)}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary edit-lecture-btn" 
+                                data-lesson-id="${lesson.id}" 
+                                data-lecture-id="${lecture.id}">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                            <i class="fas fa-minus"></i>
+                    </div>
+                `;
+            });
+        } else {
+            lecturesHtml = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> No lectures available yet</p>';
+        }
+        
+        let quizzesHtml = '';
+        if (lesson.quizzes && lesson.quizzes.length > 0) {
+            lesson.quizzes.forEach(quiz => {
+                quizzesHtml += `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <i class="fas fa-clipboard-check text-info mr-2"></i>
+                            <span>${escapeHtml(quiz.title)}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-info edit-quiz-btn" 
+                                data-lesson-id="${lesson.id}" 
+                                data-quiz-id="${quiz.id}">
+                            <i class="fas fa-edit"></i> Edit
                         </button>
                     </div>
+                `;
+            });
+        } else {
+            quizzesHtml = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> No quizzes available yet</p>';
+        }
+        
+        const lessonCard = `
+            <div class="card card-outline card-primary mb-3" id="lesson-${lesson.id}">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title">
+                            <span class="badge badge-primary mr-2">${lessonNumber}</span>
+                            <strong>${escapeHtml(lesson.title)}</strong>
+                        </h3>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-primary edit-lesson-btn mr-1" 
+                                    data-id="${lesson.id}" 
+                                    data-title="${escapeHtml(lesson.title)}" 
+                                    data-description="${escapeHtml(lesson.description || '')}">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+                    ${lesson.description ? `<p class="text-muted mb-0 mt-2"><small>${escapeHtml(lesson.description)}</small></p>` : ''}
                 </div>
                 <div class="card-body">
-                    ${lesson.description ? `<p class="text-muted">${escapeHtml(lesson.description)}</p>` : ''}
-                    
-                    <!-- Action Buttons -->
                     <div class="mb-3">
-                        <button class="btn btn-info btn-sm create-lecture-btn" data-lesson-id="${lesson.id}">
+                        <button class="btn btn-primary btn-sm create-lecture-btn mr-1" data-lesson-id="${lesson.id}">
                             <i class="fas fa-plus"></i> Add Lecture
                         </button>
-                        <button class="btn btn-success btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
+                        <button class="btn btn-info btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
                             <i class="fas fa-plus"></i> Add Quiz
                         </button>
                     </div>
-
+                    
                     <div class="row">
-                        <!-- Lectures Section -->
                         <div class="col-md-6">
-                            <h5 class="text-info">
-                                <i class="fas fa-video"></i> Lectures 
-                                <span class="badge badge-info">${lesson.lectures.length}</span>
-                            </h5>
-                            ${renderLectures(lesson.lectures, lesson.id)}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0"><i class="fas fa-chalkboard-teacher text-primary"></i> Lectures</h5>
+                            </div>
+                            <div class="mb-3">
+                                ${lecturesHtml}
+                            </div>
                         </div>
-
-                        <!-- Quizzes Section -->
                         <div class="col-md-6">
-                            <h5 class="text-success">
-                                <i class="fas fa-clipboard-list"></i> Quizzes 
-                                <span class="badge badge-success">${lesson.quizzes.length}</span>
-                            </h5>
-                            ${renderQuizzes(lesson.quizzes, lesson.id)}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0"><i class="fas fa-clipboard-list text-info"></i> Quizzes</h5>
+                            </div>
+                            <div class="mb-3">
+                                ${quizzesHtml}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
-        container.append(lessonHtml);
+        
+        container.append(lessonCard);
+    });
+    
+    // Highlight active nav item on scroll
+    $(window).on('scroll', function() {
+        let scrollPos = $(window).scrollTop() + 150;
+        $('.lesson-nav-link').each(function() {
+            const target = $(this).attr('href');
+            const section = $(target);
+            if (section.length) {
+                const sectionTop = section.offset().top;
+                const sectionBottom = sectionTop + section.outerHeight();
+                if (scrollPos >= sectionTop && scrollPos < sectionBottom) {
+                    $('.lesson-nav-link').removeClass('active');
+                    $(this).addClass('active');
+                }
+            }
+        });
     });
 }
 
-function renderLectures(lectures, lessonId) {
-    if (!lectures || lectures.length === 0) {
-        return '<p class="text-muted"><small>No lectures yet</small></p>';
-    }
-
-    let html = '<ul class="list-group list-group-flush">';
-    lectures.forEach((lecture, index) => {
-        const icon = getContentTypeIcon(lecture.content_type);
-        html += `
-            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <div>
-                    <i class="fas fa-${icon} text-primary mr-2"></i>
-                    ${escapeHtml(lecture.title)}
-                </div>
-                <button class="btn btn-xs btn-outline-primary edit-lecture-btn" 
-                        data-lesson-id="${lessonId}" 
-                        data-lecture-id="${lecture.id}">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </li>
-        `;
-    });
-    html += '</ul>';
-    return html;
+function showEmptyState() {
+    $('#loadingState').hide();
+    $('#emptyState').show();
+    $('#lessonNavigation').html(`
+        <div class="p-3 text-center text-muted">
+            <small>No lessons to display</small>
+        </div>
+    `);
 }
 
-function renderQuizzes(quizzes, lessonId) {
-    if (!quizzes || quizzes.length === 0) {
-        return '<p class="text-muted"><small>No quizzes yet</small></p>';
+function updateCounts(lessons) {
+    const lessonCount = lessons ? lessons.length : 0;
+    let totalQuizzes = 0;
+    
+    if (lessons) {
+        lessons.forEach(lesson => {
+            if (lesson.quizzes) {
+                totalQuizzes += lesson.quizzes.length;
+            }
+        });
     }
-
-    let html = '<ul class="list-group list-group-flush">';
-    quizzes.forEach((quiz, index) => {
-        html += `
-            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <div>
-                    <i class="fas fa-clipboard-list text-success mr-2"></i>
-                    ${escapeHtml(quiz.title)}
-                    <br>
-                    <small class="text-muted">
-                        ${quiz.time_limit ? quiz.time_limit + ' min' : 'No time limit'} | 
-                        Pass: ${quiz.passing_score}%
-                    </small>
-                </div>
-                <button class="btn btn-xs btn-outline-success edit-quiz-btn" 
-                        data-lesson-id="${lessonId}" 
-                        data-quiz-id="${quiz.id}">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </li>
-        `;
-    });
-    html += '</ul>';
-    return html;
+    
+    $('#lessonCount').text(lessonCount);
+    $('#totalQuizCount').text(totalQuizzes);
 }
 
-function buildNavigation(lessons) {
-    const nav = $('#lessonNavigation');
-    
-    if (!lessons || lessons.length === 0) {
-        nav.html('<div class="p-3 text-center text-muted"><small>No lessons</small></div>');
-        return;
+function getContentTypeIcon(type) {
+    switch(type) {
+        case 'video': return 'video';
+        case 'pdf': return 'file-pdf';
+        case 'file': return 'file';
+        default: return 'file-alt';
     }
+}
 
-    let html = '<div class="list-group list-group-flush">';
-    
-    lessons.forEach((lesson, index) => {
-        html += `
-            <a href="#lesson-${lesson.id}" class="list-group-item list-group-item-action lesson-nav-link">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge badge-primary mr-2">${index + 1}</span>
-                        <small>${escapeHtml(lesson.title)}</small>
-                    </div>
-                    <div>
-                        <span class="badge badge-info" title="Lectures">${lesson.lectures.length}</span>
-                        <span class="badge badge-success" title="Quizzes">${lesson.quizzes.length}</span>
-                    </div>
-                </div>
-            </a>
-        `;
-    });
-    
-    html += '</div>';
-    nav.html(html);
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
 }
 
 function createLesson() {
@@ -365,26 +433,4 @@ function deleteLesson() {
             btn.prop('disabled', false).html(originalHtml);
         }
     });
-}
-
-function getContentTypeIcon(type) {
-    const icons = {
-        'video': 'video',
-        'pdf': 'file-pdf',
-        'file': 'file',
-        'text': 'file-alt'
-    };
-    return icons[type] || 'file-alt';
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.toString().replace(/[&<>"']/g, m => map[m]);
 }

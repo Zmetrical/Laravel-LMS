@@ -57,12 +57,7 @@ function renderLessons(lessons) {
                     <i class="fas fa-chevron-right text-muted"></i>
                 </div>
                 <div class="mt-1">
-                    <span class="badge badge-light badge-sm mr-1">
-                        <i class="fas fa-chalkboard-teacher"></i> ${lectureCount}
-                    </span>
-                    <span class="badge badge-light badge-sm">
-                        <i class="fas fa-clipboard-check"></i> ${quizCount}
-                    </span>
+
                 </div>
             </a>
         `;
@@ -135,12 +130,6 @@ function renderLessons(lessons) {
                             <strong>${escapeHtml(lesson.title)}</strong>
                         </h3>
                         <div>
-                            <span class="badge badge-primary mr-1">
-                                <i class="fas fa-chalkboard-teacher"></i> ${lectureCount} Lectures
-                            </span>
-                            <span class="badge badge-info">
-                                <i class="fas fa-clipboard-check"></i> ${quizCount} Quizzes
-                            </span>
                         </div>
                     </div>
                     ${lesson.description ? `<p class="text-muted mb-0 mt-2"><small>${escapeHtml(lesson.description)}</small></p>` : ''}

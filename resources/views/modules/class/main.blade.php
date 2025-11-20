@@ -51,22 +51,6 @@
                             <i class="fas fa-graduation-cap text-primary"></i>
                             <span id="className">{{ $class->class_name ?? 'Loading...' }}</span>
                         </h3>
-                        <p class="text-muted mb-0">
-                            <small>
-                                <i class="fas fa-tag"></i> Course Code: <span id="classCode">{{ $class->class_code ?? '' }}</span>
-                                | <i class="fas fa-calendar"></i> SY {{ date('Y') }}-{{ date('Y') + 1 }}
-                            </small>
-                        </p>
-                    </div>
-                    <div class="col-md-4 text-right">
-                        <div class="d-inline-block mr-2">
-                            <small class="text-muted d-block">Total Lessons</small>
-                            <h3 class="mb-0 text-primary" id="lessonCount">0</h3>
-                        </div>
-                        <div class="d-inline-block">
-                            <small class="text-muted d-block">Total Quizzes</small>
-                            <h3 class="mb-0 text-info" id="totalQuizCount">0</h3>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -244,9 +244,7 @@ $(document).ready(function () {
 
         // Update header
         const semester = semesters.find(s => s.id === selectedSemesterId);
-        $('#selectedClassName').text(className);
-        $('#selectedClassCode').text(classCode);
-        $('#selectedSemesterName').text(semester.name);
+
 
         // Show loading and load students
         $('#emptyState').hide();
