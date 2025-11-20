@@ -9,6 +9,8 @@ use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
 use App\Http\Controllers\User_Management\User_Management;
+use App\Http\Controllers\Grade_Management\GradeBook_Management;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -187,4 +189,15 @@ Route::prefix('teacher')->name('teacher.')->middleware(['web', 'auth:teacher'])-
         Route::get('/students', [Page_Grade::class, 'getStudents'])->name('students.list');
         Route::get('/quizzes', [Page_Grade::class, 'getQuizzes'])->name('quizzes.list');
     });
+
+    Route::prefix('class/{classId}/gradebook')->group(function () {
+        Route::get('/', [GradeBook_Management::class, 'list_gradebook'])->name('teacher.gradebook');
+        Route::get('/data', [GradeBook_Management::class, 'getGradebookData'])->name('teacher.gradebook.data');
+        Route::post('/column/add', [GradeBook_Management::class, 'addColumn'])->name('teacher.gradebook.column.add');
+        Route::post('/score/update', [GradeBook_Management::class, 'updateScore'])->name('teacher.gradebook.score.update');
+        Route::get('/quizzes', [GradeBook_Management::class, 'getAvailableQuizzes'])->name('teacher.gradebook.quizzes');
+        Route::get('/export', [GradeBook_Management::class, 'exportGradebook'])->name('teacher.gradebook.export');
+        Route::post('/import', [GradeBook_Management::class, 'importGradebook'])->name('teacher.gradebook.import');
+    });
+
 });
