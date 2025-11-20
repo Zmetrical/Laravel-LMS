@@ -7,7 +7,6 @@ use App\Http\Controllers\Class_Management\Page_Lecture;
 use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
-use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
 use App\Http\Controllers\User_Management\User_Management;
 use Illuminate\Support\Facades\DB;

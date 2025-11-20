@@ -167,7 +167,7 @@ Route::prefix('student')->name('student.')->group(function () {
             // Quizzes Page
             Route::get('/quizzes', function ($classId) {
                 $class = DB::table('classes')->where('id', $classId)->first();
-                return view('modules.class.page_quiz', ['userType' => 'student', 'class' => $class]);
+                return view('modules.quiz.page_quiz', ['userType' => 'student', 'class' => $class]);
             })->name('quizzes');
             
             // Grades Page
