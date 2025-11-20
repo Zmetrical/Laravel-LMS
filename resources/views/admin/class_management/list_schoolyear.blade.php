@@ -2,12 +2,13 @@
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
         <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-        <li class="breadcrumb-item active">School Year Management</li>
+        <li class="breadcrumb-item active">School Year & Semester Management</li>
     </ol>
 @endsection
 
@@ -15,7 +16,7 @@
 <br>
 <div class="container-fluid">
     <div class="row">
-        <!-- Left Panel: School Years by Status -->
+        <!-- Left Panel: School Years List -->
         <div class="col-md-4">
             <div class="card card-primary card-outline">
                 <div class="card-header">
@@ -23,150 +24,128 @@
                         <i class="fas fa-calendar-alt"></i> School Years
                     </h3>
                 </div>
-                <div class="card-body p-0">
-                    <!-- Status Tabs -->
-                    <ul class="nav nav-pills nav-fill" id="statusTabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" id="active-tab" data-toggle="pill" href="#activeTab">
-                                <i class="fas fa-star"></i> Active
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="upcoming-tab" data-toggle="pill" href="#upcomingTab">
-                                <i class="fas fa-clock"></i> Upcoming
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="archived-tab" data-toggle="pill" href="#archivedTab">
-                                <i class="fas fa-archive"></i> Archived
-                            </a>
-                        </li>
-                    </ul>
-
-                    <!-- Loading Indicator -->
-                    <div id="loadingIndicator" class="text-center py-5">
-                        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                        <p class="mt-2 text-muted">Loading...</p>
+                <div class="card-body">
+                    <!-- Status Filter -->
+                    <div class="form-group">
+                        <select class="form-control" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="completed">Completed</option>
+                        </select>
                     </div>
 
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="statusTabContent" style="display: none;">
-                        <!-- Active Tab -->
-                        <div class="tab-pane fade show active" id="activeTab">
-                            <div id="activeYearsList" class="list-group list-group-flush">
-                            </div>
-                        </div>
+                    <!-- Loading Indicator -->
+                    <div id="loadingIndicator" class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                        <p class="mt-2">Loading school years...</p>
+                    </div>
 
-                        <!-- Upcoming Tab -->
-                        <div class="tab-pane fade" id="upcomingTab">
-                            <div id="upcomingYearsList" class="list-group list-group-flush">
-                            </div>
+                    <!-- School Years List -->
+                    <div id="schoolYearsContainer" style="display: none; max-height: 500px; overflow-y: auto;">
+                        <div class="list-group" id="schoolYearsList">
                         </div>
+                    </div>
 
-                        <!-- Archived Tab -->
-                        <div class="tab-pane fade" id="archivedTab">
-                            <div id="archivedYearsList" class="list-group list-group-flush">
-                            </div>
-                        </div>
+                    <!-- Empty State -->
+                    <div id="emptyYears" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No school years found</p>
                     </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn btn-primary btn-block" id="addSchoolYearBtn">
-                        <i class="fas fa-plus"></i> Create New School Year
+                        <i class="fas fa-plus"></i> Create School Year
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Right Panel: Selected Year Details -->
+        <!-- Right Panel: Details & Semesters -->
         <div class="col-md-8">
-            <div class="card card-info card-outline">
+            <div class="card card-primary card-outline">
                 <div class="card-header">
                     <h3 class="card-title" id="detailsTitle">
                         <i class="fas fa-info-circle"></i> School Year Details
                     </h3>
                     <div class="card-tools" id="detailsTools" style="display: none;">
-                        <button class="btn btn-tool" id="editYearBtn" title="Edit">
+                        <button class="btn btn-tool" id="editYearBtn" title="Edit School Year">
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
                 </div>
-                <div class="card-body" style="min-height: 400px;">
+                <div class="card-body">
                     <!-- Empty State -->
-                    <div id="emptyState" class="text-center text-muted py-5">
-                        <i class="fas fa-arrow-left fa-3x mb-3"></i>
-                        <h5>Select a School Year</h5>
-                        <p>Choose a school year from the list to view details and manage semesters</p>
+                    <div id="emptyState" class="text-center py-5">
+                        <i class="fas fa-arrow-left fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Please select a school year to view details</p>
                     </div>
 
                     <!-- Details Content -->
                     <div id="detailsContent" style="display: none;">
-                        <!-- Year Info -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="info-box bg-light">
-                                    <span class="info-box-icon bg-primary">
-                                        <i class="fas fa-calendar"></i>
-                                    </span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">School Year</span>
-                                        <span class="info-box-number" id="yearDisplay">-</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-box bg-light">
-                                    <span class="info-box-icon bg-info">
-                                        <i class="fas fa-code"></i>
-                                    </span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Year Code</span>
-                                        <span class="info-box-number" id="codeDisplay">-</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Status Badge -->
+                        <!-- Year Info Header -->
                         <div class="mb-3">
-                            <span class="badge badge-lg" id="statusBadge"></span>
+                            <h5 id="yearDisplayHeader" class="mb-2"></h5>
+                            <span class="badge" id="statusBadge"></span>
+                            <span class="badge badge-secondary ml-2" id="codeBadge"></span>
                         </div>
 
                         <!-- Action Buttons -->
                         <div class="mb-4" id="actionButtons">
-                            <button class="btn btn-success" id="activateBtn" style="display: none;">
+                            <button class="btn btn-success btn-sm" id="activateBtn" style="display: none;">
                                 <i class="fas fa-check-circle"></i> Set as Active
                             </button>
-                            <button class="btn btn-warning" id="archiveBtn" style="display: none;">
-                                <i class="fas fa-archive"></i> Archive School Year
+                            <button class="btn btn-warning btn-sm" id="archiveBtn" style="display: none;">
+                                <i class="fas fa-archive"></i> Archive
                             </button>
                         </div>
 
+                        <hr>
+
                         <!-- Semesters Section -->
-                        <div class="card">
-                            <div class="card-header bg-primary">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-list"></i> Semesters
-                                </h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list"></i> Semesters
+                            </h5>
+                            <div>
+                                <button class="btn btn-secondary btn-sm mr-2" id="viewSemestersBtn">
+                                    <i class="fas fa-eye"></i> View Semesters
+                                </button>
+                                <button class="btn btn-primary btn-sm" id="addSemesterBtn">
+                                    <i class="fas fa-plus"></i> Add Semester
+                                </button>
                             </div>
-                            <div class="card-body">
-                                <div id="semestersLoading" class="text-center py-3">
-                                    <i class="fas fa-spinner fa-spin"></i> Loading semesters...
-                                </div>
-                                <div id="semestersList" style="display: none;">
-                                    <div class="list-group" id="semestersContainer">
-                                    </div>
-                                </div>
-                                <div id="noSemesters" class="text-center text-muted py-3" style="display: none;">
-                                    <i class="fas fa-inbox fa-2x mb-2"></i>
-                                    <p>No semesters found for this school year</p>
-                                </div>
+                        </div>
+
+                        <!-- Semesters Loading -->
+                        <div id="semestersLoading" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin text-primary"></i>
+                            <p class="mt-2">Loading semesters...</p>
+                        </div>
+
+                        <!-- Semesters Table -->
+                        <div id="semestersTableContainer" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="bg-primary">
+                                        <tr>
+                                            <th>Semester</th>
+                                            <th>Code</th>
+                                            <th>Period</th>
+                                            <th>Status</th>
+                                            <th width="150">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="semestersTableBody">
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="card-footer">
-                                <a href="#" class="btn btn-primary btn-sm" id="manageSemestersBtn">
-                                    <i class="fas fa-cog"></i> Manage Semesters
-                                </a>
-                            </div>
+                        </div>
+
+                        <!-- No Semesters -->
+                        <div id="noSemesters" class="text-center py-4" style="display: none;">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No semesters added yet</p>
                         </div>
                     </div>
                 </div>
@@ -175,13 +154,13 @@
     </div>
 </div>
 
-<!-- Add/Edit School Year Modal -->
+<!-- School Year Modal -->
 <div class="modal fade" id="schoolYearModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary">
                 <h5 class="modal-title">
-                    <i class="fas fa-calendar-alt"></i> <span id="modalTitle">Add School Year</span>
+                    <i class="fas fa-calendar-alt"></i> <span id="syModalTitle">Add School Year</span>
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
@@ -219,6 +198,68 @@
         </div>
     </div>
 </div>
+
+<!-- Semester Modal -->
+<div class="modal fade" id="semesterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title">
+                    <i class="fas fa-list"></i> <span id="semModalTitle">Add Semester</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="semesterForm">
+                <input type="hidden" id="semesterId">
+                <input type="hidden" id="semesterSchoolYearId">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="semesterName">Semester Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="semesterName" 
+                               placeholder="e.g., First Semester" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="semesterCode">Semester Code <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="semesterCode" 
+                               placeholder="e.g., 1ST-SEM" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="startDate">Start Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="startDate" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="endDate">End Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="endDate" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="semStatusGroup" style="display: none;">
+                        <label for="semStatus">Status <span class="text-danger">*</span></label>
+                        <select class="form-control" id="semStatus">
+                            <option value="upcoming">Upcoming</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @endsection
 
 @section('scripts')
@@ -230,6 +271,9 @@
             updateSchoolYear: "{{ route('admin.schoolyears.update', ['id' => ':id']) }}",
             setActive: "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}",
             getSemesters: "{{ route('admin.semesters.list') }}",
+            createSemester: "{{ route('admin.semesters.create') }}",
+            updateSemester: "{{ route('admin.semesters.update', ['id' => ':id']) }}",
+            setActiveSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
             semestersPage: "{{ route('admin.semesters.index') }}",
             csrfToken: "{{ csrf_token() }}"
         };

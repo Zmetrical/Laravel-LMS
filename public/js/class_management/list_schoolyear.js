@@ -1,15 +1,22 @@
 $(document).ready(function () {
     let schoolYears = [];
     let selectedYearId = null;
+    let currentSemesters = [];
     let isEditMode = false;
+    let isSemesterEditMode = false;
 
     // Initialize
     loadSchoolYears();
 
+    // Status Filter
+    $('#statusFilter').change(function () {
+        displaySchoolYears();
+    });
+
     // Add School Year Button
     $('#addSchoolYearBtn').click(function () {
         isEditMode = false;
-        $('#modalTitle').text('Add School Year');
+        $('#syModalTitle').text('Add School Year');
         $('#schoolYearId').val('');
         $('#yearStart').val('');
         $('#yearEnd').val('');
@@ -32,7 +39,7 @@ $(document).ready(function () {
         }
     });
 
-    // Form Submit
+    // School Year Form Submit
     $('#schoolYearForm').submit(function (e) {
         e.preventDefault();
 
@@ -75,10 +82,57 @@ $(document).ready(function () {
         }
     });
 
+    // Add Semester Button
+    $('#addSemesterBtn').click(function () {
+        if (!selectedYearId) return;
+        
+        isSemesterEditMode = false;
+        $('#semModalTitle').text('Add Semester');
+        $('#semesterId').val('');
+        $('#semesterSchoolYearId').val(selectedYearId);
+        $('#semesterName').val('');
+        $('#semesterCode').val('');
+        $('#startDate').val('');
+        $('#endDate').val('');
+        $('#semStatusGroup').hide();
+        $('#semesterModal').modal('show');
+    });
+
+    // View Semesters Button
+    $('#viewSemestersBtn').click(function () {
+        if (!selectedYearId) return;
+        
+        const year = schoolYears.find(sy => sy.id === selectedYearId);
+        if (year) {
+            window.location.href = API_ROUTES.semestersPage + '?sy=' + selectedYearId;
+        }
+    });
+
+    // Semester Form Submit
+    $('#semesterForm').submit(function (e) {
+        e.preventDefault();
+
+        const formData = {
+            school_year_id: $('#semesterSchoolYearId').val(),
+            name: $('#semesterName').val(),
+            code: $('#semesterCode').val().toUpperCase(),
+            start_date: $('#startDate').val(),
+            end_date: $('#endDate').val()
+        };
+
+        if (isSemesterEditMode) {
+            formData.status = $('#semStatus').val();
+            updateSemester(formData);
+        } else {
+            createSemester(formData);
+        }
+    });
+
     // Load School Years
     function loadSchoolYears() {
         $('#loadingIndicator').show();
-        $('#statusTabContent').hide();
+        $('#schoolYearsContainer').hide();
+        $('#emptyYears').hide();
 
         $.ajax({
             url: API_ROUTES.getSchoolYears,
@@ -86,9 +140,8 @@ $(document).ready(function () {
             success: function (response) {
                 if (response.success) {
                     schoolYears = response.data;
-                    displaySchoolYears();
                     $('#loadingIndicator').hide();
-                    $('#statusTabContent').show();
+                    displaySchoolYears();
                 }
             },
             error: function (xhr) {
@@ -105,39 +158,23 @@ $(document).ready(function () {
 
     // Display School Years
     function displaySchoolYears() {
-        const activeYears = schoolYears.filter(sy => sy.status === 'active');
-        const upcomingYears = schoolYears.filter(sy => sy.status === 'upcoming');
-        const archivedYears = schoolYears.filter(sy => sy.status === 'completed');
+        const statusFilter = $('#statusFilter').val();
+        let filteredYears = schoolYears;
 
-        renderYearsList(activeYears, '#activeYearsList', 'active');
-        renderYearsList(upcomingYears, '#upcomingYearsList', 'upcoming');
-        renderYearsList(archivedYears, '#archivedYearsList', 'archived');
-
-        // Auto-select active year if exists
-        if (activeYears.length > 0 && !selectedYearId) {
-            selectYear(activeYears[0].id);
+        if (statusFilter) {
+            filteredYears = schoolYears.filter(sy => sy.status === statusFilter);
         }
-    }
 
-    // Render Years List
-    function renderYearsList(years, containerId, type) {
-        const container = $(containerId);
-        container.empty();
-
-        if (years.length === 0) {
-            const emptyMsg = type === 'active' ? 'No active school year' :
-                           type === 'upcoming' ? 'No upcoming school years' :
-                           'No archived school years';
-            container.append(`
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-info-circle"></i>
-                    <p class="mb-0 mt-2">${emptyMsg}</p>
-                </div>
-            `);
+        if (filteredYears.length === 0) {
+            $('#schoolYearsContainer').hide();
+            $('#emptyYears').show();
             return;
         }
 
-        years.forEach(sy => {
+        const container = $('#schoolYearsList');
+        container.empty();
+
+        filteredYears.forEach(sy => {
             const statusBadge = getStatusBadgeClass(sy.status);
             const isSelected = sy.id === selectedYearId ? 'active' : '';
             
@@ -159,12 +196,23 @@ $(document).ready(function () {
             container.append(item);
         });
 
+        $('#schoolYearsContainer').show();
+        $('#emptyYears').hide();
+
         // Click handler
         container.find('.year-item').click(function (e) {
             e.preventDefault();
             const yearId = $(this).data('year-id');
             selectYear(yearId);
         });
+
+        // Auto-select active year if exists and no selection
+        if (!selectedYearId) {
+            const activeYear = filteredYears.find(sy => sy.status === 'active');
+            if (activeYear) {
+                selectYear(activeYear.id);
+            }
+        }
     }
 
     // Select Year
@@ -185,12 +233,12 @@ $(document).ready(function () {
 
         // Update details
         $('#detailsTitle').html(`<i class="fas fa-info-circle"></i> SY ${year.year_start}-${year.year_end}`);
-        $('#yearDisplay').text(`${year.year_start} - ${year.year_end}`);
-        $('#codeDisplay').text(year.code);
+        $('#yearDisplayHeader').text(`School Year ${year.year_start}-${year.year_end}`);
         
         const badgeClass = getStatusBadgeClass(year.status);
-        $('#statusBadge').attr('class', `badge badge-lg ${badgeClass}`)
+        $('#statusBadge').attr('class', `badge ${badgeClass}`)
                          .text(year.status.toUpperCase());
+        $('#codeBadge').text(year.code);
 
         // Show/hide action buttons
         $('#activateBtn').hide();
@@ -202,9 +250,6 @@ $(document).ready(function () {
             $('#archiveBtn').show();
         }
 
-        // Update manage semesters link
-        $('#manageSemestersBtn').attr('href', `${API_ROUTES.semestersPage}?sy=${year.id}`);
-
         // Load semesters
         loadSemesters(yearId);
     }
@@ -212,7 +257,7 @@ $(document).ready(function () {
     // Load Semesters
     function loadSemesters(yearId) {
         $('#semestersLoading').show();
-        $('#semestersList').hide();
+        $('#semestersTableContainer').hide();
         $('#noSemesters').hide();
 
         $.ajax({
@@ -223,9 +268,11 @@ $(document).ready(function () {
                 $('#semestersLoading').hide();
                 
                 if (response.success && response.data.length > 0) {
+                    currentSemesters = response.data;
                     displaySemesters(response.data);
-                    $('#semestersList').show();
+                    $('#semestersTableContainer').show();
                 } else {
+                    currentSemesters = [];
                     $('#noSemesters').show();
                 }
             },
@@ -238,36 +285,123 @@ $(document).ready(function () {
 
     // Display Semesters
     function displaySemesters(semesters) {
-        const container = $('#semestersContainer');
-        container.empty();
+        const tbody = $('#semestersTableBody');
+        tbody.empty();
 
         semesters.forEach(sem => {
-            const statusBadge = sem.status === 'active' ? 'badge-success' :
-                              sem.status === 'upcoming' ? 'badge-info' : 'badge-secondary';
+            const statusBadge = sem.status === 'active' ? 'badge-primary' :
+                              sem.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
             
-            const item = `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">${sem.name}</h6>
-                            <small class="text-muted">${sem.code}</small>
-                        </div>
-                        <span class="badge ${statusBadge}">${sem.status}</span>
-                    </div>
-                </div>
+            const row = `
+                <tr>
+                    <td><strong>${sem.name}</strong></td>
+                    <td><span class="badge badge-secondary">${sem.code}</span></td>
+                    <td><small>${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small></td>
+                    <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary edit-semester-btn" data-semester-id="${sem.id}" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${sem.status !== 'active' ? `
+                        <button class="btn btn-sm btn-success activate-semester-btn" data-semester-id="${sem.id}" 
+                                data-semester-name="${sem.name}" title="Set Active">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        ` : ''}
+                    </td>
+                </tr>
             `;
-            container.append(item);
+            tbody.append(row);
+        });
+
+        // Action handlers
+        $('.edit-semester-btn').click(function () {
+            const semId = $(this).data('semester-id');
+            editSemester(semId);
+        });
+
+        $('.activate-semester-btn').click(function () {
+            const semId = $(this).data('semester-id');
+            const semName = $(this).data('semester-name');
+            activateSemester(semId, semName);
+        });
+    }
+
+    // Edit Semester
+    function editSemester(semesterId) {
+        const semester = currentSemesters.find(s => s.id === semesterId);
+        if (!semester) return;
+
+        isSemesterEditMode = true;
+        $('#semModalTitle').text('Edit Semester');
+        $('#semesterId').val(semester.id);
+        $('#semesterSchoolYearId').val(semester.school_year_id);
+        $('#semesterName').val(semester.name);
+        $('#semesterCode').val(semester.code);
+        $('#startDate').val(semester.start_date);
+        $('#endDate').val(semester.end_date);
+        $('#semStatus').val(semester.status);
+        $('#semStatusGroup').show();
+        $('#semesterModal').modal('show');
+    }
+
+    // Activate Semester
+    function activateSemester(semesterId, semesterName) {
+        Swal.fire({
+            title: 'Activate Semester?',
+            html: `Set <strong>${semesterName}</strong> as active?<br><small class="text-muted">This will deactivate all other semesters</small>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const url = API_ROUTES.setActiveSemester.replace(':id', semesterId);
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
+                    success: function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Activated',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            loadSemesters(selectedYearId);
+                            loadSchoolYears();
+                        }
+                    },
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to activate semester'
+                        });
+                    }
+                });
+            }
         });
     }
 
     // Get Status Badge Class
     function getStatusBadgeClass(status) {
-        const badges = {
-            'active': 'badge-success',
-            'completed': 'badge-secondary',
-            'upcoming': 'badge-warning'
-        };
-        return badges[status] || 'badge-light';
+        return {
+            'active': 'badge-primary',
+            'completed': 'badge-dark',
+            'upcoming': 'badge-secondary'
+        }[status] || 'badge-light';
+    }
+
+    // Format Date
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     // Create School Year
@@ -276,9 +410,7 @@ $(document).ready(function () {
             url: API_ROUTES.createSchoolYear,
             method: 'POST',
             data: formData,
-            headers: {
-                'X-CSRF-TOKEN': API_ROUTES.csrfToken
-            },
+            headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
             success: function (response) {
                 if (response.success) {
                     $('#schoolYearModal').modal('hide');
@@ -293,14 +425,10 @@ $(document).ready(function () {
                 }
             },
             error: function (xhr) {
-                let errorMsg = 'Failed to create school year';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: errorMsg
+                    text: xhr.responseJSON?.message || 'Failed to create school year'
                 });
             }
         });
@@ -311,7 +439,7 @@ $(document).ready(function () {
         const sy = schoolYears.find(item => item.id === id);
         if (sy) {
             isEditMode = true;
-            $('#modalTitle').text('Edit School Year');
+            $('#syModalTitle').text('Edit School Year');
             $('#schoolYearId').val(sy.id);
             $('#yearStart').val(sy.year_start);
             $('#yearEnd').val(sy.year_end);
@@ -330,9 +458,7 @@ $(document).ready(function () {
             url: url,
             method: 'PUT',
             data: formData,
-            headers: {
-                'X-CSRF-TOKEN': API_ROUTES.csrfToken
-            },
+            headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
             success: function (response) {
                 if (response.success) {
                     $('#schoolYearModal').modal('hide');
@@ -347,14 +473,10 @@ $(document).ready(function () {
                 }
             },
             error: function (xhr) {
-                let errorMsg = 'Failed to update school year';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: errorMsg
+                    text: xhr.responseJSON?.message || 'Failed to update school year'
                 });
             }
         });
@@ -366,12 +488,12 @@ $(document).ready(function () {
         
         Swal.fire({
             title: 'Activate School Year?',
-            html: `Set <strong>SY ${year.year_start}-${year.year_end}</strong> as the active school year?<br><small class="text-muted">This will deactivate all other school years</small>`,
+            html: `Set <strong>SY ${year.year_start}-${year.year_end}</strong> as active?<br><small class="text-muted">This will deactivate all other school years</small>`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate it',
+            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate',
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -380,9 +502,7 @@ $(document).ready(function () {
                 $.ajax({
                     url: url,
                     method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': API_ROUTES.csrfToken
-                    },
+                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
                     success: function (response) {
                         if (response.success) {
                             Swal.fire({
@@ -413,12 +533,12 @@ $(document).ready(function () {
         
         Swal.fire({
             title: 'Archive School Year?',
-            html: `Archive <strong>SY ${year.year_start}-${year.year_end}</strong>?<br><small class="text-muted">This will mark the school year as completed</small>`,
+            html: `Archive <strong>SY ${year.year_start}-${year.year_end}</strong>?<br><small class="text-muted">This will mark it as completed</small>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ffc107',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-archive"></i> Yes, archive it',
+            confirmButtonText: '<i class="fas fa-archive"></i> Yes, archive',
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -432,21 +552,16 @@ $(document).ready(function () {
                         year_end: year.year_end,
                         status: 'completed'
                     },
-                    headers: {
-                        'X-CSRF-TOKEN': API_ROUTES.csrfToken
-                    },
+                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
                     success: function (response) {
                         if (response.success) {
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Archived',
-                                text: 'School year has been archived',
+                                text: 'School year archived successfully',
                                 timer: 2000,
                                 showConfirmButton: false
                             });
-                            
-                            // Switch to archived tab
-                            $('#archived-tab').tab('show');
                             loadSchoolYears();
                         }
                     },
@@ -457,6 +572,69 @@ $(document).ready(function () {
                             text: 'Failed to archive school year'
                         });
                     }
+                });
+            }
+        });
+    }
+
+    // Create Semester
+    function createSemester(formData) {
+        $.ajax({
+            url: API_ROUTES.createSemester,
+            method: 'POST',
+            data: formData,
+            headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
+            success: function (response) {
+                if (response.success) {
+                    $('#semesterModal').modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    loadSemesters(selectedYearId);
+                }
+            },
+            error: function (xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Failed to create semester'
+                });
+            }
+        });
+    }
+
+    // Update Semester
+    function updateSemester(formData) {
+        const id = $('#semesterId').val();
+        const url = API_ROUTES.updateSemester.replace(':id', id);
+
+        $.ajax({
+            url: url,
+            method: 'PUT',
+            data: formData,
+            headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
+            success: function (response) {
+                if (response.success) {
+                    $('#semesterModal').modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    loadSemesters(selectedYearId);
+                }
+            },
+            error: function (xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Failed to update semester'
                 });
             }
         });

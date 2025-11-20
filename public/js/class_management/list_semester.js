@@ -4,7 +4,6 @@ $(document).ready(function () {
     let selectedSemesterId = null;
     let selectedClassCode = null;
     let selectedClassName = null;
-    let isEditMode = false;
 
     // Check if school year ID is provided
     if (!SCHOOL_YEAR_ID) {
@@ -22,61 +21,6 @@ $(document).ready(function () {
     // Initialize
     loadSchoolYear();
     loadSemesters();
-
-    // Add Semester Buttons
-    $('#addSemesterBtn, #addFirstSemesterBtn').click(function () {
-        openSemesterModal();
-    });
-
-    // Auto-generate semester code
-    $('#semesterName').on('change', function () {
-        const name = $(this).val();
-        let code = '';
-        
-        if (name === '1st Semester') {
-            code = 'SEM1';
-        } else if (name === '2nd Semester') {
-            code = 'SEM2';
-        } else if (name === 'Summer') {
-            code = 'SUMMER';
-        }
-        
-        if (code && !isEditMode) {
-            $('#semesterCode').val(code);
-        }
-    });
-
-    // Form Submit
-    $('#semesterForm').submit(function (e) {
-        e.preventDefault();
-        
-        const startDate = new Date($('#startDate').val());
-        const endDate = new Date($('#endDate').val());
-        
-        if (endDate <= startDate) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Date Range',
-                text: 'End date must be after start date'
-            });
-            return;
-        }
-
-        const formData = {
-            school_year_id: SCHOOL_YEAR_ID,
-            name: $('#semesterName').val(),
-            code: $('#semesterCode').val().toUpperCase(),
-            start_date: $('#startDate').val(),
-            end_date: $('#endDate').val()
-        };
-
-        if (isEditMode) {
-            formData.status = $('#status').val();
-            updateSemester(formData);
-        } else {
-            createSemester(formData);
-        }
-    });
 
     // Load School Year
     function loadSchoolYear() {
@@ -125,7 +69,6 @@ $(document).ready(function () {
 
         $('#schoolYearLoading').hide();
         $('#schoolYearInfo').show();
-        $('#addSemesterBtn').prop('disabled', false);
     }
 
     // Load Semesters
@@ -192,20 +135,7 @@ $(document).ready(function () {
                             <small class="text-muted d-block">${sem.code}</small>
                             <small class="text-muted">${startDate} - ${endDate}</small>
                         </div>
-                        <button class="btn btn-tool btn-sm ml-2 edit-semester-btn" 
-                                data-semester-id="${sem.id}" 
-                                title="Edit Semester"
-                                onclick="event.preventDefault(); event.stopPropagation();">
-                            <i class="fas fa-edit"></i>
-                        </button>
                     </div>
-                    ${sem.status !== 'active' ? `
-                        <button class="btn btn-success btn-xs btn-block mt-2 activate-semester-btn" 
-                                data-semester-id="${sem.id}"
-                                onclick="event.preventDefault(); event.stopPropagation();">
-                            <i class="fas fa-check-circle"></i> Set as Active
-                        </button>
-                    ` : ''}
                 </a>
             `;
             container.append(item);
@@ -216,20 +146,6 @@ $(document).ready(function () {
             e.preventDefault();
             const semesterId = $(this).data('semester-id');
             selectSemester(semesterId);
-        });
-
-        container.find('.edit-semester-btn').click(function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const semesterId = $(this).data('semester-id');
-            openSemesterModal(semesterId);
-        });
-
-        container.find('.activate-semester-btn').click(function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const semesterId = $(this).data('semester-id');
-            activateSemester(semesterId);
         });
     }
 
@@ -402,161 +318,12 @@ $(document).ready(function () {
         });
     }
 
-    // Open Semester Modal
-    function openSemesterModal(semesterId = null) {
-        isEditMode = !!semesterId;
-        
-        if (isEditMode) {
-            const semester = semesters.find(s => s.id === semesterId);
-            if (!semester) return;
-
-            $('#modalTitle').text('Edit Semester');
-            $('#semesterId').val(semester.id);
-            $('#semesterName').val(semester.name);
-            $('#semesterCode').val(semester.code);
-            $('#startDate').val(semester.start_date);
-            $('#endDate').val(semester.end_date);
-            $('#status').val(semester.status);
-            $('#statusGroup').show();
-        } else {
-            $('#modalTitle').text('Add Semester');
-            $('#semesterForm')[0].reset();
-            $('#semesterId').val('');
-            $('#statusGroup').hide();
-        }
-
-        $('#schoolYearId').val(SCHOOL_YEAR_ID);
-        $('#semesterModal').modal('show');
-    }
-
-    // Create Semester
-    function createSemester(formData) {
-        $.ajax({
-            url: API_ROUTES.createSemester,
-            method: 'POST',
-            data: formData,
-            headers: {
-                'X-CSRF-TOKEN': API_ROUTES.csrfToken
-            },
-            success: function (response) {
-                if (response.success) {
-                    $('#semesterModal').modal('hide');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: response.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    loadSemesters();
-                }
-            },
-            error: function (xhr) {
-                let errorMsg = 'Failed to create semester';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMsg
-                });
-            }
-        });
-    }
-
-    // Update Semester
-    function updateSemester(formData) {
-        const id = $('#semesterId').val();
-        const url = API_ROUTES.updateSemester.replace(':id', id);
-
-        $.ajax({
-            url: url,
-            method: 'PUT',
-            data: formData,
-            headers: {
-                'X-CSRF-TOKEN': API_ROUTES.csrfToken
-            },
-            success: function (response) {
-                if (response.success) {
-                    $('#semesterModal').modal('hide');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: response.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    loadSemesters();
-                }
-            },
-            error: function (xhr) {
-                let errorMsg = 'Failed to update semester';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMsg
-                });
-            }
-        });
-    }
-
-    // Activate Semester
-    function activateSemester(id) {
-        const semester = semesters.find(s => s.id === id);
-        
-        Swal.fire({
-            title: 'Activate Semester?',
-            html: `Set <strong>${semester.name}</strong> as active?<br><small class="text-muted">This will deactivate all other semesters</small>`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate it',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const url = API_ROUTES.setActive.replace(':id', id);
-
-                $.ajax({
-                    url: url,
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': API_ROUTES.csrfToken
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Activated',
-                                text: response.message,
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            loadSemesters();
-                        }
-                    },
-                    error: function () {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Failed to activate semester'
-                        });
-                    }
-                });
-            }
-        });
-    }
-
     // Get Status Badge Class
     function getStatusBadgeClass(status) {
         const badges = {
-            'active': 'badge-success',
-            'completed': 'badge-secondary',
-            'upcoming': 'badge-warning'
+            'active': 'badge-primary',
+            'completed': 'badge-dark',
+            'upcoming': 'badge-secondary'
         };
         return badges[status] || 'badge-light';
     }

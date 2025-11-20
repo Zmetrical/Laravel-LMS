@@ -27,7 +27,6 @@
                         <i class="fas fa-calendar-alt"></i>
                         <span id="syDisplay">-</span>
                     </h5>
-                    <small class="text-muted">Code: <span id="codeDisplay">-</span></small>
                 </div>
                 <span class="badge badge-lg" id="statusBadge"></span>
             </div>
@@ -43,11 +42,6 @@
                     <h3 class="card-title">
                         <i class="fas fa-list"></i> Semesters
                     </h3>
-                    <div class="card-tools">
-                        <button class="btn btn-primary btn-xs" id="addSemesterBtn" disabled>
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div id="semestersLoading" class="text-center py-4">
@@ -60,10 +54,7 @@
 
                     <div id="noSemesters" class="text-center py-4" style="display: none;">
                         <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                        <p class="text-muted mb-2">No semesters found</p>
-                        <button class="btn btn-primary btn-sm" id="addFirstSemesterBtn">
-                            <i class="fas fa-plus"></i> Add Semester
-                        </button>
+                        <p class="text-muted mb-0">No semesters found</p>
                     </div>
                 </div>
             </div>
@@ -131,16 +122,6 @@
 
                     <!-- Students Table -->
                     <div id="studentsContent" style="display: none;">
-                        <!-- Class Info Bar -->
-                        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
-                            <div>
-                                <h6 class="mb-1"><span id="selectedClassName">-</span></h6>
-                                <small class="text-muted">
-                                    <span id="selectedClassCode">-</span> | 
-                                    <span id="selectedSemesterName">-</span>
-                                </small>
-                            </div>
-                        </div>
 
                         <div class="table-responsive">
                             <table class="table table-hover">
@@ -170,76 +151,6 @@
         </div>
     </div>
 </div>
-
-<!-- Add/Edit Semester Modal -->
-<div class="modal fade" id="semesterModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title">
-                    <i class="fas fa-calendar-plus"></i> <span id="modalTitle">Add Semester</span>
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form id="semesterForm">
-                <input type="hidden" id="semesterId">
-                <input type="hidden" id="schoolYearId">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="semesterName">Semester Name <span class="text-danger">*</span></label>
-                                <select class="form-control" id="semesterName" required>
-                                    <option value="">Select Semester</option>
-                                    <option value="1st Semester">1st Semester</option>
-                                    <option value="2nd Semester">2nd Semester</option>
-                                    <option value="Summer">Summer</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="semesterCode">Semester Code <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="semesterCode" 
-                                       placeholder="e.g., SEM1, SEM2, SUMMER" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="startDate">Start Date <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="startDate" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="endDate">End Date <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="endDate" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group" id="statusGroup" style="display: none;">
-                        <label for="status">Status <span class="text-danger">*</span></label>
-                        <select class="form-control" id="status">
-                            <option value="upcoming">Upcoming</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -248,9 +159,6 @@
         const API_ROUTES = {
             getSchoolYear: "{{ route('admin.schoolyears.list') }}",
             getSemesters: "{{ route('admin.semesters.list') }}",
-            createSemester: "{{ route('admin.semesters.create') }}",
-            updateSemester: "{{ route('admin.semesters.update', ['id' => ':id']) }}",
-            setActive: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
             getSemesterClasses: "{{ route('admin.semesters.classes', ['id' => ':id']) }}",
             getEnrollmentHistory: "{{ route('admin.semesters.enrollment-history', ['semesterId' => ':semesterId', 'classCode' => ':classCode']) }}",
             csrfToken: "{{ csrf_token() }}"
