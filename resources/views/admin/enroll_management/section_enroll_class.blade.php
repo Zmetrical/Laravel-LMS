@@ -26,8 +26,7 @@
             <!-- School Year Info -->
             <div class="alert alert-dark alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <h5><i class="icon fas fa-calendar-alt"></i> School Year 2024-2025</h5>
-                Manage class enrollments for sections in the current academic year.
+                <h5><i class="icon fas fa-calendar-alt"></i> {{ $activeSemesterDisplay ?? 'No Active Semester' }}</h5>
             </div>
 
             <div class="row">
@@ -168,6 +167,9 @@
             enrollClass: "{{ route('admin.sections.enroll', ['id' => ':id']) }}",
             removeClass: "{{ route('admin.sections.remove-class', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}"
         };
+
+        const ACTIVE_SEMESTER_ID = {{ $activeSemester->semester_id ?? 'null' }};
+
     </script>
     @if(isset($scripts))
         @foreach($scripts as $script)

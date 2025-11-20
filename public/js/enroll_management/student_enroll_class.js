@@ -172,6 +172,7 @@ $(document).ready(function() {
             data: {
                 student_id: STUDENT_ID,
                 class_ids: [classId],
+                semester_id: ACTIVE_SEMESTER_ID,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {

@@ -218,6 +218,12 @@ $(document).ready(function () {
     $('#confirmEnrollBtn').click(function () {
         const classId = $('#availableClassesSelect').val();
         if (!classId || !selectedSectionId) return;
+        
+        // Check if semester is available
+        if (!ACTIVE_SEMESTER_ID) {
+            showError('No active semester found. Please set an active semester first.');
+            return;
+        }
 
         const url = API_ROUTES.enrollClass.replace(':id', selectedSectionId);
 
@@ -226,6 +232,7 @@ $(document).ready(function () {
             method: 'POST',
             data: {
                 class_id: classId,
+                semester_id: ACTIVE_SEMESTER_ID,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function (response) {
@@ -233,7 +240,7 @@ $(document).ready(function () {
                     showSuccess(response.message);
                     $('#enrollClassModal').modal('hide');
                     loadSectionClasses(selectedSectionId);
-                    loadSections(); // Refresh section list to update counts
+                    loadSections();
                 }
             },
             error: function (xhr) {

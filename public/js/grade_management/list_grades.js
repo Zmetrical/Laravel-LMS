@@ -132,12 +132,12 @@ $(document).ready(function() {
             
             // Section with strand and level
             const sectionInfo = grade.section_name ? 
-                `${grade.section_name}${grade.strand_code ? ' - ' + grade.strand_code : ''}${grade.level_name ? ' (' + grade.level_name + ')' : ''}` : 
+                `${grade.section_name}${grade.strand_code ? ' - ' + grade.strand_code : ''}` : 
                 '<span class="text-muted">N/A</span>';
             row.append(`<td><small>${sectionInfo}</small></td>`);
             
             // Student Type
-            const typeClass = grade.student_type === 'regular' ? 'success' : 'warning';
+            const typeClass = grade.student_type === 'regular' ? 'primary' : 'secondary';
             row.append(`
                 <td class="text-center">
                     <span class="badge badge-${typeClass}">
@@ -265,7 +265,7 @@ $(document).ready(function() {
             `${grade.first_name} ${grade.middle_name ? grade.middle_name + ' ' : ''}${grade.last_name}`
         );
         
-        const typeClass = grade.student_type === 'regular' ? 'success' : 'warning';
+        const typeClass = grade.student_type === 'regular' ? 'primary' : 'secondary';
         $('#detailStudentType').html(
             `<span class="badge badge-${typeClass}">${grade.student_type.toUpperCase()}</span>`
         );
@@ -358,8 +358,6 @@ $(document).ready(function() {
             case 'PASSED': return 'success';
             case 'FAILED': return 'danger';
             case 'INC': return 'warning';
-            case 'DRP': return 'secondary';
-            case 'W': return 'secondary';
             default: return 'secondary';
         }
     }

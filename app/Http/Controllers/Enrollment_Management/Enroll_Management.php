@@ -208,39 +208,41 @@ class Enroll_Management extends MainController
     }
 
 
-    /**
-     * Enroll a class to a section
-     */
-    public function enrollClass(Request $request, $id)
-    {
-        try {
-            $section = Section::findOrFail($id);
-
-            $validated = $request->validate([
+        public function enrollClass(Request $request, $id)
+        {
+            $request->validate([
                 'class_id' => 'required|exists:classes,id',
+                'semester_id' => 'required|exists:semesters,id'
             ]);
 
             // Check if already enrolled
-            if ($section->classes()->where('class_id', $validated['class_id'])->exists()) {
+            $exists = DB::table('section_class_matrix')
+                ->where('section_id', $id)
+                ->where('class_id', $request->class_id)
+                ->where('semester_id', $request->semester_id)
+                ->exists();
+
+            if ($exists) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class is already enrolled in this section'
+                    'message' => 'Class is already enrolled in this section for the selected semester'
                 ], 400);
             }
 
-            $section->classes()->attach($validated['class_id']);
+            // Insert into section_class_matrix
+            DB::table('section_class_matrix')->insert([
+                'section_id' => $id,
+                'class_id' => $request->class_id,
+                'semester_id' => $request->semester_id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Class enrolled successfully'
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error enrolling class: ' . $e->getMessage()
-            ], 500);
         }
-    }
 
     /**
      * Remove a class from a section
@@ -473,7 +475,8 @@ class Enroll_Management extends MainController
         $request->validate([
             'student_id' => 'required|exists:students,id',
             'class_ids' => 'required|array',
-            'class_ids.*' => 'exists:classes,id'
+            'class_ids.*' => 'exists:classes,id',
+            'semester_id' => 'required|exists:semesters,id'
         ]);
 
         try {
@@ -488,12 +491,14 @@ class Enroll_Management extends MainController
                 $exists = DB::table('student_class_matrix')
                     ->where('student_number', $student->student_number)
                     ->where('class_code', $class->class_code)
+                    ->where('semester_id', $request->semester_id)
                     ->exists();
 
                 if (!$exists) {
                     DB::table('student_class_matrix')->insert([
                         'student_number' => $student->student_number,
-                        'class_code' => $class->class_code
+                        'class_code' => $class->class_code,
+                        'semester_id' => $request->semester_id,
                     ]);
                 }
             }

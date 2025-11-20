@@ -15,10 +15,10 @@
 @section('content')
 <br>
     <div class="container-fluid">
+        <!-- School Year Info -->
         <div class="alert alert-dark alert-dismissible">
             <button type="button" class="close" data-dismiss="alert">&times;</button>
-            <h5><i class="icon fas fa-calendar-alt"></i> School Year 2024-2025</h5>
-            Manage class assignment for teacher in the current academic year.
+            <h5><i class="icon fas fa-calendar-alt"></i> {{ $activeSemesterDisplay ?? 'No Active Semester' }}</h5>
         </div>
         <div class="row">
             <!-- Left Sidebar - Class List -->
