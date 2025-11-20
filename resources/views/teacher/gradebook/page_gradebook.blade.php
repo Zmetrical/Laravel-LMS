@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+        /* Previous styles remain the same */
         .jsgrid-header-row > .jsgrid-header-cell {
             background-color: #343a40;
             color: #fff;
@@ -33,7 +34,6 @@
             border-color: #007bff;
         }
         
-        /* Highlight changed cells */
         .changed-cell-value {
             background-color: #fff3cd;
             padding: 2px 6px;
@@ -88,7 +88,6 @@
             margin-bottom: 15px;
         }
 
-        /* Sticky Save Button */
         #saveChangesBtn {
             position: fixed;
             bottom: 30px;
@@ -119,10 +118,19 @@
             }
         }
 
-        /* Badge for online quiz columns */
         .badge-info {
             padding: 4px 8px;
             font-size: 12px;
+        }
+
+        .sheet-info-icon {
+            color: #17a2b8;
+            margin-left: 5px;
+        }
+
+        #sheetSelect {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
         }
     </style>
 @endsection
@@ -160,6 +168,7 @@
         <i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>
     </button>
 
+    <!-- Tabs and content remain the same -->
     <div class="card card-dark card-outline card-tabs">
         <div class="card-header p-0 pt-1 border-bottom-0">
             <ul class="nav nav-tabs" id="custom-tabs" role="tablist">
@@ -298,7 +307,51 @@
         </div>
     </div>
 
-    <!-- Edit Column Modal -->
+    <!-- Sheet Selection Modal -->
+    <div class="modal fade" id="sheetSelectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-excel"></i> Select Excel Sheet to Import
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Your Excel file contains multiple sheets. Please select which sheet contains the gradebook data.
+                    </div>
+                    <div class="form-group">
+                        <label for="sheetSelect">
+                            <strong>Available Sheets:</strong>
+                            <i class="fas fa-question-circle sheet-info-icon" 
+                               title="Select the sheet that contains student grades" 
+                               data-toggle="tooltip"></i>
+                        </label>
+                        <select class="form-control form-control-lg" id="sheetSelect">
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                        <small class="text-muted">
+                            The number in parentheses shows how many rows each sheet contains.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-info" id="confirmSheetBtn">
+                        <i class="fas fa-check"></i> Continue with Selected Sheet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Column Modal (remains the same) -->
     <div class="modal fade" id="editColumnModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -338,7 +391,7 @@
         </div>
     </div>
 
-    <!-- Import Confirmation Modal -->
+    <!-- Import Confirmation Modal (remains the same) -->
     <div class="modal fade" id="importConfirmModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -381,8 +434,14 @@
             updateColumn: "{{ route('teacher.gradebook.column.update', ['columnId' => '__COLUMN_ID__']) }}",
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
             getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
+            getSheets: "{{ route('teacher.gradebook.sheets', ['classId' => $classId]) }}",
             importGradebook: "{{ route('teacher.gradebook.import', ['classId' => $classId]) }}"
         };
+
+        // Initialize tooltips
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
     </script>
     
     @if(isset($scripts))

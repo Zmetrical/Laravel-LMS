@@ -359,14 +359,50 @@ class GradeBook_Management extends MainController
     }
 
     /**
-     * Import gradebook from Excel
+     * Get available sheets from uploaded Excel file
+     */
+    public function getExcelSheets(Request $request)
+    {
+        try {
+            $request->validate([
+                'file' => 'required|mimes:xlsx,xls|max:5120'
+            ]);
+
+            $file = $request->file('file');
+            $spreadsheet = IOFactory::load($file->getPathname());
+            
+            $sheets = [];
+            foreach ($spreadsheet->getAllSheets() as $index => $sheet) {
+                $sheets[] = [
+                    'index' => $index,
+                    'name' => $sheet->getTitle(),
+                    'row_count' => $sheet->getHighestRow()
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'sheets' => $sheets
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to read Excel file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Import gradebook from Excel with sheet selection
      */
     public function importGradebook(Request $request, $classId)
     {
         try {
             $request->validate([
                 'file' => 'required|mimes:xlsx,xls|max:5120',
-                'action' => 'required|in:replace,keep'
+                'action' => 'required|in:replace,keep',
+                'sheet_index' => 'required|integer|min:0'
             ]);
 
             $teacher = Auth::guard('teacher')->user();
@@ -374,7 +410,19 @@ class GradeBook_Management extends MainController
 
             $file = $request->file('file');
             $spreadsheet = IOFactory::load($file->getPathname());
-            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Get the selected sheet
+            $sheetIndex = $request->sheet_index;
+            $allSheets = $spreadsheet->getAllSheets();
+            
+            if (!isset($allSheets[$sheetIndex])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid sheet index selected.'
+                ], 400);
+            }
+            
+            $sheet = $allSheets[$sheetIndex];
             $data = $sheet->toArray();
 
             if (count($data) < 3) {
@@ -539,7 +587,7 @@ class GradeBook_Management extends MainController
 
             return response()->json([
                 'success' => true,
-                'message' => "Successfully imported scores for $imported students",
+                'message' => "Successfully imported scores for $imported students from sheet '{$sheet->getTitle()}'",
                 'errors' => $errors,
                 'new_columns' => $columnMapping['new_columns'] ?? []
             ]);

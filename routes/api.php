@@ -9,7 +9,6 @@ use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
 use App\Http\Controllers\User_Management\User_Management;
-use App\Http\Controllers\Grade_Management\GradeBook_Management;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;

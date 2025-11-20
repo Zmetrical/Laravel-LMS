@@ -254,6 +254,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             
             Route::post('/{classId}/import', [GradeBook_Management::class, 'importGradebook'])
                 ->name('import');
+            Route::post('/gradebook/{classId}/sheets', [GradeBook_Management::class, 'getExcelSheets'])
+                ->name('sheets');
         });
     });
 });

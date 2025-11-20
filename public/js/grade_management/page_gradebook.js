@@ -470,6 +470,62 @@ $(document).ready(function() {
 
         selectedFile = file;
         
+        // First, get available sheets from the file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = $('#importExcelBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Reading file...');
+
+        $.ajax({
+            url: API_ROUTES.getSheets,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success && response.sheets) {
+                    availableSheets = response.sheets;
+                    showSheetSelectionModal();
+                } else {
+                    toastr.error('Failed to read Excel file');
+                }
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || 'Failed to read Excel file';
+                toastr.error(msg);
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import from Excel');
+            }
+        });
+
+        $(this).val('');
+    });
+
+    function showSheetSelectionModal() {
+        if (availableSheets.length === 0) {
+            toastr.error('No sheets found in the Excel file');
+            return;
+        }
+
+        // Populate sheet selection dropdown
+        let options = '';
+        availableSheets.forEach(sheet => {
+            options += `<option value="${sheet.index}">
+                ${escapeHtml(sheet.name)} (${sheet.row_count} rows)
+            </option>`;
+        });
+        $('#sheetSelect').html(options);
+
+        // Show the sheet selection modal
+        $('#sheetSelectionModal').modal('show');
+    }
+
+    $('#confirmSheetBtn').click(function() {
+        const selectedSheetIndex = parseInt($('#sheetSelect').val());
+        $('#sheetSelectionModal').modal('hide');
+
         // Check if gradebook has existing data
         let hasData = false;
         ['WW', 'PT', 'QA'].forEach(type => {
@@ -480,28 +536,29 @@ $(document).ready(function() {
         if (hasData) {
             $('#importConfirmModal').modal('show');
         } else {
-            performImport('keep');
+            performImport('keep', selectedSheetIndex);
         }
-
-        $(this).val('');
     });
 
     $('#replaceDataBtn').click(function() {
+        const selectedSheetIndex = parseInt($('#sheetSelect').val());
         $('#importConfirmModal').modal('hide');
-        performImport('replace');
+        performImport('replace', selectedSheetIndex);
     });
 
     $('#keepDataBtn').click(function() {
+        const selectedSheetIndex = parseInt($('#sheetSelect').val());
         $('#importConfirmModal').modal('hide');
-        performImport('keep');
+        performImport('keep', selectedSheetIndex);
     });
 
-    function performImport(action) {
+    function performImport(action, sheetIndex) {
         if (!selectedFile) return;
 
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('action', action);
+        formData.append('sheet_index', sheetIndex);
 
         const btn = $('#importExcelBtn');
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
@@ -521,6 +578,10 @@ $(document).ready(function() {
                         toastr.warning(`${response.errors.length} row(s) had errors. Check console for details.`);
                     }
                     
+                    if (response.new_columns && response.new_columns.length > 0) {
+                        toastr.info(`Created ${response.new_columns.length} new columns: ${response.new_columns.join(', ')}`);
+                    }
+                    
                     loadGradebook();
                 } else {
                     toastr.error(response.message || 'Import failed');
@@ -533,6 +594,7 @@ $(document).ready(function() {
             complete: function() {
                 btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import from Excel');
                 selectedFile = null;
+                availableSheets = [];
             }
         });
     }
