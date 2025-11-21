@@ -84,6 +84,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/create_student', [User_Management::class, 'create_student'])->name('create_student');
         Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
         
+        Route::get('/get_sections/filter', [User_Management::class, 'getSectionsForFilter'])->name('sections.filter');
+
         // Teacher Pages
         Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
         Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
@@ -115,6 +117,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/list_class', [Class_Management::class, 'list_class'])->name('list_class');
         Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');
         Route::get('/list_section', [Class_Management::class, 'list_section'])->name('list_section');
+    
+        Route::get('/get_class/{id}', [Class_Management::class, 'getClassData'])
+            ->name('get_class');
+
+        // Update Class
+        Route::put('/update_class/{id}', [Class_Management::class, 'updateClass'])
+            ->name('update_class');
+    
     });
 });
 
@@ -128,6 +138,9 @@ Route::prefix('profile')->name('profile.')->group(function () {
         Route::get('/', [Profile_Management::class, 'show_student'])->name('student.show');
         Route::get('/edit', [Profile_Management::class, 'edit_student'])->name('student.edit');
         Route::post('/update', [Profile_Management::class, 'update_student'])->name('student.update');
+    
+        Route::get('/enrolled-classes', [Profile_Management::class, 'get_enrolled_classes'])
+            ->name('student.enrolled_classes');
     });
 
     // Teacher Profiles

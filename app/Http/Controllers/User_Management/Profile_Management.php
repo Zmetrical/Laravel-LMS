@@ -15,61 +15,133 @@ use Illuminate\Support\Facades\Storage;
 use Exception;
 class Profile_Management extends MainController
 {
-    // ---------------------------------------------------------------------------
-    //  Student
-    // ---------------------------------------------------------------------------
+// View only
+public function show_student($id)
+{
+    $student = DB::table('students')
+        ->join('sections', 'students.section_id', '=', 'sections.id')
+        ->join('levels', 'sections.level_id', '=', 'levels.id')
+        ->join('strands', 'sections.strand_id', '=', 'strands.id')
+        ->select(
+            'students.*',
+            'sections.name as section',
+            'levels.name as level',
+            'strands.code as strand'
+        )
+        ->where('students.id', '=', $id)
+        ->first();
 
-    // View only
-    public function show_student($id)
-    {
-
-        $student = DB::table(table: 'students')
-            ->join('sections', 'students.section_id', '=', 'sections.id')
-            ->join('levels', 'sections.level_id', '=', 'levels.id')
-            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+    // Get enrolled semesters based on student type
+    if ($student->student_type === 'regular') {
+        // For regular students, get semesters from section_class_matrix
+        $enrolledSemesters = DB::table('section_class_matrix as scm')
+            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
             ->select(
-                'students.*',
-                'sections.name as section',
-                'levels.name as level',
-                'strands.code as strand'
+                'sem.id as semester_id',
+                'sem.name as semester_name',
+                'sy.year_start',
+                'sy.year_end',
+                'sy.code as school_year_code'
             )
-            ->where('students.id', '=', $id)
-            ->first();
-
-        $data = [
-            'student' => $student,
-            'mode' => 'view',
-            'scripts' => ['profile_management/profile_student.js']
-        ];
-
-        return view('modules.profile.profile_student', $data);
+            ->where('scm.section_id', '=', $student->section_id)
+            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+            ->orderBy('sy.year_start', 'desc')
+            ->orderBy('sem.name', 'asc')
+            ->get();
+    } else {
+        // For irregular students, get semesters from student_class_matrix
+        $enrolledSemesters = DB::table('student_class_matrix as scm')
+            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+            ->select(
+                'sem.id as semester_id',
+                'sem.name as semester_name',
+                'sy.year_start',
+                'sy.year_end',
+                'sy.code as school_year_code'
+            )
+            ->where('scm.student_number', '=', $student->student_number)
+            ->where('scm.enrollment_status', '=', 'enrolled')
+            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+            ->orderBy('sy.year_start', 'desc')
+            ->orderBy('sem.name', 'asc')
+            ->get();
     }
 
-    // Edit form
-    public function edit_student($id)
-    {
-        $student = Student::findOrFail($id);
-        $student = DB::table(table: 'students')
-            ->join('sections', 'students.section_id', '=', 'sections.id')
-            ->join('levels', 'sections.level_id', '=', 'levels.id')
-            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+    $data = [
+        'student' => $student,
+        'enrolledSemesters' => $enrolledSemesters,
+        'mode' => 'view',
+        'scripts' => ['profile_management/profile_student.js']
+    ];
+
+    return view('modules.profile.profile_student', $data);
+}
+
+// Edit form
+public function edit_student($id)
+{
+    $student = DB::table('students')
+        ->join('sections', 'students.section_id', '=', 'sections.id')
+        ->join('levels', 'sections.level_id', '=', 'levels.id')
+        ->join('strands', 'sections.strand_id', '=', 'strands.id')
+        ->select(
+            'students.*',
+            'sections.name as section',
+            'levels.name as level',
+            'strands.code as strand'
+        )
+        ->where('students.id', '=', $id)
+        ->first();
+
+    // Get enrolled semesters based on student type
+    if ($student->student_type === 'regular') {
+        // For regular students, get semesters from section_class_matrix
+        $enrolledSemesters = DB::table('section_class_matrix as scm')
+            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
             ->select(
-                'students.*',
-                'sections.name as section',
-                'levels.name as level',
-                'strands.code as strand'
+                'sem.id as semester_id',
+                'sem.name as semester_name',
+                'sy.year_start',
+                'sy.year_end',
+                'sy.code as school_year_code'
             )
-            ->where('students.id', '=', $id)
-            ->first();
-
-        $data = [
-            'student' => $student,
-            'mode' => 'edit',
-            'scripts' => ['profile_management/profile_student.js']
-        ];
-
-        return view('modules.profile.profile_student', $data);
+            ->where('scm.section_id', '=', $student->section_id)
+            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+            ->orderBy('sy.year_start', 'desc')
+            ->orderBy('sem.name', 'asc')
+            ->get();
+    } else {
+        // For irregular students, get semesters from student_class_matrix
+        $enrolledSemesters = DB::table('student_class_matrix as scm')
+            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+            ->select(
+                'sem.id as semester_id',
+                'sem.name as semester_name',
+                'sy.year_start',
+                'sy.year_end',
+                'sy.code as school_year_code'
+            )
+            ->where('scm.student_number', '=', $student->student_number)
+            ->where('scm.enrollment_status', '=', 'enrolled')
+            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+            ->orderBy('sy.year_start', 'desc')
+            ->orderBy('sem.name', 'asc')
+            ->get();
     }
+
+    $data = [
+        'student' => $student,
+        'enrolledSemesters' => $enrolledSemesters,
+        'mode' => 'edit',
+        'scripts' => ['profile_management/profile_student.js']
+    ];
+
+    return view('modules.profile.profile_student', $data);
+}
     public function update_student(Request $request, $id)
     {
         try {
@@ -77,23 +149,20 @@ class Profile_Management extends MainController
 
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
+                'middle_name' => 'nullable|string|max:255',
                 'last_name' => 'required|string|max:255',
-                'email' => 'required|email|max:255|unique:students,email,' . $id,
+                'email' => 'nullable|email|max:255|unique:students,email,' . $id,
                 'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
             // === Handle Image  ===
             if ($request->hasFile('profile_image')) {
-                // Delete old image if exists
                 if ($student->profile_image) {
                     Storage::disk('public')->delete($student->profile_image);
                 }
 
-                // Save new image to storage/app/public/students
                 $image = $request->file('profile_image');
                 $imageName = 'student_' . $id . '_' . time() . '.' . $image->extension();
-
-                // Store path in database: students/student_1_1234567890.jpg
                 $imagePath = $image->storeAs('students', $imageName, 'public');
                 $validated['profile_image'] = $imagePath;
             }
@@ -126,17 +195,78 @@ class Profile_Management extends MainController
         }
     }
 
+    // Get enrolled classes for a student
+    public function get_enrolled_classes($id)
+    {
+        try {
+            $student = Student::findOrFail($id);
+            
+            // Check student type
+            if ($student->student_type === 'regular') {
+                // For regular students, get classes from section_class_matrix
+                $enrolledClasses = DB::table('section_class_matrix as scm')
+                    ->join('classes as c', 'scm.class_id', '=', 'c.id')
+                    ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                    ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                    ->select(
+                        'c.class_code',
+                        'c.class_name',
+                        'sem.name as semester_name',
+                        'sy.year_start',
+                        'sy.year_end',
+                        'scm.semester_id'
+                    )
+                    ->where('scm.section_id', '=', $student->section_id)
+                    ->orderBy('sy.year_start', 'desc')
+                    ->orderBy('sem.name', 'asc')
+                    ->orderBy('c.class_name', 'asc')
+                    ->get();
+            } else {
+                // For irregular students, get classes from student_class_matrix
+                $enrolledClasses = DB::table('student_class_matrix as scm')
+                    ->join('classes as c', 'scm.class_code', '=', 'c.class_code')
+                    ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                    ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                    ->select(
+                        'c.class_code',
+                        'c.class_name',
+                        'sem.name as semester_name',
+                        'sy.year_start',
+                        'sy.year_end',
+                        'scm.semester_id',
+                        'scm.enrollment_status'
+                    )
+                    ->where('scm.student_number', '=', $student->student_number)
+                    ->where('scm.enrollment_status', '=', 'enrolled')
+                    ->orderBy('sy.year_start', 'desc')
+                    ->orderBy('sem.name', 'asc')
+                    ->orderBy('c.class_name', 'asc')
+                    ->get();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $enrolledClasses,
+                'student_type' => $student->student_type
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch enrolled classes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     // ---------------------------------------------------------------------------
     //  Teacher
     // ---------------------------------------------------------------------------
 
     public function show_teacher($id)
     {
-        $teacher = DB::table(table: 'teachers')
-            ->select(
-                'teachers.*',
-            )
-            ->where('teachers.id', '=', value: $id)
+        $teacher = DB::table('teachers')
+            ->select('teachers.*')
+            ->where('teachers.id', '=', $id)
             ->first();
 
         if (!$teacher) {
@@ -175,7 +305,6 @@ class Profile_Management extends MainController
     public function update_teacher(Request $request, $id)
     {
         try {
-            // Validate the request
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
@@ -188,7 +317,6 @@ class Profile_Management extends MainController
 
             DB::beginTransaction();
 
-            // Check if teacher exists
             $teacher = Teacher::find($id);
             if (!$teacher) {
                 return response()->json([
@@ -197,21 +325,16 @@ class Profile_Management extends MainController
                 ], 404);
             }
 
-            // === Handle Image  ===
             if ($request->hasFile('profile_image')) {
-                // Delete old image if exists
                 if ($teacher->profile_image) {
                     Storage::disk('public')->delete($teacher->profile_image);
                 }
-                // Save new image to storage/app/public/teachers
                 $image = $request->file('profile_image');
                 $imageName = 'teacher_' . $id . '_' . time() . '.' . $image->extension();
-                // Store path in database: teachers/teacher_1_1234567890.jpg
                 $imagePath = $image->storeAs('teachers', $imageName, 'public');
                 $validated['profile_image'] = $imagePath;
             }
 
-            // Update teacher record
             $teacher->update([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
@@ -258,6 +381,7 @@ class Profile_Management extends MainController
             ], 500);
         }
     }
+
     public function change_password_teacher(Request $request, $id)
     {
         try {
@@ -276,7 +400,6 @@ class Profile_Management extends MainController
                 ], 404);
             }
 
-            // Verify current password
             if (!Hash::check($validated['current_password'], $teacher->password)) {
                 return response()->json([
                     'success' => false,
@@ -284,7 +407,6 @@ class Profile_Management extends MainController
                 ], 422);
             }
 
-            // Update password
             $teacher->update([
                 'password' => Hash::make($validated['new_password']),
                 'updated_at' => now(),
@@ -317,6 +439,4 @@ class Profile_Management extends MainController
             ], 500);
         }
     }
-
-    
 }

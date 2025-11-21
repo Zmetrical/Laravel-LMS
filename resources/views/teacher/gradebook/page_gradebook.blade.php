@@ -13,7 +13,13 @@
             vertical-align: top;
             padding: 10px 5px;
         }
-        
+        .summary-header th {
+            background-color: #343a40 !important;
+            color: #fff !important;
+            font-weight: 600;
+            vertical-align: top;
+            padding: 10px 5px;
+        }
         .jsgrid-cell {
             padding: 8px 5px;
         }
@@ -217,15 +223,15 @@
                 <div class="tab-pane fade" id="summary" role="tabpanel">
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-sm">
-                            <thead class="thead-dark">
+                            <thead class="summary-header">
                                 <tr>
-                                    <th>USN</th>
-                                    <th>Student Name</th>
+                                    <th class="pb-4">USN</th>
+                                    <th class="pb-4">Student Name</th>
                                     <th class="text-center">Written Work<br><small id="wwPercLabel">({{ $class->ww_perc }}%)</small></th>
                                     <th class="text-center">Performance Task<br><small id="ptPercLabel">({{ $class->pt_perc }}%)</small></th>
                                     <th class="text-center">Quarterly Assessment<br><small id="qaPercLabel">({{ $class->qa_perce }}%)</small></th>
-                                    <th class="text-center">Initial Grade</th>
-                                    <th class="text-center ">Quarterly Grade</th>
+                                    <th class="text-center pb-4">Initial Grade</th>
+                                    <th class="text-center pb-4">Quarterly Grade</th>
                                 </tr>
                             </thead>
                             <tbody id="summaryTableBody">

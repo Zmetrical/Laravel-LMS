@@ -1,130 +1,168 @@
-console.log("list user");
+console.log("Student List Initialized");
 
 let dataTable;
 
 $(document).ready(function () {
+    // Update student count badge
+    function updateStudentCount() {
+        if (dataTable && dataTable.rows) {
+            const count = dataTable.rows({ filter: 'applied' }).count();
+            $('#studentsCount').text(count + ' Student' + (count !== 1 ? 's' : ''));
+        }
+    }
 
-    // ---------------------------------------------------------------------------
-    // Filters
-    // ---------------------------------------------------------------------------
-
+    // Initialize DataTable
     dataTable = $('#studentTable').DataTable({
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         scrollX: true,
-        autoWidth: true,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-            '<"row"<"col-sm-12"tr>>' +
-            '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        autoWidth: false,
+        order: [[1, 'asc']], // Sort by Full Name by default
+        searching: true, // Keep search functionality enabled
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' + // Removed 'f' to hide search box
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         language: {
-            search: "_INPUT_",
-            searchPlaceholder: "Search students..."
+            emptyTable: "No students found",
+            zeroRecords: "No matching students found",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ students",
+            infoEmpty: "Showing 0 to 0 of 0 students",
+            infoFiltered: "(filtered from _MAX_ total students)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        columnDefs: [
+            { targets: 6, orderable: false } // Disable sorting on Actions column
+        ],
+        drawCallback: function() {
+            updateStudentCount();
         }
     });
 
-    // === Header FILTERS ===
-    const filters = [
-        { selector: '#studentNumber', column: 0, type: 'search' },
-        { selector: '#studentName', columns: [1, 2], type: 'nameSearch' },
-        { selector: '#strand', column: 3, type: 'select' },
-        { selector: '#level', column: 4, type: 'select' },
-        { selector: '#section', column: 5, type: 'select' }
-    ];
+    // Column index mapping
+    const COL = {
+        STUDENT_NO: 0,
+        FULL_NAME: 1,
+        STRAND: 2,
+        LEVEL: 3,
+        SECTION: 4,
+        TYPE: 5
+    };
 
-
-    filters.forEach(f => {
-        if (f.type === 'search') {
-            $(f.selector).on('keyup', function () {
-                const val = $(this).val();
-                dataTable
-                    .column(f.column)
-                    .search(val, false, true)
-                    .draw();
-            });
-        } else if (f.type === 'nameSearch') {
-            $(f.selector).on('keyup', function () {
-                const val = $(this).val().toLowerCase();
-
-                // Custom global search on both first and last name columns
-                dataTable.rows().every(function () {
-                    const row = this.data();
-                    const first = (row[1] || '').toLowerCase();
-                    const last = (row[2] || '').toLowerCase();
-                    const match = first.includes(val) || last.includes(val);
-                    $(this.node()).toggle(match);
-                });
-            });
-        } else {
-            $(f.selector).on('change', function () {
-                const val = $(this).val();
-                dataTable
-                    .column(f.column)
-                    .search(val ? '^' + val + '$' : '', true, false)
-                    .draw();
-            });
-        }
+    // Student Number Filter
+    $('#studentNumber').on('keyup', function() {
+        dataTable.column(COL.STUDENT_NO).search(this.value).draw();
     });
 
-    const strandSelect = $('#strand');
-    const levelSelect = $('#level');
-    const sectionSelect = $('#section');
+    // Student Name Filter
+    $('#studentName').on('keyup', function() {
+        dataTable.column(COL.FULL_NAME).search(this.value).draw();
+    });
 
-    // === Update Header OPTIONS ===
-    function render_Sections() {
-        const strandId = strandSelect.val();
-        const levelId = levelSelect.val();
+    // Strand Filter (exact match)
+    $('#strand').on('change', function() {
+        const val = $(this).val();
+        dataTable.column(COL.STRAND).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
+    });
 
-        // Reset section dropdown
-        sectionSelect.html('<option hidden disabled selected>Select Section</option>');
+    // Level Filter (exact match)
+    $('#level').on('change', function() {
+        const val = $(this).val();
+        dataTable.column(COL.LEVEL).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
+    });
 
-        const params = {};
-        if (strandId) params.strand_id = strandId;
-        if (levelId) params.level_id = levelId;
+    // Section Filter (exact match)
+    $('#section').on('change', function() {
+        const val = $(this).val();
+        dataTable.column(COL.SECTION).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
+    });
 
-        if (Object.keys(params).length > 0) {
-            $.ajax({
-                url: API_ROUTES.getSections,
-                method: 'GET',
-                data: params,
-                success: function (data) {
-                    if (data.length > 0) {
-                        data.forEach(section => {
-                            sectionSelect.append(
-                                $('<option>', { value: section.id, text: section.name })
-                            );
-                        });
-                    } else {
-                        sectionSelect.append(
-                            $('<option>', { text: 'No sections available', disabled: true })
-                        );
-                    }
-                },
-                error: function () {
-                    sectionSelect.append(
-                        $('<option>', { text: 'Error loading sections', disabled: true })
-                    );
-                }
-            });
-        } else {
-            sectionSelect.append(
-                $('<option>', { text: 'Please select strand and level first', disabled: true })
-            );
-        }
+    // Escape special regex characters
+    function escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    strandSelect.on('change', render_Sections);
-    levelSelect.on('change', render_Sections);
+    // Dynamic Section Loading - works with strand OR level OR both
+    $('#strand, #level').on('change', function() {
+        const strandCode = $('#strand').val();
+        const levelName = $('#level').val();
 
-    // === Clear FILTER ===
-    $('#clearFilters').on('click', function () {
-        filters.forEach(f => {
-            if (f.type === 'search') {
-                $(f.selector).val('');
-            } else {
-                $(f.selector).val('').prop('selectedIndex', 0);
+        // Reset section dropdown
+        $('#section').html('<option value="">All Sections</option>');
+        
+        // Clear section filter when either strand or level changes
+        dataTable.column(COL.SECTION).search('').draw();
+
+        // Load sections if EITHER strand OR level is selected (or both)
+        if (strandCode || levelName) {
+            loadSections(strandCode, levelName);
+        }
+    });
+
+    function loadSections(strandCode, levelName) {
+        const params = {};
+        
+        // Only add parameters that have values
+        if (strandCode) params.strand_code = strandCode;
+        if (levelName) params.level_name = levelName;
+        
+        console.log('Loading sections with:', params);
+        
+        $.ajax({
+            url: API_ROUTES.getSections,
+            type: 'GET',
+            data: params,
+            success: function(response) {
+                console.log('Sections response:', response);
+                
+                $('#section').html('<option value="">All Sections</option>');
+                
+                // Handle different response formats
+                const sections = Array.isArray(response) ? response : (response.data || response.sections || []);
+                
+                if (sections && sections.length > 0) {
+                    sections.forEach(function(section) {
+                        const sectionName = section.name || section.section_name || section.code;
+                        const sectionValue = section.name || section.section_name || section.code;
+                        $('#section').append(`<option value="${sectionValue}">${sectionName}</option>`);
+                    });
+                    console.log(`Loaded ${sections.length} sections`);
+                } else {
+                    console.log('No sections found for the selected filters');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading sections:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    error: error,
+                    response: xhr.responseText
+                });
+                $('#section').html('<option value="">All Sections</option>');
             }
         });
+    }
 
+    // Clear All Filters
+    $('#clearFilters').on('click', function() {
+        // Clear input fields
+        $('#studentNumber').val('');
+        $('#studentName').val('');
+        
+        // Reset select dropdowns
+        $('#strand').val('');
+        $('#level').val('');
+        $('#section').html('<option value="">All Sections</option>');
+
+        // Clear all DataTable searches and redraw
         dataTable.search('').columns().search('').draw();
     });
+
+    // Initial count
+    updateStudentCount();
 });

@@ -13,6 +13,7 @@ use App\Models\User_Management\Section;
 use App\Models\User_Management\Level;
 use App\Models\User_Management\Student;
 use App\Models\User_Management\Teacher;
+use Illuminate\Support\Str;
 
 use Exception;
 
@@ -56,76 +57,83 @@ class User_Management extends MainController
         return response()->json($query->get());
     }
 
-    public function insert_student(Request $request)
-    {
-        // Validate the form data to match the view fields
-        $validated = $request->validate([
-            'email' => 'required|email|max:255|unique:students,email',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'section' => 'required|exists:sections,id',
-        ]);
+public function insert_student(Request $request)
+{
+    // Validate the form data - email is now optional
+    $validated = $request->validate([
+        'email' => 'nullable|email|max:255|unique:students,email',
+        'first_name' => 'required|string|max:255',
+        'middle_name' => 'nullable|string|max:255',
+        'last_name' => 'required|string|max:255',
+        'section' => 'required|exists:sections,id',
+    ]);
 
-        try {
-            DB::transaction(function () use ($validated) {
-                // Generate student number and password
-                $studentNumber = $this->generateStudentNumber();
-                $defaultPassword = $this->generateStudentPassword($validated['first_name'], $validated['last_name']);
+    try {
+        DB::transaction(function () use ($validated) {
+            // Generate student number and password
+            $studentNumber = $this->generateStudentNumber();
+            $defaultPassword = $this->generateStudentPassword();
 
-                // Create student record
-                $student = Student::create([
-                    'student_number' => $studentNumber,
-                    'first_name' => $validated['first_name'],
-                    'middle_name' => $validated['middle_name'],
-                    'last_name' => $validated['last_name'],
-                    'email' => $validated['email'],
-                    'student_password' => Hash::make($defaultPassword),
-                    'section_id' => $validated['section'],
-                    'enrollment_date' => now(),
-                ]);
+            // Process middle initial
+            $middleInitial = null;
+            if (!empty($validated['middle_name'])) {
+                $middleInitial = $this->processMiddleInitial($validated['middle_name']);
+            }
 
-                \Log::info('Student created successfully', [
-                    'student_id' => $student->id,
-                    'student_number' => $studentNumber,
-                    'default_password' => $defaultPassword // Log for admin reference
-                ]);
-            });
+            // Create student record
+            $student = Student::create([
+                'student_number' => $studentNumber,
+                'first_name' => $validated['first_name'],
+                'middle_name' => $middleInitial,
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'] ?? '', // Empty string if no email
+                'student_password' => Hash::make($defaultPassword),
+                'section_id' => $validated['section'],
+                'enrollment_date' => now(),
+            ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Teacher created successfully!',
-                // 'redirect_url' => route('profile.teacher', ['id' => $teacherId])
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
+            \Log::info('Student created successfully', [
+                'student_id' => $student->id,
+                'student_number' => $studentNumber,
+                'default_password' => $defaultPassword
+            ]);
+        });
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create teacher: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Student created successfully!',
+        ], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to create student: ' . $e->getMessage()
+        ], 500);
     }
+}
 
-    public function insert_students(Request $request)
-    {
-        // Validate the request
-        $request->validate([
-            'section' => 'required|exists:sections,id',
-            'students' => 'required|array|min:1|max:100',
-            'students.*.email' => 'required|email|distinct',
-            'students.*.firstName' => 'required|string|max:255',
-            'students.*.lastName' => 'required|string|max:255',
-            'students.*.middleInitial' => 'nullable|string|max:2',
-            'students.*.gender' => 'required|in:Male,Female',
-            'students.*.studentType' => 'required|in:regular,irregular',
-        ]);
+public function insert_students(Request $request)
+{
+    // Validate the request - email is now optional
+    $request->validate([
+        'section' => 'required|exists:sections,id',
+        'students' => 'required|array|min:1|max:100',
+        'students.*.email' => 'nullable|email|distinct',
+        'students.*.firstName' => 'required|string|max:255',
+        'students.*.lastName' => 'required|string|max:255',
+        'students.*.middleInitial' => 'nullable|string|max:50',
+        'students.*.gender' => 'required|in:Male,Female,M,F',
+        'students.*.studentType' => 'required|in:regular,irregular',
+    ]);
 
-        try {
-            DB::beginTransaction();
+    try {
+        DB::beginTransaction();
 
-            // Check for duplicate emails in database
-            $emails = array_column($request->students, 'email');
+        // Check for duplicate emails in database (only non-empty emails)
+        $emails = array_filter(array_column($request->students, 'email'));
+        
+        if (!empty($emails)) {
             $existingEmails = Student::whereIn('email', $emails)->pluck('email')->toArray();
 
             if (!empty($existingEmails)) {
@@ -135,80 +143,129 @@ class User_Management extends MainController
                     'errors' => ['These emails already exist: ' . implode(', ', $existingEmails)]
                 ], 422);
             }
+        }
 
-            $year = date('Y');
+        $year = date('Y');
 
-            // Get the highest student number for this year
-            $lastStudent = Student::where('student_number', 'LIKE', $year . '%')
-                ->orderBy('student_number', 'DESC')
-                ->first();
+        // Get the highest student number for this year
+        $lastStudent = Student::where('student_number', 'LIKE', $year . '%')
+            ->orderBy('student_number', 'DESC')
+            ->first();
 
-            // Extract the sequential number or start from 0
-            $lastCount = $lastStudent
-                ? (int)substr($lastStudent->student_number, 4)
-                : 0;
+        // Extract the sequential number or start from 0
+        $lastCount = $lastStudent
+            ? (int)substr($lastStudent->student_number, 4)
+            : 0;
 
-            // Prepare bulk insert data
-            $studentsData = [];
-            $passwordMatrixData = [];
-            $now = now();
+        // Prepare bulk insert data
+        $studentsData = [];
+        $passwordMatrixData = [];
+        $now = now();
 
-            foreach ($request->students as $index => $studentData) {
-                $lastCount++;
-                $studentNumber = $year . str_pad($lastCount, 5, '0', STR_PAD_LEFT);
+        foreach ($request->students as $index => $studentData) {
+            $lastCount++;
+            $studentNumber = $year . str_pad($lastCount, 5, '0', STR_PAD_LEFT);
 
-                $password = ucfirst(strtolower($studentData['firstName'])) .
-                    ucfirst(strtolower($studentData['lastName'])) . '@' . $year;
+            $password = $this->generateStudentPassword();
 
-                $studentsData[] = [
-                    'student_number' => $studentNumber,
-                    'student_password' => Hash::make($password),
-                    'email' => $studentData['email'],
-                    'first_name' => $studentData['firstName'],
-                    'middle_name' => $studentData['middleInitial'] ?? null,
-                    'last_name' => $studentData['lastName'],
-                    'gender' => $studentData['gender'],
-                    'section_id' => $request->section,
-                    'student_type' => $studentData['studentType'],
-                    'enrollment_date' => now(),
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-
-                // Prepare password matrix data
-                $passwordMatrixData[] = [
-                    'student_number' => $studentNumber,
-                    'plain_password' => $password,
-                ];
+            // Normalize gender: M or F to Male or Female
+            $gender = $studentData['gender'];
+            if ($gender === 'M') {
+                $gender = 'Male';
+            } elseif ($gender === 'F') {
+                $gender = 'Female';
             }
 
-            // Insert students
-            Student::insert($studentsData);
+            // Process middle initial - extract first letters up to 3
+            $middleInitial = null;
+            if (!empty($studentData['middleInitial'])) {
+                $middleInitial = $this->processMiddleInitial($studentData['middleInitial']);
+            }
 
-            // Insert password matrix
-            DB::table('student_password_matrix')->insert($passwordMatrixData);
+            $studentsData[] = [
+                'student_number' => $studentNumber,
+                'student_password' => Hash::make($password),
+                'email' => $studentData['email'] ?? '',
+                'first_name' => $studentData['firstName'],
+                'middle_name' => $middleInitial,
+                'last_name' => $studentData['lastName'],
+                'gender' => $gender,
+                'section_id' => $request->section,
+                'student_type' => $studentData['studentType'],
+                'enrollment_date' => now(),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
 
-            DB::commit();
+            // Prepare password matrix data
+            $passwordMatrixData[] = [
+                'student_number' => $studentNumber,
+                'plain_password' => $password,
+            ];
+        }
 
-            return response()->json([
-                'success' => true,
-                'message' => count($studentsData) . " student(s) created successfully!",
-                'count' => count($studentsData)
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        // Insert students
+        Student::insert($studentsData);
 
-            \Log::error('Failed to create students', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+        // Insert password matrix
+        DB::table('student_password_matrix')->insert($passwordMatrixData);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred: ' . $e->getMessage()
-            ], 500);
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => count($studentsData) . " student(s) created successfully!",
+            'count' => count($studentsData)
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to create students', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Process middle initial/name to extract first letters
+ * Takes first letter of each word, maximum 3 letters
+ * 
+ * @param string $middleName
+ * @return string
+ */
+private function processMiddleInitial($middleName)
+{
+    if (empty($middleName)) {
+        return null;
+    }
+
+    // Trim and remove extra spaces
+    $middleName = trim(preg_replace('/\s+/', ' ', $middleName));
+    
+    // Split by space to get individual words
+    $words = explode(' ', $middleName);
+    
+    // Get first letter of each word
+    $initials = '';
+    foreach ($words as $word) {
+        if (!empty($word)) {
+            $initials .= strtoupper(substr($word, 0, 1));
+            // Stop if we already have 3 letters
+            if (strlen($initials) >= 3) {
+                break;
+            }
         }
     }
+    
+    // Return maximum 3 letters
+    return substr($initials, 0, 3);
+}
 
     private function generateStudentNumber()
     {
@@ -218,12 +275,13 @@ class User_Management extends MainController
         return $year . str_pad($lastStudent + 1, 5, '0', STR_PAD_LEFT);
     }
 
-    private function generateStudentPassword($firstName, $lastName)
-    {
-        $password = ucfirst(strtolower($firstName)) . ucfirst(strtolower($lastName)) . '@' . date('Y');
-
-        return $password;
-    }
+/**
+ * Generate password using Laravel's secure random string generator
+ */
+private function generateStudentPassword()
+{
+    return Str::random(10); // Generates random alphanumeric string
+}
 
     public function list_students(Request $request)
     {
@@ -258,7 +316,48 @@ class User_Management extends MainController
     }
 
 
+/**
+ * Get sections filtered by strand and/or level for student list dropdown
+ */
+public function getSectionsForFilter(Request $request)
+{
+    try {
+        $query = DB::table('sections')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+            ->select(
+                'sections.id',
+                'sections.code',
+                'sections.name'
+            )
+            ->where('sections.status', 1); // Only active sections
 
+        // Filter by strand code if provided
+        if ($request->has('strand_code') && $request->strand_code != '') {
+            $query->where('strands.code', $request->strand_code);
+        }
+
+        // Filter by level name if provided
+        if ($request->has('level_name') && $request->level_name != '') {
+            $query->where('levels.name', $request->level_name);
+        }
+
+        $sections = $query->orderBy('sections.name', 'asc')->get();
+
+        return response()->json($sections);
+        
+    } catch (Exception $e) {
+        \Log::error('Failed to get sections for filter', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load sections.'
+        ], 500);
+    }
+}
 
 
     // ---------------------------------------------------------------------------

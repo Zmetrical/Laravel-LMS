@@ -54,7 +54,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Student Pages
         Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_student');
         Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_students');
-        
+        Route::get('/get_sections/filter', [Class_Management::class, 'getSectionsForFilter'])->name('sections.filter');
+
+
+
         // Teacher Pages
         Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('insert_teacher');
     });

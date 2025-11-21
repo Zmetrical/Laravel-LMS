@@ -1,6 +1,5 @@
 $(document).ready(function () {
 
-
     // ---------------------------------------------------------------------------
     //  Page Mode
     // ---------------------------------------------------------------------------
@@ -10,7 +9,6 @@ $(document).ready(function () {
     const isEditMode = pathSegments.includes('edit');
 
     if (!isEditMode) {
-
         $('#profileImagePreview').css({
             'width': '200px',
             'height': '200px'
@@ -26,8 +24,7 @@ $(document).ready(function () {
                 $(this).hide();
             }
         });
-    }
-    else {
+    } else {
         $('#profileImagePreview').css({
             'width': '150px',
             'height': '150px'
@@ -47,20 +44,82 @@ $(document).ready(function () {
     });
 
     // ---------------------------------------------------------------------------
-    //  AJAX Functions
+    //  Load Enrolled Classes
+    // ---------------------------------------------------------------------------
+
+    function loadEnrolledClasses() {
+        $.ajax({
+            url: API_ROUTES.getEnrolledClasses,
+            type: 'GET',
+            success: function (response) {
+                if (response.success) {
+                    populateEnrolledClasses(response.data);
+                } else {
+                    showEnrolledClassesError('Failed to load enrolled classes');
+                }
+            },
+            error: function (xhr) {
+                console.error('Error loading enrolled classes:', xhr);
+                showEnrolledClassesError('Error loading enrolled classes');
+            }
+        });
+    }
+
+    function populateEnrolledClasses(classes) {
+        const tbody = $('#enrolledClassesBody');
+        tbody.empty();
+
+        if (classes.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="4" class="text-center text-muted">No enrolled classes found</td>
+                </tr>
+            `);
+            return;
+        }
+
+        classes.forEach(function(cls) {
+            const row = `
+                <tr>
+                    <td>${cls.class_code}</td>
+                    <td>${cls.class_name}</td>
+                    <td>${cls.year_start} - ${cls.year_end}</td>
+                    <td>${cls.semester_name}</td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+
+    function showEnrolledClassesError(message) {
+        const tbody = $('#enrolledClassesBody');
+        tbody.empty();
+        tbody.append(`
+            <tr>
+                <td colspan="4" class="text-center text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> ${message}
+                </td>
+            </tr>
+        `);
+    }
+
+    // Load enrolled classes on page load
+    loadEnrolledClasses();
+
+    // ---------------------------------------------------------------------------
+    //  AJAX Form Submit
     // ---------------------------------------------------------------------------
 
     $('#profileForm').on('submit', function (e) {
         e.preventDefault();
 
         const formData = new FormData(this);
-
         const id = $(this).data('student-id');
 
         // Show loading
         Swal.fire({
             title: 'Processing...',
-            text: 'Creating student records',
+            text: 'Updating student profile',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -76,7 +135,6 @@ $(document).ready(function () {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-
             success: function (response) {
                 if (response.success) {
                     Swal.fire({
@@ -86,7 +144,6 @@ $(document).ready(function () {
                         timer: 2000,
                         showConfirmButton: false
                     }).then(() => {
-                        // === Redirect  ===
                         window.location.href = API_ROUTES.redirectBack;
                     });
                 }
@@ -99,6 +156,7 @@ $(document).ready(function () {
                     $.each(errors, function (key, value) {
                         errorMessage += value[0] + '<br>';
                     });
+                    
                     Swal.fire({
                         icon: 'error',
                         title: 'Validation Error',
@@ -108,7 +166,7 @@ $(document).ready(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error!',
-                        text: 'Something went wrong. Please try again.'
+                        text: xhr.responseJSON?.message || 'Something went wrong. Please try again.'
                     });
                 }
             }
@@ -116,38 +174,3 @@ $(document).ready(function () {
     });
 
 });
-
-
-// Data for enrolled classes table
-const enrolledClasses = [
-    { code: "MATH-101", name: "Business Mathematics" },
-    { code: "ENG-101", name: "English for Academic Purposes" },
-    { code: "SCI-101", name: "General Chemistry" },
-    { code: "SOC-101", name: "Philippine Politics and Governance" },
-    { code: "PE-101", name: "Physical Education" }
-];
-
-
-// Populate Enrolled Classes Table
-function populateEnrolledClasses() {
-    const tbody = document.getElementById('enrolledClassesBody');
-    tbody.innerHTML = '';
-
-    enrolledClasses.forEach(cls => {
-        const row = document.createElement('tr');
-
-        const codeCell = document.createElement('td');
-        codeCell.textContent = cls.code;
-
-        const nameCell = document.createElement('td');
-        nameCell.textContent = cls.name;
-
-        row.appendChild(codeCell);
-        row.appendChild(nameCell);
-        tbody.appendChild(row);
-    });
-}
-
-$(document).ready(function () {
-    populateEnrolledClasses();
-})

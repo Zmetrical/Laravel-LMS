@@ -55,10 +55,6 @@
                                 <option value="" selected disabled>Select Section</option>
                             </select>
                         </div>
-
-                        <div class="alert alert-info">
-                            <small><i class="fas fa-info-circle mr-1"></i>Select academic info before adding students</small>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -85,12 +81,11 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="input-group">
-                                    <input type="number" class="form-control" id="numRows" value="5" min="1" max="50" placeholder="Number of students">
+                                    <input type="number" class="form-control" id="numRows" value="5" min="1" max="100" placeholder="Number of students">
                                     <div class="input-group-append">
                                         <button class="btn btn-primary" type="button" id="generateRowsBtn">
                                             <i class="fas fa-plus-circle mr-1"></i> Generate Rows
                                         </button>
-
                                     </div>
                                 </div>
                             </div>
@@ -107,7 +102,7 @@
                                 <thead class="bg-light">
                                     <tr>
                                         <th width="40" class="text-center">#</th>
-                                        <th width="220">Email <span class="text-danger">*</span></th>
+                                        <th width="220">Email</th>
                                         <th width="180">Last Name <span class="text-danger">*</span></th>
                                         <th width="180">First Name <span class="text-danger">*</span></th>
                                         <th width="80">M.I.</th>
@@ -121,8 +116,6 @@
                                 </tbody>
                             </table>
                         </div>
-
-
                     </div>
 
                     <div class="card-footer">

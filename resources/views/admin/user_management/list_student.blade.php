@@ -6,9 +6,22 @@
             <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
         @endforeach
     @endif
-
     <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+    <style>
+        .filter-card { background: #f8f9fa; border: 1px solid #e9ecef; }
+        .filter-card .form-control, .filter-card .form-select { 
+            font-size: 0.875rem; 
+            height: calc(2.25rem + 2px);
+        }
+        .filter-card label { 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            color: #6c757d; 
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+    </style>
 @endsection
 
 @section('breadcrumb')
@@ -20,124 +33,125 @@
 
 @section('content')
 <br>
-    <!-- Content -->
-    <div class="container-fluid">
-        <div class="card">
-            <div class="card-body">
-                <!-- Compact Filter Area -->
-                <div class="row align-items-end mb-3">
-                    <!-- Search Filter (Student Number) -->
-                    <div class="col-auto" id="searchFilter">
-                        <label class="mb-1 ">Student Number</label>
-                        <input type="text" class="form-control" id="studentNumber"
-                            placeholder="Enter student number">
-                    </div>
-                    <!-- Search Filter (Student Name) -->
-                    <div class="col-auto" id="searchNameFilter">
-                        <label class="mb-1">Student Name</label>
-                        <input type="text" class="form-control" id="studentName"
-                            placeholder="Enter student name">
-                    </div>
-                    <div class="col-auto">
-                        <label class="mb-1">Strand</label>
-                        <select class="form-control" id="strand" name="strand" required>
-                            <option hidden disabled selected>Select Strand</option>
-                            @foreach($strands as $strand)
-                                <option value="{{ $strand->id }}">{{ $strand->code }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <label class="mb-1 ">Year</label>
-                        <select class="form-control " id="level" name="level" required>
-                            <option hidden disabled selected>Select Year Level</option>
-                            @foreach($levels as $level)
-                                <option value="{{ $level->id }}">{{ $level->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <label class="mb-1 ">Section</label>
-                        <select class="form-control" id="section" name="section" required>
-                            <option hidden disabled selected>Select Section</option>
-                        </select>
-                    </div>
-
-                    <div class="col-auto ml-auto">
-                        <button class="btn btn-secondary" id="clearFilters">
-                            <i class="fas fa-undo"></i> Clear filters
-                        </button>
-                    </div>
+<div class="container-fluid">
+    <!-- Filter Card -->
+    <div class="card filter-card mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label>Student Number</label>
+                    <input type="text" class="form-control" id="studentNumber" placeholder="Search...">
                 </div>
-
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-body ">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover mb-0" id="studentTable" style="width: 100%;">
-                        <thead
-                            style="position: sticky; top: 0; background-color: #fff; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);">
-                            <tr>
-                                <th>Student Number</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Strand</th>
-                                <th>Level</th>
-                                <th>Section</th>
-                                <th>Actions</th>
-                            </tr>
-
-                            
-                        </thead>
-                        <tbody id="studentTableBody">
-                            @foreach ($students as $student)
-                                <tr>
-                                    <td>{{ $student->student_number }}</td>
-                                    <td>{{ $student->first_name }}</td>
-                                    <td>{{ $student->last_name }}</td>
-                                    <td>{{ $student->strand }}</td>
-                                    <td>{{ $student->level }}</td>
-                                    <td>{{ $student->section }}</td>
-                                    <td>
-                                        <a href="{{ route('profile.student.show', $student->id) }}" 
-                                            class="btn btn-sm btn-info">
-                                            <i class="fas fa-user"></i> Profile
-                                        </a>
-                                        <a href="{{ route('profile.student.edit', $student->id) }}"
-                                            class="btn btn-sm btn-primary">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                <div class="col-md-2">
+                    <label>Student Name</label>
+                    <input type="text" class="form-control" id="studentName" placeholder="Search...">
+                </div>
+                <div class="col-md-2">
+                    <label>Strand</label>
+                    <select class="form-control" id="strand">
+                        <option value="">All Strands</option>
+                        @foreach($strands as $strand)
+                            <option value="{{ $strand->code }}">{{ $strand->code }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>Year Level</label>
+                    <select class="form-control" id="level">
+                        <option value="">All Levels</option>
+                        @foreach($levels as $level)
+                            <option value="{{ $level->name }}">{{ $level->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>Section</label>
+                    <select class="form-control" id="section">
+                        <option value="">All Sections</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-block" id="clearFilters">
+                        <i class="fas fa-undo mr-1"></i> Clear
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Student Table Card -->
+    <div class="card card-primary card-outline">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-users mr-2"></i>Student List</h3>
+            <div class="card-tools">
+                <span class="badge badge-primary" id="studentsCount">{{ count($students) }} Students</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" id="studentTable" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Student Number</th>
+                            <th>Full Name</th>
+                            <th>Strand</th>
+                            <th>Level</th>
+                            <th>Section</th>
+                            <th>Type</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        @foreach ($students as $student)
+                            <tr>
+                                <td>{{ $student->student_number }}</td>
+                                <td>{{ $student->last_name }}, {{ $student->first_name }}</td>
+                                <td>{{ $student->strand }}</td>
+                                <td>{{ $student->level }}</td>
+                                <td>{{ $student->section }}</td>
+                                <td>
+                                    @php
+                                        $type = $student->type ?? 'regular';
+                                        $badgeClass = match($type) {
+                                            'regular' => 'badge-primary',
+                                            'irregular' => 'badge-secondary',
+                                            default => 'badge-primary'
+                                        };
+                                    @endphp
+                                    <span class="badge {{ $badgeClass }}">{{ $type }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ route('profile.student.show', $student->id) }}" 
+                                        class="btn btn-sm btn-outline-secondary" title="View Profile">
+                                        <i class="fas fa-user"></i>
+                                    </a>
+                                    <a href="{{ route('profile.student.edit', $student->id) }}"
+                                        class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
-
-    <!-- DataTables -->
     <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
     <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
     <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-
-    <!-- ExcelJs (CDN stays as-is) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script>
-    const API_ROUTES = {
-        getSections: "{{ route('sections.data') }}",
-    };
+        const API_ROUTES = {
+            getSections: "{{ route('admin.sections.filter') }}",
+        };
+
     </script>
-
-
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>

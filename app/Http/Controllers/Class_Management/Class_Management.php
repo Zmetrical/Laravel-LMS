@@ -15,13 +15,35 @@ use App\Models\Class_Management\Classes;
 class Class_Management extends MainController
 {
 
+    /**
+     * Generate unique class code
+     */
+    private function generateClassCode()
+    {
+        $prefix = 'CLASS';
+        
+        // Get the last class ID or count
+        $lastClass = DB::table('classes')->orderBy('id', 'desc')->first();
+        $nextNumber = $lastClass ? $lastClass->id + 1 : 1;
+        
+        // Format: CLS-001, CLS-002, etc.
+        $code = $prefix . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        
+        // Ensure uniqueness (in case of deletions)
+        while (DB::table('classes')->where('class_code', $code)->exists()) {
+            $nextNumber++;
+            $code = $prefix . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
+        
+        return $code;
+    }
 
-    // === Insert Class
+    /**
+     * Insert Class (Updated - Auto Code Generation)
+     */
     public function insert_class(Request $request)
     {
-        // Validate the form data
         $validated = $request->validate([
-            'class_code' => 'required|string|max:100|unique:classes,class_code',
             'class_name' => 'required|string|max:250',
             'ww_perc' => 'required|integer|min:0|max:100',
             'pt_perc' => 'required|integer|min:0|max:100',
@@ -29,7 +51,7 @@ class Class_Management extends MainController
         ]);
 
         try {
-            // Validate that percentages total 100
+            // Validate percentages total 100
             $totalPercentage = $request->ww_perc + $request->pt_perc + $request->qa_perce;
             if ($totalPercentage != 100) {
                 return response()->json([
@@ -38,12 +60,13 @@ class Class_Management extends MainController
                 ], 422);
             }
 
-            // Start database transaction
             DB::beginTransaction();
 
-            // Insert class into classes table
+            // Auto-generate class code
+            $classCode = $this->generateClassCode();
+
             $class = DB::table('classes')->insertGetId([
-                'class_code' => $request->class_code,
+                'class_code' => $classCode,
                 'class_name' => $request->class_name,
                 'ww_perc' => $request->ww_perc,
                 'pt_perc' => $request->pt_perc,
@@ -54,7 +77,7 @@ class Class_Management extends MainController
 
             \Log::info('Class created successfully', [
                 'class_id' => $class,
-                'class_code' => $request->class_code,
+                'class_code' => $classCode,
                 'class_name' => $request->class_name,
             ]);
 
@@ -62,11 +85,11 @@ class Class_Management extends MainController
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class created successfully!',
-                'class_id' => $class
+                'message' => 'Class created successfully with code: ' . $classCode,
+                'class_id' => $class,
+                'class_code' => $classCode
             ], 201);
         } catch (Exception $e) {
-            // Rollback transaction on error
             DB::rollBack();
 
             \Log::error('Failed to create class', [
@@ -81,7 +104,111 @@ class Class_Management extends MainController
         }
     }
 
+    
+    /**
+     * Update Class
+     */
+    public function updateClass(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'class_name' => 'required|string|max:250',
+            'ww_perc' => 'required|integer|min:0|max:100',
+            'pt_perc' => 'required|integer|min:0|max:100',
+            'qa_perce' => 'required|integer|min:0|max:100',
+        ]);
 
+        try {
+            // Check if class exists
+            $class = DB::table('classes')->where('id', $id)->first();
+
+            if (!$class) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class not found.'
+                ], 404);
+            }
+
+            // Validate percentages total 100
+            $totalPercentage = $request->ww_perc + $request->pt_perc + $request->qa_perce;
+            if ($totalPercentage != 100) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Grade weight distribution must total exactly 100%. Current total: ' . $totalPercentage . '%'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            DB::table('classes')
+                ->where('id', $id)
+                ->update([
+                    'class_name' => $request->class_name,
+                    'ww_perc' => $request->ww_perc,
+                    'pt_perc' => $request->pt_perc,
+                    'qa_perce' => $request->qa_perce,
+                    'updated_at' => now(),
+                ]);
+
+            \Log::info('Class updated successfully', [
+                'class_id' => $id,
+                'class_code' => $class->class_code,
+                'class_name' => $request->class_name,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Class updated successfully!'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Failed to update class', [
+                'class_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update class: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    
+    /**
+     * Get single class data for editing
+     */
+    public function getClassData($id)
+    {
+        try {
+            $class = DB::table('classes')->where('id', $id)->first();
+
+            if (!$class) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class not found.'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $class
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get class data', [
+                'class_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load class data.'
+            ], 500);
+        }
+    }
     // ---------------------------------------------------------------------------
     //  List Class
     // ---------------------------------------------------------------------------

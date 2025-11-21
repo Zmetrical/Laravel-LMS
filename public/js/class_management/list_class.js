@@ -1,9 +1,10 @@
-console.log("list_class");
-
-console.log("create_class");
+console.log("class_management");
 
 $(document).ready(function() {
-    // Validate weight percentages
+    // ========================================================================
+    // WEIGHT VALIDATION FUNCTION (Unified for both Create & Edit)
+    // ========================================================================
+    
     function validateWeights() {
         const ww = parseFloat($('#ww_perc').val()) || 0;
         const pt = parseFloat($('#pt_perc').val()) || 0;
@@ -16,47 +17,128 @@ $(document).ready(function() {
 
         if (total === 100) {
             alertDiv.removeClass('alert-danger alert-warning').addClass('alert-success').show();
-            statusSpan.text('Perfect!');
+            statusSpan.html('<i class="fas fa-check-circle"></i> Perfect!');
             messageSpan.text(' Total weight is 100%');
             return true;
         } else if (total < 100) {
             alertDiv.removeClass('alert-success alert-danger').addClass('alert-warning').show();
-            statusSpan.text('Warning:');
+            statusSpan.html('<i class="fas fa-exclamation-triangle"></i> Warning:');
             messageSpan.text(' Total weight is ' + total + '%. Need ' + (100 - total) + '% more.');
             return false;
         } else {
             alertDiv.removeClass('alert-success alert-warning').addClass('alert-danger').show();
-            statusSpan.text('Error:');
+            statusSpan.html('<i class="fas fa-times-circle"></i> Error:');
             messageSpan.text(' Total weight is ' + total + '%. Exceeds 100% by ' + (total - 100) + '%.');
             return false;
         }
     }
+
+    // ========================================================================
+    // UNIFIED MODAL FUNCTIONS
+    // ========================================================================
 
     // Real-time validation on input
     $('.weight-input').on('input', function() {
         validateWeights();
     });
 
-    // Initial validation when modal opens
-    $('#createClassModal').on('shown.bs.modal', function() {
+    // Open Create Modal
+    window.openClassModal = function() {
+        resetModal();
+        $('#classModalTitle').html('<i class="fas fa-plus-circle"></i> Create New Class');
+        $('#submitBtn').html('<i class="fas fa-save"></i> Save Class');
+        $('#classCodeGroup').hide();
+        $('#form_method').val('');
         validateWeights();
-    });
+        $('#classModal').modal('show');
+    };
 
-    // Reset form when modal closes
-    $('#createClassModal').on('hidden.bs.modal', function() {
-        $('#insert_class')[0].reset();
-        $('#weightAlert').hide();
-        // Reset to default values
+    // Reset Modal to Default State
+    function resetModal() {
+        $('#classForm')[0].reset();
+        $('#class_id').val('');
+        $('#class_code').val('');
         $('#ww_perc').val(30);
         $('#pt_perc').val(50);
         $('#qa_perce').val(20);
+        $('#weightAlert').hide();
+    }
+
+    // When modal closes
+    $('#classModal').on('hidden.bs.modal', function() {
+        resetModal();
     });
 
-    // Form submission
-    $('#insert_class').on('submit', function(e) {
+    // ========================================================================
+    // EDIT FUNCTIONALITY
+    // ========================================================================
+
+    $(document).on('click', '.btn-edit', function() {
+        const classId = $(this).data('id');
+
+        $.ajax({
+            url: API_ROUTES.getClass.replace(':id', classId),
+            method: 'GET',
+            beforeSend: function() {
+                Swal.fire({
+                    title: 'Loading...',
+                    text: 'Fetching class data',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            },
+            success: function(response) {
+                Swal.close();
+                
+                if (response.success) {
+                    const classData = response.data;
+
+                    // Populate form fields
+                    $('#class_id').val(classData.id);
+                    $('#class_code').val(classData.class_code);
+                    $('#class_name').val(classData.class_name);
+                    $('#ww_perc').val(classData.ww_perc);
+                    $('#pt_perc').val(classData.pt_perc);
+                    $('#qa_perce').val(classData.qa_perce);
+
+                    // Update modal UI for editing
+                    $('#classModalTitle').html('<i class="fas fa-edit"></i> Edit Class');
+                    $('#submitBtn').html('<i class="fas fa-save"></i> Update Class');
+                    $('#classCodeGroup').show();
+                    $('#form_method').val('PUT');
+
+                    // Validate and show modal
+                    validateWeights();
+                    $('#classModal').modal('show');
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response.message || 'Failed to load class data'
+                    });
+                }
+            },
+            error: function(xhr) {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Failed to load class data. Please try again.'
+                });
+            }
+        });
+    });
+
+    // ========================================================================
+    // FORM SUBMISSION (Create/Update)
+    // ========================================================================
+
+    $('#classForm').on('submit', function(e) {
         e.preventDefault();
 
-        // Validate weights before submission
+        // Validate weights
         if (!validateWeights()) {
             Swal.fire({
                 icon: 'error',
@@ -66,10 +148,8 @@ $(document).ready(function() {
             return false;
         }
 
-        const formData = new FormData(this);
-
-        // Check if form has required data
-        if (!formData.get('class_code') || !formData.get('class_name')) {
+        // Check required fields
+        if (!$('#class_name').val().trim()) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Missing Data',
@@ -78,18 +158,25 @@ $(document).ready(function() {
             return false;
         }
 
+        const formData = new FormData(this);
+        const classId = $('#class_id').val();
+        const isEdit = classId !== '';
+
         // Show loading
         Swal.fire({
             title: 'Processing...',
-            text: 'Creating class record',
+            text: isEdit ? 'Updating class record' : 'Creating class record',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
             }
         });
 
+        // Determine URL and method
+        const url = isEdit ? API_ROUTES.updateClass.replace(':id', classId) : API_ROUTES.insertClass;
+
         $.ajax({
-            url: API_ROUTES.insertClass,
+            url: url,
             method: 'POST',
             data: formData,
             processData: false,
@@ -102,17 +189,14 @@ $(document).ready(function() {
                         text: response.message,
                         confirmButtonText: 'OK'
                     }).then(() => {
-                        // Close modal
-                        $('#createClassModal').modal('hide');
-                        // Reload page to show new class
+                        $('#classModal').modal('hide');
                         window.location.reload();
                     });
                 } else {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error!',
-                        text: response.message,
-                        confirmButtonText: 'OK'
+                        text: response.message || 'Something went wrong'
                     });
                 }
             },
@@ -140,4 +224,59 @@ $(document).ready(function() {
             }
         });
     });
+
+    // ========================================================================
+    // SEARCH & FILTER
+    // ========================================================================
+
+    $('#searchInput').on('keyup', function() {
+        const searchValue = $(this).val().toLowerCase();
+        
+        $('#classesTable tbody tr').filter(function() {
+            const row = $(this);
+            const matchesSearch = row.text().toLowerCase().indexOf(searchValue) > -1;
+            row.toggle(matchesSearch);
+        });
+
+        updateTableInfo();
+    });
+
+    $('#sortBy').on('change', function() {
+        const sortValue = $(this).val();
+        const tbody = $('#classesTable tbody');
+        const rows = tbody.find('tr').get();
+
+        rows.sort(function(a, b) {
+            if (sortValue === 'name') {
+                const aName = $(a).find('td:eq(1)').text();
+                const bName = $(b).find('td:eq(1)').text();
+                return aName.localeCompare(bName);
+            } else if (sortValue === 'newest') {
+                return $(b).data('id') - $(a).data('id');
+            } else if (sortValue === 'oldest') {
+                return $(a).data('id') - $(b).data('id');
+            }
+        });
+
+        $.each(rows, function(index, row) {
+            tbody.append(row);
+            $(row).find('td:first').text(index + 1);
+        });
+    });
+
+    // ========================================================================
+    // TABLE INFO UPDATE
+    // ========================================================================
+
+    function updateTableInfo() {
+        const visibleRows = $('#classesTable tbody tr:visible').length;
+        const totalRows = $('#classesTable tbody tr').length;
+        
+        $('#showingFrom').text(visibleRows > 0 ? 1 : 0);
+        $('#showingTo').text(visibleRows);
+        $('#totalEntries').text(totalRows);
+    }
+
+    // Initial update
+    updateTableInfo();
 });
