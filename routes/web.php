@@ -16,6 +16,8 @@ use App\Http\Controllers\Grade_Management\GradeBook_Management;
 
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
+use App\Http\Controllers\Enrollment_Management\SectionController;
+
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\User_Management\Profile_Management;
@@ -98,8 +100,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::prefix('enrollment_management')->group(function () {
         // Section Pages
         Route::get('/enroll_class', [Enroll_Management::class, 'enroll_class'])->name('enroll_class');
-        Route::get('/section-class-enrollment', [Enroll_Management::class, 'sectionClassEnrollment'])->name('section_class_enrollment');
         
+        // Route::get('/section-class-enrollment', [Enroll_Management::class, 'sectionClassEnrollment'])->name('section_class_enrollment');
+        
+        Route::prefix('sections')->group(function () {
+            Route::get('/', [SectionController::class, 'index'])
+                ->name('enrollment.sections');
+            
+            Route::get('/list', [SectionController::class, 'getSectionsList'])
+                ->name('sections.list');
+            
+            Route::get('/{id}/details', [SectionController::class, 'getSectionDetails'])
+                ->name('sections.details');
+            
+            Route::get('/{sectionId}/available-classes', [SectionController::class, 'getAvailableClasses'])
+                ->name('classes.available');
+            
+            Route::post('/{id}/enroll', [SectionController::class, 'enrollClass'])
+                ->name('sections.enroll');
+            
+            Route::delete('/{sectionId}/classes/{classId}', [SectionController::class, 'removeClass'])
+                ->name('sections.remove-class');
+        });
+
         // Student Pages
         Route::get('/student_irreg_enroll', [Enroll_Management::class, 'studentIrregEnrollment'])->name('student_irreg_class_enrollment');
         Route::get('/students/{id}/enrollment', [Enroll_Management::class, 'studentClassEnrollment'])->name('student_class_enrollment');

@@ -1,6 +1,7 @@
 console.log("list_strand");
 
 let strands = [];
+let filteredStrands = [];
 let editingStrandId = null;
 
 $(document).ready(function() {
@@ -9,17 +10,31 @@ $(document).ready(function() {
 });
 
 function setupEventListeners() {
+    // Form submission
     $('#strandForm').on('submit', function(e) {
         e.preventDefault();
         saveStrand();
     });
 
+    // Auto-uppercase strand code
     $('#strandCode').on('input', function() {
         this.value = this.value.toUpperCase();
     });
 
+    // Modal reset on close
     $('#createStrandModal').on('hidden.bs.modal', function() {
         resetStrandForm();
+    });
+
+    // Search filter
+    $('#searchStrand').on('keyup', function() {
+        applyFilters();
+    });
+
+    // Clear filters button
+    $('#clearFilters').on('click', function() {
+        $('#searchStrand').val('');
+        applyFilters();
     });
 }
 
@@ -31,6 +46,8 @@ function loadStrands() {
         success: function(response) {
             if (response.success) {
                 strands = response.data;
+                filteredStrands = [...strands];
+                updateStrandCount();
                 renderStrandsTable();
             }
         },
@@ -47,38 +64,60 @@ function loadStrands() {
     });
 }
 
+// Apply filters
+function applyFilters() {
+    const searchValue = $('#searchStrand').val().toLowerCase().trim();
+    
+    filteredStrands = strands.filter(strand => {
+        // Search in both code and name
+        const matchesSearch = !searchValue || 
+            strand.code.toLowerCase().includes(searchValue) ||
+            strand.name.toLowerCase().includes(searchValue);
+        
+        return matchesSearch;
+    });
+    
+    updateStrandCount();
+    renderStrandsTable();
+}
+
+// Update strand count badge
+function updateStrandCount() {
+    const count = filteredStrands.length;
+    $('#strandsCount').text(count + ' Strand' + (count !== 1 ? 's' : ''));
+}
+
 // Render strands table
 function renderStrandsTable() {
     const tbody = $('#strandsTableBody');
     tbody.empty();
 
-    if (strands.length === 0) {
+    if (filteredStrands.length === 0) {
         tbody.append(`
             <tr>
                 <td colspan="5" class="text-center text-muted py-4">
-                    <i class="fas fa-info-circle"></i> No strands available. Create one to get started.
+                    <i class="fas fa-info-circle"></i> No strands found.
                 </td>
             </tr>
         `);
         return;
     }
 
-    strands.forEach((strand, index) => {
+    filteredStrands.forEach((strand, index) => {
         const sectionCount = strand.sections_count || 0;
         
         tbody.append(`
             <tr>
                 <td>${index + 1}</td>
-                <td><strong>${strand.code}</strong></td>
-                <td>${strand.name}</td>
+                <td><strong>${escapeHtml(strand.code)}</strong></td>
+                <td>${escapeHtml(strand.name)}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-dark" onclick="viewStrandSections(${strand.id})" title="View Sections">
-                        <i class="fas fa-eye"></i> ${sectionCount}
+                    <button class="btn btn-sm btn-outline-secondary" onclick="viewStrandSections(${strand.id})" title="View Sections">
+                        <i class="fas fa-list"></i> ${sectionCount}
                     </button>
                 </td>
                 <td class="text-center">
-
-                    <button class="btn btn-sm btn-outline-dark" onclick="editStrand(${strand.id})" title="Edit">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editStrand(${strand.id})" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
                 </td>
@@ -101,7 +140,7 @@ function saveStrand() {
             icon: 'warning',
             title: 'Validation Error',
             text: 'Please fill in all required fields.',
-            confirmButtonColor: '#17a2b8'
+            confirmButtonColor: '#007bff'
         });
         return;
     }
@@ -150,7 +189,7 @@ function saveStrand() {
                 icon: 'error',
                 title: 'Error',
                 html: errorMessage,
-                confirmButtonColor: '#17a2b8'
+                confirmButtonColor: '#007bff'
             });
         },
         complete: function() {
@@ -168,7 +207,7 @@ function editStrand(id) {
             icon: 'error',
             title: 'Error',
             text: 'Strand not found.',
-            confirmButtonColor: '#17a2b8'
+            confirmButtonColor: '#007bff'
         });
         return;
     }
@@ -196,7 +235,7 @@ function viewStrandSections(strandId) {
             icon: 'error',
             title: 'Error',
             text: 'Strand not found.',
-            confirmButtonColor: '#17a2b8'
+            confirmButtonColor: '#007bff'
         });
         return;
     }
@@ -207,7 +246,7 @@ function viewStrandSections(strandId) {
     // Show loading state
     $('#sectionsTableBody').html(`
         <tr>
-            <td colspan="4" class="text-center">
+            <td colspan="3" class="text-center">
                 <i class="fas fa-spinner fa-spin"></i> Loading sections...
             </td>
         </tr>
@@ -229,7 +268,7 @@ function viewStrandSections(strandId) {
             console.error('Failed to load sections:', xhr);
             $('#sectionsTableBody').html(`
                 <tr>
-                    <td colspan="4" class="text-center text-danger">
+                    <td colspan="3" class="text-center text-danger">
                         <i class="fas fa-exclamation-circle"></i> Failed to load sections
                     </td>
                 </tr>
@@ -246,7 +285,7 @@ function renderSectionsTable(sections) {
     if (sections.length === 0) {
         tbody.append(`
             <tr>
-                <td colspan="4" class="text-center text-muted py-4">
+                <td colspan="3" class="text-center text-muted py-4">
                     <i class="fas fa-info-circle"></i> No sections available for this strand.
                 </td>
             </tr>
@@ -255,10 +294,6 @@ function renderSectionsTable(sections) {
     }
 
     sections.forEach((section, index) => {
-        const statusBadge = section.status == 1 
-            ? '<span class="badge badge-success">Active</span>' 
-            : '<span class="badge badge-secondary">Inactive</span>';
-        
         tbody.append(`
             <tr>
                 <td>${index + 1}</td>

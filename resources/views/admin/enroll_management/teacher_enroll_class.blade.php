@@ -60,13 +60,8 @@
                             <div class="row align-items-center">
                                 <div class="col-md-9">
                                     <h4 class="mb-1" id="selectedClassName"><i class="fas fa-book-open"></i> </h4>
-                                    <p class="text-muted mb-0" id="selectedClassCode"></p>
                                 </div>
-                                <div class="col-md-3 text-right">
-                                    <button class="btn btn-primary" id="assignTeacherBtn">
-                                        <i class="fas fa-user-tie"></i> Manage Teacher
-                                    </button>
-                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -74,28 +69,35 @@
                     <!-- Teacher & Class Info -->
                     <div class="card">
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <strong><i class="fas fa-chalkboard-teacher"></i> Assigned Teacher:</strong>
-                                    <p class="text-muted mb-0" id="teacherNameDisplay">None</p>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between">
+                                
+                                <div class="p-2" style="flex: 1 1 30%;">
+                                    <strong class="d-block mb-1" style="font-size: 1.1rem;">
+                                        <i class="fas fa-chalkboard-teacher text-dark"></i> Assigned Teacher:
+                                    </strong>
+                                    <span id="teacherNameDisplay"
+                                        class="badge badge-secondary p-2"
+                                        style="font-size: 1rem;">
+                                        None
+                                    </span>
                                 </div>
-                                <div class="col-md-4">
-                                    <strong><i class="fas fa-users"></i> Enrolled Sections:</strong>
-                                    <p class="text-muted mb-0" id="sectionsCountDisplay">0</p>
-                                </div>
-                                <div class="col-md-4">
-                                    <strong><i class="fas fa-user-graduate"></i> Total Students:</strong>
-                                    <p class="text-muted mb-0" id="totalStudentsDisplay">0</p>
-                                </div>
-                            </div>
-                            <div class="mt-3" id="enrolledSectionsContainer">
-                                <div class="text-center text-muted py-2">
-                                    <div class="spinner-border spinner-border-sm" role="status">
-                                        <span class="sr-only">Loading...</span>
+
+                                <!-- Enrolled Sections -->
+                                <div class="p-2" style="flex: 1 1 40%;" id="enrolledSectionsContainer">
+                                    <div class="text-center text-muted py-2">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading sections...
                                     </div>
-                                    <span class="ml-2">Loading sections...</span>
                                 </div>
+
+                                <!-- Button -->
+                                <div class="p-2 text-right" style="flex: 1 1 25%;">
+                                    <button class="btn btn-primary" id="assignTeacherBtn">
+                                        <i class="fas fa-user-tie"></i> Manage Teacher
+                                    </button>
+                                </div>
+
                             </div>
+
                         </div>
                     </div>
 
@@ -112,7 +114,7 @@
                                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                                         </div>
                                         <input type="text" class="form-control" id="studentSearch"
-                                            placeholder="Search by name or student number...">
+                                            placeholder="Search by student name or number...">
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -189,12 +191,23 @@
                     </button>
                 </div>
                 <div class="modal-body">
+
+
+
+                    <!-- Teacher Selection -->
+                    <div class="form-group">
+                        <label><i class="fas fa-user-check"></i> Assign New Teacher</label>
+                        <select class="form-control select2" id="teacherSelect" style="width: 100%;">
+                            <option value="">-- Select Teacher --</option>
+                        </select>
+                    </div>
+
                     <!-- Current Teacher Display -->
                     <div id="currentTeacherSection" style="display:none;">
                         <div class="card card-outline card-primary">
                             <div class="card-header">
                                 <h6 class="card-title mb-0">
-                                    <i class="fas fa-user-circle"></i> Currently Assigned
+                                    <i class="fas fa-user-circle"></i> Assign
                                 </h6>
                             </div>
                             <div class="card-body">
@@ -203,7 +216,6 @@
                                         <h5 class="mb-1" id="currentTeacherNameModal"></h5>
                                         <p class="mb-0 small">
                                             <i class="fas fa-envelope"></i> <span id="currentTeacherEmail"></span><br>
-                                            <i class="fas fa-phone"></i> <span id="currentTeacherPhone"></span>
                                         </p>
                                     </div>
                                     <div class="col-md-4 text-right">
@@ -217,14 +229,6 @@
                         <hr>
                     </div>
 
-
-                    <!-- Teacher Selection -->
-                    <div class="form-group">
-                        <label><i class="fas fa-user-check"></i> Assign New Teacher</label>
-                        <select class="form-control select2" id="teacherSelect" style="width: 100%;">
-                            <option value="">-- Select Teacher --</option>
-                        </select>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">

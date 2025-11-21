@@ -7,6 +7,20 @@
         @endforeach
     @endif
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <style>
+        .filter-card { background: #f8f9fa; border: 1px solid #e9ecef; }
+        .filter-card .form-control, .filter-card .form-select { 
+            font-size: 0.875rem; 
+            height: calc(2.25rem + 2px);
+        }
+        .filter-card label { 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            color: #6c757d; 
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+    </style>
 @endsection
 
 @section('breadcrumb')
@@ -18,177 +32,168 @@
 
 @section('content')
 <br>
-    <div class="container-fluid">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-users"></i> Section Management</h3>
-                <div class="card-tools">
-                    <button class="btn btn-sm btn-primary" onclick="openCreateModal()">
-                        <i class="fas fa-plus"></i> Create Section
+<div class="container-fluid">
+    <!-- Filter Card -->
+    <div class="card filter-card mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label>Strand</label>
+                    <select class="form-control" id="filterStrand">
+                        <option value="">All Strands</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Level</label>
+                    <select class="form-control" id="filterLevel">
+                        <option value="">All Levels</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <!-- Spacer -->
+                </div>
+                <div class="col-md-1 d-flex">
+                    <button class="btn btn-outline-secondary btn-block" id="clearFilters" title="Clear Filters">
+                        <i class="fas fa-undo"></i>
                     </button>
                 </div>
             </div>
-            <div class="card-body">
-                <!-- Filters -->
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <label class="small">Strand</label>
-                        <select class="form-control form-control-sm" id="filterStrand">
-                            <option value="">All Strands</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small">Level</label>
-                        <select class="form-control form-control-sm" id="filterLevel">
-                            <option value="">All Levels</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="small">Search</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" class="form-control" id="searchSection" placeholder="Search by section name or code...">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button" onclick="loadSections()">
-                                    <i class="fas fa-search"></i>
-                                </button>
+        </div>
+    </div>
+
+    <!-- Section Table Card -->
+    <div class="card card-primary card-outline">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-users mr-2"></i>Section List</h3>
+            <div class="card-tools">
+                <span class="badge badge-primary mr-2" id="sectionsCount">0 Sections</span>
+                <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#sectionModal" onclick="openCreateModal()">
+                    <i class="fas fa-plus"></i> Create Section
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" id="sectionTable" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th width="10%">#</th>
+                            <th width="20%">Name</th>
+                            <th width="20%">Strand</th>
+                            <th width="15%">Level</th>
+                            <th width="15%" class="text-center">Classes</th>
+                            <th width="15%" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sectionsTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <i class="fas fa-spinner fa-spin"></i> Loading sections...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Section Modal -->
+<div class="modal fade" id="sectionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectionModalTitle">
+                    <i class="fas fa-plus"></i> Create New Section
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="sectionForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="sectionName">Section Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control text-uppercase" id="sectionName" name="name" required
+                                    placeholder="e.g., VIRGO, ARIES" maxlength="50" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="strandSelect">Strand <span class="text-danger">*</span></label>
+                                <select class="form-control" id="strandSelect" name="strand_id" required>
+                                    <option value="">Select Strand</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="levelSelect">Level <span class="text-danger">*</span></label>
+                                <select class="form-control" id="levelSelect" name="level_id" required>
+                                    <option value="">Select Level</option>
+                                </select>
                             </div>
                         </div>
                     </div>
-                </div>
 
+                    <input type="hidden" id="sectionId" name="id" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Section
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Classes Modal -->
+<div class="modal fade" id="viewClassesModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-center" id="classesModalTitle">
+                    <i class="fas fa-book"></i> Classes
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover table-sm">
-                        <thead class="thead-light">
+                    <table class="table table-bordered table-hover">
+                        <thead>
                             <tr>
-                                <th width="5%" class="text-center">#</th>
-                                <th width="15%">Name</th>
-                                <th width="15%">Strand</th>
-                                <th width="10%">Level</th>
-                                <th width="5%" class="text-center">Classes</th>
-                                <th width="5%" class="text-center">Actions</th>
+                                <th width="10%">#</th>
+                                <th width="60%">Class Name</th>
+                                <th width="30%">Grade Distribution</th>
                             </tr>
                         </thead>
-                        <tbody id="sectionsTableBody">
+                        <tbody id="classesTableBody">
                             <tr>
-                                <td colspan="8" class="text-center">
-                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                        <span class="sr-only">Loading...</span>
-                                    </div>
-                                    Loading sections...
+                                <td colspan="3" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading classes...
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Create/Edit Section Modal -->
-    <div class="modal fade" id="sectionModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="sectionModalTitle">
-                        <i class="fas fa-plus-circle"></i> Create New Section
-                    </h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <form id="sectionForm">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="sectionName">Section Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="sectionName" name="name" required
-                                        placeholder="e.g., VIRGO, ARIES" />
-                                    <small class="form-text text-muted">Enter section name (will be converted to uppercase)</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="strandSelect">Strand <span class="text-danger">*</span></label>
-                                    <select class="form-control" id="strandSelect" name="strand_id" required>
-                                        <option value="">Select Strand</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="levelSelect">Level <span class="text-danger">*</span></label>
-                                    <select class="form-control" id="levelSelect" name="level_id" required>
-                                        <option value="">Select Level</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Generated Code</label>
-                                    <input type="text" class="form-control bg-light" id="generatedCode" readonly
-                                        placeholder="Will be auto-generated" />
-                                    <small class="form-text text-muted">Code format: STRAND-LEVEL-NAME</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <input type="hidden" id="sectionId" name="id" />
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <i class="fas fa-save"></i> Save Section
-                        </button>
-                    </div>
-                </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
             </div>
         </div>
     </div>
-
-    <!-- View Classes Modal -->
-    <div class="modal fade" id="viewClassesModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header modal-outline">
-                    <h5 class="modal-title">
-                        <i class="fas fa-book"></i> Enrolled Classes - <span id="sectionNameDisplay"></span>
-                    </h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="20%">Class Code</th>
-                                    <th width="40%">Class Name</th>
-                                    <th width="35%">Grade Distribution</th>
-                                </tr>
-                            </thead>
-                            <tbody id="classesTableBody">
-                                <tr>
-                                    <td colspan="4" class="text-center">Loading...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
 @endsection
 
 @section('scripts')

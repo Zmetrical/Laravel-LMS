@@ -38,13 +38,17 @@
     <div class="card filter-card mb-3">
         <div class="card-body py-3">
             <div class="row g-2 align-items-end">
-                <div class="col-md-2">
-                    <label>Student Number</label>
-                    <input type="text" class="form-control" id="studentNumber" placeholder="Search...">
+                <div class="col-md-3">
+                    <label>Search Student</label>
+                    <input type="text" class="form-control" id="searchStudent" placeholder="Number or Name...">
                 </div>
                 <div class="col-md-2">
-                    <label>Student Name</label>
-                    <input type="text" class="form-control" id="studentName" placeholder="Search...">
+                    <label>Student Type</label>
+                    <select class="form-control" id="studentType">
+                        <option value="">All Types</option>
+                        <option value="regular">Regular</option>
+                        <option value="irregular">Irregular</option>
+                    </select>
                 </div>
                 <div class="col-md-2">
                     <label>Strand</label>
@@ -70,9 +74,9 @@
                         <option value="">All Sections</option>
                     </select>
                 </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button class="btn btn-outline-secondary btn-block" id="clearFilters">
-                        <i class="fas fa-undo mr-1"></i> Clear
+                <div class="col-md-1 d-flex">
+                    <button class="btn btn-outline-secondary btn-block" id="clearFilters" title="Clear Filters">
+                        <i class="fas fa-undo"></i>
                     </button>
                 </div>
             </div>
@@ -150,7 +154,6 @@
         const API_ROUTES = {
             getSections: "{{ route('admin.sections.filter') }}",
         };
-
     </script>
     @if(isset($scripts))
         @foreach($scripts as $script)

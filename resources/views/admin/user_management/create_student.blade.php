@@ -55,6 +55,19 @@
                                 <option value="" selected disabled>Select Section</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <div class="d-flex flex-wrap">
+                                <button type="button" class="btn btn-primary mr-1 mb-2 flex-grow-1" id="importExcel">
+                                    <i class="fas fa-upload mr-1"></i> Import
+                                </button>
+
+                                <button type="button" class="btn btn-primary mr-1 mb-2 flex-grow-1" id="generateTemplate">
+                                    <i class="fas fa-download mr-1"></i> Download
+                                </button>
+                            </div>
+                            <input type="file" class="d-none" id="excelFile" accept=".xlsx,.xls">
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -64,17 +77,6 @@
                 <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-users mr-2"></i>Student Information</h3>
-                        <div class="card-tools">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-outline-success" id="importExcel">
-                                    <i class="fas fa-upload mr-1"></i> Import Excel
-                                </button>
-                                <button type="button" class="btn btn-outline-info" id="generateTemplate">
-                                    <i class="fas fa-download mr-1"></i> Download Template
-                                </button>
-                            </div>
-                            <input type="file" class="d-none" id="excelFile" accept=".xlsx,.xls">
-                        </div>
                     </div>
                     <div class="card-body">
                         <!-- Action Buttons Row -->
@@ -83,14 +85,14 @@
                                 <div class="input-group">
                                     <input type="number" class="form-control" id="numRows" value="5" min="1" max="100" placeholder="Number of students">
                                     <div class="input-group-append">
-                                        <button class="btn btn-primary" type="button" id="generateRowsBtn">
+                                        <button class="btn btn-secondary" type="button" id="generateRowsBtn">
                                             <i class="fas fa-plus-circle mr-1"></i> Generate Rows
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6 text-right">
-                                <button type="button" class="btn btn-primary" id="addRowBtn">
+                                <button type="button" class="btn btn-secondary" id="addRowBtn">
                                     <i class="fas fa-plus mr-1"></i> Add Another Student
                                 </button>
                             </div>
@@ -119,7 +121,7 @@
                     </div>
 
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-success btn-lg float-right">
+                        <button type="submit" class="btn btn-primary btn-lg float-right">
                             <i class="fas fa-save mr-2"></i> Save All Students
                         </button>
                     </div>

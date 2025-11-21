@@ -68,11 +68,10 @@ $(document).ready(function() {
                    data-class-name="${cls.class_name}">
                     <div class="d-flex w-100 justify-content-between align-items-start">
                         <div style="flex: 1;">
-                            <h6 class="mb-1"><strong>${cls.class_code}</strong></h6>
-                            <p class="mb-1 text-muted small">${cls.class_name}</p>
+                            <h6 class="mb-1"><strong>${cls.class_name}</strong></h6>
                             ${teacherInfo}
                         </div>
-                        <span class="badge badge-primary badge-pill ml-2">${cls.section_count}</span>
+                        <span class="badge badge-light badge-pill ml-2">${cls.section_count}</span>
                     </div>
                 </a>
             `;
@@ -94,15 +93,12 @@ $(document).ready(function() {
         const className = $(this).data('class-name');
         
         $('#selectedClassName').html(`<i class="fas fa-book-open"></i> ${className}`);
-        $('#selectedClassCode').text(`Code: ${classCode}`);
         
         $('#noClassSelected').hide();
         $('#enrollmentSection').show();
         
         // Reset stats
         $('#teacherNameDisplay').text('None');
-        $('#sectionsCountDisplay').text('0');
-        $('#totalStudentsDisplay').text('0');
         
         // Load data
         loadClassDetails(currentClassId);
@@ -153,25 +149,35 @@ $(document).ready(function() {
     // ========================================================================
     function renderEnrolledSections(sections) {
         const container = $('#enrolledSectionsContainer');
-        $('#sectionsCountDisplay').text(sections.length);
-        
+
         if (sections.length === 0) {
             container.html(`
-                <div class="mt-2">
-                    <span class="text-muted"><i class="fas fa-inbox"></i> No sections enrolled</span>
+                <div class="mt-1">
+                    <strong><i class="fas fa-layer-group"></i> Sections:</strong>
+                    <p class="text-muted mb-0"><i class="fas fa-inbox"></i> No sections enrolled</p>
                 </div>
             `);
             return;
         }
 
-        let html = '<div class="mt-2"><strong><i class="fas fa-layer-group"></i> Sections:</strong> ';
-        sections.forEach((section, index) => {
-            html += `<span class="badge badge-secondary">${section.name} (${section.student_count})</span> `;
+        let html = `
+            <div class="mt-1">
+                <strong><i class="fas fa-layer-group"></i> Sections:</strong>
+                <div class="mt-1">
+        `;
+
+        sections.forEach(section => {
+            html += `<span class="badge badge-secondary mr-1">${section.name} (${section.student_count})</span>`;
         });
-        html += '</div>';
-        
+
+        html += `
+                </div>
+            </div>
+        `;
+
         container.html(html);
     }
+
 
     // ========================================================================
     // POPULATE SECTION FILTER
@@ -201,7 +207,6 @@ $(document).ready(function() {
                     allStudents = response.data || [];
                     allSections = response.sections || [];
                     renderStudents(allStudents);
-                    $('#totalStudentsDisplay').text(allStudents.length);
                 } else {
                     showError('#enrolledStudentsBody', response.message || 'Failed to load students', 6);
                 }
@@ -245,7 +250,7 @@ $(document).ready(function() {
                     <td>${student.student_number}</td>
                     <td><strong>${student.last_name}, ${student.first_name}</strong></td>
                     <td>${student.level_name || 'N/A'}</td>
-                    <td>${student.strand_name || 'N/A'}</td>
+                    <td>${student.strand_code || 'N/A'}</td>
                     <td>${student.section_name || 'N/A'}</td>
                     <td class="text-center">${typeBadge}</td>
                 </tr>
@@ -315,8 +320,9 @@ $(document).ready(function() {
         if (currentTeacher && currentTeacher.first_name) {
             $('#currentTeacherNameModal').text(`${currentTeacher.first_name} ${currentTeacher.last_name}`);
             $('#currentTeacherEmail').text(currentTeacher.email);
-            $('#currentTeacherPhone').text(currentTeacher.phone);
             $('#currentTeacherSection').show();
+            $('#removeTeacherBtn').show();
+
         } else {
             $('#currentTeacherSection').hide();
         }
@@ -333,7 +339,7 @@ $(document).ready(function() {
                     response.data.forEach(teacher => {
                         select.append(`
                             <option value="${teacher.id}">
-                                ${teacher.first_name} ${teacher.last_name} - ${teacher.email}
+                                ${teacher.first_name} ${teacher.last_name}
                             </option>
                         `);
                     });
@@ -345,6 +351,26 @@ $(document).ready(function() {
             }
         });
     }
+
+    $('#teacherSelect').on('change', function () {
+        const teacherId = $(this).val();
+
+        if (!teacherId) {
+            $('#previewTeacherCard').hide();
+            return;
+        }
+
+        const teacher = allTeachers.find(t => t.id == teacherId);
+
+        if (teacher) {
+            $('#currentTeacherNameModal').text(`${teacher.first_name} ${teacher.last_name}`);
+            $('#currentTeacherEmail').text(teacher.email);
+            $('#currentTeacherSection').show();
+            $('#removeTeacherBtn').hide();
+        } else {
+            $('#currentTeacherSection').hide();
+        }
+    });
 
     // ========================================================================
     // CONFIRM ASSIGN TEACHER

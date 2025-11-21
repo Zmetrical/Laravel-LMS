@@ -1,6 +1,7 @@
 console.log("list_section.js loaded");
 
 let sections = [];
+let filteredSections = [];
 let strands = [];
 let levels = [];
 let editingSectionId = null;
@@ -10,25 +11,38 @@ $(document).ready(function() {
     loadStrands();
     loadLevels();
     loadSections();
-    
-    // Event listeners
-    $('#filterStrand').on('change', loadSections);
-    $('#filterLevel').on('change', loadSections);
-    $('#searchSection').on('keyup', function(e) {
-        if (e.key === 'Enter') {
-            loadSections();
-        }
-    });
-    
-    // Form change listeners for code generation
-    $('#sectionName, #strandSelect, #levelSelect').on('change keyup', generateSectionCode);
-    
-    // Form submit
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Form submission
     $('#sectionForm').on('submit', function(e) {
         e.preventDefault();
         saveSection();
     });
-});
+
+    // Auto-uppercase section name
+    $('#sectionName').on('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+
+    // Modal reset on close
+    $('#sectionModal').on('hidden.bs.modal', function() {
+        resetSectionForm();
+    });
+
+    // Filter changes
+    $('#filterStrand, #filterLevel').on('change', function() {
+        applyFilters();
+    });
+
+    // Clear filters button
+    $('#clearFilters').on('click', function() {
+        $('#filterStrand').val('');
+        $('#filterLevel').val('');
+        applyFilters();
+    });
+}
 
 // Load strands
 function loadStrands() {
@@ -64,72 +78,94 @@ function loadLevels() {
     });
 }
 
-// Load sections with filters
+// Load sections from database
 function loadSections() {
-    const filters = {
-        strand: $('#filterStrand').val(),
-        level: $('#filterLevel').val(),
-        search: $('#searchSection').val()
-    };
-    
     $.ajax({
         url: API_ROUTES.getSections,
         type: 'GET',
-        data: filters,
         success: function(response) {
             if (response.success) {
                 sections = response.data;
+                filteredSections = [...sections];
+                updateSectionCount();
                 renderSectionsTable();
             }
         },
         error: function(xhr) {
             console.error('Failed to load sections:', xhr);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to load sections. Please try again.'
-            });
+            $('#sectionsTableBody').html(`
+                <tr>
+                    <td colspan="6" class="text-center text-danger">
+                        <i class="fas fa-exclamation-circle"></i> Failed to load sections
+                    </td>
+                </tr>
+            `);
         }
     });
+}
+
+// Apply filters
+function applyFilters() {
+    const strandFilter = $('#filterStrand').val();
+    const levelFilter = $('#filterLevel').val();
+    
+    filteredSections = sections.filter(section => {
+        // Filter by strand
+        const matchesStrand = !strandFilter || section.strand_code === strandFilter;
+        
+        // Filter by level
+        const matchesLevel = !levelFilter || section.level_id == levelFilter;
+        
+        return matchesStrand && matchesLevel;
+    });
+    
+    updateSectionCount();
+    renderSectionsTable();
+}
+
+// Update section count badge
+function updateSectionCount() {
+    const count = filteredSections.length;
+    $('#sectionsCount').text(count + ' Section' + (count !== 1 ? 's' : ''));
 }
 
 // Render sections table
 function renderSectionsTable() {
     const tbody = $('#sectionsTableBody');
     tbody.empty();
-    
-    if (sections.length === 0) {
+
+    if (filteredSections.length === 0) {
         tbody.append(`
             <tr>
-                <td colspan="8" class="text-center text-muted">
-                    <i class="fas fa-inbox"></i> No sections found
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle"></i> No sections found.
                 </td>
             </tr>
         `);
         return;
     }
-    
-    sections.forEach((section, index) => {
 
-        const row = `
+    filteredSections.forEach((section, index) => {
+        const classCount = section.classes_count || 0;
+        
+        tbody.append(`
             <tr>
-                <td class="text-center">${index + 1}</td>
-                <td>${section.name}</td>
-                <td>${section.strand_code}</td>
-                <td>${section.level_name}</td>
+                <td>${index + 1}</td>
+                <td><strong>${escapeHtml(section.name)}</strong></td>
+                <td>${escapeHtml(section.strand_code)}</td>
+                <td>${escapeHtml(section.level_name)}</td>
                 <td class="text-center">
-                    <button class="btn btn-xs btn-secondary" onclick="viewSectionClasses(${section.id}, '${section.code}')">
-                        <i class="fas fa-eye"></i> ${section.classes_count}
+                    <button class="btn btn-sm btn-outline-secondary" onclick="viewSectionClasses(${section.id}, '${escapeHtml(section.code)}')" title="View Classes">
+                        <i class="fas fa-book"></i> ${classCount}
                     </button>
                 </td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-primary" onclick="editSection(${section.id})" title="Edit">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editSection(${section.id})" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
                 </td>
             </tr>
-        `;
-        tbody.append(row);
+        `);
     });
 }
 
@@ -175,47 +211,39 @@ function updateLevelSelects() {
     if (filterValue) filterSelect.val(filterValue);
 }
 
-// Generate section code preview
-function generateSectionCode() {
-    const name = $('#sectionName').val().trim().toUpperCase();
-    const strandId = $('#strandSelect').val();
-    const levelId = $('#levelSelect').val();
-    
-    if (name && strandId && levelId) {
-        const strand = strands.find(s => s.id == strandId);
-        const level = levels.find(l => l.id == levelId);
-        
-        if (strand && level) {
-            const code = `${strand.code}-${level.name}-${name}`;
-            $('#generatedCode').val(code);
-        }
-    } else {
-        $('#generatedCode').val('');
-    }
-}
-
 // Open create modal
 function openCreateModal() {
     resetSectionForm();
-    $('#sectionModalTitle').html('<i class="fas fa-plus-circle"></i> Create New Section');
-    $('#submitBtn').html('<i class="fas fa-save"></i> Save Section');
+    $('#sectionModalTitle').html('<i class="fas fa-plus"></i> Create New Section');
     $('#sectionModal').modal('show');
 }
 
 // Edit section
 function editSection(id) {
     const section = sections.find(s => s.id === id);
-    if (!section) return;
     
+    if (!section) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Section not found.',
+            confirmButtonColor: '#007bff'
+        });
+        return;
+    }
+
     editingSectionId = id;
-    $('#sectionId').val(id);
+    
+    // Populate form
+    $('#sectionId').val(section.id);
     $('#sectionName').val(section.name);
     $('#strandSelect').val(section.strand_id);
     $('#levelSelect').val(section.level_id);
-    generateSectionCode();
     
+    // Update modal title
     $('#sectionModalTitle').html('<i class="fas fa-edit"></i> Edit Section');
-    $('#submitBtn').html('<i class="fas fa-save"></i> Update Section');
+    
+    // Show modal
     $('#sectionModal').modal('show');
 }
 
@@ -224,15 +252,17 @@ function saveSection() {
     const formData = {
         name: $('#sectionName').val().trim(),
         strand_id: $('#strandSelect').val(),
-        level_id: $('#levelSelect').val()
+        level_id: $('#levelSelect').val(),
+        _token: $('input[name="_token"]').val()
     };
     
     // Validation
     if (!formData.name || !formData.strand_id || !formData.level_id) {
         Swal.fire({
             icon: 'warning',
-            title: 'Incomplete Form',
-            text: 'Please fill in all required fields.'
+            title: 'Validation Error',
+            text: 'Please fill in all required fields.',
+            confirmButtonColor: '#007bff'
         });
         return;
     }
@@ -241,56 +271,85 @@ function saveSection() {
     const url = isEdit ? API_ROUTES.updateSection.replace(':id', editingSectionId) : API_ROUTES.createSection;
     const method = isEdit ? 'PUT' : 'POST';
     
+    if (isEdit) {
+        formData.id = editingSectionId;
+    }
+    
     // Disable submit button
-    $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+    const submitBtn = $('#sectionForm button[type="submit"]');
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
     
     $.ajax({
         url: url,
         type: method,
         data: formData,
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        },
         success: function(response) {
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Success',
+                    title: 'Success!',
                     text: response.message,
                     timer: 2000,
                     showConfirmButton: false
                 });
+                
                 $('#sectionModal').modal('hide');
                 loadSections();
             }
         },
         error: function(xhr) {
-            let errorMessage = 'Failed to save section. Please try again.';
+            let errorMessage = 'Failed to save section.';
+            
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMessage = xhr.responseJSON.message;
             } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                const errors = Object.values(xhr.responseJSON.errors).flat();
-                errorMessage = errors.join('<br>');
+                const errors = xhr.responseJSON.errors;
+                errorMessage = Object.values(errors).flat().join('<br>');
             }
             
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                html: errorMessage
+                html: errorMessage,
+                confirmButtonColor: '#007bff'
             });
         },
         complete: function() {
-            $('#submitBtn').prop('disabled', false).html('<i class="fas fa-save"></i> Save Section');
+            submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Section');
         }
     });
 }
 
 // View section classes
 function viewSectionClasses(sectionId, sectionCode) {
-    $('#sectionNameDisplay').text(sectionCode);
-    $('#classesTableBody').html('<tr><td colspan="4" class="text-center">Loading...</td></tr>');
+    const section = sections.find(s => s.id === sectionId);
+    
+    if (!section) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Section not found.',
+            confirmButtonColor: '#007bff'
+        });
+        return;
+    }
+
+    // Update modal title with section info
+    $('#classesModalTitle').html(`<i class="fas fa-book"></i> ${sectionCode}`);
+    
+    // Show loading state
+    $('#classesTableBody').html(`
+        <tr>
+            <td colspan="3" class="text-center">
+                <i class="fas fa-spinner fa-spin"></i> Loading classes...
+            </td>
+        </tr>
+    `);
+    
+    // Show modal
     $('#viewClassesModal').modal('show');
     
+    // Load classes via AJAX
     const url = API_ROUTES.getSectionClasses.replace(':id', sectionId);
     
     $.ajax({
@@ -302,8 +361,14 @@ function viewSectionClasses(sectionId, sectionCode) {
             }
         },
         error: function(xhr) {
-            $('#classesTableBody').html('<tr><td colspan="4" class="text-center text-danger">Failed to load classes</td></tr>');
             console.error('Failed to load classes:', xhr);
+            $('#classesTableBody').html(`
+                <tr>
+                    <td colspan="3" class="text-center text-danger">
+                        <i class="fas fa-exclamation-circle"></i> Failed to load classes
+                    </td>
+                </tr>
+            `);
         }
     });
 }
@@ -316,8 +381,8 @@ function renderClassesTable(classes) {
     if (classes.length === 0) {
         tbody.append(`
             <tr>
-                <td colspan="4" class="text-center text-muted">
-                    <i class="fas fa-inbox"></i> No classes enrolled yet
+                <td colspan="3" class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle"></i> No classes available for this section.
                 </td>
             </tr>
         `);
@@ -325,11 +390,10 @@ function renderClassesTable(classes) {
     }
     
     classes.forEach((classItem, index) => {
-        const row = `
+        tbody.append(`
             <tr>
                 <td>${index + 1}</td>
-                <td><strong>${classItem.class_code}</strong></td>
-                <td>${classItem.class_name}</td>
+                <td><strong>${escapeHtml(classItem.class_name)}</strong></td>
                 <td>
                     <small>
                         WW: ${classItem.ww_perc}% | 
@@ -338,8 +402,7 @@ function renderClassesTable(classes) {
                     </small>
                 </td>
             </tr>
-        `;
-        tbody.append(row);
+        `);
     });
 }
 
@@ -347,6 +410,19 @@ function renderClassesTable(classes) {
 function resetSectionForm() {
     $('#sectionForm')[0].reset();
     $('#sectionId').val('');
-    $('#generatedCode').val('');
+    $('#sectionModalTitle').html('<i class="fas fa-plus"></i> Create New Section');
     editingSectionId = null;
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }

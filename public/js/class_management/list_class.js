@@ -1,6 +1,68 @@
 console.log("class_management");
 
+let dataTable;
+
 $(document).ready(function() {
+    // ========================================================================
+    // DATATABLE INITIALIZATION
+    // ========================================================================
+    
+    function updateClassCount() {
+        if (dataTable && dataTable.rows) {
+            const count = dataTable.rows({ filter: 'applied' }).count();
+            $('#classCount').text(count + ' Class' + (count !== 1 ? 'es' : ''));
+        }
+    }
+
+    dataTable = $('#classesTable').DataTable({
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        scrollX: true,
+        autoWidth: false,
+        order: [[1, 'asc']], // Sort by Class Name by default
+        searching: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        language: {
+            emptyTable: "No classes found",
+            zeroRecords: "No matching classes found",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ classes",
+            infoEmpty: "Showing 0 to 0 of 0 classes",
+            infoFiltered: "(filtered from _MAX_ total classes)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        columnDefs: [
+            { targets: 4, orderable: false } // Disable sorting on Actions column
+        ],
+        drawCallback: function() {
+            updateClassCount();
+        }
+    });
+
+    // ========================================================================
+    // SEARCH FILTER
+    // ========================================================================
+
+    $('#searchInput').on('keyup', function() {
+        dataTable.search(this.value).draw();
+    });
+
+    // Clear Filters
+    $('#clearFilters').on('click', function() {
+        $('#searchInput').val('');
+        dataTable.search('').draw();
+    });
+
+    // Initial count
+    updateClassCount();
+
     // ========================================================================
     // WEIGHT VALIDATION FUNCTION (Unified for both Create & Edit)
     // ========================================================================
@@ -190,7 +252,11 @@ $(document).ready(function() {
                         confirmButtonText: 'OK'
                     }).then(() => {
                         $('#classModal').modal('hide');
-                        window.location.reload();
+                        dataTable.ajax.reload(null, false); // Reload without resetting pagination
+                        // If ajax is not configured, fallback to page reload
+                        if (!dataTable.settings()[0].ajax) {
+                            window.location.reload();
+                        }
                     });
                 } else {
                     Swal.fire({
@@ -224,59 +290,4 @@ $(document).ready(function() {
             }
         });
     });
-
-    // ========================================================================
-    // SEARCH & FILTER
-    // ========================================================================
-
-    $('#searchInput').on('keyup', function() {
-        const searchValue = $(this).val().toLowerCase();
-        
-        $('#classesTable tbody tr').filter(function() {
-            const row = $(this);
-            const matchesSearch = row.text().toLowerCase().indexOf(searchValue) > -1;
-            row.toggle(matchesSearch);
-        });
-
-        updateTableInfo();
-    });
-
-    $('#sortBy').on('change', function() {
-        const sortValue = $(this).val();
-        const tbody = $('#classesTable tbody');
-        const rows = tbody.find('tr').get();
-
-        rows.sort(function(a, b) {
-            if (sortValue === 'name') {
-                const aName = $(a).find('td:eq(1)').text();
-                const bName = $(b).find('td:eq(1)').text();
-                return aName.localeCompare(bName);
-            } else if (sortValue === 'newest') {
-                return $(b).data('id') - $(a).data('id');
-            } else if (sortValue === 'oldest') {
-                return $(a).data('id') - $(b).data('id');
-            }
-        });
-
-        $.each(rows, function(index, row) {
-            tbody.append(row);
-            $(row).find('td:first').text(index + 1);
-        });
-    });
-
-    // ========================================================================
-    // TABLE INFO UPDATE
-    // ========================================================================
-
-    function updateTableInfo() {
-        const visibleRows = $('#classesTable tbody tr:visible').length;
-        const totalRows = $('#classesTable tbody tr').length;
-        
-        $('#showingFrom').text(visibleRows > 0 ? 1 : 0);
-        $('#showingTo').text(visibleRows);
-        $('#totalEntries').text(totalRows);
-    }
-
-    // Initial update
-    updateTableInfo();
 });

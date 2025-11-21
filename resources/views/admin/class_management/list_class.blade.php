@@ -6,91 +6,97 @@
         <link rel="stylesheet" href="{{ asset('assets/css/'.$style) }}">
     @endforeach
 @endif
+    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <style>
+        .filter-card { background: #f8f9fa; border: 1px solid #e9ecef; }
+        .filter-card .form-control { 
+            font-size: 0.875rem; 
+            height: calc(2.25rem + 2px);
+        }
+        .filter-card label { 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            color: #6c757d; 
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+    </style>
 @endsection
 
 @section('breadcrumb')
-<li class="breadcrumb-item"><a href="#">Home</a></li>
-<li class="breadcrumb-item active">List Class</li>
+<ol class="breadcrumb breadcrumb-custom">
+    <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
+    <li class="breadcrumb-item active">Class List</li>
+</ol>
 @endsection
 
 @section('content')
+<br>
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Class List</h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="openClassModal()">
-                            <i class="fas fa-plus"></i> New Course
-                        </button>
-                    </div>
+    <!-- Filter Card -->
+    <div class="card filter-card mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label>Search Classes</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search by class name or code...">
                 </div>
-                <div class="card-body">
-                    <!-- Filters -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                </div>
-                                <input type="text" class="form-control" id="searchInput" placeholder="Search classes...">
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control" id="sortBy">
-                                <option value="newest">Newest</option>
-                                <option value="oldest">Oldest</option>
-                                <option value="name">Course Name</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Table -->
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover" id="classesTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 5%">#</th>
-                                    <th style="width: 35%">Course Name</th>
-                                    <th style="width: 15%">Written Work</th>
-                                    <th style="width: 15%">Performance Task</th>
-                                    <th style="width: 20%">Quarterly Assessment</th>
-                                    <th style="width: 10%" class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($classes as $class)
-                                <tr data-id="{{ $class->id }}">
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $class->class_name }}</td>
-                                    <td>{{ $class->ww_perc }}%</td>
-                                    <td>{{ $class->pt_perc }}%</td>
-                                    <td>{{ $class->qa_perce }}%</td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-primary btn-edit" data-id="{{ $class->id }}" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">No classes found</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="row mt-3">
-                        <div class="col-sm-12 col-md-5">
-                            <div class="dataTables_info">
-                                Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalEntries">{{ $classes->count() }}</span> entries
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-block" id="clearFilters">
+                        <i class="fas fa-undo mr-1"></i> Clear
+                    </button>
                 </div>
+                <div class="col-md-6 text-right">
+                    <button type="button" class="btn btn-primary" onclick="openClassModal()">
+                        <i class="fas fa-plus mr-1"></i> New Class
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Table Card -->
+    <div class="card card-primary card-outline">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-book mr-2"></i>Class List</h3>
+            <div class="card-tools">
+                <span class="badge badge-primary" id="classCount">{{ count($classes) }} Classes</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" id="classesTable" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%">Class Name</th>
+                            <th style="width: 15%">Written Work</th>
+                            <th style="width: 15%">Performance Task</th>
+                            <th style="width: 15%">Quarterly Assessment</th>
+                            <th class="text-center" style="width: 10%">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classTableBody">
+                        @forelse ($classes as $class)
+                            <tr data-id="{{ $class->id }}">
+                                <td>{{ $class->class_name }}</td>
+                                <td><span class="badge badge-secondary">{{ $class->ww_perc }}%</span></td>
+                                <td><span class="badge badge-secondary">{{ $class->pt_perc }}%</span></td>
+                                <td><span class="badge badge-secondary">{{ $class->qa_perce }}%</span></td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary btn-edit" data-id="{{ $class->id }}" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No classes found</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -178,6 +184,10 @@
 @endsection
 
 @section('scripts')
+    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
     <script>

@@ -668,6 +668,7 @@ class Enroll_Management extends MainController
                     's.section_id',
                     'sec.name as section_name',
                     'str.name as strand_name',
+                    'str.code as strand_code',
                     'l.name as level_name'
                 )
                 ->get();
@@ -701,6 +702,8 @@ class Enroll_Management extends MainController
                     's.section_id',
                     'sec.name as section_name',
                     'str.name as strand_name',
+                    'str.code as strand_code',
+
                     'l.name as level_name'
                 )
                 ->get();

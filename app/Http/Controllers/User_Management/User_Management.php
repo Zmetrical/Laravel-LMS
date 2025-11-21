@@ -454,22 +454,42 @@ public function getSectionsForFilter(Request $request)
         }
     }
 
-    public function list_teacher(Request $request)
-    {
-        $teachers = DB::table('teachers')
-            ->select(
-                'teachers.*',
-            )
-            ->get();
+public function list_teacher(Request $request)
+{
+    // Get all teachers with their assigned classes
+    $teachers = DB::table('teachers')
+        ->select('teachers.*')
+        ->get()
+        ->map(function($teacher) {
+            // Get classes assigned to this teacher
+            $classes = DB::table('teacher_class_matrix')
+                ->join('classes', 'teacher_class_matrix.class_id', '=', 'classes.id')
+                ->where('teacher_class_matrix.teacher_id', $teacher->id)
+                ->select(
+                    'classes.id',
+                    'classes.class_code',
+                    'classes.class_name'
+                )
+                ->get();
+            
+            $teacher->classes = $classes;
+            return $teacher;
+        });
 
-        $data = [
-            'scripts' => [
-                'user_management/list_teacher.js',
-            ],
+    // Get all unique classes for the filter dropdown
+    $classes = DB::table('classes')
+        ->select('id','class_code', 'class_name')
+        ->orderBy('class_code')
+        ->get();
 
-            'teachers' => $teachers
-        ];
+    $data = [
+        'scripts' => [
+            'user_management/list_teacher.js',
+        ],
+        'teachers' => $teachers,
+        'classes' => $classes
+    ];
 
-        return view('admin.user_management.list_teacher', $data);
-    }
+    return view('admin.user_management.list_teacher', $data);
+}
 }

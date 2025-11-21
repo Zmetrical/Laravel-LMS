@@ -15,6 +15,39 @@
     <link rel="stylesheet" href="{{ asset('dist/css/adminlte.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/fullcalendar/main.css') }}">
 
+    <style>
+        :root {
+            --trinity-blue: #2a347e;
+        }
+
+        /* Use the variable */
+        .bg-primary,
+        .btn-primary {
+            background-color: var(--trinity-blue) !important;
+            border-color: var(--trinity-blue) !important;
+        }
+
+
+        .card-primary:not(.card-outline) > .card-header {
+            background-color: var(--trinity-blue);
+        }
+
+
+
+        .list-group-item.active {
+            background-color: var(--trinity-blue) !important;
+            border-color: var(--trinity-blue) !important;
+        }
+
+        .btn-outline-primary {
+            border-color: var(--trinity-blue) !important;
+            color: var(--trinity-blue) !important;
+        }
+        .card-primary.card-outline {
+            border-top: 3px solid var(--trinity-blue) !important;
+        }
+
+    </style>
     <!-- Styles -->
     @yield('head')
 </head>

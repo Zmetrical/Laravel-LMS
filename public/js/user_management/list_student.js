@@ -1,4 +1,4 @@
-console.log("Student List Initialized");
+console.log("Student List");
 
 let dataTable;
 
@@ -18,8 +18,8 @@ $(document).ready(function () {
         scrollX: true,
         autoWidth: false,
         order: [[1, 'asc']], // Sort by Full Name by default
-        searching: true, // Keep search functionality enabled
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' + // Removed 'f' to hide search box
+        searching: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
              '<"row"<"col-sm-12"tr>>' +
              '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         language: {
@@ -54,14 +54,29 @@ $(document).ready(function () {
         TYPE: 5
     };
 
-    // Student Number Filter
-    $('#studentNumber').on('keyup', function() {
-        dataTable.column(COL.STUDENT_NO).search(this.value).draw();
+    // Merged Search Student Filter (searches both student number and name)
+    $('#searchStudent').on('keyup', function() {
+        const searchValue = this.value;
+        
+        // Use DataTables search with custom filter function
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (searchValue === '') return true;
+            
+            const studentNumber = data[COL.STUDENT_NO].toLowerCase();
+            const fullName = data[COL.FULL_NAME].toLowerCase();
+            const search = searchValue.toLowerCase();
+            
+            return studentNumber.includes(search) || fullName.includes(search);
+        });
+        
+        dataTable.draw();
+        $.fn.dataTable.ext.search.pop();
     });
 
-    // Student Name Filter
-    $('#studentName').on('keyup', function() {
-        dataTable.column(COL.FULL_NAME).search(this.value).draw();
+    // Student Type Filter
+    $('#studentType').on('change', function() {
+        const val = $(this).val();
+        dataTable.column(COL.TYPE).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
     });
 
     // Strand Filter (exact match)
@@ -151,10 +166,10 @@ $(document).ready(function () {
     // Clear All Filters
     $('#clearFilters').on('click', function() {
         // Clear input fields
-        $('#studentNumber').val('');
-        $('#studentName').val('');
+        $('#searchStudent').val('');
         
         // Reset select dropdowns
+        $('#studentType').val('');
         $('#strand').val('');
         $('#level').val('');
         $('#section').html('<option value="">All Sections</option>');

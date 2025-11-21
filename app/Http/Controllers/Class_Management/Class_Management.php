@@ -544,155 +544,171 @@ class Class_Management extends MainController
         }
     }
 
-    /**
-     * Create section
-     */
-    public function createSection(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'strand_id' => 'required|exists:strands,id',
-            'level_id' => 'required|exists:levels,id',
+/**
+ * Create section
+ */
+public function createSection(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'strand_id' => 'required|exists:strands,id',
+        'level_id' => 'required|exists:levels,id',
+    ]);
+
+    try {
+        // Get strand and level info
+        $strand = DB::table('strands')->where('id', $request->strand_id)->first();
+        $level = DB::table('levels')->where('id', $request->level_id)->first();
+
+        DB::beginTransaction();
+
+        // Get the next sequence number for this strand-level combination
+        $maxCode = DB::table('sections')
+            ->where('code', 'LIKE', $strand->code . '-' . $level->name . '-%')
+            ->orderBy('code', 'desc')
+            ->first();
+
+        $nextNumber = 1;
+        if ($maxCode) {
+            // Extract the number from the last code (e.g., "STEM-11-3" -> 3)
+            $parts = explode('-', $maxCode->code);
+            $lastNumber = (int) end($parts);
+            $nextNumber = $lastNumber + 1;
+        }
+
+        // Create code format: STRAND-LEVEL-NUMBER (e.g., STEM-11-1)
+        $code = strtoupper($strand->code . '-' . $level->name . '-' . $nextNumber);
+
+        $sectionId = DB::table('sections')->insertGetId([
+            'code' => $code,
+            'name' => strtoupper($request->name),
+            'strand_id' => $request->strand_id,
+            'level_id' => $request->level_id,
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
-        try {
-            // Generate section code
-            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
-            $level = DB::table('levels')->where('id', $request->level_id)->first();
+        \Log::info('Section created successfully', [
+            'section_id' => $sectionId,
+            'code' => $code,
+            'name' => $request->name,
+        ]);
 
-            // Create code format: STRAND-LEVEL-NAME (e.g., STEM-11-VIRGO)
-            $code = strtoupper($strand->code . '-' . $level->name . '-' . $request->name);
+        DB::commit();
 
-            // Check if code already exists
-            $exists = DB::table('sections')->where('code', $code)->exists();
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'A section with this combination already exists.'
-                ], 422);
+        return response()->json([
+            'success' => true,
+            'message' => 'Section created successfully!',
+            'section_id' => $sectionId,
+            'code' => $code
+        ], 201);
+    } catch (Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to create section', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to create section: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Update section
+ */
+public function updateSection(Request $request, $id)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'strand_id' => 'required|exists:strands,id',
+        'level_id' => 'required|exists:levels,id',
+    ]);
+
+    try {
+        // Check if section exists
+        $section = DB::table('sections')->where('id', $id)->first();
+
+        if (!$section) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Section not found.'
+            ], 404);
+        }
+
+        // Get strand and level info
+        $strand = DB::table('strands')->where('id', $request->strand_id)->first();
+        $level = DB::table('levels')->where('id', $request->level_id)->first();
+
+        DB::beginTransaction();
+
+        // Check if strand or level changed
+        $strandChanged = $section->strand_id != $request->strand_id;
+        $levelChanged = $section->level_id != $request->level_id;
+
+        if ($strandChanged || $levelChanged) {
+            // Need to generate new code if strand or level changed
+            $maxCode = DB::table('sections')
+                ->where('code', 'LIKE', $strand->code . '-' . $level->name . '-%')
+                ->where('id', '!=', $id)
+                ->orderBy('code', 'desc')
+                ->first();
+
+            $nextNumber = 1;
+            if ($maxCode) {
+                $parts = explode('-', $maxCode->code);
+                $lastNumber = (int) end($parts);
+                $nextNumber = $lastNumber + 1;
             }
 
-            DB::beginTransaction();
+            $code = strtoupper($strand->code . '-' . $level->name . '-' . $nextNumber);
+        } else {
+            // Keep the existing code if strand and level didn't change
+            $code = $section->code;
+        }
 
-            $sectionId = DB::table('sections')->insertGetId([
+        DB::table('sections')
+            ->where('id', $id)
+            ->update([
                 'code' => $code,
                 'name' => strtoupper($request->name),
                 'strand_id' => $request->strand_id,
                 'level_id' => $request->level_id,
-                'status' => 1,
-                'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            \Log::info('Section created successfully', [
-                'section_id' => $sectionId,
-                'code' => $code,
-                'name' => $request->name,
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Section created successfully!',
-                'section_id' => $sectionId
-            ], 201);
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            \Log::error('Failed to create section', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create section: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update section
-     */
-    public function updateSection(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'strand_id' => 'required|exists:strands,id',
-            'level_id' => 'required|exists:levels,id',
+        \Log::info('Section updated successfully', [
+            'section_id' => $id,
+            'code' => $code,
+            'name' => $request->name,
         ]);
 
-        try {
-            // Check if section exists
-            $section = DB::table('sections')->where('id', $id)->first();
+        DB::commit();
 
-            if (!$section) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Section not found.'
-                ], 404);
-            }
+        return response()->json([
+            'success' => true,
+            'message' => 'Section updated successfully!',
+            'code' => $code
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
 
-            // Generate new section code
-            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
-            $level = DB::table('levels')->where('id', $request->level_id)->first();
+        \Log::error('Failed to update section', [
+            'section_id' => $id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
 
-            $code = strtoupper($strand->code . '-' . $level->name . '-' . $request->name);
-
-            // Check if code already exists (excluding current section)
-            $exists = DB::table('sections')
-                ->where('code', $code)
-                ->where('id', '!=', $id)
-                ->exists();
-
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'A section with this combination already exists.'
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            DB::table('sections')
-                ->where('id', $id)
-                ->update([
-                    'code' => $code,
-                    'name' => strtoupper($request->name),
-                    'strand_id' => $request->strand_id,
-                    'level_id' => $request->level_id,
-                    'updated_at' => now(),
-                ]);
-
-            \Log::info('Section updated successfully', [
-                'section_id' => $id,
-                'code' => $code,
-                'name' => $request->name,
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Section updated successfully!'
-            ]);
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            \Log::error('Failed to update section', [
-                'section_id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update section: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update section: ' . $e->getMessage()
+        ], 500);
     }
-
+}
     /**
      * Get section classes (enrolled classes for a section)
      */

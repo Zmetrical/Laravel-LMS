@@ -54,7 +54,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Student Pages
         Route::post('/insert_student', [User_Management::class, 'insert_student'])->name('insert_student');
         Route::post('/insert_students', [User_Management::class, 'insert_students'])->name('insert_students');
-        Route::get('/get_sections/filter', [Class_Management::class, 'getSectionsForFilter'])->name('sections.filter');
 
 
 
@@ -97,15 +96,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Teachers
         Route::get('/teachers', [Enroll_Management::class, 'getTeachersList'])->name('teachers.list');
 
-    // Section Management API
-    Route::prefix('sections')->name('sections.')->group(function () {
-        Route::get('/', [Enroll_Management::class, 'getSectionsData'])->name('list');
-        Route::get('/{id}/details', [Enroll_Management::class, 'getDetails'])->name('details');
-        Route::get('/{id}/classes/details', [Enroll_Management::class, 'getSectionClasses'])->name('classes.details');
+    // // Section Management API
+    // Route::prefix('sections')->name('sections.')->group(function () {
+    //     Route::get('/', [Enroll_Management::class, 'getSectionsData'])->name('list');
+    //     Route::get('/{id}/details', [Enroll_Management::class, 'getDetails'])->name('details');
+    //     Route::get('/{id}/classes/details', [Enroll_Management::class, 'getSectionClasses'])->name('classes.details');
         
-        Route::post('/{id}/enroll-class', [Enroll_Management::class, 'enrollClass'])->name('enroll');
-        Route::delete('/{sectionId}/remove-class/{classId}', [Enroll_Management::class, 'removeClass'])->name('remove-class');
-    });
+    //     Route::post('/{id}/enroll-class', [Enroll_Management::class, 'enrollClass'])->name('enroll');
+    //     Route::delete('/{sectionId}/remove-class/{classId}', [Enroll_Management::class, 'removeClass'])->name('remove-class');
+    // });
 
     // Class Management API
     Route::prefix('classes')->name('classes.')->group(function () {
