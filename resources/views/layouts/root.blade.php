@@ -39,10 +39,6 @@
             border-color: var(--trinity-blue) !important;
         }
 
-        .btn-outline-primary {
-            border-color: var(--trinity-blue) !important;
-            color: var(--trinity-blue) !important;
-        }
         .card-primary.card-outline {
             border-top: 3px solid var(--trinity-blue) !important;
         }

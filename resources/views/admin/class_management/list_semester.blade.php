@@ -60,7 +60,7 @@
             </div>
 
             <!-- Enrolled Classes -->
-            <div class="card card-dark card-outline" id="classesCard" style="display: none;">
+            <div class="card card-primary card-outline" id="classesCard" style="display: none;">
                 <div class="card-header">
                     <h3 class="card-title">
                         <i class="fas fa-book"></i> Enrolled Classes
@@ -106,7 +106,42 @@
                         <span class="badge badge-primary mr-2" id="studentCount">0 Students</span>
                     </div>
                 </div>
-                <div class="card-body" style="min-height: 500px;">
+
+                <!-- Filters Card -->
+                <div class="card-body pb-0" id="filtersSection" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                </div>
+                                <input type="text" class="form-control" id="studentSearch"
+                                    placeholder="Search by student name or number...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control form-control-sm" id="sectionFilter">
+                                <option value="">All Sections</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control form-control-sm" id="remarksFilter">
+                                <option value="">All Remarks</option>
+                                <option value="PASSED">Passed</option>
+                                <option value="FAILED">Failed</option>
+                                <option value="INC">Incomplete</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-default btn-sm btn-block" id="resetFiltersBtn">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <hr class="mt-3 mb-0">
+                </div>
+
+                <div class="card-body m-0 p-0" style="min-height: 500px;">
                     <!-- Empty State -->
                     <div id="emptyState" class="text-center text-muted py-5">
                         <i class="fas fa-arrow-left fa-3x mb-3"></i>
@@ -121,18 +156,17 @@
                     </div>
 
                     <!-- Students Table -->
-                    <div id="studentsContent" style="display: none;">
-
+                    <div id="studentsContent" class="p-0" style="display: none;">
                         <div class="table-responsive">
                             <table class="table table-hover">
-                                <thead class="bg-dark">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th width="120">Student Number</th>
+                                        <th width="200">Student Number</th>
                                         <th>Name</th>
                                         <th width="150">Section</th>
-                                        <th width="100">Status</th>
-                                        <th width="90" class="text-center">Final Grade</th>
-                                        <th width="80">Remarks</th>
+                                        <th width="100">Type</th>
+                                        <th width="150" class="text-center">Final Grade</th>
+                                        <th width="100">Remarks</th>
                                     </tr>
                                 </thead>
                                 <tbody id="studentsTableBody">

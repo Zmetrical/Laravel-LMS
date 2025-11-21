@@ -4,6 +4,8 @@ $(document).ready(function () {
     let selectedSemesterId = null;
     let selectedClassCode = null;
     let selectedClassName = null;
+    let allStudents = [];
+    let allSections = [];
 
     // Check if school year ID is provided
     if (!SCHOOL_YEAR_ID) {
@@ -163,6 +165,12 @@ $(document).ready(function () {
         // Reset selected class
         selectedClassCode = null;
         selectedClassName = null;
+        allStudents = [];
+        allSections = [];
+
+        // Hide filters and reset
+        $('#filtersSection').hide();
+        resetFilters();
 
         // Show classes card and hide students
         $('#classesCard').show();
@@ -242,15 +250,12 @@ $(document).ready(function () {
         $('.class-row').removeClass('table-primary');
         $(`.class-row[data-class-code="${classCode}"]`).addClass('table-primary');
 
-        // Update header
-        const semester = semesters.find(s => s.id === selectedSemesterId);
-
-
         // Show loading and load students
         $('#emptyState').hide();
         $('#studentsContent').hide();
         $('#noStudents').hide();
         $('#studentsLoading').show();
+        $('#filtersSection').hide();
 
         loadEnrollmentHistory(classCode);
     }
@@ -268,9 +273,16 @@ $(document).ready(function () {
                 $('#studentsLoading').hide();
                 
                 if (response.success && response.data.length > 0) {
-                    displayEnrollmentHistory(response.data);
+                    allStudents = response.data;
+                    
+                    // Extract unique sections
+                    allSections = [...new Set(allStudents.map(s => s.section_name).filter(Boolean))];
+                    populateSectionFilter(allSections);
+                    
+                    displayEnrollmentHistory(allStudents);
                     $('#studentsContent').show();
-                    $('#studentCount').text(`${response.data.length} Student${response.data.length > 1 ? 's' : ''}`);
+                    $('#filtersSection').show();
+                    $('#studentCount').text(`${allStudents.length} Student${allStudents.length > 1 ? 's' : ''}`);
                 } else {
                     $('#noStudents').show();
                     $('#studentCount').text('0 Students');
@@ -284,14 +296,36 @@ $(document).ready(function () {
         });
     }
 
+    // Populate Section Filter
+    function populateSectionFilter(sections) {
+        const select = $('#sectionFilter');
+        select.find('option:not(:first)').remove();
+        
+        sections.forEach(section => {
+            select.append(`<option value="${section}">${section}</option>`);
+        });
+    }
+
     // Display Enrollment History
     function displayEnrollmentHistory(students) {
         const tbody = $('#studentsTableBody');
         tbody.empty();
 
+        if (students.length === 0) {
+            tbody.html(`
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No students found</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
         students.forEach(student => {
-            const statusBadge = student.enrollment_status === 'enrolled' ? 'badge-success' :
-                              student.enrollment_status === 'dropped' ? 'badge-danger' : 'badge-secondary';
+            const statusBadge = student.student_type === 'regular' ? 'badge-primary' :
+                              student.student_type === 'irregular' ? 'badge-secondary' : 'badge-secondary';
             
             const remarksBadge = student.remarks === 'PASSED' ? 'badge-success' :
                                student.remarks === 'FAILED' ? 'badge-danger' : 'badge-warning';
@@ -302,7 +336,7 @@ $(document).ready(function () {
                     <td>${student.first_name} ${student.last_name}</td>
                     <td>${student.section_name || 'N/A'}</td>
                     <td>
-                        <span class="badge ${statusBadge}">${student.enrollment_status}</span>
+                        <span class="badge ${statusBadge}">${student.student_type}</span>
                     </td>
                     <td class="text-center">
                         ${student.final_grade ? `<strong>${student.final_grade}</strong>` : '-'}
@@ -315,6 +349,44 @@ $(document).ready(function () {
             tbody.append(row);
         });
     }
+
+    // Apply Filters
+    function applyFilters() {
+        const searchTerm = $('#studentSearch').val().toLowerCase();
+        const sectionFilter = $('#sectionFilter').val();
+        const remarksFilter = $('#remarksFilter').val();
+
+        const filtered = allStudents.filter(student => {
+            const matchSearch = !searchTerm || 
+                student.student_number.toLowerCase().includes(searchTerm) ||
+                student.first_name.toLowerCase().includes(searchTerm) ||
+                student.last_name.toLowerCase().includes(searchTerm);
+            
+            const matchSection = !sectionFilter || student.section_name === sectionFilter;
+            const matchRemarks = !remarksFilter || student.remarks === remarksFilter;
+
+            return matchSearch && matchSection && matchRemarks;
+        });
+
+        displayEnrollmentHistory(filtered);
+        $('#studentCount').text(`${filtered.length} Student${filtered.length !== 1 ? 's' : ''}`);
+    }
+
+    // Reset Filters
+    function resetFilters() {
+        $('#studentSearch').val('');
+        $('#sectionFilter').val('');
+        $('#remarksFilter').val('');
+        
+        if (allStudents.length > 0) {
+            displayEnrollmentHistory(allStudents);
+            $('#studentCount').text(`${allStudents.length} Student${allStudents.length > 1 ? 's' : ''}`);
+        }
+    }
+
+    // Filter Event Handlers
+    $('#studentSearch, #sectionFilter, #remarksFilter').on('input change', applyFilters);
+    $('#resetFiltersBtn').click(resetFilters);
 
     // Get Status Badge Class
     function getStatusBadgeClass(status) {

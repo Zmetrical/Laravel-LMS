@@ -63,13 +63,13 @@
 
         <!-- Right Panel: Details & Semesters -->
         <div class="col-md-8">
-            <div class="card card-primary card-outline">
+            <div class="card card-primary">
                 <div class="card-header">
                     <h3 class="card-title" id="detailsTitle">
                         <i class="fas fa-info-circle"></i> School Year Details
                     </h3>
                     <div class="card-tools" id="detailsTools" style="display: none;">
-                        <button class="btn btn-tool" id="editYearBtn" title="Edit School Year">
+                        <button class="btn btn-tool text-white" id="editYearBtn" title="Edit School Year">
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
@@ -83,13 +83,6 @@
 
                     <!-- Details Content -->
                     <div id="detailsContent" style="display: none;">
-                        <!-- Year Info Header -->
-                        <div class="mb-3">
-                            <h5 id="yearDisplayHeader" class="mb-2"></h5>
-                            <span class="badge" id="statusBadge"></span>
-                            <span class="badge badge-secondary ml-2" id="codeBadge"></span>
-                        </div>
-
                         <!-- Action Buttons -->
                         <div class="mb-4" id="actionButtons">
                             <button class="btn btn-success btn-sm" id="activateBtn" style="display: none;">
@@ -127,10 +120,9 @@
                         <div id="semestersTableContainer" style="display: none;">
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover">
-                                    <thead class="bg-primary">
+                                    <thead class="bg-light">
                                         <tr>
                                             <th>Semester</th>
-                                            <th>Code</th>
                                             <th>Period</th>
                                             <th>Status</th>
                                             <th width="150">Actions</th>

@@ -187,7 +187,6 @@ $(document).ready(function () {
                                 <i class="fas fa-calendar mr-2"></i>
                                 SY ${sy.year_start}-${sy.year_end}
                             </h6>
-                            <small class="text-muted">${sy.code}</small>
                         </div>
                         <span class="badge ${statusBadge}">${sy.status.toUpperCase()}</span>
                     </div>
@@ -232,14 +231,8 @@ $(document).ready(function () {
         $('#detailsTools').show();
 
         // Update details
-        $('#detailsTitle').html(`<i class="fas fa-info-circle"></i> SY ${year.year_start}-${year.year_end}`);
-        $('#yearDisplayHeader').text(`School Year ${year.year_start}-${year.year_end}`);
+        $('#detailsTitle').text(`School Year ${year.year_start}-${year.year_end}`);
         
-        const badgeClass = getStatusBadgeClass(year.status);
-        $('#statusBadge').attr('class', `badge ${badgeClass}`)
-                         .text(year.status.toUpperCase());
-        $('#codeBadge').text(year.code);
-
         // Show/hide action buttons
         $('#activateBtn').hide();
         $('#archiveBtn').hide();
@@ -295,7 +288,6 @@ $(document).ready(function () {
             const row = `
                 <tr>
                     <td><strong>${sem.name}</strong></td>
-                    <td><span class="badge badge-secondary">${sem.code}</span></td>
                     <td><small>${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small></td>
                     <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
                     <td>
