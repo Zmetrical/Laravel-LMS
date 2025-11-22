@@ -21,7 +21,6 @@ class Page_Grade extends MainController
             'userType' => 'teacher',
             'class' => $class,
             'scripts' => ['class_grade/page_gradebook.js']
-
         ]);
     }
 
@@ -161,60 +160,6 @@ class Page_Grade extends MainController
 
     public function getStudentGrades($classId, $studentNumber)
     {
-        $class = DB::table('classes')->where('id', $classId)->first();
 
-        $attempts = DB::table('student_quiz_attempts as sqa')
-            ->join('quizzes as q', 'sqa.quiz_id', '=', 'q.id')
-            ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
-            ->where('l.class_id', $classId)
-            ->where('sqa.student_number', $studentNumber)
-            ->where('sqa.status', 'graded')
-            ->select(
-                'q.id as quiz_id',
-                'q.title as quiz_title',
-                'l.title as lesson_title',
-                'q.passing_score',
-                'sqa.score',
-                'sqa.total_points',
-                'sqa.submitted_at',
-                'sqa.attempt_number',
-                DB::raw('ROUND((sqa.score / sqa.total_points * 100), 2) as percentage')
-            )
-            ->orderBy('l.order_number')
-            ->orderBy('sqa.submitted_at', 'desc')
-            ->get()
-            ->groupBy('quiz_id');
-
-        $grades = [];
-        foreach ($attempts as $quizId => $quizAttempts) {
-            $best = $quizAttempts->sortByDesc('score')->first();
-            $grades[] = [
-                'quiz_id' => $best->quiz_id,
-                'quiz_title' => $best->quiz_title,
-                'lesson_title' => $best->lesson_title,
-                'score' => floatval($best->score),
-                'total_points' => floatval($best->total_points),
-                'percentage' => floatval($best->percentage),
-                'passing_score' => floatval($best->passing_score),
-                'passed' => $best->percentage >= $best->passing_score,
-                'attempt_count' => $quizAttempts->count(),
-                'submitted_at' => $best->submitted_at
-            ];
-        }
-
-        $totalScore = collect($grades)->sum('score');
-        $totalPoints = collect($grades)->sum('total_points');
-        $averagePercentage = $totalPoints > 0 ? round(($totalScore / $totalPoints) * 100, 2) : 0;
-
-        return response()->json([
-            'grades' => $grades,
-            'summary' => [
-                'total_score' => $totalScore,
-                'total_points' => $totalPoints,
-                'average_percentage' => $averagePercentage,
-                'quiz_count' => count($grades),
-            ],
-            'class' => $class
-        ]);
     }
 }

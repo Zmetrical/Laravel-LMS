@@ -46,7 +46,7 @@ class Grade_list extends MainController
             'activeSemesterDisplay' => $activeSemesterDisplay
         ];
         
-        return view('student.gradebook_list', $data);
+        return view('student.list_gradebook', $data);
     }
     
     /**
