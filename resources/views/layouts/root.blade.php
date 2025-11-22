@@ -30,11 +30,25 @@
             border-color: var(--trinity-blue) !important;
             color: var(--trinity-blue) !important;
         }
+        .btn-outline-primary:hover{
+            border-color: var(--trinity-blue) !important;
 
+            background-color: var(--trinity-blue) !important;
+            color: #fff!important;
+        }
         .text-primary{
             color: var(--trinity-blue) !important;
         }
-
+    .question-nav-btn.answered {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+        color: white !important;
+    }
+    .question-nav-btn.active {
+        background-color: var(--trinity-blue) !important;
+        border-color: var(--trinity-blue) !important;
+        color: white !important;
+    }
 
 
 

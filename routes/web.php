@@ -11,6 +11,8 @@ use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Year_Management;
+use App\Http\Controllers\Class_Management\Quiz_Attempt;
+
 use App\Http\Controllers\Grade_Management\Grade_Management;
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
 use App\Http\Controllers\Grade_Management\Grade_list;
@@ -25,6 +27,7 @@ use App\Http\Controllers\User_Management\Profile_Management;
 use App\Http\Controllers\User_Management\User_Management;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\QuizAttemptMiddleware;
 
 // ===========================================================================
 // PUBLIC ROUTES
@@ -211,11 +214,7 @@ Route::prefix('student')->name('student.')->group(function () {
             // Lessons Page
             Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('lessons');
             
-            // Quizzes Page
-            Route::get('/quizzes', function ($classId) {
-                $class = DB::table('classes')->where('id', $classId)->first();
-                return view('modules.quiz.page_quiz', ['userType' => 'student', 'class' => $class]);
-            })->name('quizzes');
+
             
             // Grades Page
             Route::get('/grades', [Page_Grade::class, 'studentIndex'])->name('grades');
@@ -227,7 +226,16 @@ Route::prefix('student')->name('student.')->group(function () {
                 Route::get('/{lectureId}/stream/{filename}', [Page_Lecture::class, 'stream'])->name('stream');
 
                 // Quiz Pages
-                Route::get('quiz/{quizId}', [Page_Quiz::class, 'studentViewQuiz'])->name('quiz.view');
+                Route::get('quiz/{quizId}', [Quiz_Attempt::class, 'viewQuiz'])->name('quiz.view');
+
+                Route::get('/quiz/{quizId}/start', [Quiz_Attempt::class, 'startQuiz'])
+                    ->middleware(QuizAttemptMiddleware::class)
+                    ->name('quiz.start');                
+                Route::get('/quiz/{quizId}/save-progress', [Quiz_Attempt::class, 'saveProgress'])->name('quiz.save-progress');
+
+                Route::post('/quiz/{quizId}/submit', [Quiz_Attempt::class, 'submitQuiz'])->name('quiz.submit');
+                Route::get('/quiz/{quizId}/results/{attemptId}', [Quiz_Attempt::class, 'getResults'])->name('quiz.results');
+                Route::post('/quiz/{quizId}/heartbeat', [Quiz_Attempt::class, 'heartbeat'])->name('quiz.heartbeat');
             });
         });
     });

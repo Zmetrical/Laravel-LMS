@@ -158,8 +158,109 @@ class Page_Grade extends MainController
         ]);
     }
 
-    public function getStudentGrades($classId, $studentNumber)
-    {
-
+public function getStudentGrades($classId, $studentNumber)
+{
+    // Verify the class exists
+    $class = DB::table('classes')->where('id', $classId)->first();
+    
+    if (!$class) {
+        return response()->json(['error' => 'Class not found'], 404);
     }
+
+    // Verify the student is enrolled in this class
+    $isEnrolled = DB::table('student_class_matrix')
+        ->where('student_number', $studentNumber)
+        ->where('class_code', $class->class_code)
+        ->exists();
+
+    if (!$isEnrolled) {
+        // Check if enrolled through section
+        $student = DB::table('students')->where('student_number', $studentNumber)->first();
+        
+        if ($student && $student->section_id) {
+            $isEnrolledThroughSection = DB::table('section_class_matrix')
+                ->where('section_id', $student->section_id)
+                ->where('class_id', $classId)
+                ->exists();
+            
+            if (!$isEnrolledThroughSection) {
+                return response()->json(['error' => 'Student not enrolled in this class'], 403);
+            }
+        } else {
+            return response()->json(['error' => 'Student not enrolled in this class'], 403);
+        }
+    }
+
+    // Get all quizzes for this class with their lessons
+    $quizzes = DB::table('quizzes as q')
+        ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
+        ->where('l.class_id', $classId)
+        ->where('q.status', 1)
+        ->select(
+            'q.id as quiz_id',
+            'q.title as quiz_title',
+            'q.passing_score',
+            'l.id as lesson_id',
+            'l.title as lesson_title',
+            'l.order_number'
+        )
+        ->orderBy('l.order_number')
+        ->orderBy('q.id')
+        ->get();
+
+    $grades = [];
+
+    foreach ($quizzes as $quiz) {
+        // Get the best attempt for this student on this quiz
+        $bestAttempt = DB::table('student_quiz_attempts')
+            ->where('student_number', $studentNumber)
+            ->where('quiz_id', $quiz->quiz_id)
+            ->where('status', 'graded')
+            ->orderBy('score', 'desc')
+            ->first();
+
+        // Get total number of attempts
+        $attemptCount = DB::table('student_quiz_attempts')
+            ->where('student_number', $studentNumber)
+            ->where('quiz_id', $quiz->quiz_id)
+            ->whereIn('status', ['submitted', 'graded'])
+            ->count();
+
+        $gradeData = [
+            'quiz_id' => $quiz->quiz_id,
+            'quiz_title' => $quiz->quiz_title,
+            'lesson_id' => $quiz->lesson_id,
+            'lesson_title' => $quiz->lesson_title,
+            'passing_score' => (float) $quiz->passing_score,
+            'attempt_count' => $attemptCount,
+            'score' => null,
+            'total_points' => null,
+            'percentage' => null,
+            'submitted_at' => null
+        ];
+
+        if ($bestAttempt) {
+            $gradeData['score'] = (float) $bestAttempt->score;
+            $gradeData['total_points'] = (float) $bestAttempt->total_points;
+            
+            if ($bestAttempt->total_points > 0) {
+                $gradeData['percentage'] = ($bestAttempt->score / $bestAttempt->total_points) * 100;
+            }
+            
+            $gradeData['submitted_at'] = $bestAttempt->submitted_at;
+        }
+
+        $grades[] = $gradeData;
+    }
+
+    return response()->json([
+        'grades' => $grades,
+        'student_number' => $studentNumber,
+        'class' => [
+            'id' => $class->id,
+            'code' => $class->class_code,
+            'name' => $class->class_name
+        ]
+    ]);
+}
 }

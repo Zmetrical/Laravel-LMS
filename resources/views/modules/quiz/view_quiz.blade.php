@@ -5,21 +5,7 @@
 
 @section('page-styles')
 <style>
-    .quiz-info-card {
-        border-left: 4px solid #007bff;
-    }
-    .attempt-row:hover {
-        background-color: #f8f9fa;
-    }
-    .badge-passed {
-        background-color: #28a745;
-    }
-    .badge-failed {
-        background-color: #dc3545;
-    }
-    .badge-pending {
-        background-color: #ffc107;
-    }
+
 </style>
 @endsection
 
@@ -36,7 +22,7 @@
 <div class="row">
     <!-- Quiz Information -->
     <div class="col-md-8">
-        <div class="card quiz-info-card">
+        <div class="card">
             <div class="card-header bg-primary">
                 <h3 class="card-title text-white">
                     <i class="fas fa-clipboard-list"></i> {{ $quiz->title }}
@@ -123,7 +109,7 @@
         <!-- Previous Attempts -->
         @if($attempts->count() > 0)
         <div class="card mt-3">
-            <div class="card-header bg-info">
+            <div class="card-header bg-primary">
                 <h3 class="card-title text-white">
                     <i class="fas fa-history"></i> Previous Attempts
                 </h3>
@@ -174,53 +160,6 @@
         @endif
     </div>
 
-    <!-- Sidebar Instructions -->
-    <div class="col-md-4">
-        <div class="card card-outline card-primary">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-info-circle"></i> Instructions
-                </h3>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled">
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success"></i>
-                        Read all questions carefully
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success"></i>
-                        Answer all questions before submitting
-                    </li>
-                    @if($quiz->time_limit)
-                    <li class="mb-2">
-                        <i class="fas fa-clock text-warning"></i>
-                        Complete within {{ $quiz->time_limit }} minutes
-                    </li>
-                    @endif
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success"></i>
-                        You can navigate between questions
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success"></i>
-                        Review your answers before submitting
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                        Once submitted, you cannot change answers
-                    </li>
-                </ul>
-
-                @if($quiz->shuffle_questions)
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-random"></i>
-                    <small>Questions will appear in random order</small>
-                </div>
-                @endif
-            </div>
-        </div>
-    </div>
 </div>
 
 
@@ -229,7 +168,6 @@
 @section('page-scripts')
 <script>
     const QUIZ_ID = {{ $quiz->id }};
-    const CLASS_ID = {{ $class->id }};
     const LESSON_ID = {{ $lesson->id }};
     
     const API_ROUTES = {

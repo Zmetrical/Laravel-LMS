@@ -137,13 +137,7 @@ Route::prefix('student')->name('student.')->middleware(['web', 'auth:student'])-
         Route::get('/lesson/{lessonId}/lecture/{lectureId}/data', [Page_Lecture::class, 'getData'])
             ->name('lecture.data');
         
-        // Quiz API
-        Route::prefix('lesson/{lessonId}/quiz/{quizId}')->name('quiz.')->group(function () {
-            Route::get('/start', [Page_Quiz::class, 'studentStartQuiz'])->name('start');
-            Route::post('/submit', [Page_Quiz::class, 'studentSubmitQuiz'])->name('submit');
-            Route::get('/results/{attemptId}', [Page_Quiz::class, 'studentGetResults'])->name('results');
-        });
-        
+
         // Grades
         Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('grades.list');
         Route::get('/student/{studentNumber}/grades', [Page_Grade::class, 'getStudentGrades'])->name('grades.student');

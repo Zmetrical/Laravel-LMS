@@ -1,54 +1,125 @@
 $(document).ready(function() {
     let currentQuestionIndex = 0;
     let answers = {};
-    let timeRemaining = TIME_LIMIT * 60; // Convert to seconds
+    let timeRemaining = TIME_LIMIT * 60;
     let timerInterval = null;
+    let viewMode = 'oneByOne';
+    let heartbeatInterval = null;
+    let autoSaveInterval = null;
+    let isSubmitting = false;
+    let lastSavedAnswers = {};
+    let pendingSave = false;
+
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
 
     // Initialize
     initializeTimer();
     loadSavedAnswers();
+    startHeartbeat();
+    startAutoSave();
+    preventBrowserManipulation();
+    
+    // Show resume message if resuming
+    if (typeof IS_RESUMING !== 'undefined' && IS_RESUMING) {
+        Toast.fire({
+            icon: 'info',
+            title: 'Quiz resumed. Your previous answers have been restored.',
+            timer: 4000
+        });
+    }
+
+    // View Mode Toggle
+    $('#viewModeToggle').on('click', function() {
+        if (viewMode === 'oneByOne') {
+            viewMode = 'showAll';
+            $('#viewModeToggle').html('<i class="fas fa-th-list"></i> <span id="viewModeText">One by One</span>');
+            $('#questionsContainer').addClass('all-questions-mode');
+            $('.question-item').show();
+        } else {
+            viewMode = 'oneByOne';
+            $('#viewModeToggle').html('<i class="fas fa-square"></i> <span id="viewModeText">Show All</span>');
+            $('#questionsContainer').removeClass('all-questions-mode');
+            $('.question-item').hide();
+            $(`#question-${currentQuestionIndex}`).show();
+        }
+        $('html, body').animate({ scrollTop: 0 }, 300);
+    });
+
+    // Option Card Click Handler
+    $(document).on('click', '.option-card', function() {
+        const questionIndex = $(this).data('question-index');
+        const optionId = $(this).data('option-id');
+        
+        $(this).siblings('.option-card').removeClass('selected');
+        $(this).addClass('selected');
+        
+        const radio = $(this).find('.option-radio');
+        radio.prop('checked', true).trigger('change');
+    });
 
     // Question Navigation Buttons
     $('.question-nav-btn').on('click', function() {
         const index = parseInt($(this).data('index'));
-        navigateToQuestion(index);
+        
+        if (viewMode === 'showAll') {
+            const questionCard = $(`#question-${index}`);
+            $('html, body').animate({
+                scrollTop: questionCard.offset().top - 80
+            }, 300);
+            $('.question-nav-btn').removeClass('active');
+            $(`.question-nav-btn[data-index="${index}"]`).addClass('active');
+        } else {
+            navigateToQuestion(index);
+        }
     });
 
-    // Next Button
+    // Next/Previous Buttons
     $('.next-question-btn').on('click', function() {
         const index = parseInt($(this).data('index'));
         navigateToQuestion(index + 1);
     });
 
-    // Previous Button
     $('.prev-question-btn').on('click', function() {
         const index = parseInt($(this).data('index'));
         navigateToQuestion(index - 1);
     });
 
-    // Track Answers
+    // Track Answers with debounce for essays
+    let essayDebounce = null;
     $('.question-answer').on('change input', function() {
         const questionId = $(this).data('question-id');
         const questionIndex = $(this).data('question-index');
         let answer;
 
         if ($(this).is('textarea')) {
-            // Essay answer
-            answer = {
-                question_id: questionId,
-                answer_text: $(this).val().trim()
-            };
+            clearTimeout(essayDebounce);
+            
+            essayDebounce = setTimeout(() => {
+                answer = {
+                    question_id: questionId,
+                    answer_text: $(this).val().trim()
+                };
+                answers[questionId] = answer;
+                updateNavigationButton(questionIndex);
+            }, 500);
         } else {
-            // Multiple choice or true/false
             answer = {
                 question_id: questionId,
                 option_id: parseInt($(this).val())
             };
+            answers[questionId] = answer;
+            updateNavigationButton(questionIndex);
         }
-
-        answers[questionId] = answer;
-        saveAnswersToStorage();
-        updateNavigationButton(questionIndex);
     });
 
     // Review Answers
@@ -61,20 +132,245 @@ $(document).ready(function() {
         submitQuiz();
     });
 
+    // Keyboard navigation
+    $(document).on('keydown', function(e) {
+        if (viewMode === 'showAll') return;
+        if ($(e.target).is('textarea')) return;
+
+        if (e.keyCode === 37 && currentQuestionIndex > 0) {
+            e.preventDefault();
+            navigateToQuestion(currentQuestionIndex - 1);
+        }
+        
+        if (e.keyCode === 39 && currentQuestionIndex < QUESTIONS.length - 1) {
+            e.preventDefault();
+            navigateToQuestion(currentQuestionIndex + 1);
+        }
+    });
+
     // Warn before leaving page
     window.addEventListener('beforeunload', function(e) {
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
+        if (!isSubmitting) {
+            // Try to save before leaving (sync request)
+            if (Object.keys(answers).length > 0) {
+                saveProgressSync();
+            }
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
     });
+
+    // Prevent back/forward navigation
+    function preventBrowserManipulation() {
+        history.pushState(null, null, location.href);
+        
+        window.addEventListener('popstate', function(event) {
+            history.pushState(null, null, location.href);
+        });
+
+        // Detect visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('Tab hidden - saving progress...');
+                saveProgressToServer(true); // Force immediate save
+            }
+        });
+
+        // Handle page focus
+        window.addEventListener('focus', function() {
+            console.log('Tab focused - checking session...');
+            checkSessionValidity();
+        });
+    }
+
+    // Check if session is still valid
+    function checkSessionValidity() {
+        $.ajax({
+            url: API_ROUTES.heartbeat,
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': CSRF_TOKEN
+            },
+            data: {
+                attempt_id: ATTEMPT_ID
+            },
+            error: function(xhr) {
+                if (xhr.status === 401 || xhr.status === 419) {
+                    handleSessionExpired();
+                } else if (xhr.status === 410) {
+                    handleTimeExpired();
+                }
+            }
+        });
+    }
+
+    // Heartbeat to keep session alive
+    function startHeartbeat() {
+        heartbeatInterval = setInterval(function() {
+            $.ajax({
+                url: API_ROUTES.heartbeat,
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                data: {
+                    attempt_id: ATTEMPT_ID,
+                    answered_count: Object.keys(answers).length,
+                    time_remaining: timeRemaining
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401 || xhr.status === 419) {
+                        handleSessionExpired();
+                    } else if (xhr.status === 410) {
+                        handleTimeExpired();
+                    }
+                }
+            });
+        }, 120000); // 2 minutes
+    }
+
+    function handleSessionExpired() {
+        clearInterval(heartbeatInterval);
+        clearInterval(timerInterval);
+        clearInterval(autoSaveInterval);
+        
+        Swal.fire({
+            title: 'Session Expired',
+            text: 'Your session has expired. Your progress has been saved. Please log in again to continue.',
+            icon: 'error',
+            allowOutsideClick: false,
+            confirmButtonColor: '#007bff'
+        }).then(() => {
+            window.location.href = '/login';
+        });
+    }
+
+    function handleTimeExpired() {
+        clearInterval(heartbeatInterval);
+        clearInterval(timerInterval);
+        clearInterval(autoSaveInterval);
+        
+        Swal.fire({
+            title: 'Time Expired',
+            text: 'Your quiz time has expired and your answers have been automatically submitted.',
+            icon: 'warning',
+            allowOutsideClick: false,
+            confirmButtonColor: '#007bff'
+        }).then(() => {
+            window.location.href = API_ROUTES.backToQuiz;
+        });
+    }
+
+    // Auto-save answers to server
+    function startAutoSave() {
+        autoSaveInterval = setInterval(function() {
+            saveProgressToServer(false);
+        }, 30000); // Every 30 seconds
+    }
+
+    function saveProgressToServer(forceImmediate = false) {
+        // Only save if there are changes
+        if (JSON.stringify(answers) === JSON.stringify(lastSavedAnswers)) {
+            return;
+        }
+
+        // Prevent multiple simultaneous saves
+        if (pendingSave && !forceImmediate) {
+            return;
+        }
+
+        pendingSave = true;
+
+        $.ajax({
+            url: API_ROUTES.saveProgress,
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': CSRF_TOKEN,
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                attempt_id: ATTEMPT_ID,
+                answers: answers
+            }),
+            success: function(response) {
+                if (response.success) {
+                    lastSavedAnswers = JSON.parse(JSON.stringify(answers));
+                    console.log('Progress auto-saved at', new Date().toLocaleTimeString());
+                }
+                pendingSave = false;
+            },
+            error: function(xhr) {
+                console.error('Auto-save failed:', xhr);
+                pendingSave = false;
+                
+                if (xhr.status === 410 && xhr.responseJSON?.time_expired) {
+                    handleTimeExpired();
+                } else if (xhr.status === 401 || xhr.status === 419) {
+                    handleSessionExpired();
+                }
+            }
+        });
+    }
+
+    // Synchronous save for beforeunload (best effort)
+    function saveProgressSync() {
+        if (JSON.stringify(answers) === JSON.stringify(lastSavedAnswers)) {
+            return;
+        }
+
+        const data = JSON.stringify({
+            attempt_id: ATTEMPT_ID,
+            answers: answers
+        });
+
+        // Use sendBeacon for reliable page exit
+        const blob = new Blob([data], { type: 'application/json' });
+        const sent = navigator.sendBeacon(
+            API_ROUTES.saveProgress + '?_token=' + CSRF_TOKEN,
+            blob
+        );
+
+        if (!sent) {
+            // Fallback to synchronous XHR (blocks page unload)
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', API_ROUTES.saveProgress, false);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('X-CSRF-TOKEN', CSRF_TOKEN);
+            try {
+                xhr.send(data);
+            } catch (e) {
+                console.error('Sync save failed:', e);
+            }
+        }
+    }
 
     function initializeTimer() {
         if (TIME_LIMIT === 0) return;
 
-        // Check for saved time
-        const savedTime = localStorage.getItem(`quiz_${QUIZ_ID}_time`);
-        if (savedTime) {
-            timeRemaining = parseInt(savedTime);
+        // Calculate time remaining from elapsed seconds (server-calculated)
+        const totalTime = TIME_LIMIT * 60; // Convert minutes to seconds
+        const elapsed = Math.floor(Math.abs(ELAPSED_SECONDS)); // Round and ensure positive
+        timeRemaining = Math.max(0, totalTime - elapsed);
+
+        console.log('Timer initialized:', {
+            timeLimit: TIME_LIMIT + ' minutes',
+            totalSeconds: totalTime,
+            elapsedSeconds: elapsed,
+            remainingSeconds: timeRemaining,
+            remainingMinutes: Math.floor(timeRemaining / 60)
+        });
+
+        // If time already expired
+        if (timeRemaining <= 0) {
+            Toast.fire({
+                icon: 'error',
+                title: 'Time has expired!'
+            });
+            setTimeout(() => {
+                window.location.href = API_ROUTES.backToQuiz;
+            }, 2000);
+            return;
         }
 
         updateTimerDisplay();
@@ -82,37 +378,43 @@ $(document).ready(function() {
         timerInterval = setInterval(function() {
             timeRemaining--;
             updateTimerDisplay();
-            localStorage.setItem(`quiz_${QUIZ_ID}_time`, timeRemaining);
 
-            // Warning at 5 minutes
             if (timeRemaining === 300) {
                 $('.quiz-timer').addClass('warning');
-                toastr.warning('5 minutes remaining!', 'Time Alert');
+                Toast.fire({
+                    icon: 'warning',
+                    title: '5 minutes remaining!'
+                });
             }
 
-            // Warning at 1 minute
             if (timeRemaining === 60) {
-                toastr.error('1 minute remaining!', 'Time Alert');
+                Toast.fire({
+                    icon: 'error',
+                    title: '1 minute remaining!'
+                });
             }
 
-            // Time's up
             if (timeRemaining <= 0) {
                 clearInterval(timerInterval);
-                toastr.error('Time is up! Submitting quiz...', 'Time Expired');
-                setTimeout(function() {
-                    submitQuiz(true);
-                }, 2000);
+                clearInterval(heartbeatInterval);
+                clearInterval(autoSaveInterval);
+                
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Time is up! Submitting quiz...'
+                });
+                setTimeout(() => submitQuiz(true), 2000);
             }
         }, 1000);
     }
 
     function updateTimerDisplay() {
         const minutes = Math.floor(timeRemaining / 60);
-        const seconds = timeRemaining % 60;
+        const seconds = Math.floor(timeRemaining % 60);
         const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         $('#timerDisplay').text(display);
+        $('#timerDisplayMobile').text(display);
 
-        // Add warning class if less than 5 minutes
         if (timeRemaining <= 300) {
             $('.quiz-timer').addClass('warning');
         }
@@ -121,146 +423,142 @@ $(document).ready(function() {
     function navigateToQuestion(index) {
         if (index < 0 || index >= QUESTIONS.length) return;
 
-        // Hide current question
         $('.question-item').hide();
-        
-        // Show target question
         $(`#question-${index}`).show();
         
-        // Update navigation
         $('.question-nav-btn').removeClass('active');
         $(`.question-nav-btn[data-index="${index}"]`).addClass('active');
         
         currentQuestionIndex = index;
-
-        // Scroll to top
         $('html, body').animate({ scrollTop: 0 }, 300);
     }
 
     function updateNavigationButton(questionIndex) {
         const question = QUESTIONS[questionIndex];
         const hasAnswer = answers[question.id];
+        const $navBtn = $(`.question-nav-btn[data-index="${questionIndex}"]`);
         
         if (hasAnswer) {
             if (question.question_type === 'essay') {
-                // Check if essay has content
-                if (hasAnswer.answer_text && hasAnswer.answer_text.length > 0) {
-                    $(`.question-nav-btn[data-index="${questionIndex}"]`).addClass('answered');
+                if (hasAnswer.answer_text && hasAnswer.answer_text.trim().length > 0) {
+                    $navBtn.addClass('answered');
                 } else {
-                    $(`.question-nav-btn[data-index="${questionIndex}"]`).removeClass('answered');
+                    $navBtn.removeClass('answered');
                 }
             } else {
-                // Multiple choice or true/false
-                if (hasAnswer.option_id) {
-                    $(`.question-nav-btn[data-index="${questionIndex}"]`).addClass('answered');
+                if (hasAnswer.option_id !== undefined && hasAnswer.option_id !== null) {
+                    $navBtn.addClass('answered');
+                } else {
+                    $navBtn.removeClass('answered');
                 }
             }
         } else {
-            $(`.question-nav-btn[data-index="${questionIndex}"]`).removeClass('answered');
+            $navBtn.removeClass('answered');
         }
     }
 
     function showReviewModal() {
-        let unansweredCount = 0;
         let answeredCount = 0;
-
-        let html = '<div class="table-responsive"><table class="table table-bordered">';
-        html += '<thead><tr><th>Question</th><th>Status</th><th>Action</th></tr></thead><tbody>';
 
         QUESTIONS.forEach((question, index) => {
             const hasAnswer = answers[question.id];
-            let status = '<span class="badge badge-warning">Not Answered</span>';
+            const $btn = $(`.question-review-btn[data-question-id="${question.id}"]`);
+            
+            let isAnswered = false;
             
             if (hasAnswer) {
                 if (question.question_type === 'essay') {
-                    if (hasAnswer.answer_text && hasAnswer.answer_text.length > 0) {
-                        status = '<span class="badge badge-success">Answered</span>';
-                        answeredCount++;
-                    } else {
-                        unansweredCount++;
-                    }
+                    isAnswered = hasAnswer.answer_text && hasAnswer.answer_text.length > 0;
                 } else {
-                    if (hasAnswer.option_id) {
-                        status = '<span class="badge badge-success">Answered</span>';
-                        answeredCount++;
-                    } else {
-                        unansweredCount++;
-                    }
+                    isAnswered = hasAnswer.option_id !== undefined;
                 }
-            } else {
-                unansweredCount++;
             }
 
-            html += `
-                <tr>
-                    <td>Question ${index + 1}</td>
-                    <td>${status}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-info review-go-to-question" 
-                                data-index="${index}" data-dismiss="modal">
-                            <i class="fas fa-arrow-right"></i> Go
-                        </button>
-                    </td>
-                </tr>
-            `;
+            if (isAnswered) {
+                $btn.removeClass('btn-outline-secondary btn-outline-primary')
+                    .addClass('btn-success');
+                answeredCount++;
+            } else {
+                $btn.removeClass('btn-success btn-outline-primary')
+                    .addClass('btn-outline-secondary');
+            }
         });
 
-        html += '</tbody></table></div>';
+        $('#answeredCount').text(answeredCount);
 
-        if (unansweredCount > 0) {
-            html = `
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Warning:</strong> You have ${unansweredCount} unanswered question(s).
-                    Are you sure you want to submit?
-                </div>
-            ` + html;
+        if (answeredCount < QUESTIONS.length) {
+            $('#reviewWarning').show();
         } else {
-            html = `
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i>
-                    <strong>Great!</strong> You have answered all questions.
-                </div>
-            ` + html;
+            $('#reviewWarning').hide();
         }
 
-        $('#reviewContent').html(html);
         $('#reviewModal').modal('show');
-
-        // Handle go to question from review
-        $('.review-go-to-question').on('click', function() {
-            const index = parseInt($(this).data('index'));
-            navigateToQuestion(index);
-        });
     }
 
+    $(document).on('click', '.question-review-btn', function() {
+        const index = parseInt($(this).data('index'));
+        
+        if (viewMode === 'showAll') {
+            $('#viewModeToggle').trigger('click');
+            setTimeout(() => navigateToQuestion(index), 100);
+        } else {
+            navigateToQuestion(index);
+        }
+    });
+
     function submitQuiz(timeExpired = false) {
-        if (!timeExpired) {
-            // Check if at least some questions are answered
-            if (Object.keys(answers).length === 0) {
-                toastr.warning('Please answer at least one question before submitting');
-                return;
-            }
+        if (!timeExpired && Object.keys(answers).length === 0) {
+            Toast.fire({
+                icon: 'warning',
+                title: 'Please answer at least one question'
+            });
+            return;
         }
 
-        // Prepare answers array
+        // Save progress before submitting
+        saveProgressToServer(true);
+
         const answersArray = Object.values(answers);
 
         if (!timeExpired) {
-            if (!confirm('Are you sure you want to submit your quiz? You cannot change your answers after submission.')) {
-                return;
-            }
+            Swal.fire({
+                title: 'Submit Quiz?',
+                text: "You cannot change your answers after submission.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#007bff',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, submit it!',
+                cancelButtonText: 'Continue answering'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performSubmit(answersArray, timeExpired);
+                }
+            });
+        } else {
+            performSubmit(answersArray, timeExpired);
         }
+    }
 
+    function performSubmit(answersArray, timeExpired) {
         $('#reviewModal').modal('hide');
+        
+        isSubmitting = true;
         
         const submitBtn = $('#confirmSubmitBtn, #submitQuizBtn');
         const originalHtml = submitBtn.html();
         submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Submitting...');
 
-        // Clear timer
         if (timerInterval) {
             clearInterval(timerInterval);
+        }
+        
+        if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+        }
+
+        if (autoSaveInterval) {
+            clearInterval(autoSaveInterval);
         }
 
         $.ajax({
@@ -270,20 +568,9 @@ $(document).ready(function() {
                 'X-CSRF-TOKEN': CSRF_TOKEN,
                 'Content-Type': 'application/json'
             },
-            data: JSON.stringify({
-                answers: answersArray
-            }),
+            data: JSON.stringify({ answers: answersArray }),
             success: function(response) {
                 if (response.success) {
-                    // Clear saved data
-                    clearSavedData();
-                    
-                    // Remove beforeunload warning
-                    window.removeEventListener('beforeunload', function() {});
-
-                    toastr.success(response.message);
-
-                    // Show result summary
                     if (!response.data.has_essay) {
                         const percentage = response.data.percentage;
                         const passed = percentage >= PASSING_SCORE;
@@ -291,67 +578,90 @@ $(document).ready(function() {
                         Swal.fire({
                             title: passed ? 'Congratulations!' : 'Quiz Completed',
                             html: `
-                                <p>Score: <strong>${response.data.score} / ${response.data.total_points}</strong></p>
-                                <p>Percentage: <strong>${percentage}%</strong></p>
-                                <p class="text-${passed ? 'success' : 'danger'}">
-                                    <strong>${passed ? 'PASSED' : 'FAILED'}</strong>
-                                </p>
+                                <div class="text-center">
+                                    <i class="fas fa-${passed ? 'trophy' : 'clipboard-check'} fa-3x text-${passed ? 'success' : 'info'} mb-3"></i>
+                                    <h4>Your Score</h4>
+                                    <h2 class="text-primary">${response.data.score} / ${response.data.total_points}</h2>
+                                    <h3 class="text-${passed ? 'success' : 'danger'}">${percentage}%</h3>
+                                    <p class="mb-0">
+                                        <strong class="text-${passed ? 'success' : 'danger'}">${passed ? 'PASSED' : 'FAILED'}</strong>
+                                    </p>
+                                </div>
                             `,
                             icon: passed ? 'success' : 'info',
-                            confirmButtonText: 'View Results'
+                            confirmButtonText: 'View Results',
+                            confirmButtonColor: '#007bff',
+                            allowOutsideClick: false
                         }).then(() => {
                             window.location.href = API_ROUTES.backToQuiz;
                         });
                     } else {
-                        setTimeout(function() {
+                        Swal.fire({
+                            title: 'Quiz Submitted!',
+                            html: `
+                                <div class="text-center">
+                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                    <p>Your answers have been submitted successfully.</p>
+                                    <p class="text-muted">Some questions require manual grading. Your final score will be available once grading is complete.</p>
+                                </div>
+                            `,
+                            icon: 'success',
+                            confirmButtonText: 'Back to Quiz',
+                            confirmButtonColor: '#007bff',
+                            allowOutsideClick: false
+                        }).then(() => {
                             window.location.href = API_ROUTES.backToQuiz;
-                        }, 1500);
+                        });
                     }
                 } else {
-                    toastr.error(response.message || 'Failed to submit quiz');
+                    isSubmitting = false;
+                    Toast.fire({
+                        icon: 'error',
+                        title: response.message || 'Failed to submit quiz'
+                    });
                     submitBtn.prop('disabled', false).html(originalHtml);
                 }
             },
             error: function(xhr) {
                 console.error('Error submitting quiz:', xhr);
-                let errorMsg = 'Failed to submit quiz';
+                isSubmitting = false;
                 
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
+                if (xhr.status === 410 && xhr.responseJSON?.time_expired) {
+                    handleTimeExpired();
+                } else {
+                    let errorMsg = 'Failed to submit quiz';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    
+                    Toast.fire({
+                        icon: 'error',
+                        title: errorMsg
+                    });
+                    submitBtn.prop('disabled', false).html(originalHtml);
                 }
-                
-                toastr.error(errorMsg);
-                submitBtn.prop('disabled', false).html(originalHtml);
             }
         });
     }
 
-    function saveAnswersToStorage() {
-        localStorage.setItem(`quiz_${QUIZ_ID}_answers`, JSON.stringify(answers));
-    }
-
     function loadSavedAnswers() {
-        const saved = localStorage.getItem(`quiz_${QUIZ_ID}_answers`);
-        if (saved) {
-            answers = JSON.parse(saved);
-            
-            // Restore answers to form
-            QUESTIONS.forEach((question, index) => {
-                const answer = answers[question.id];
-                if (answer) {
-                    if (question.question_type === 'essay') {
-                        $(`#essay_${index}`).val(answer.answer_text || '');
-                    } else {
-                        $(`input[name="question_${question.id}"][value="${answer.option_id}"]`).prop('checked', true);
-                    }
-                    updateNavigationButton(index);
+        QUESTIONS.forEach((question, index) => {
+            const savedAnswer = question.saved_answer;
+            if (savedAnswer) {
+                answers[question.id] = savedAnswer;
+                
+                if (question.question_type === 'essay') {
+                    $(`#essay_${index}`).val(savedAnswer.answer_text || '');
+                } else if (savedAnswer.option_id) {
+                    const radio = $(`input[name="question_${question.id}"][value="${savedAnswer.option_id}"]`);
+                    radio.prop('checked', true);
+                    radio.closest('.option-card').addClass('selected');
                 }
-            });
-        }
-    }
-
-    function clearSavedData() {
-        localStorage.removeItem(`quiz_${QUIZ_ID}_answers`);
-        localStorage.removeItem(`quiz_${QUIZ_ID}_time`);
+                updateNavigationButton(index);
+            }
+        });
+        
+        lastSavedAnswers = JSON.parse(JSON.stringify(answers));
     }
 });
