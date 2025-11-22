@@ -17,19 +17,86 @@
             padding-bottom: 80px;
         }
 
-        /* Optional: active item style */
         .nav-sidebar>.nav-item.menu-open>.nav-link,
         .nav-sidebar>.nav-item>.nav-link.active {
             background-color: #4b545c !important;
-            /* Blue header color */
             color: #fff !important;
         }
 
-
-        /* Optional: active sub-item style */
         .nav-treeview>.nav-item>.nav-link.active {
             background-color: #fff !important;
             color: #343a40 !important;
+        }
+
+        /* Google Classroom style breadcrumb */
+        .main-header.navbar {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .breadcrumb-custom {
+            background-color: transparent;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .breadcrumb-custom .breadcrumb-item {
+            font-size: 20px;
+            font-weight: 400;
+            color: #202124;
+        }
+
+        .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            font-size: 20px;
+            color: #5f6368;
+            padding: 0 8px;
+        }
+
+        .breadcrumb-custom .breadcrumb-item a {
+            color: #5f6368;
+            text-decoration: none;
+        }
+
+        .breadcrumb-custom .breadcrumb-item a:hover {
+            color: #202124;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-custom .breadcrumb-item.active {
+            color: #202124;
+            font-weight: 500;
+        }
+
+        .breadcrumb-icon {
+            font-size: 24px;
+            color: #5f6368;
+            margin-right: 12px;
+        }
+
+        .content-wrapper {
+            padding-top: 0;
+        }
+
+        .content-header {
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .nav-section-title {
+            padding: 10px 15px 5px 15px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background-color: rgba(255,255,255,0.1);
+            margin: 10px 15px;
         }
     </style>
 @endsection
@@ -44,6 +111,13 @@
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+                    </li>
+                </ul>
+
+                <!-- Breadcrumb in Navbar -->
+                <ul class="navbar-nav ml-3 flex-grow-1">
+                    <li class="nav-item d-flex align-items-center">
+                        @yield('breadcrumb')
                     </li>
                 </ul>
 
@@ -66,9 +140,28 @@
             <aside class="main-sidebar sidebar-dark-primary  elevation-4">
                 <a href="{{ route('student.home') }}" class="brand-link text-center" style="padding: 20px 0;">
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
-                        style="width: 80px; height: 80px; display: block; margin: 0 auto;">
-                    <span class="brand-text font-weight-light d-block mt-2">Student</span>
+                        style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
+                                <!-- School Year -->
+                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-center align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="text-white font-weight-bold mb-1" style="font-size: 14px;">
+                                    @if($activeSemester)
+                                        </i>SY {{ $activeSemester->school_year_code }}
+                                    @else
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>No Active Semester</span>
+                                    @endif
+                                </div>
+                                <div class="text-white-50 small">
+                                    </i>{{ $activeSemester->semester_name ?? 'N/A' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="sidebar">
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
@@ -110,12 +203,7 @@
 
             <!-- Content Wrapper -->
             <div class="content-wrapper">
-                <div class="content-header">
-                    <div class="container-fluid">
-                        @yield('breadcrumb')
-                    </div>
-                </div>
-
+                <br>
                 <section class="content">
                     <div class="container-fluid">
                         @yield('content')

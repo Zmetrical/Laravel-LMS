@@ -42,17 +42,6 @@ CREATE TABLE `gradebook_columns` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `gradebook_imports` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `class_code` varchar(100) NOT NULL,
-  `teacher_id` int(11) NOT NULL,
-  `filename` varchar(255) NOT NULL,
-  `rows_imported` int(11) NOT NULL,
-  `import_summary` text DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 CREATE TABLE `gradebook_scores` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `column_id` bigint(20) UNSIGNED NOT NULL,
@@ -237,7 +226,7 @@ CREATE TABLE `students` (
   `student_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `student_password` varchar(100) NOT NULL,
   `rememberToken` varchar(100) DEFAULT NULL,
-  `email` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
   `first_name` varchar(100) NOT NULL,
   `middle_name` varchar(100) NOT NULL,
   `last_name` varchar(100) NOT NULL,
@@ -346,9 +335,6 @@ ALTER TABLE `gradebook_columns`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `class_code` (`class_code`,`component_type`,`column_name`);
 
-ALTER TABLE `gradebook_imports`
-  ADD PRIMARY KEY (`id`);
-
 ALTER TABLE `gradebook_scores`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `column_id` (`column_id`,`student_number`);
@@ -455,9 +441,6 @@ ALTER TABLE `classes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `gradebook_columns`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `gradebook_imports`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `gradebook_scores`

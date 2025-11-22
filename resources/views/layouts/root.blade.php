@@ -26,7 +26,9 @@
             background-color: var(--trinity-blue) !important;
             border-color: var(--trinity-blue) !important;
         }
-
+        .text-primary{
+            color: var(--trinity-blue) !important;
+        }
 
         .card-primary:not(.card-outline) > .card-header {
             background-color: var(--trinity-blue);
