@@ -229,6 +229,33 @@
         border-color: #007bff;
         box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     }
+
+    /* Multiple Answer Checkboxes */
+    .option-card[data-type="checkbox"] .option-letter {
+        border-radius: 4px; /* Square for checkboxes */
+    }
+
+    .option-card[data-type="checkbox"].selected .option-letter {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .option-checkbox {
+        display: none;
+    }
+
+    /* Short Answer Input */
+    .short-answer-input {
+        border: 2px solid #dee2e6;
+        transition: all 0.2s ease;
+        padding: 12px 15px;
+    }
+
+    .short-answer-input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
 </style>
 @endsection
 
@@ -322,7 +349,40 @@
                             </div>
                             @endforeach
                         </div>
+                @elseif($question['question_type'] === 'multiple_answer')
+                    <!-- Multiple Answer (Checkboxes) -->
+                    <div class="options-container">
+                        @foreach($question['options'] as $optIndex => $option)
+                        <div class="card option-card" data-option-id="{{ $option->id }}" data-question-index="{{ $index }}" data-type="checkbox">
+                            <div class="card-body">
+                                <div class="option-letter">{{ chr(65 + $optIndex) }}</div>
+                                <div class="option-text">{{ $option->option_text }}</div>
+                                <input type="checkbox" 
+                                    id="q{{ $index }}_opt{{ $optIndex }}" 
+                                    name="question_{{ $question['id'] }}[]" 
+                                    class="option-checkbox question-answer" 
+                                    value="{{ $option->id }}"
+                                    data-question-id="{{ $question['id'] }}"
+                                    data-question-index="{{ $index }}">
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    <small class="form-text text-muted mt-2">
+                        <i class="fas fa-info-circle"></i> Select all correct answers
+                    </small>
 
+                @elseif($question['question_type'] === 'short_answer')
+                    <!-- Short Answer -->
+                    <div class="form-group">
+                        <input type="text" 
+                            class="form-control form-control-lg short-answer-input question-answer" 
+                            id="short_{{ $index }}"
+                            placeholder="Type your answer here..."
+                            data-question-id="{{ $question['id'] }}"
+                            data-question-index="{{ $index }}"
+                            maxlength="500">
+                    </div>
                     @elseif($question['question_type'] === 'essay')
                         <!-- Essay Answer -->
                         <div class="form-group">

@@ -12,7 +12,7 @@ use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Class_Management\Quiz_Attempt;
-
+use App\Http\Controllers\Class_Management\Quiz_Submit;
 use App\Http\Controllers\Grade_Management\Grade_Management;
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
 use App\Http\Controllers\Grade_Management\Grade_list;
@@ -233,7 +233,7 @@ Route::prefix('student')->name('student.')->group(function () {
                     ->name('quiz.start');                
                 Route::get('/quiz/{quizId}/save-progress', [Quiz_Attempt::class, 'saveProgress'])->name('quiz.save-progress');
 
-                Route::post('/quiz/{quizId}/submit', [Quiz_Attempt::class, 'submitQuiz'])->name('quiz.submit');
+                Route::post('/quiz/{quizId}/submit', [Quiz_Submit::class, 'submitQuiz'])->name('quiz.submit');
                 Route::get('/quiz/{quizId}/results/{attemptId}', [Quiz_Attempt::class, 'getResults'])->name('quiz.results');
                 Route::post('/quiz/{quizId}/heartbeat', [Quiz_Attempt::class, 'heartbeat'])->name('quiz.heartbeat');
             });

@@ -16,11 +16,39 @@
     .question-item:hover {
         background-color: #f8f9fa;
     }
-    .option-correct-indicator {
+    .option-correct-indicator { cursor: pointer; }
+    .question-type-card {
         cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid #dee2e6;
     }
-    .collapsed-card .card-body {
-        display: none;
+    .question-type-card:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+    }
+    .question-type-card.selected {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    .question-type-card .card-body { padding: 15px; }
+    .question-type-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    .option-item {
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    .question-preview {
+        border-left: 3px solid #17a2b8;
+        padding-left: 15px;
+        margin-bottom: 10px;
+    }
+    .badge-question-type {
+        font-size: 0.7rem;
+        text-transform: uppercase;
     }
 </style>
 @endsection
@@ -38,13 +66,9 @@
 <!-- Quiz Settings Card -->
 <div class="card card-primary">
     <div class="card-header">
-        <h3 class="card-title">
-            <i class="fas fa-cog"></i> Quiz Settings
-        </h3>
+        <h3 class="card-title"><i class="fas fa-cog"></i> Quiz Settings</h3>
         <div class="card-tools">
-            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                <i class="fas fa-minus"></i>
-            </button>
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
         </div>
     </div>
     <div class="card-body">
@@ -53,8 +77,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label>Quiz Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="quizTitle" 
-                               placeholder="e.g., Chapter 1 Quiz" required>
+                        <input type="text" class="form-control" id="quizTitle" placeholder="e.g., Chapter 1 Quiz" required>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -64,34 +87,28 @@
                     </div>
                 </div>
             </div>
-
             <div class="form-group">
                 <label>Description (Optional)</label>
-                <textarea class="form-control" id="quizDescription" rows="2" 
-                          placeholder="Brief description of the quiz..."></textarea>
+                <textarea class="form-control" id="quizDescription" rows="2" placeholder="Brief description..."></textarea>
             </div>
-
             <div class="row">
                 <div class="col-md-3">
                     <div class="form-group">
                         <label>Time Limit (Minutes)</label>
-                        <input type="number" class="form-control" id="timeLimit" 
-                               value="60" min="1" placeholder="Leave blank for no limit">
-                        <small class="form-text text-muted">0 or blank = No time limit</small>
+                        <input type="number" class="form-control" id="timeLimit" value="60" min="0">
+                        <small class="form-text text-muted">0 = No limit</small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
                         <label>Max Attempts <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="maxAttempts" 
-                               value="1" min="1" max="10" required>
+                        <input type="number" class="form-control" id="maxAttempts" value="1" min="1" max="10" required>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
                         <label>Passing Score (%) <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="passingScore" 
-                               value="75" min="0" max="100" required>
+                        <input type="number" class="form-control" id="passingScore" value="75" min="0" max="100" required>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -116,11 +133,9 @@
 <div class="row">
     <!-- Question List Sidebar -->
     <div class="col-md-3">
-        <div class="card card-info">
+        <div class="card card-primary">
             <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-list"></i> Questions
-                </h3>
+                <h3 class="card-title"><i class="fas fa-list"></i> Questions</h3>
             </div>
             <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
                 <ul class="nav nav-pills nav-sidebar flex-column" id="questionNav">
@@ -129,11 +144,9 @@
                     </li>
                 </ul>
             </div>
-            <div class="card-footer">
-                <div class="text-center">
-                    <strong>Total: <span id="totalQuestions">0</span> questions</strong><br>
-                    <strong>Points: <span id="totalPoints">0</span></strong>
-                </div>
+            <div class="card-footer text-center">
+                <strong>Total: <span id="totalQuestions">0</span> questions</strong><br>
+                <strong>Points: <span id="totalPoints">0</span></strong>
             </div>
         </div>
     </div>
@@ -141,126 +154,121 @@
     <!-- Question Builder Area -->
     <div class="col-md-9">
         <!-- Question Type Selection -->
-        <div class="card card-primary card-outline card-outline-tabs">
-            <div class="card-header p-0 border-bottom-0">
-                <ul class="nav nav-tabs" id="questionTypeTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="mc-tab" data-toggle="tab" href="#multipleChoice" role="tab">
-                            <i class="fas fa-check-circle"></i> Multiple Choice
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="tf-tab" data-toggle="tab" href="#trueFalse" role="tab">
-                            <i class="fas fa-toggle-on"></i> True/False
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="essay-tab" data-toggle="tab" href="#essay" role="tab">
-                            <i class="fas fa-file-alt"></i> Essay
-                        </a>
-                    </li>
-                </ul>
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-plus-circle"></i> Add New Question</h3>
             </div>
-
             <div class="card-body">
-                <div class="tab-content" id="questionTypeTabsContent">
-                    <!-- Multiple Choice Tab -->
-                    <div class="tab-pane fade show active" id="multipleChoice" role="tabpanel">
-                        <div class="form-group">
-                            <label>Question Text <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="mcQuestion" rows="3" 
-                                      placeholder="Enter your question here..."></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Points <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="mcPoints" 
-                                   value="1" min="0.01" step="0.01">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Answer Options <small class="text-muted">(Check the correct answer)</small></label>
-                            <div id="mcOptions">
-                                <div class="input-group mb-2 mc-option-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text">A</span>
-                                    </div>
-                                    <input type="text" class="form-control mc-option" placeholder="Option A">
-                                    <div class="input-group-append">
-                                        <div class="input-group-text option-correct-indicator">
-                                            <input type="radio" name="mcCorrect" value="0">
-                                        </div>
-                                        <button class="btn btn-danger btn-sm remove-option" type="button" style="display:none;">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
+                <!-- Step 1: Select Question Type -->
+                <div id="questionTypeSelector">
+                    <h5 class="mb-3">Select Question Type</h5>
+                    <div class="row">
+                        <div class="col-md-4 col-6 mb-3">
+                            <div class="card question-type-card text-center" data-type="multiple_choice">
+                                <div class="card-body">
+                                    <i class="fas fa-check-circle question-type-icon text-primary"></i>
+                                    <h6>Multiple Choice</h6>
+                                    <small class="text-muted">Single correct answer</small>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addMCOption">
-                                <i class="fas fa-plus"></i> Add Option
+                        </div>
+                        <div class="col-md-4 col-6 mb-3">
+                            <div class="card question-type-card text-center" data-type="multiple_answer">
+                                <div class="card-body">
+                                    <i class="fas fa-check-double question-type-icon text-primary"></i>
+                                    <h6>Multiple Answer</h6>
+                                    <small class="text-muted">Multiple correct answers</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6 mb-3">
+                            <div class="card question-type-card text-center" data-type="true_false">
+                                <div class="card-body">
+                                    <i class="fas fa-toggle-on question-type-icon text-primary"></i>
+                                    <h6>True/False</h6>
+                                    <small class="text-muted">Binary choice</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6 mb-3">
+                            <div class="card question-type-card text-center" data-type="short_answer">
+                                <div class="card-body">
+                                    <i class="fas fa-font question-type-icon text-primary"></i>
+                                    <h6>Short Answer</h6>
+                                    <small class="text-muted">Identification type</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6 mb-3">
+                            <div class="card question-type-card text-center" data-type="essay">
+                                <div class="card-body">
+                                    <i class="fas fa-file-alt question-type-icon text-primary"></i>
+                                    <h6>Essay</h6>
+                                    <small class="text-muted">Long form answer</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Question Form (Hidden initially) -->
+                <div id="questionFormContainer" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <span id="selectedTypeIcon"></span>
+                            <span id="selectedTypeName"></span>
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="changeTypeBtn">
+                            <i class="fas fa-exchange-alt"></i> Change Type
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Question Text <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="questionText" rows="3" placeholder="Enter your question here..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Points <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="questionPoints" value="1" min="0.01" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Options Container (for MC, MA, TF) -->
+                    <div id="optionsContainer" style="display: none;">
+                        <label>Answer Options <span class="text-danger">*</span></label>
+                        <div id="optionsList"></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addOptionBtn" style="display: none;">
+                            <i class="fas fa-plus"></i> Add Option
+                        </button>
+                        <small class="text-muted d-block mt-1" id="optionLimitHint"></small>
+                    </div>
+
+                    <!-- Short Answer Container -->
+                    <div id="shortAnswerContainer" style="display: none;">
+                        <div class="form-group">
+                            <label>Accepted Answers <span class="text-danger">*</span></label>
+                            <small class="text-muted d-block mb-2">Add all acceptable answers. Matching is case-insensitive.</small>
+                            <div id="acceptedAnswersList"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addAcceptedAnswerBtn">
+                                <i class="fas fa-plus"></i> Add Alternative Answer
                             </button>
                         </div>
-
-                        <button type="button" class="btn btn-primary" id="addMCQuestion">
-                            <i class="fas fa-plus"></i> Add Question
-                        </button>
+                        <div class="custom-control custom-switch mb-3">
+                            <input type="checkbox" class="custom-control-input" id="exactMatch" checked>
+                            <label class="custom-control-label" for="exactMatch">Require exact match (uncheck for partial matching)</label>
+                        </div>
                     </div>
 
-                    <!-- True/False Tab -->
-                    <div class="tab-pane fade" id="trueFalse" role="tabpanel">
-                        <div class="form-group">
-                            <label>Question Text <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="tfQuestion" rows="3" 
-                                      placeholder="Enter your true/false statement..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Points <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="tfPoints" 
-                                   value="1" min="0.01" step="0.01">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Correct Answer <span class="text-danger">*</span></label>
-                            <div>
-                                <div class="custom-control custom-radio">
-                                    <input type="radio" id="tfTrue" name="tfCorrect" 
-                                           class="custom-control-input" value="true">
-                                    <label class="custom-control-label" for="tfTrue">True</label>
-                                </div>
-                                <div class="custom-control custom-radio">
-                                    <input type="radio" id="tfFalse" name="tfCorrect" 
-                                           class="custom-control-input" value="false">
-                                    <label class="custom-control-label" for="tfFalse">False</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="button" class="btn btn-primary" id="addTFQuestion">
-                            <i class="fas fa-plus"></i> Add Question
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" id="cancelQuestionBtn">
+                            <i class="fas fa-times"></i> Cancel
                         </button>
-                    </div>
-
-                    <!-- Essay Tab -->
-                    <div class="tab-pane fade" id="essay" role="tabpanel">
-                        <div class="form-group">
-                            <label>Question Text <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="essayQuestion" rows="3" 
-                                      placeholder="Enter your essay prompt..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Points <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="essayPoints" 
-                                   value="10" min="0.01" step="0.01">
-                        </div>
-
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Note:</strong> Essay questions will be manually graded.
-                        </div>
-
-                        <button type="button" class="btn btn-primary" id="addEssayQuestion">
+                        <button type="button" class="btn btn-primary" id="addQuestionBtn">
                             <i class="fas fa-plus"></i> Add Question
                         </button>
                     </div>
@@ -276,12 +284,30 @@
         </div>
     </div>
 </div>
+
+<!-- Question Edit Modal -->
+<div class="modal fade" id="editQuestionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white"><i class="fas fa-edit"></i> Edit Question</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body" id="editQuestionBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('page-scripts')
 <script>
     const LESSON_ID = {{ $lesson->id }};
     const IS_EDIT = {{ $isEdit ?? false ? 'true' : 'false' }};
+    const MAX_OPTIONS = 10;
     
     @if($isEdit ?? false)
         const QUIZ_ID = {{ $quiz->id ?? 0 }};
@@ -291,7 +317,6 @@
         @if($isEdit ?? false)
             getQuizData: "{{ route('teacher.class.quiz.data', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
             submitQuiz: "{{ route('teacher.class.quiz.update', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
-            deleteQuiz: "{{ route('teacher.class.quiz.delete', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
         @else
             submitQuiz: "{{ route('teacher.class.quiz.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}",
         @endif

@@ -59,12 +59,20 @@ $(document).ready(function() {
     $(document).on('click', '.option-card', function() {
         const questionIndex = $(this).data('question-index');
         const optionId = $(this).data('option-id');
+        const type = $(this).data('type');
         
-        $(this).siblings('.option-card').removeClass('selected');
-        $(this).addClass('selected');
-        
-        const radio = $(this).find('.option-radio');
-        radio.prop('checked', true).trigger('change');
+        if (type === 'checkbox') {
+            // Multiple answer - toggle checkbox
+            $(this).toggleClass('selected');
+            const checkbox = $(this).find('.option-checkbox');
+            checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+        } else {
+            // Single answer - radio behavior
+            $(this).siblings('.option-card').removeClass('selected');
+            $(this).addClass('selected');
+            const radio = $(this).find('.option-radio');
+            radio.prop('checked', true).trigger('change');
+        }
     });
 
     // Question Navigation Buttons
@@ -95,16 +103,17 @@ $(document).ready(function() {
     });
 
     // Track Answers with debounce for essays
-    let essayDebounce = null;
+    // Track Answers with debounce for text inputs
+    let textDebounce = null;
     $('.question-answer').on('change input', function() {
         const questionId = $(this).data('question-id');
         const questionIndex = $(this).data('question-index');
         let answer;
 
         if ($(this).is('textarea')) {
-            clearTimeout(essayDebounce);
-            
-            essayDebounce = setTimeout(() => {
+            // Essay answer
+            clearTimeout(textDebounce);
+            textDebounce = setTimeout(() => {
                 answer = {
                     question_id: questionId,
                     answer_text: $(this).val().trim()
@@ -112,7 +121,31 @@ $(document).ready(function() {
                 answers[questionId] = answer;
                 updateNavigationButton(questionIndex);
             }, 500);
+        } else if ($(this).is('input[type="text"]')) {
+            // Short answer
+            clearTimeout(textDebounce);
+            textDebounce = setTimeout(() => {
+                answer = {
+                    question_id: questionId,
+                    answer_text: $(this).val().trim()
+                };
+                answers[questionId] = answer;
+                updateNavigationButton(questionIndex);
+            }, 500);
+        } else if ($(this).is('.option-checkbox')) {
+            // Multiple answer - collect all checked options
+            const checkedOptions = [];
+            $(`input[name="question_${questionId}[]"]:checked`).each(function() {
+                checkedOptions.push(parseInt($(this).val()));
+            });
+            answer = {
+                question_id: questionId,
+                option_ids: checkedOptions // Array of option IDs
+            };
+            answers[questionId] = answer;
+            updateNavigationButton(questionIndex);
         } else {
+            // Single answer (radio)
             answer = {
                 question_id: questionId,
                 option_id: parseInt($(this).val())
@@ -653,7 +686,19 @@ $(document).ready(function() {
                 
                 if (question.question_type === 'essay') {
                     $(`#essay_${index}`).val(savedAnswer.answer_text || '');
+                } else if (question.question_type === 'short_answer') {
+                    $(`#short_${index}`).val(savedAnswer.answer_text || '');
+                } else if (question.question_type === 'multiple_answer') {
+                    // Multiple checkboxes
+                    if (savedAnswer.option_ids && Array.isArray(savedAnswer.option_ids)) {
+                        savedAnswer.option_ids.forEach(optionId => {
+                            const checkbox = $(`input[name="question_${question.id}[]"][value="${optionId}"]`);
+                            checkbox.prop('checked', true);
+                            checkbox.closest('.option-card').addClass('selected');
+                        });
+                    }
                 } else if (savedAnswer.option_id) {
+                    // Single radio
                     const radio = $(`input[name="question_${question.id}"][value="${savedAnswer.option_id}"]`);
                     radio.prop('checked', true);
                     radio.closest('.option-card').addClass('selected');

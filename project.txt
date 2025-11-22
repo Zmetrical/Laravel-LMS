@@ -39,17 +39,6 @@ CREATE TABLE `gradebook_columns` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `gradebook_imports` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `class_code` varchar(100) NOT NULL,
-  `teacher_id` int(11) NOT NULL,
-  `filename` varchar(255) NOT NULL,
-  `rows_imported` int(11) NOT NULL,
-  `import_summary` text DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 CREATE TABLE `gradebook_scores` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `column_id` bigint(20) UNSIGNED NOT NULL,
@@ -151,11 +140,12 @@ CREATE TABLE `quiz_questions` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `quiz_id` bigint(20) UNSIGNED NOT NULL,
   `question_text` text NOT NULL,
-  `question_type` enum('multiple_choice','true_false','essay') NOT NULL DEFAULT 'multiple_choice',
+  `question_type` enum('multiple_choice','multiple_answer','true_false','short_answer','essay') DEFAULT NULL,
   `points` decimal(5,2) NOT NULL DEFAULT 1.00,
   `order_number` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `exact_match` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `quiz_question_options` (
@@ -164,6 +154,14 @@ CREATE TABLE `quiz_question_options` (
   `option_text` text NOT NULL,
   `is_correct` tinyint(1) NOT NULL DEFAULT 0,
   `order_number` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `quiz_short_answers` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `question_id` bigint(20) UNSIGNED NOT NULL,
+  `answer_text` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -234,7 +232,7 @@ CREATE TABLE `students` (
   `student_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `student_password` varchar(100) NOT NULL,
   `rememberToken` varchar(100) DEFAULT NULL,
-  `email` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
   `first_name` varchar(100) NOT NULL,
   `middle_name` varchar(100) NOT NULL,
   `last_name` varchar(100) NOT NULL,

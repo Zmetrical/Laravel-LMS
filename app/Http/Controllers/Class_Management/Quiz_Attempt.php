@@ -177,12 +177,29 @@ class Quiz_Attempt extends MainController
                     ->where('attempt_id', $attemptId)
                     ->get();
 
-                foreach ($savedAnswersData as $answer) {
-                    $savedAnswers[$answer->question_id] = [
-                        'option_id' => $answer->option_id,
-                        'answer_text' => $answer->answer_text
-                    ];
-                }
+                    foreach ($savedAnswersData as $answer) {
+                        $qId = $answer->question_id;
+                        
+                        // Get question type to determine how to structure saved answer
+                        $qType = DB::table('quiz_questions')
+                            ->where('id', $qId)
+                            ->value('question_type');
+                        
+                        if ($qType === 'multiple_answer') {
+                            // For multiple answer, collect all option_ids
+                            if (!isset($savedAnswers[$qId])) {
+                                $savedAnswers[$qId] = ['option_ids' => []];
+                            }
+                            if ($answer->option_id) {
+                                $savedAnswers[$qId]['option_ids'][] = $answer->option_id;
+                            }
+                        } else {
+                            $savedAnswers[$qId] = [
+                                'option_id' => $answer->option_id,
+                                'answer_text' => $answer->answer_text
+                            ];
+                        }
+                    }
 
             } else {
                 // Check max attempts
@@ -460,165 +477,6 @@ class Quiz_Attempt extends MainController
             return response()->json([
                 'success' => false,
                 'message' => 'Heartbeat failed'
-            ], 500);
-        }
-    }
-
-    /**
-     * Submit quiz attempt
-     */
-    public function submitQuiz(Request $request, $classId, $lessonId, $quizId)
-    {
-        $studentNumber = Auth::guard('student')->user()->student_number;
-        
-        DB::beginTransaction();
-        try {
-            $quiz = DB::table('quizzes')
-                ->where('id', $quizId)
-                ->where('lesson_id', $lessonId)
-                ->where('status', 1)
-                ->first();
-
-            if (!$quiz) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Quiz not found'
-                ], 404);
-            }
-
-            // Get the active attempt
-            $attempt = DB::table('student_quiz_attempts')
-                ->where('student_number', $studentNumber)
-                ->where('quiz_id', $quizId)
-                ->where('status', 'in_progress')
-                ->orderBy('id', 'desc')
-                ->first();
-
-            if (!$attempt) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active quiz attempt found'
-                ], 403);
-            }
-
-            // Check time expiration
-            if ($quiz->time_limit) {
-                $startedAt = Carbon::parse($attempt->started_at);
-                $expiresAt = $startedAt->addMinutes($quiz->time_limit);
-                
-                if (Carbon::now()->greaterThan($expiresAt)) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Time expired',
-                        'time_expired' => true
-                    ], 410);
-                }
-            }
-
-            // Verify questions belong to this quiz
-            $quizQuestionIds = DB::table('quiz_questions')
-                ->where('quiz_id', $quizId)
-                ->pluck('id')
-                ->toArray();
-
-            $answers = $request->input('answers', []);
-            foreach ($answers as $answer) {
-                if (!in_array($answer['question_id'], $quizQuestionIds)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Invalid question ID detected'
-                    ], 400);
-                }
-            }
-
-            $score = 0;
-            $hasEssay = false;
-
-            // Process final answers
-            foreach ($answers as $answer) {
-                $question = DB::table('quiz_questions')
-                    ->where('id', $answer['question_id'])
-                    ->where('quiz_id', $quizId)
-                    ->first();
-
-                if (!$question) continue;
-
-                $existing = DB::table('student_quiz_answers')
-                    ->where('attempt_id', $attempt->id)
-                    ->where('question_id', $answer['question_id'])
-                    ->first();
-
-                $answerData = [
-                    'attempt_id' => $attempt->id,
-                    'question_id' => $answer['question_id'],
-                    'updated_at' => now()
-                ];
-
-                if ($question->question_type === 'essay') {
-                    $answerData['answer_text'] = $answer['answer_text'] ?? '';
-                    $answerData['is_correct'] = null;
-                    $answerData['points_earned'] = 0;
-                    $hasEssay = true;
-                } else {
-                    $answerData['option_id'] = $answer['option_id'] ?? null;
-                    
-                    if ($answerData['option_id']) {
-                        $option = DB::table('quiz_question_options')
-                            ->where('id', $answerData['option_id'])
-                            ->where('question_id', $question->id)
-                            ->first();
-
-                        if ($option) {
-                            $isCorrect = $option->is_correct == 1;
-                            $answerData['is_correct'] = $isCorrect ? 1 : 0;
-                            $answerData['points_earned'] = $isCorrect ? $question->points : 0;
-                            $score += $answerData['points_earned'];
-                        }
-                    }
-                }
-
-                if ($existing) {
-                    DB::table('student_quiz_answers')
-                        ->where('id', $existing->id)
-                        ->update($answerData);
-                } else {
-                    $answerData['created_at'] = now();
-                    DB::table('student_quiz_answers')->insert($answerData);
-                }
-            }
-
-            // Mark attempt as submitted/graded
-            DB::table('student_quiz_attempts')
-                ->where('id', $attempt->id)
-                ->update([
-                    'score' => $score,
-                    'submitted_at' => now(),
-                    'status' => $hasEssay ? 'submitted' : 'graded',
-                    'updated_at' => now()
-                ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => $hasEssay 
-                    ? 'Quiz submitted. Essay questions require manual grading.' 
-                    : 'Quiz submitted successfully',
-                'data' => [
-                    'attempt_id' => $attempt->id,
-                    'score' => $score,
-                    'total_points' => $attempt->total_points,
-                    'percentage' => $attempt->total_points > 0 ? round(($score / $attempt->total_points) * 100, 2) : 0,
-                    'has_essay' => $hasEssay
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to submit quiz: ' . $e->getMessage()
             ], 500);
         }
     }
