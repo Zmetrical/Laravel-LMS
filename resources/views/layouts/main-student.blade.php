@@ -166,26 +166,40 @@
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
                             data-accordion="false">
-                            <!-- User Menu -->
-                            <li class="nav-item {{ Request::is('class/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('class/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-users"></i>
-                                    <p>
-                                        Class
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                            
+                            <!-- My Classes -->                            
+                            <li class="nav-item">
+                                <a href="{{ route('student.list_class') }}" 
+                                class="nav-link {{ Request::routeIs('student.list_class') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-th-list"></i>
+                                    <p>All Classes</p>
                                 </a>
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('student.list_class') }}"
-                                            class="nav-link {{ Request::routeIs('student.list_class') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Class List</p>
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
+                            <div class="nav-divider"></div>
 
+                            @forelse($studentClasses as $class)
+                                <li class="nav-item">
+                                    <a href="{{ route('student.class.lessons', $class->id) }}" 
+                                    class="nav-link {{ Request::is('student/class/' . $class->id . '*') ? 'active' : '' }}">
+                                        <i class="nav-icon fas fa-book"></i>
+                                        <p>
+                                            {{ Str::limit($class->class_name, 15) }}
+                                        </p>
+                                    </a>
+                                </li>
+                            @empty
+                                <li class="nav-item">
+                                    <a href="{{ route('student.list_class') }}" class="nav-link">
+                                        <i class="nav-icon fas fa-info-circle text-muted"></i>
+                                        <p class="text-muted small">No classes enrolled</p>
+                                    </a>
+                                </li>
+                            @endforelse
+                            
+                            <div class="nav-divider"></div>
+                            
+
+                            
                         </ul>
                     </nav>
                 </div>

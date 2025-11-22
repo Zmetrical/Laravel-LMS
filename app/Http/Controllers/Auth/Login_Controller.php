@@ -54,6 +54,9 @@ class Login_Controller extends MainController
                 'student_number' => $student->student_number
             ]);
 
+            $sessionKey = 'student_classes_' . $student->id;
+            $request->session()->forget($sessionKey);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful! Redirecting...',
@@ -83,8 +86,16 @@ class Login_Controller extends MainController
 
     public function logout_student(Request $request)
     {
-        $studentNumber = Auth::guard('student')->user()?->student_number;
+        $student = Auth::guard('student')->user();
+
+        $studentNumber = $student?->student_number;
         
+        // Clear student classes cache
+        if ($student) {
+            $sessionKey = 'student_classes_' . $student->id;
+            $request->session()->forget($sessionKey);
+        }
+    
         Auth::guard('student')->logout();
 
         $request->session()->invalidate();

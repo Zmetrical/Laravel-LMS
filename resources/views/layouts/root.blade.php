@@ -22,17 +22,19 @@
 
         /* Use the variable */
         .bg-primary,
-        .btn-primary {
+        .btn-primary{
             background-color: var(--trinity-blue) !important;
             border-color: var(--trinity-blue) !important;
         }
+        .btn-outline-primary{
+            border-color: var(--trinity-blue) !important;
+            color: var(--trinity-blue) !important;
+        }
+
         .text-primary{
             color: var(--trinity-blue) !important;
         }
 
-        .card-primary:not(.card-outline) > .card-header {
-            background-color: var(--trinity-blue);
-        }
 
 
 
@@ -40,10 +42,24 @@
             background-color: var(--trinity-blue) !important;
             border-color: var(--trinity-blue) !important;
         }
+        .nav-tabs > .nav-item > .nav-link{
+            color: var(--trinity-blue) !important;
+        }
+        .nav-tabs > .nav-item > .nav-link.active{
+            background-color: var(--trinity-blue) !important;
+            color: #fff !important;
+        }
+        .card-primary:not(.card-outline) > .card-header {
+            background-color: var(--trinity-blue);
+        }
 
         .card-primary.card-outline {
             border-top: 3px solid var(--trinity-blue) !important;
         }
+        .card-primary.card-outline-tabs>.card-header a.active {
+            border-top: 3px solid var(--trinity-blue) !important;
+        }
+
 
     </style>
     <!-- Styles -->

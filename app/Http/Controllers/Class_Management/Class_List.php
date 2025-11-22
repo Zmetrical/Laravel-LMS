@@ -24,102 +24,122 @@ class Class_List extends MainController
         return view('modules.class.list_class', $data);
     }
 
-    /**
-     * Get student's enrolled classes
-     */
-    public function getStudentClasses()
-    {
-        try {
-            $student = Auth::guard('student')->user();
+/**
+ * Get student's enrolled classes FOR ACTIVE SEMESTER
+ */
+public function getStudentClasses()
+{
+    try {
+        $student = Auth::guard('student')->user();
 
-            if (!$student) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 401);
-            }
-
-            // Get classes based on student type
-            if ($student->student_type === 'regular') {
-                // Regular students: Get classes through their section
-                $classes = $this->getRegularStudentClasses($student);
-            } else {
-                // Irregular students: Get classes directly from student_class_matrix
-                $classes = $this->getIrregularStudentClasses($student);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $classes,
-                'student_type' => $student->student_type
-            ]);
-        } catch (\Exception $e) {
+        if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load classes: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get classes for regular students (through section)
-     */
-    private function getRegularStudentClasses($student)
-    {
-        if (!$student->section_id) {
-            return [];
+                'message' => 'Unauthorized'
+            ], 401);
         }
 
-        return DB::table('section_class_matrix as scm')
-            ->join('classes as c', 'scm.class_id', '=', 'c.id')
-            ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
-            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-            ->where('scm.section_id', $student->section_id)
-            ->select(
-                'c.id',
-                'c.class_code',
-                'c.class_name',
-                'c.ww_perc',
-                'c.pt_perc',
-                'c.qa_perce',
-                DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
-                't.email as teacher_email',
-                't.profile_image as teacher_image'
-            )
-            ->orderBy('c.class_code')
-            ->get();
+        // Get active semester
+        $activeSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
+
+        if (!$activeSemester) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'No active semester found',
+                'student_type' => $student->student_type
+            ]);
+        }
+
+        // Get classes based on student type FOR ACTIVE SEMESTER
+        if ($student->student_type === 'regular') {
+            $classes = $this->getRegularStudentClasses($student, $activeSemester->id);
+        } else {
+            $classes = $this->getIrregularStudentClasses($student, $activeSemester->id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $classes,
+            'student_type' => $student->student_type,
+            'active_semester' => [
+                'id' => $activeSemester->id,
+                'name' => $activeSemester->name,
+                'code' => $activeSemester->code
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load classes: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get classes for regular students (through section) FOR SPECIFIC SEMESTER
+ */
+private function getRegularStudentClasses($student, $semesterId)
+{
+    if (!$student->section_id) {
+        return [];
     }
 
-    /**
-     * Get classes for irregular students (direct enrollment)
-     */
-    private function getIrregularStudentClasses($student)
-    {
-        return DB::table('student_class_matrix as scm')
-            ->join('classes as c', function ($join) {
-                $join->on(
-                    DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
-                );
-            })
-            ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
-            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-            ->where('scm.student_number', $student->student_number)
-            ->select(
-                'c.id',
-                'c.class_code',
-                'c.class_name',
-                'c.ww_perc',
-                'c.pt_perc',
-                'c.qa_perce',
-                DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
-                't.email as teacher_email',
-                't.profile_image as teacher_image'
-            )
-            ->orderBy('c.class_code')
-            ->get();
-    }
+    return DB::table('section_class_matrix as scm')
+        ->join('classes as c', 'scm.class_id', '=', 'c.id')
+        ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
+        ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+        ->where('scm.section_id', $student->section_id)
+        ->where('scm.semester_id', $semesterId) // Filter by semester
+        ->select(
+            'c.id',
+            'c.class_code',
+            'c.class_name',
+            'c.ww_perc',
+            'c.pt_perc',
+            'c.qa_perce',
+            DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
+            't.email as teacher_email',
+            't.profile_image as teacher_image'
+        )
+        ->orderBy('c.class_code')
+        ->get();
+}
+
+/**
+ * Get classes for irregular students (direct enrollment) FOR SPECIFIC SEMESTER
+ */
+private function getIrregularStudentClasses($student, $semesterId)
+{
+    return DB::table('student_class_matrix as scm')
+        ->join('classes as c', function ($join) {
+            $join->on(
+                DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
+                '=',
+                DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
+            );
+        })
+        ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
+        ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+        ->where('scm.student_number', $student->student_number)
+        ->where('scm.semester_id', $semesterId) // Filter by semester
+        ->where('scm.enrollment_status', 'enrolled')
+        ->select(
+            'c.id',
+            'c.class_code',
+            'c.class_name',
+            'c.ww_perc',
+            'c.pt_perc',
+            'c.qa_perce',
+            DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
+            't.email as teacher_email',
+            't.profile_image as teacher_image'
+        )
+        ->orderBy('c.class_code')
+        ->get();
+}
 
     /**
      * Get class details for student

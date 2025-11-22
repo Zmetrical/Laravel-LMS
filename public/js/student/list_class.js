@@ -112,11 +112,10 @@ $(document).ready(function() {
                     <div class="card card-primary card-outline h-100">
                         <div class="card-header">
                             <h3 class="card-title">
-                                <i class="fas fa-book"></i> ${escapeHtml(classData.class_code)}
+                                <i class="fas fa-book"></i> ${escapeHtml(classData.class_name)}
                             </h3>
                         </div>
                         <div class="card-body">
-                            <h6 class="mb-3">${escapeHtml(classData.class_name)}</h6>
                             ${teacherInfo}
                             ${progressHtml}
                         </div>

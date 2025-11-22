@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Http\Composers\Active_Schoolyear;
+use App\Http\Composers\Student_Classes;
 
 class ViewServiceProvider extends ServiceProvider
 {
@@ -15,6 +16,9 @@ class ViewServiceProvider extends ServiceProvider
         'layouts.main-teacher',
         'layouts.main-student'
         ], Active_Schoolyear::class);
+
+        View::composer('layouts.main-student', Student_Classes::class);
+
     }
 
     public function register()
