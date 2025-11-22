@@ -172,9 +172,17 @@
                                 <a href="{{ route('student.list_class') }}" 
                                 class="nav-link {{ Request::routeIs('student.list_class') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-th-list"></i>
-                                    <p>All Classes</p>
+                                    <p>My Classes</p>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a href="{{ route('student.list_class') }}" 
+                                class="nav-link {{ Request::routeIs('student.list_class') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-th-list"></i>
+                                    <p>My Grades</p>
+                                </a>
+                            </li>
+
                             <div class="nav-divider"></div>
 
                             @forelse($studentClasses as $class)
@@ -197,9 +205,6 @@
                             @endforelse
                             
                             <div class="nav-divider"></div>
-                            
-
-                            
                         </ul>
                     </nav>
                 </div>

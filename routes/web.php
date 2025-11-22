@@ -194,6 +194,7 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::post('/logout', [Login_Controller::class, 'logout_student'])->name('logout');
 
         // Class Pages
+        Route::get('/classes', [Class_List::class, 'student_class_list'])->name('list_class');
         Route::get('/class', [Class_List::class, 'student_class_list'])->name('list_class');
 
         // Class Content Pages
