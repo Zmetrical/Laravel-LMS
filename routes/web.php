@@ -13,6 +13,7 @@ use App\Http\Controllers\Class_Management\Page_Quiz;
 use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Grade_Management\Grade_Management;
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
+use App\Http\Controllers\Grade_Management\Grade_list;
 
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
@@ -194,8 +195,16 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::post('/logout', [Login_Controller::class, 'logout_student'])->name('logout');
 
         // Class Pages
-        Route::get('/classes', [Class_List::class, 'student_class_list'])->name('list_class');
-        Route::get('/class', [Class_List::class, 'student_class_list'])->name('list_class');
+        Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
+        Route::get('/my_grades', [Grade_list::class, 'student_grade_list'])->name('list_grade');
+        
+        // Get Student Grades (AJAX)
+        Route::get('/my_grades/list', [Grade_list::class, 'getStudentGrades'])
+            ->name('grades.list');
+        
+        // Get Class Grade Details (AJAX)
+        Route::get('/my_grades/details/{classId}', [Grade_list::class, 'getClassGradeDetails'])
+            ->name('grades.details');
 
         // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {

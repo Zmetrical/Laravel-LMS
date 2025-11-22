@@ -176,8 +176,8 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ route('student.list_class') }}" 
-                                class="nav-link {{ Request::routeIs('student.list_class') ? 'active' : '' }}">
+                                <a href="{{ route('student.list_grade') }}" 
+                                class="nav-link {{ Request::routeIs('student.list_grade') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-th-list"></i>
                                     <p>My Grades</p>
                                 </a>

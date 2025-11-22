@@ -21,8 +21,7 @@
 <br>
     <div class="container-fluid">
         <!-- Active Semester Info -->
-        <div class="alert alert-dark alert-dismissible">
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <div class="alert alert-dark">
             <h5><i class="icon fas fa-calendar-alt"></i> {{ $activeSemesterDisplay ?? 'No Active Semester' }}</h5>
         </div>
         
