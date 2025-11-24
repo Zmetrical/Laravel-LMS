@@ -38,6 +38,7 @@ return [
      | Leaving it to null will allow localhost only.
      */
     'storage' => [
+        
         'enabled'    => env('DEBUGBAR_STORAGE_ENABLED', true),
         'open'       => env('DEBUGBAR_OPEN_STORAGE'), // bool/callback.
         'driver'     => env('DEBUGBAR_STORAGE_DRIVER', 'file'), // redis, file, pdo, socket, custom
@@ -162,6 +163,7 @@ return [
      */
 
     'collectors' => [
+            'views' => true,
         'phpinfo'         => env('DEBUGBAR_COLLECTORS_PHPINFO', false),         // Php version
         'messages'        => env('DEBUGBAR_COLLECTORS_MESSAGES', true),         // Messages
         'time'            => env('DEBUGBAR_COLLECTORS_TIME', true),             // Time Datalogger

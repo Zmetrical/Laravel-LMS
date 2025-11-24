@@ -49,26 +49,21 @@ $(document).ready(function() {
         
         participants.forEach(function(participant) {
             const genderBadge = participant.gender.toLowerCase() === 'male' 
-                ? '<span class="badge badge-info">Male</span>' 
-                : '<span class="badge badge-primary">Female</span>';
+                ? '<span class="">Male</span>'  
+                : '<span class="">Female</span>';
             
             const typeBadge = participant.student_type === 'regular'
-                ? '<span class="badge badge-success">Regular</span>'
-                : '<span class="badge badge-warning">Irregular</span>';
-
-            const enrollmentIcon = participant.enrollment_type === 'direct'
-                ? '<i class="fas fa-user-check text-success" title="Direct Enrollment"></i>'
-                : '<i class="fas fa-users text-info" title="Section Enrollment"></i>';
+                ? '<span class="badge badge-primary">Regular</span>'
+                : '<span class="badge badge-secondary">Irregular</span>';
 
             const sectionDisplay = participant.section_name !== 'No Section'
-                ? `<strong>${participant.section_code}</strong><br><small class="text-muted">${participant.section_name}</small>`
+                ? `${participant.section_name}`
                 : '<span class="text-muted">No Section</span>';
 
             rows += `
                 <tr>
                     <td class="text-center">${participant.row_number}</td>
                     <td>
-                        ${enrollmentIcon}
                         <strong>${participant.student_number}</strong>
                     </td>
                     <td>
@@ -78,8 +73,9 @@ $(document).ready(function() {
                         <small>${participant.email}</small>
                     </td>
                     <td>${sectionDisplay}</td>
-                    <td class="text-center">${typeBadge}</td>
                     <td class="text-center">${genderBadge}</td>
+
+                    <td class="text-center">${typeBadge}</td>
                 </tr>
             `;
         });

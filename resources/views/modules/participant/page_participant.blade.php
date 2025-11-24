@@ -28,8 +28,8 @@
                                 <th style="width: 25%;">Name</th>
                                 <th style="width: 20%;">Email</th>
                                 <th style="width: 15%;">Section</th>
-                                <th style="width: 10%;" class="text-center">Type</th>
                                 <th style="width: 10%;" class="text-center">Gender</th>
+                                <th style="width: 10%;" class="text-center">Type</th>
                             </tr>
                         </thead>
                         <tbody id="participantsTableBody">
@@ -44,10 +44,6 @@
                 </div>
             </div>
             <div class="card-footer">
-                <small class="text-muted">
-                    <i class="fas fa-info-circle"></i> 
-                    Showing all students enrolled in this class (both direct enrollment and section-based enrollment)
-                </small>
             </div>
         </div>
     </div>

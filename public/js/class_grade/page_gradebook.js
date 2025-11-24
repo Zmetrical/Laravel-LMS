@@ -1,3 +1,5 @@
+console.log("page gradebook");
+
 // Teacher Grades JS
 $(document).ready(function() {
     const classId = API_ROUTES.classId;
@@ -65,8 +67,8 @@ $(document).ready(function() {
         
         // Add summary columns
         $thead.append(`
-            <th class="text-center bg-info">Total Score</th>
-            <th class="text-center bg-info">Average %</th>
+            <th class="text-center">Total Score</th>
+            <th class="text-center">Average %</th>
         `);
         
         // Calculate statistics
@@ -94,13 +96,10 @@ $(document).ready(function() {
                 
                 if (quizGrade.score !== null) {
                     const percentage = quizGrade.percentage;
-                    const badgeClass = percentage >= 75 ? 'badge-success' : 
-                                      percentage >= 60 ? 'badge-info' : 
-                                      'badge-danger';
                     
                     row += `
                         <td class="text-center">
-                            <span class="badge ${badgeClass}">
+                            <span class="">
                                 ${quizGrade.score} / ${quizGrade.total}
                             </span>
                             <br>
@@ -122,16 +121,13 @@ $(document).ready(function() {
             });
             
             const studentAvg = studentMax > 0 ? ((studentTotal / studentMax) * 100).toFixed(2) : 0;
-            const avgBadge = studentAvg >= 75 ? 'badge-success' : 
-                           studentAvg >= 60 ? 'badge-info' : 
-                           'badge-danger';
-            
+
             row += `
                     <td class="text-center bg-light">
                         <strong>${studentTotal.toFixed(2)} / ${studentMax.toFixed(2)}</strong>
                     </td>
                     <td class="text-center bg-light">
-                        <span class="badge ${avgBadge}">${studentAvg}%</span>
+                        <span class="">${studentAvg}%</span>
                     </td>
                 </tr>
             `;

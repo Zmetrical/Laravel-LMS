@@ -6,23 +6,23 @@
 @section('tab-content')
 <div class="row">
     <div class="col-12">
-        <div class="card card-primary card-outline">
+        <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-table"></i> Grade Book
                 </h3>
                 <div class="card-tools">
-                    <button type="button" class="btn btn-sm btn-info" id="refreshGrades">
+                    <button type="button" class="btn btn-sm btn-primary" id="refreshGrades">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0 m-0">
                 <div class="table-responsive" id="gradeTableContainer" style="display: none;">
                     <table class="table table-bordered table-hover" id="gradeTable">
-                        <thead class="bg-primary">
+                        <thead class="">
                             <tr>
-                                <th style="position: sticky; left: 0; z-index: 10; background-color: #007bff; color: white;">Student Name</th>
+                                <th style="position: sticky; left: 0; z-index: 10;">Student Name</th>
                                 <!-- Quiz columns will be added dynamically -->
                             </tr>
                         </thead>

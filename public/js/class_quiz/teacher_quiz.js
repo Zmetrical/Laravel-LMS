@@ -381,7 +381,7 @@ $(document).ready(function() {
                             <span class="badge badge-light ml-1">${q.points}pts</span>
                         </div>
                         <div>
-                            <button class="btn btn-xs btn-info edit-question-btn mr-1" data-index="${i}"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-xs btn-primary edit-question-btn mr-1" data-index="${i}"><i class="fas fa-edit"></i></button>
                             <button class="btn btn-xs btn-danger delete-question-btn" data-index="${i}"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>

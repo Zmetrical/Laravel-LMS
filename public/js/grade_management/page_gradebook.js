@@ -1,3 +1,6 @@
+console.log("gradebook class");
+
+
 $(document).ready(function() {
     $.ajaxSetup({
         headers: {
