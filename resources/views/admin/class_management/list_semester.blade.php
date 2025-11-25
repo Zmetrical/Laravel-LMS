@@ -16,7 +16,7 @@
 <br>
 <div class="container-fluid">
     <!-- School Year Info Header -->
-    <div class="card card-dark card-outline mb-3">
+    <div class="card card-dark mb-3">
         <div class="card-body p-3">
             <div id="schoolYearLoading" class="text-center py-2">
                 <i class="fas fa-spinner fa-spin"></i> Loading school year...

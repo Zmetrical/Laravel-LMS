@@ -180,7 +180,7 @@
                                             </a>
                                         </li>
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.enrollment.sections') }}" class="nav-link {{ Request::routeIs('admin.section_class_enrollment') ? 'active' : '' }}">
+                                            <a href="{{ route('admin.enrollment.sections') }}" class="nav-link {{ Request::routeIs('admin.enrollment.sections') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                                 <p>Section Enrollment</p>
                                             </a>

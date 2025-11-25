@@ -48,7 +48,6 @@
                             style="max-height: 550px; overflow-y: auto;">
                             <div class="text-center py-4">
                                  <i class="fas fa-spinner fa-spin fa-2x"></i>
-
                                 <p class="mt-2 mb-0 small">Loading sections...</p>
                             </div>
                         </div>
@@ -107,12 +106,11 @@
                                         </tr>
                                     </thead>
                                     <tbody id="enrolledClassesBody">
-<tr>
-    <td colspan="5" class="text-center py-4 text-primary">
-        <i class="fas fa-spinner fa-spin"></i> Loading ...
-    </td>
-</tr>
-
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-primary">
+                                                <i class="fas fa-spinner fa-spin"></i> Loading ...
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -127,25 +125,60 @@
                                 <span class="badge badge-light" id="studentsCount">0 Students</span>
                             </div>
                         </div>
-                        <div class="card-body p-0">
+                        
+                        <!-- Filters inside card body -->
+                        <div class="card-body pb-0">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        </div>
+                                        <input type="text" class="form-control" id="studentSearchFilter"
+                                            placeholder="Search by name or student number...">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-control form-control-sm" id="genderFilter">
+                                        <option value="">All Genders</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-control form-control-sm" id="studentTypeFilter">
+                                        <option value="">All Types</option>
+                                        <option value="regular">Regular</option>
+                                        <option value="irregular">Irregular</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-secondary btn-sm btn-block" id="resetStudentFiltersBtn">
+                                        <i class="fas fa-redo"></i> Reset
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body p-0 pt-3">
                             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
                                 <table class="table table-striped table-hover mb-0">
                                     <thead style="position: sticky; top: 0; z-index: 1; background: white;">
                                         <tr>
                                             <th width="5%">#</th>
-                                            <th width="20%">Student Number</th>
-                                            <th width="40%">Name</th>
-                                            <th width="20%">Email</th>
-                                            <th width="15%">Type</th>
+                                            <th width="15%">Student Number</th>
+                                            <th width="30%">Name</th>
+                                            <th width="10%" class="text-center">Gender</th>
+                                            <th width="25%">Email</th>
+                                            <th width="15%" class="text-center">Type</th>
                                         </tr>
                                     </thead>
                                     <tbody id="studentsBody">
                                         <tr>
-                                            <td colspan="5" class="text-center py-4 text-primary">
+                                            <td colspan="6" class="text-center py-4 text-primary">
                                                 <i class="fas fa-spinner fa-spin"></i> Loading ...
                                             </td>
                                         </tr>
-
                                     </tbody>
                                 </table>
                             </div>

@@ -182,7 +182,7 @@ class SectionController extends MainController
                 ];
             });
 
-            // Get students in this section
+            // Get students in this section with gender
             $students = DB::table('students as s')
                 ->where('s.section_id', $id)
                 ->select(
@@ -192,6 +192,7 @@ class SectionController extends MainController
                     's.middle_name',
                     's.last_name',
                     's.email',
+                    's.gender',
                     's.student_type'
                 )
                 ->orderBy('s.last_name')
@@ -287,7 +288,6 @@ class SectionController extends MainController
         try {
             $enrolledCount = 0;
             $skippedCount = 0;
-            $errors = [];
 
             DB::beginTransaction();
 

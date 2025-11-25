@@ -11,9 +11,9 @@ $(document).ready(function () {
     let sections = [];
     let levels = [];
     let strands = [];
-    let selectedClassesList = []; // Store selected classes
+    let selectedClassesList = [];
+    let allStudents = []; // Store all students for filtering
     const MAX_CLASSES = 10;
-
 
     // Load sections on page load
     loadSections();
@@ -143,6 +143,9 @@ $(document).ready(function () {
         $('#noSectionSelected').hide();
         $('#enrollmentSection').show();
         
+        // Reset student filters when switching sections
+        resetStudentFilters();
+        
         loadSectionDetails(selectedSectionId);
     });
 
@@ -150,8 +153,8 @@ $(document).ready(function () {
     // LOAD SECTION DETAILS
     // ========================================================================
     function loadSectionDetails(sectionId) {
-        showLoader('#enrolledClassesBody', 'Loading classes...', 5);
-        showLoader('#studentsBody', 'Loading students...', 5);
+        showLoader('#enrolledClassesBody', 'Loading classes...', 4);
+        showLoader('#studentsBody', 'Loading students...', 6);
         
         const url = API_ROUTES.getSectionDetails.replace(':id', sectionId);
 
@@ -161,15 +164,16 @@ $(document).ready(function () {
             success: function (response) {
                 if (response.success) {
                     renderClasses(response.classes || []);
-                    renderStudents(response.students || []);
+                    allStudents = response.students || [];
+                    renderStudents(allStudents);
                 } else {
-                    showError('#enrolledClassesBody', 'Failed to load classes', 5);
-                    showError('#studentsBody', 'Failed to load students', 5);
+                    showError('#enrolledClassesBody', 'Failed to load classes', 4);
+                    showError('#studentsBody', 'Failed to load students', 6);
                 }
             },
             error: function (xhr) {
-                showError('#enrolledClassesBody', 'Failed to load data', 5);
-                showError('#studentsBody', 'Failed to load data', 5);
+                showError('#enrolledClassesBody', 'Failed to load data', 4);
+                showError('#studentsBody', 'Failed to load data', 6);
                 Toast.fire({
                     icon: "error",
                     title: "Could not load section details"
@@ -190,7 +194,7 @@ $(document).ready(function () {
         if (classes.length === 0) {
             tbody.html(`
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
+                    <td colspan="4" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No classes enrolled yet</p>
                     </td>
@@ -224,20 +228,27 @@ $(document).ready(function () {
     }
 
     // ========================================================================
-    // RENDER STUDENTS
+    // RENDER STUDENTS (with filtering support)
     // ========================================================================
     function renderStudents(students) {
         const tbody = $('#studentsBody');
         tbody.empty();
         
-        $('#studentsCount').text(`${students.length} ${students.length === 1 ? 'Student' : 'Students'}`);
+        // Update count to show filtered/total
+        const totalCount = allStudents.length;
+        const filteredCount = students.length;
+        const countText = filteredCount === totalCount 
+            ? `${totalCount} ${totalCount === 1 ? 'Student' : 'Students'}`
+            : `${filteredCount} of ${totalCount} Students`;
+        
+        $('#studentsCount').text(countText);
 
         if (students.length === 0) {
             tbody.html(`
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
+                    <td colspan="6" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
-                        <p class="mb-0">No students in this section</p>
+                        <p class="mb-0">${allStudents.length === 0 ? 'No students in this section' : 'No students match your filters'}</p>
                     </td>
                 </tr>
             `);
@@ -247,14 +258,20 @@ $(document).ready(function () {
         students.forEach((student, index) => {
             const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
             const typeColor = student.student_type === 'regular' ? 'primary' : 'secondary';
+            const genderIcon = student.gender === 'Male' ? 'mars' : 'venus';
+            const genderColor = student.gender === 'Male' ? 'primary' : 'danger';
             
             const row = `
                 <tr>
                     <td>${index + 1}</td>
                     <td>${student.student_number}</td>
                     <td>${fullName}</td>
+                    <td class="text-center">
+                        <i class="fas fa-${genderIcon} text-${genderColor}"></i>
+                        ${student.gender || '-'}
+                    </td>
                     <td>${student.email || '-'}</td>
-                    <td>
+                    <td class="text-center">
                         <span class="badge badge-${typeColor}">
                             ${student.student_type ? student.student_type.toUpperCase() : 'N/A'}
                         </span>
@@ -266,12 +283,50 @@ $(document).ready(function () {
     }
 
     // ========================================================================
+    // STUDENT FILTERS
+    // ========================================================================
+    function applyStudentFilters() {
+        const searchTerm = $('#studentSearchFilter').val().toLowerCase();
+        const genderFilter = $('#genderFilter').val();
+        const typeFilter = $('#studentTypeFilter').val();
+
+        const filtered = allStudents.filter(student => {
+            const fullName = `${student.first_name} ${student.middle_name} ${student.last_name}`.toLowerCase();
+            
+            const matchSearch = !searchTerm || 
+                student.student_number.toLowerCase().includes(searchTerm) ||
+                fullName.includes(searchTerm);
+            
+            const matchGender = !genderFilter || student.gender === genderFilter;
+            const matchType = !typeFilter || student.student_type === typeFilter;
+
+            return matchSearch && matchGender && matchType;
+        });
+
+        renderStudents(filtered);
+    }
+
+    // Filter events
+    $('#studentSearchFilter, #genderFilter, #studentTypeFilter').on('input change', applyStudentFilters);
+
+    // Reset student filters
+    $('#resetStudentFiltersBtn').click(function() {
+        resetStudentFilters();
+        renderStudents(allStudents);
+    });
+
+    function resetStudentFilters() {
+        $('#studentSearchFilter').val('');
+        $('#genderFilter').val('');
+        $('#studentTypeFilter').val('');
+    }
+
+    // ========================================================================
     // ENROLL CLASS BUTTON - OPEN MODAL
     // ========================================================================
     $('#enrollClassBtn').click(function () {
         if (!selectedSectionId) return;
         
-        // Reset selected classes list
         selectedClassesList = [];
         updateSelectedClassesDisplay();
         
@@ -356,17 +411,14 @@ $(document).ready(function () {
         
         if (!classId) return;
 
-        // Check if already added
         if (selectedClassesList.some(c => c.id === classId)) {
             Toast.fire({
                 icon: "info",
                 title: "This class is already in the list"
             });
-
             return;
         }
 
-        // Add to list
         const classData = {
             id: classId,
             name: selectedOption.data('class-name'),
@@ -374,15 +426,10 @@ $(document).ready(function () {
         };
 
         selectedClassesList.push(classData);
-        
-        // Remove from dropdown
         selectedOption.remove();
-        
-        // Reset select
         select.val('');
         $('#addClassToListBtn').prop('disabled', true);
         
-        // Update display
         updateSelectedClassesDisplay();
         
         Toast.fire({
@@ -447,10 +494,8 @@ $(document).ready(function () {
         const index = $(this).data('index');
         const removedClass = selectedClassesList[index];
         
-        // Remove from array
         selectedClassesList.splice(index, 1);
         
-        // Add back to dropdown
         const select = $('#availableClassesSelect');
         select.append(`
             <option value="${removedClass.id}" 
@@ -460,20 +505,18 @@ $(document).ready(function () {
             </option>
         `);
         
-        // Sort options alphabetically
         const options = select.find('option:not(:first)').sort((a, b) => {
             return $(a).text().localeCompare($(b).text());
         });
         select.find('option:not(:first)').remove();
         select.append(options);
         
-        // Update display
         updateSelectedClassesDisplay();
         
-                Toast.fire({
-                    icon: "info",
-                    title: "Class removed from list"
-                });
+        Toast.fire({
+            icon: "info",
+            title: "Class removed from list"
+        });
     });
 
     // ========================================================================
@@ -483,10 +526,10 @@ $(document).ready(function () {
         if (selectedClassesList.length === 0 || !selectedSectionId) return;
         
         if (!ACTIVE_SEMESTER_ID) {
-                Toast.fire({
-                    icon: "error",
-                    title: "No active semester found. Please set an active semester first."
-                });
+            Toast.fire({
+                icon: "error",
+                title: "No active semester found. Please set an active semester first."
+            });
             return;
         }
 
@@ -555,14 +598,12 @@ $(document).ready(function () {
                 removeClassFromSection(classId);
             }
         });
-
-
     });
+
     function removeClassFromSection(classId) {
         const url = API_ROUTES.removeClass
             .replace(':sectionId', selectedSectionId)
             .replace(':classId', classId);
-
 
         $.ajax({
             url: url,
@@ -591,9 +632,8 @@ $(document).ready(function () {
         });
     }
 
-
     // ========================================================================
-    // FILTERS
+    // SECTION FILTERS
     // ========================================================================
     $('#sectionSearch, #levelFilter, #strandFilter').on('input change', function () {
         renderSectionsList();

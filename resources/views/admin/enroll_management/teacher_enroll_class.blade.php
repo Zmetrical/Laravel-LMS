@@ -16,8 +16,7 @@
 <br>
     <div class="container-fluid">
         <!-- School Year Info -->
-        <div class="alert alert-dark alert-dismissible">
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <div class="alert alert-dark">
             <h5><i class="icon fas fa-calendar-alt"></i> {{ $activeSemesterDisplay ?? 'No Active Semester' }}</h5>
         </div>
         <div class="row">
@@ -101,12 +100,19 @@
                         </div>
                     </div>
 
-                    <!-- Filters Card -->
-                    <div class="card">
+
+
+                    <!-- Students Table -->
+                    <div class="card card-primary">
+                        
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-filter"></i> Filter Students</h3>
+                            <h3 class="card-title"><i class="fas fa-list"></i> Student List</h3>
+                            <div class="card-tools">
+                                <span class="badge badge-light" id="studentsCount">0 Students</span>
+                            </div>
                         </div>
-                        <div class="card-body">
+
+                        <div class="card-body pb-0">
                             <div class="row">
                                 <div class="col-md-5">
                                     <div class="input-group">
@@ -136,16 +142,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Students Table -->
-                    <div class="card card-primary">
-                        <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-list"></i> Student List</h3>
-                            <div class="card-tools">
-                                <span class="badge badge-light" id="studentsCount">0 Students</span>
-                            </div>
-                        </div>
                         <div class="card-body p-0">
                             <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                 <table class="table table-striped table-hover mb-0">
@@ -172,6 +168,7 @@
                                 </table>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -191,9 +188,6 @@
                     </button>
                 </div>
                 <div class="modal-body">
-
-
-
                     <!-- Teacher Selection -->
                     <div class="form-group">
                         <label><i class="fas fa-user-check"></i> Assign New Teacher</label>
