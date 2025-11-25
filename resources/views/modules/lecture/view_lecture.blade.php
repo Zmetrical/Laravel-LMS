@@ -23,7 +23,7 @@
             </div>
 
             <!-- Lecture Header -->
-            <div class="card card-primary card-outline">
+            <div class="card">
                 <div class="card-body">
                     <div class="mb-2">
                         <small class="text-muted">

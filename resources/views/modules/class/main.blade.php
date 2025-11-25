@@ -35,7 +35,7 @@
 @section('content')
     <div class="container-fluid">
         <!-- Course Info Card -->
-        <div class="card card-primary card-outline">
+        <div class="card card-primary">
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-md-8">

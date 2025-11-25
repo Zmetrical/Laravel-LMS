@@ -16,7 +16,7 @@
         </div>
 
         <!-- Lesson Context Card -->
-        <div class="card card-primary card-outline mb-3">
+        <div class="card card-primary mb-3">
             <div class="card-body">
                 <div class="mb-2">
                     <small class="text-muted">
@@ -91,9 +91,6 @@
                                   name="content" 
                                   rows="15"
                                   placeholder="Enter your lecture content here...">{{ isset($lecture) && $lecture->content_type === 'text' ? $lecture->content : '' }}</textarea>
-                        <small class="form-text text-muted">
-                            Write your lecture content. You can use HTML for formatting.
-                        </small>
                     </div>
 
                     <!-- Video URL -->
@@ -178,7 +175,7 @@
 
     <!-- Settings Sidebar -->
     <div class="col-md-3">
-        <div class="card">
+        <div class="card card-primary card-outline">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-cog"></i> Settings
@@ -196,9 +193,6 @@
                            name="order_number"
                            value="{{ $lecture->order_number ?? 0 }}"
                            min="0">
-                    <small class="form-text text-muted">
-                        Lower numbers appear first
-                    </small>
                 </div>
 
                 <hr>
