@@ -1,0 +1,107 @@
+----------------------
+INPUT DATA SHEET
+----------------------
+A13 to A62 - student number male
+A64 to A113 - student number female
+
+B13 to B62 - student name (same with number)
+B64 to B113
+
+K7 - Grade & Section
+S7 - Teacher
+S8 - Semester
+
+AE7 - Subject
+
+----------------------
+1ST (1st Quarter) SHEET
+----------------------
+K7 - ='INPUT DATA'!K7
+S7 - ='INPUT DATA'!S7
+S8 - ='INPUT DATA'!S8
+AE7 - ='INPUT DATA'!AE7
+
+//students 
+//-- this should be from table INPUT DATA
+A13 ='INPUT DATA'!A13
+B13 = 'INPUT DATA'!B13
+
+//--written work
+//--
+
+
+F11 to O11 - highest score(score out of)
+P11 - =IF(COUNT($F11:$O11)=0,"",SUM($F11:$O11))
+R11 - =IF('INPUT DATA'!AE8="","",INDEX('Helper(IMPORTANT!)'!$AU$2:$AU$5,MATCH(AE8,'Helper(IMPORTANT!)'!$AQ$2:$AQ$5,0)))
+
+//students grades
+F13 to O13 - grades of written work
+F62 to O62 male
+F64 to O64 female
+
+P13 - =IF(COUNT($F13:$O13)=0,"",SUM($F13:$O13))
+Q13 - =IFERROR(IF(P13="","",ROUND(P13/$P$11*100,2)),"")
+R13 - =IFERROR(IF(Q13="","",ROUND(Q13*$R$11,2)),"")
+
+
+//--
+//--performance task
+//--
+
+S11 - AB11 - highest possible score
+
+AC11 - =IF(COUNT($S11:$AB11)=0,"",SUM($S11:$AB11))
+AE11 - =IF('INPUT DATA'!AE8="","",INDEX('Helper(IMPORTANT!)'!$AV$2:$AV$5,MATCH(AE8,'Helper(IMPORTANT!)'!$AQ$2:$AQ$5,0)))
+
+
+S13 - AB13 etc... same with written work
+
+AC13 - =IF(COUNT($S13:$AB13)=0,"",SUM($S13:$AB13))
+AD13 - =IFERROR(IF(AC13="","",ROUND(AC13/$AC$11*100,2)),"")
+AE13 = =IFERROR(IF(AD13="","",ROUND(AD13*$AE$11,2)),"")
+
+//--
+//--Quarterly Assessment
+//--
+
+AF11 - highest possible score
+AH11 - =IF('INPUT DATA'!AE8="","",INDEX('Helper(IMPORTANT!)'!$AW$2:$AW$5,MATCH(AE8,'Helper(IMPORTANT!)'!$AQ$2:$AQ$5,0)))
+
+AF13 - just one colmn, same with written work with the male female
+AG13 - =IFERROR(IF(AF13="","",ROUND(AF13/$AF$11*100,2)),"")
+AH13 - =IFERROR(IF(AG13="","",ROUND(AG13*$AH$11,2)),"")
+
+//--
+//--Initial Grade
+//--
+
+
+AI13 - =IFERROR(R13+AE13+AH13,"")
+AJ13- =IFERROR(VLOOKUP(AI13,'Helper(IMPORTANT!)'!$AX$1:$AY$41,2,TRUE),"")
+
+
+----------------------
+2ND (2nd Quarter)Sheet 
+----------------------
+// -- same content with 1st quarter
+
+
+K8 - ='INPUT DATA'!K7
+I10 - ='INPUT DATA'!S7
+V8 - ='INPUT DATA'!S8
+V9 - ='INPUT DATA'!AE7
+
+//students 
+//-- this should be from table INPUT DATA
+A13 ='INPUT DATA'!A13
+B13 = 'INPUT DATA'!B13
+
+FIRST QUARTER							
+//students grades
+F13 - ='1ST'!AJ13 
+SECOND QUARTER
+N13 - ='2ND'!AJ13
+
+FIRST SEMESTER FINAL GRADES
+V13 - =IF(OR(F13="",N13=""),"",IF(ISERROR(ROUND(AVERAGE(F13,N13),0)),"",ROUND(AVERAGE(F13,N13),0)))
+Z13 - =IF(OR($F13="",N13="",$V13=""),"",IF($V13>=75,"PASSED","FAILED"))

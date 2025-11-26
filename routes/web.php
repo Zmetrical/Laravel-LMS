@@ -299,7 +299,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             
             Route::get('/{classId}/quizzes', [GradeBook_Management::class, 'getAvailableQuizzes'])
                 ->name('quizzes');
-            
+            Route::post('/class/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
+                ->name('export');
         });
     });
 });

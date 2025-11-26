@@ -142,11 +142,16 @@
     <div class="card card-dark card-outline">
         <div class="card-body">
             <div class="row align-items-center">
-                <div class="col-md-12">
+                <div class="col-md-8">
                     <h3 class="mb-1">
                         <i class="fas fa-book"></i> <span id="className">{{ $class->class_name }}</span>
                     </h3>
                     <p class="text-muted mb-0">{{ $class->class_code }}</p>
+                </div>
+                <div class="col-md-4 text-right">
+                    <button class="btn btn-primary btn-sm" id="exportBtn">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </button>
                 </div>
             </div>
         </div>
@@ -252,8 +257,8 @@
     <div class="modal fade" id="editColumnModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Column</h5>
+                <div class="modal-header bg-dark">
+                    <h5 class="modal-title text-white"><i class="fas fa-edit"></i> Edit Column</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
@@ -279,8 +284,42 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-info">
+                        <button type="submit" class="btn btn-dark">
                             <i class="fas fa-save"></i> Update
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white"><i class="fas fa-file-excel"></i> Export Gradebook</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <form id="exportForm">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Select Quarter <span class="text-danger">*</span></label>
+                            <select class="form-control" id="exportQuarter" required>
+                                <option value="1st">First Quarter</option>
+                                <option value="2nd">Second Quarter</option>
+                            </select>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-download"></i> Download Excel
                         </button>
                     </div>
                 </form>
@@ -300,7 +339,8 @@
             addColumn: "{{ route('teacher.gradebook.column.add', ['classId' => $classId]) }}",
             updateColumn: "{{ route('teacher.gradebook.column.update', ['columnId' => '__COLUMN_ID__']) }}",
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
-            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}"
+            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
+            exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"
         };
     </script>
     

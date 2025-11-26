@@ -1,6 +1,5 @@
 console.log("gradebook class");
 
-
 $(document).ready(function() {
     $.ajaxSetup({
         headers: {
@@ -436,7 +435,7 @@ $(document).ready(function() {
                     <td class="text-center">${ptWeighted.toFixed(2)}</td>
                     <td class="text-center">${qaWeighted.toFixed(2)}</td>
                     <td class="text-center">${initialGrade.toFixed(2)}</td>
-                    <td class="text-center bg-secondary" ><strong>${quarterlyGrade}</strong></td>
+                    <td class="text-center bg-secondary"><strong>${quarterlyGrade}</strong></td>
                 </tr>
             `;
         });
@@ -468,4 +467,46 @@ $(document).ready(function() {
         };
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
+
+    // Export handlers
+    $('#exportBtn').click(function() {
+        $('#exportModal').modal('show');
+    });
+
+    $('#exportForm').submit(function(e) {
+        e.preventDefault();
+        
+        const quarter = $('#exportQuarter').val();
+        const btn = $('#exportForm button[type="submit"]');
+        
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
+        
+        // Create a temporary form for file download
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = API_ROUTES.exportGradebook;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = $('meta[name="csrf-token"]').attr('content');
+        form.appendChild(csrfInput);
+        
+        const quarterInput = document.createElement('input');
+        quarterInput.type = 'hidden';
+        quarterInput.name = 'quarter';
+        quarterInput.value = quarter;
+        form.appendChild(quarterInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        
+        // Reset button after a delay
+        setTimeout(function() {
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
+            $('#exportModal').modal('hide');
+            toastr.success('Export started! Your download should begin shortly.');
+        }, 1000);
+    });
 });
