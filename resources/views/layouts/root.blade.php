@@ -11,10 +11,6 @@
     <!-- AdminLTE Theme style -->
     <link rel="stylesheet" href="{{ asset('dist/css/adminlte.min.css') }}">
 
-        <!-- AdminLTE Theme style -->
-    <link rel="stylesheet" href="{{ asset('dist/css/adminlte.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/fullcalendar/main.css') }}">
-
     <style>
         :root {
             --trinity-blue: #2a347e;
@@ -91,10 +87,6 @@
 <script src="{{ asset('plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <!-- AdminLTE -->
 <script src="{{ asset('dist/js/adminlte.min.js') }}"></script>
-<!-- calendar -->
-<script src="{{ asset('plugins/moment/moment.min.js') }}"></script>
-<script src="{{ asset('plugins/fullcalendar/main.js') }}"></script>
-
     <!-- Script -->
     @yield('foot')
 </html>

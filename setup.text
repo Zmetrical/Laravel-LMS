@@ -18,6 +18,7 @@ php artisan key:generate
 
 php artisan serve
 
+php artisan storage:link
 
 ------------------
 .ENV

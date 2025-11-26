@@ -3,6 +3,9 @@ console.log("page gradebook");
 // Teacher Grades JS
 $(document).ready(function() {
     const classId = API_ROUTES.classId;
+    let allGrades = [];
+    let allQuizzes = [];
+    let classInfo = null;
     
     function loadGrades() {
         $('#loadingState').show();
@@ -32,8 +35,13 @@ $(document).ready(function() {
                     return;
                 }
                 
+                // Store data globally
+                allGrades = response.grades;
+                allQuizzes = response.quizzes;
+                classInfo = response.class;
+                
                 console.log('Rendering grade table...');
-                renderGradeTable(response.grades, response.quizzes, response.class);
+                renderGradeTable(allGrades);
                 $('#gradeTableContainer').show();
             },
             error: function(xhr) {
@@ -43,21 +51,25 @@ $(document).ready(function() {
                 
                 $('#loadingState').hide();
                 
-                toastr.error('Failed to load grades');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load grades'
+                });
             }
         });
     }
     
-    function renderGradeTable(grades, quizzes, classInfo) {
+    function renderGradeTable(grades) {
         const $thead = $('#gradeTable thead tr');
         const $tbody = $('#gradeTableBody');
         
-        // Clear existing content
-        $thead.find('th:not(:first)').remove();
+        // Clear existing content (keep first two columns)
+        $thead.find('th:not(:first):not(:nth-child(2))').remove();
         $tbody.empty();
         
         // Add quiz columns
-        quizzes.forEach(quiz => {
+        allQuizzes.forEach(quiz => {
             $thead.append(`
                 <th class="text-center" title="${quiz.lesson_title}">
                     ${quiz.title}
@@ -67,23 +79,28 @@ $(document).ready(function() {
         
         // Add summary columns
         $thead.append(`
-            <th class="text-center">Total Score</th>
-            <th class="text-center">Average %</th>
+            <th class="text-center bg-light">Total Score</th>
+            <th class="text-center bg-light">Average %</th>
         `);
         
         // Calculate statistics
         let totalStudents = grades.length;
-        let totalQuizzes = quizzes.length;
+        let totalQuizzes = allQuizzes.length;
         let classTotal = 0;
         let classCount = 0;
         let passingCount = 0;
         
         // Add student rows
-        grades.forEach(student => {
+        grades.forEach((student, index) => {
             let row = `
                 <tr>
-                    <td style="position: sticky; left: 0; z-index: 5; background-color: white;">
+                    <td style="position: sticky; left: 0; z-index: 5; background-color: white;" class="text-center">
+                        <strong>${index + 1}</strong>
+                    </td>
+                    <td style="position: sticky; left: 50px; z-index: 5; background-color: white;">
                         <strong>${student.full_name}</strong>
+                        <br>
+                        <small class="text-muted">${student.student_number}</small>
                     </td>
             `;
             
@@ -91,7 +108,7 @@ $(document).ready(function() {
             let studentMax = 0;
             let scoredQuizzes = 0;
             
-            quizzes.forEach(quiz => {
+            allQuizzes.forEach(quiz => {
                 const quizGrade = student.quizzes[quiz.id];
                 
                 if (quizGrade.score !== null) {
@@ -99,9 +116,7 @@ $(document).ready(function() {
                     
                     row += `
                         <td class="text-center">
-                            <span class="">
-                                ${quizGrade.score} / ${quizGrade.total}
-                            </span>
+                            <span>${quizGrade.score} / ${quizGrade.total}</span>
                             <br>
                             <small class="text-muted">${percentage}%</small>
                         </td>
@@ -127,18 +142,41 @@ $(document).ready(function() {
                         <strong>${studentTotal.toFixed(2)} / ${studentMax.toFixed(2)}</strong>
                     </td>
                     <td class="text-center bg-light">
-                        <span class="">${studentAvg}%</span>
+                        <span>${studentAvg}%</span>
                     </td>
                 </tr>
             `;
             
             $tbody.append(row);
         });
-        
-        // Update summary
-        const classAverage = classCount > 0 ? (classTotal / classCount).toFixed(2) : 0;
-        const passingRate = classCount > 0 ? ((passingCount / classCount) * 100).toFixed(2) : 0;
     }
+    
+    // ========================================================================
+    // GRADE FILTERS
+    // ========================================================================
+    function applyGradeFilters() {
+        const searchTerm = $('#gradeSearchFilter').val().toLowerCase();
+
+        const filtered = allGrades.filter(student => {
+            const matchSearch = !searchTerm || 
+                student.student_number.toLowerCase().includes(searchTerm) ||
+                student.full_name.toLowerCase().includes(searchTerm);
+            
+
+            return matchSearch;
+        });
+
+        renderGradeTable(filtered);
+    }
+
+    $('#gradeSearchFilter').on('input change', function() {
+        applyGradeFilters();
+    });
+
+    $('#resetGradeFiltersBtn').click(function() {
+        $('#gradeSearchFilter').val('');
+        renderGradeTable(allGrades);
+    });
     
     $('#refreshGrades').click(function() {
         loadGrades();

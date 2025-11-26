@@ -17,12 +17,34 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Filters Section -->
+            <div class="card-body pb-2">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" id="gradeSearchFilter"
+                                placeholder="Search by name or student number...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-secondary btn-sm btn-block" id="resetGradeFiltersBtn">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="card-body p-0 m-0">
                 <div class="table-responsive" id="gradeTableContainer" style="display: none;">
-                    <table class="table table-bordered table-hover" id="gradeTable">
-                        <thead class="">
+                    <table class="table table-bordered table-hover mb-0" id="gradeTable">
+                        <thead>
                             <tr>
-                                <th style="position: sticky; left: 0; z-index: 10;">Student Name</th>
+                                <th style="position: sticky; left: 0; z-index: 10; background-color: white;" width="50">#</th>
+                                <th style="position: sticky; left: 50px; z-index: 10; background-color: white;">Student Name</th>
                                 <!-- Quiz columns will be added dynamically -->
                             </tr>
                         </thead>

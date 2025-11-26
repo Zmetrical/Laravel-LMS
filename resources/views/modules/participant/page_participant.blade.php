@@ -18,23 +18,62 @@
                     </span>
                 </div>
             </div>
+
+            <!-- Filters Section -->
+            <div class="card-body pb-2">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" id="participantSearchFilter"
+                                placeholder="Search by name or student number...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control form-control-sm" id="sectionFilter">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control form-control-sm" id="genderFilter">
+                            <option value="">All Genders</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control form-control-sm" id="typeFilter">
+                            <option value="">All Types</option>
+                            <option value="regular">Regular</option>
+                            <option value="irregular">Irregular</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-secondary btn-sm btn-block" id="resetFiltersBtn">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-striped mb-0">
                         <thead>
                             <tr>
                                 <th style="width: 5%;" class="text-center">#</th>
-                                <th style="width: 15%;">Student Number</th>
-                                <th style="width: 25%;">Name</th>
-                                <th style="width: 20%;">Email</th>
-                                <th style="width: 15%;">Section</th>
+                                <th style="width: 30%;">Student Information</th>
+                                <th style="width: 25%;">Email</th>
+                                <th style="width: 20%;">Section</th>
                                 <th style="width: 10%;" class="text-center">Gender</th>
                                 <th style="width: 10%;" class="text-center">Type</th>
                             </tr>
                         </thead>
                         <tbody id="participantsTableBody">
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                                     <p class="mt-2">Loading participants...</p>
                                 </td>
@@ -44,6 +83,7 @@
                 </div>
             </div>
             <div class="card-footer">
+                <small class="text-muted" id="filterResultText"></small>
             </div>
         </div>
     </div>
@@ -56,9 +96,7 @@
     const API_ROUTES = {
         getParticipants: "{{ route('teacher.class.participants.list', ['classId' => $class->id]) }}",
         classId: {{ $class->id }}
-
     };
-
 </script>
     @if(isset($scripts))
         @foreach($scripts as $script)
