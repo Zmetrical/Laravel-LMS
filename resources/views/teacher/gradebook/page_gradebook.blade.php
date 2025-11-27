@@ -51,6 +51,11 @@
         .online-column {
             background-color: #e3f2fd !important;
         }
+
+        .disabled-column {
+            background-color: #f5f5f5 !important;
+            opacity: 0.6;
+        }
         
         .column-header {
             display: flex;
@@ -72,20 +77,20 @@
             font-weight: normal;
         }
         
-        .edit-column-btn {
+        .edit-column-btn, .toggle-column-btn {
             cursor: pointer;
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 2px;
+            font-size: 12px;
+            opacity: 0.8;
+            transition: all 0.2s;
         }
         
-        .edit-column-btn:hover {
+        .edit-column-btn:hover, .toggle-column-btn:hover {
             opacity: 1;
-            color: #ffc107;
+            transform: scale(1.1);
         }
-        
-        .stats-box {
-            border-left: 4px solid;
+
+        .toggle-column-btn {
+            font-size: 16px;
         }
         
         .table-scroll-wrapper {
@@ -127,6 +132,10 @@
             padding: 4px 8px;
             font-size: 12px;
         }
+
+        .quarter-selector {
+            max-width: 250px;
+        }
     </style>
 @endsection
 
@@ -142,13 +151,20 @@
     <div class="card card-dark card-outline">
         <div class="card-body">
             <div class="row align-items-center">
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <h3 class="mb-1">
                         <i class="fas fa-book"></i> <span id="className">{{ $class->class_name }}</span>
                     </h3>
                     <p class="text-muted mb-0">{{ $class->class_code }}</p>
                 </div>
-                <div class="col-md-4 text-right">
+                <div class="col-md-6 text-right">
+                    <div class="d-inline-block quarter-selector mr-2">
+                        <select class="form-control form-control-sm" id="quarterSelector">
+                            @foreach($quarters as $quarter)
+                                <option value="{{ $quarter->id }}">{{ $quarter->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <button class="btn btn-primary btn-sm" id="exportBtn">
                         <i class="fas fa-file-excel"></i> Export to Excel
                     </button>
@@ -157,7 +173,6 @@
         </div>
     </div>
 
-    <!-- Sticky Save Button -->
     <button class="btn btn-success" id="saveChangesBtn" style="display: none;">
         <i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>
     </button>
@@ -191,10 +206,8 @@
             <div class="tab-content" id="custom-tabs-content">
                 <div class="tab-pane fade show active" id="ww" role="tabpanel">
                     <div class="mb-2">
-                        <button class="btn btn-dark btn-sm add-column-btn" data-type="WW">
-                            <i class="fas fa-plus"></i> Add Column
-                        </button>
-                        <span class="text-muted ml-2" id="wwColumnCount"></span>
+                        <span class="text-muted" id="wwColumnCount"></span>
+                        <span class="text-info ml-2"><i class="fas fa-info-circle"></i> Click toggle icon on column headers to enable/disable</span>
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="wwGrid"></div>
@@ -203,10 +216,8 @@
 
                 <div class="tab-pane fade" id="pt" role="tabpanel">
                     <div class="mb-2">
-                        <button class="btn btn-dark btn-sm add-column-btn" data-type="PT">
-                            <i class="fas fa-plus"></i> Add Column
-                        </button>
-                        <span class="text-muted ml-2" id="ptColumnCount"></span>
+                        <span class="text-muted" id="ptColumnCount"></span>
+                        <span class="text-info ml-2"><i class="fas fa-info-circle"></i> Click toggle icon on column headers to enable/disable</span>
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="ptGrid"></div>
@@ -215,10 +226,8 @@
 
                 <div class="tab-pane fade" id="qa" role="tabpanel">
                     <div class="mb-2">
-                        <button class="btn btn-dark btn-sm add-column-btn" data-type="QA">
-                            <i class="fas fa-plus"></i> Add Column
-                        </button>
-                        <span class="text-muted ml-2" id="qaColumnCount"></span>
+                        <span class="text-muted" id="qaColumnCount"></span>
+                        <span class="text-info ml-2"><i class="fas fa-info-circle"></i> Click toggle icon on column header to enable/disable</span>
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="qaGrid"></div>
@@ -249,6 +258,45 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enable Column Modal -->
+    <div class="modal fade" id="enableColumnModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success">
+                    <h5 class="modal-title text-white"><i class="fas fa-toggle-on"></i> Enable Column: <span id="enableColumnName"></span></h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <form id="enableColumnForm">
+                    <input type="hidden" id="enableColumnId">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Configure the column settings before enabling it.
+                        </div>
+                        <div class="form-group">
+                            <label>Maximum Points <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="enableMaxPoints" required min="1" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Link to Online Quiz (Optional)</label>
+                            <select class="form-control" id="enableQuizId">
+                                <option value="">Manual Entry</option>
+                            </select>
+                            <small class="text-muted">Linking to a quiz will auto-sync scores</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Enable Column
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -305,14 +353,10 @@
                 </div>
                 <form id="exportForm">
                     <div class="modal-body">
-                        <div class="form-group">
-                            <label>Select Quarter <span class="text-danger">*</span></label>
-                            <select class="form-control" id="exportQuarter" required>
-                                <option value="1st">First Quarter</option>
-                                <option value="2nd">Second Quarter</option>
-                            </select>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> This will export the currently selected quarter.
                         </div>
-
+                        <p class="mb-0"><strong>Selected Quarter:</strong> <span id="exportQuarterName"></span></p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">
@@ -333,11 +377,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
     <script>
         const CLASS_ID = {{ $classId }};
-        const MAX_COLUMNS = 10;
+        const MAX_WW_COLUMNS = 10;
+        const MAX_PT_COLUMNS = 10;
+        const MAX_QA_COLUMNS = 1;
+        const QUARTERS = @json($quarters);
         const API_ROUTES = {
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
-            addColumn: "{{ route('teacher.gradebook.column.add', ['classId' => $classId]) }}",
-            updateColumn: "{{ route('teacher.gradebook.column.update', ['columnId' => '__COLUMN_ID__']) }}",
+            toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
+            updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
             getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
             exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"

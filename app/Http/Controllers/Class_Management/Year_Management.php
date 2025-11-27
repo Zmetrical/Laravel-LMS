@@ -9,17 +9,19 @@ use Illuminate\Support\Facades\DB;
 
 class Year_Management extends MainController
 {
+    // Maximum semesters per school year
+    const MAX_SEMESTERS_PER_YEAR = 3;
+
     public function list_schoolyear()
     {
         $data = [
             'scripts' => ['class_management/list_schoolyear.js'],
+            'max_semesters' => self::MAX_SEMESTERS_PER_YEAR,
         ];
 
         return view('admin.class_management.list_schoolyear', $data);
     }
-    /**
-     * Get school years data (AJAX)
-     */
+
     public function getSchoolYearsData()
     {
         try {
@@ -36,7 +38,6 @@ class Year_Management extends MainController
                 ->orderBy('year_start', 'desc')
                 ->get();
 
-            // Get semester count for each school year
             foreach ($schoolYears as $sy) {
                 $sy->semesters_count = DB::table('semesters')
                     ->where('school_year_id', $sy->id)
@@ -60,9 +61,6 @@ class Year_Management extends MainController
         }
     }
 
-    /**
-     * Create school year
-     */
     public function createSchoolYear(Request $request)
     {
         $validated = $request->validate([
@@ -71,7 +69,6 @@ class Year_Management extends MainController
         ]);
 
         try {
-            // Validate year difference is exactly 1
             if ($request->year_end - $request->year_start != 1) {
                 return response()->json([
                     'success' => false,
@@ -79,10 +76,8 @@ class Year_Management extends MainController
                 ], 422);
             }
 
-            // Generate code
             $code = $request->year_start . '-' . $request->year_end;
 
-            // Check if already exists
             $exists = DB::table('school_years')->where('code', $code)->exists();
             if ($exists) {
                 return response()->json([
@@ -129,9 +124,6 @@ class Year_Management extends MainController
         }
     }
 
-    /**
-     * Update school year
-     */
     public function updateSchoolYear(Request $request, $id)
     {
         $validated = $request->validate([
@@ -150,7 +142,6 @@ class Year_Management extends MainController
                 ], 404);
             }
 
-            // Validate year difference
             if ($request->year_end - $request->year_start != 1) {
                 return response()->json([
                     'success' => false,
@@ -160,7 +151,6 @@ class Year_Management extends MainController
 
             $code = $request->year_start . '-' . $request->year_end;
 
-            // Check if code exists (excluding current)
             $exists = DB::table('school_years')
                 ->where('code', $code)
                 ->where('id', '!=', $id)
@@ -173,7 +163,6 @@ class Year_Management extends MainController
                 ], 422);
             }
 
-            // If setting to active, deactivate others
             if ($request->status === 'active') {
                 DB::table('school_years')
                     ->where('id', '!=', $id)
@@ -220,9 +209,6 @@ class Year_Management extends MainController
         }
     }
 
-    /**
-     * Set active school year
-     */
     public function setActiveSchoolYear($id)
     {
         try {
@@ -237,10 +223,8 @@ class Year_Management extends MainController
 
             DB::beginTransaction();
 
-            // Deactivate all
             DB::table('school_years')->update(['status' => 'upcoming']);
 
-            // Activate selected
             DB::table('school_years')
                 ->where('id', $id)
                 ->update([
@@ -269,9 +253,6 @@ class Year_Management extends MainController
         }
     }
 
-    /**
-     * List semester management page
-     */
     public function list_semester()
     {
         $data = [
@@ -281,9 +262,6 @@ class Year_Management extends MainController
         return view('admin.class_management.list_semester', $data);
     }
 
-    /**
-     * Get semesters data (AJAX)
-     */
     public function getSemestersData(Request $request)
     {
         try {
@@ -304,7 +282,6 @@ class Year_Management extends MainController
                     'school_years.year_end'
                 );
 
-            // Filter by school year if provided
             if ($request->has('school_year_id') && $request->school_year_id != '') {
                 $query->where('semesters.school_year_id', $request->school_year_id);
             }
@@ -329,39 +306,53 @@ class Year_Management extends MainController
         }
     }
 
-    /**
-     * Create semester
-     */
     public function createSemester(Request $request)
     {
         $validated = $request->validate([
             'school_year_id' => 'required|exists:school_years,id',
-            'name' => 'required|string|max:50',
-            'code' => 'required|string|max:20',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);
 
         try {
-            // Check if code already exists for this school year
-            $exists = DB::table('semesters')
+            // Check current semester count
+            $currentCount = DB::table('semesters')
                 ->where('school_year_id', $request->school_year_id)
-                ->where('code', $request->code)
-                ->exists();
+                ->count();
 
-            if ($exists) {
+            if ($currentCount >= self::MAX_SEMESTERS_PER_YEAR) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Semester code already exists for this school year.'
+                    'message' => "Maximum of " . self::MAX_SEMESTERS_PER_YEAR . " semesters per school year reached."
                 ], 422);
             }
+
+            // Auto-generate semester order (next number)
+            $nextOrder = $currentCount + 1;
+
+            // Generate name based on order
+            $semesterNames = [
+                1 => '1st Semester',
+                2 => '2nd Semester',
+                3 => '3rd Semester'
+            ];
+
+            // Generate code based on order
+            $semesterCodes = [
+                1 => 'SEM1',
+                2 => 'SEM2',
+                3 => 'SEM3'
+            ];
+
+            $name = $semesterNames[$nextOrder];
+            $code = $semesterCodes[$nextOrder];
 
             DB::beginTransaction();
 
             $semesterId = DB::table('semesters')->insertGetId([
                 'school_year_id' => $request->school_year_id,
-                'name' => $request->name,
-                'code' => strtoupper($request->code),
+                'name' => $name,
+                'code' => $code,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
                 'status' => 'upcoming',
@@ -371,7 +362,8 @@ class Year_Management extends MainController
 
             \Log::info('Semester created successfully', [
                 'semester_id' => $semesterId,
-                'code' => $request->code,
+                'code' => $code,
+                'order' => $nextOrder,
             ]);
 
             DB::commit();
@@ -396,15 +388,9 @@ class Year_Management extends MainController
         }
     }
 
-    /**
-     * Update semester
-     */
     public function updateSemester(Request $request, $id)
     {
         $validated = $request->validate([
-            'school_year_id' => 'required|exists:school_years,id',
-            'name' => 'required|string|max:50',
-            'code' => 'required|string|max:20',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'status' => 'required|in:active,completed,upcoming',
@@ -420,21 +406,6 @@ class Year_Management extends MainController
                 ], 404);
             }
 
-            // Check if code exists (excluding current)
-            $exists = DB::table('semesters')
-                ->where('school_year_id', $request->school_year_id)
-                ->where('code', $request->code)
-                ->where('id', '!=', $id)
-                ->exists();
-
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Semester code already exists for this school year.'
-                ], 422);
-            }
-
-            // If setting to active, deactivate others
             if ($request->status === 'active') {
                 DB::table('semesters')
                     ->where('id', '!=', $id)
@@ -447,9 +418,6 @@ class Year_Management extends MainController
             DB::table('semesters')
                 ->where('id', $id)
                 ->update([
-                    'school_year_id' => $request->school_year_id,
-                    'name' => $request->name,
-                    'code' => strtoupper($request->code),
                     'start_date' => $request->start_date,
                     'end_date' => $request->end_date,
                     'status' => $request->status,
@@ -481,72 +449,52 @@ class Year_Management extends MainController
         }
     }
 
+    public function getSemesterClasses($id)
+    {
+        try {
+            $semester = DB::table('semesters')->find($id);
 
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester not found'
+                ], 404);
+            }
 
-/**
- * Get classes enrolled in a specific semester
- */
-public function getSemesterClasses($id)
-{
-    try {
-        $semester = DB::table('semesters')->find($id);
+            $sectionClasses = DB::table('section_class_matrix as secm')
+                ->join('classes as c', 'secm.class_id', '=', 'c.id')
+                ->join('students as s', 's.section_id', '=', 'secm.section_id')
+                ->where('secm.semester_id', $id)
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name',
+                    DB::raw('COUNT(DISTINCT s.student_number) as student_count')
+                )
+                ->groupBy('c.id', 'c.class_code', 'c.class_name')
+                ->get();
 
-        if (!$semester) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Semester not found'
-            ], 404);
-        }
+            $individualClasses = DB::table('student_class_matrix as scm')
+                ->join('classes as c', function ($join) {
+                    $join->on(
+                        DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
+                        '=',
+                        DB::raw('c.class_code COLLATE utf8mb4_general_ci')
+                    );
+                })
+                ->where('scm.semester_id', $id)
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name',
+                    DB::raw('COUNT(DISTINCT scm.student_number) as student_count')
+                )
+                ->groupBy('c.id', 'c.class_code', 'c.class_name')
+                ->get();
 
-        // Get classes from section_class_matrix with section-enrolled students
-        $sectionClasses = DB::table('section_class_matrix as secm')
-            ->join('classes as c', 'secm.class_id', '=', 'c.id')
-            ->join('students as s', 's.section_id', '=', 'secm.section_id')
-            ->where('secm.semester_id', $id)
-            ->select(
-                'c.id',
-                'c.class_code',
-                'c.class_name',
-                DB::raw('COUNT(DISTINCT s.student_number) as student_count')
-            )
-            ->groupBy('c.id', 'c.class_code', 'c.class_name')
-            ->get();
-
-        // Get classes from student_class_matrix (individual enrollments)
-        $individualClasses = DB::table('student_class_matrix as scm')
-            ->join('classes as c', function ($join) {
-                $join->on(
-                    DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
-                    '=',
-                    DB::raw('c.class_code COLLATE utf8mb4_general_ci')
-                );
-            })
-            ->where('scm.semester_id', $id)
-            ->select(
-                'c.id',
-                'c.class_code',
-                'c.class_name',
-                DB::raw('COUNT(DISTINCT scm.student_number) as student_count')
-            )
-            ->groupBy('c.id', 'c.class_code', 'c.class_name')
-            ->get();
-
-        // Merge and sum student counts
-        $classesMap = [];
-        
-        foreach ($sectionClasses as $class) {
-            $classesMap[$class->id] = [
-                'id' => $class->id,
-                'class_code' => $class->class_code,
-                'class_name' => $class->class_name,
-                'student_count' => $class->student_count
-            ];
-        }
-        
-        foreach ($individualClasses as $class) {
-            if (isset($classesMap[$class->id])) {
-                $classesMap[$class->id]['student_count'] += $class->student_count;
-            } else {
+            $classesMap = [];
+            
+            foreach ($sectionClasses as $class) {
                 $classesMap[$class->id] = [
                     'id' => $class->id,
                     'class_code' => $class->class_code,
@@ -554,58 +502,103 @@ public function getSemesterClasses($id)
                     'student_count' => $class->student_count
                 ];
             }
-        }
+            
+            foreach ($individualClasses as $class) {
+                if (isset($classesMap[$class->id])) {
+                    $classesMap[$class->id]['student_count'] += $class->student_count;
+                } else {
+                    $classesMap[$class->id] = [
+                        'id' => $class->id,
+                        'class_code' => $class->class_code,
+                        'class_name' => $class->class_name,
+                        'student_count' => $class->student_count
+                    ];
+                }
+            }
 
-        // Convert to collection and sort
-        $classes = collect(array_values($classesMap))->sortBy('class_code')->values();
+            $classes = collect(array_values($classesMap))->sortBy('class_code')->values();
 
-        return response()->json([
-            'success' => true,
-            'data' => $classes
-        ]);
-    } catch (Exception $e) {
-        \Log::error('Failed to load semester classes', [
-            'semester_id' => $id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $classes
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to load semester classes', [
+                'semester_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load semester classes: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Get enrollment history for a specific class in a semester
- */
-public function getEnrollmentHistory($semesterId, $classCode)
-{
-    try {
-        // Get the class_id from class_code
-        $class = DB::table('classes')
-            ->where('class_code', $classCode)
-            ->first();
-
-        if (!$class) {
             return response()->json([
                 'success' => false,
-                'message' => 'Class not found'
-            ], 404);
+                'message' => 'Failed to load semester classes: ' . $e->getMessage()
+            ], 500);
         }
+    }
 
-        // Get sections that have this class in the semester through section_class_matrix
-        $sectionsWithClass = DB::table('section_class_matrix as secm')
-            ->where('secm.class_id', $class->id)
-            ->where('secm.semester_id', $semesterId)
-            ->pluck('secm.section_id')
-            ->toArray();
+    public function getEnrollmentHistory($semesterId, $classCode)
+    {
+        try {
+            $class = DB::table('classes')
+                ->where('class_code', $classCode)
+                ->first();
 
-        // Get students enrolled through their sections
-        $sectionStudents = collect();
-        if (!empty($sectionsWithClass)) {
-            $sectionStudents = DB::table('students as s')
+            if (!$class) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class not found'
+                ], 404);
+            }
+
+            $sectionsWithClass = DB::table('section_class_matrix as secm')
+                ->where('secm.class_id', $class->id)
+                ->where('secm.semester_id', $semesterId)
+                ->pluck('secm.section_id')
+                ->toArray();
+
+            $sectionStudents = collect();
+            if (!empty($sectionsWithClass)) {
+                $sectionStudents = DB::table('students as s')
+                    ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+                    ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                    ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                    ->leftJoin('grades_final as gf', function ($join) use ($classCode, $semesterId) {
+                        $join->on(
+                            DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
+                            '=',
+                            DB::raw('gf.student_number COLLATE utf8mb4_general_ci')
+                        )
+                        ->where('gf.class_code', $classCode)
+                        ->where('gf.semester_id', $semesterId);
+                    })
+                    ->whereIn('s.section_id', $sectionsWithClass)
+                    ->select(
+                        's.student_number',
+                        's.first_name',
+                        's.middle_name',
+                        's.last_name',
+                        's.student_type',
+                        'sec.code as section_code',
+                        'sec.name as section_name',
+                        'str.code as strand_code',
+                        'lvl.name as level_name',
+                        DB::raw("'enrolled' as enrollment_status"),
+                        'gf.final_grade',
+                        'gf.remarks',
+                        'gf.is_locked',
+                        DB::raw("'Section' as enrollment_source")
+                    )
+                    ->get();
+            }
+
+            $individualStudents = DB::table('student_class_matrix as scm')
+                ->join('students as s', function ($join) {
+                    $join->on(
+                        DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
+                        '=',
+                        DB::raw('s.student_number COLLATE utf8mb4_general_ci')
+                    );
+                })
                 ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
                 ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
                 ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
@@ -618,7 +611,8 @@ public function getEnrollmentHistory($semesterId, $classCode)
                     ->where('gf.class_code', $classCode)
                     ->where('gf.semester_id', $semesterId);
                 })
-                ->whereIn('s.section_id', $sectionsWithClass)
+                ->where('scm.semester_id', $semesterId)
+                ->where('scm.class_code', $classCode)
                 ->select(
                     's.student_number',
                     's.first_name',
@@ -629,103 +623,56 @@ public function getEnrollmentHistory($semesterId, $classCode)
                     'sec.name as section_name',
                     'str.code as strand_code',
                     'lvl.name as level_name',
-                    DB::raw("'enrolled' as enrollment_status"),
+                    'scm.enrollment_status',
                     'gf.final_grade',
                     'gf.remarks',
                     'gf.is_locked',
-                    DB::raw("'Section' as enrollment_source")
+                    DB::raw("'Individual' as enrollment_source")
                 )
                 ->get();
+
+            $allStudents = $individualStudents->concat($sectionStudents)
+                ->unique('student_number')
+                ->values();
+
+            $allStudents = $allStudents->map(function ($student) {
+                $student->full_name = trim($student->first_name . ' ' . 
+                                          ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
+                                          $student->last_name);
+                return $student;
+            });
+
+            $allStudents = $allStudents->sortBy([
+                ['last_name', 'asc'],
+                ['first_name', 'asc']
+            ])->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $allStudents,
+                'summary' => [
+                    'total_enrolled' => $allStudents->count(),
+                    'section_enrolled' => $allStudents->where('enrollment_source', 'Section')->count(),
+                    'individual_enrolled' => $allStudents->where('enrollment_source', 'Individual')->count(),
+                    'with_grades' => $allStudents->whereNotNull('final_grade')->count(),
+                    'locked_grades' => $allStudents->where('is_locked', 1)->count()
+                ]
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to load enrollment history', [
+                'semester_id' => $semesterId,
+                'class_code' => $classCode,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load enrollment history: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Get students enrolled individually through student_class_matrix
-        $individualStudents = DB::table('student_class_matrix as scm')
-            ->join('students as s', function ($join) {
-                $join->on(
-                    DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
-                    '=',
-                    DB::raw('s.student_number COLLATE utf8mb4_general_ci')
-                );
-            })
-            ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
-            ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
-            ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
-            ->leftJoin('grades_final as gf', function ($join) use ($classCode, $semesterId) {
-                $join->on(
-                    DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
-                    '=',
-                    DB::raw('gf.student_number COLLATE utf8mb4_general_ci')
-                )
-                ->where('gf.class_code', $classCode)
-                ->where('gf.semester_id', $semesterId);
-            })
-            ->where('scm.semester_id', $semesterId)
-            ->where('scm.class_code', $classCode)
-            ->select(
-                's.student_number',
-                's.first_name',
-                's.middle_name',
-                's.last_name',
-                's.student_type',
-                'sec.code as section_code',
-                'sec.name as section_name',
-                'str.code as strand_code',
-                'lvl.name as level_name',
-                'scm.enrollment_status',
-                'gf.final_grade',
-                'gf.remarks',
-                'gf.is_locked',
-                DB::raw("'Individual' as enrollment_source")
-            )
-            ->get();
-
-        // Merge both collections and remove duplicates
-        $allStudents = $individualStudents->concat($sectionStudents)
-            ->unique('student_number')
-            ->values();
-
-        // Add computed full name
-        $allStudents = $allStudents->map(function ($student) {
-            $student->full_name = trim($student->first_name . ' ' . 
-                                      ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
-                                      $student->last_name);
-            return $student;
-        });
-
-        // Sort by last name, first name
-        $allStudents = $allStudents->sortBy([
-            ['last_name', 'asc'],
-            ['first_name', 'asc']
-        ])->values();
-
-        return response()->json([
-            'success' => true,
-            'data' => $allStudents,
-            'summary' => [
-                'total_enrolled' => $allStudents->count(),
-                'section_enrolled' => $allStudents->where('enrollment_source', 'Section')->count(),
-                'individual_enrolled' => $allStudents->where('enrollment_source', 'Individual')->count(),
-                'with_grades' => $allStudents->whereNotNull('final_grade')->count(),
-                'locked_grades' => $allStudents->where('is_locked', 1)->count()
-            ]
-        ]);
-    } catch (Exception $e) {
-        \Log::error('Failed to load enrollment history', [
-            'semester_id' => $semesterId,
-            'class_code' => $classCode,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load enrollment history: ' . $e->getMessage()
-        ], 500);
     }
-}
-    /**
-     * Set active semester
-     */
+
     public function setActiveSemester($id)
     {
         try {
@@ -740,10 +687,8 @@ public function getEnrollmentHistory($semesterId, $classCode)
 
             DB::beginTransaction();
 
-            // Deactivate all
             DB::table('semesters')->update(['status' => 'upcoming']);
 
-            // Activate selected
             DB::table('semesters')
                 ->where('id', $id)
                 ->update([
@@ -751,7 +696,6 @@ public function getEnrollmentHistory($semesterId, $classCode)
                     'updated_at' => now()
                 ]);
 
-            // Also set the parent school year as active
             DB::table('school_years')->update(['status' => 'upcoming']);
             DB::table('school_years')
                 ->where('id', $semester->school_year_id)

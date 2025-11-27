@@ -10,10 +10,11 @@ use Illuminate\Support\Facades\Auth;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
-
 class GradeBook_Management extends MainController
 {
-    const MAX_COLUMNS_PER_TYPE = 10;
+    const MAX_WW_COLUMNS = 10;
+    const MAX_PT_COLUMNS = 10;
+    const MAX_QA_COLUMNS = 1;
     
     public function list_gradebook($classId) 
     {
@@ -29,20 +30,29 @@ class GradeBook_Management extends MainController
         }
 
         $class = DB::table('classes')->where('id', $classId)->first();
+        
+        // Get active quarters for current semester
+        $quarters = DB::table('quarters as q')
+            ->join('semesters as s', 'q.semester_id', '=', 's.id')
+            ->where('s.status', 'active')
+            ->orderBy('q.order_number')
+            ->select('q.*')
+            ->get();
 
         $data = [
             'scripts' => ['grade_management/page_gradebook.js'],
             'classId' => $classId,
-            'class' => $class
+            'class' => $class,
+            'quarters' => $quarters
         ];
 
         return view('teacher.gradebook.page_gradebook', $data);
     }
 
     /**
-     * Get gradebook structure and data
+     * Get gradebook structure and data for a specific quarter
      */
-    public function getGradebookData($classId)
+    public function getGradebookData($classId, Request $request)
     {
         try {
             $teacher = Auth::guard('teacher')->user();
@@ -56,11 +66,20 @@ class GradeBook_Management extends MainController
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
+            $quarterId = $request->input('quarter_id');
+            if (!$quarterId) {
+                return response()->json(['success' => false, 'message' => 'Quarter ID required'], 400);
+            }
+
             $class = DB::table('classes')->where('id', $classId)->first();
+            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
+
+            // Get or create columns for this quarter
+            $this->ensureColumnsExist($class->class_code, $quarterId);
 
             $columns = DB::table('gradebook_columns')
                 ->where('class_code', $class->class_code)
-                ->where('is_active', true)
+                ->where('quarter_id', $quarterId)
                 ->orderBy('component_type')
                 ->orderBy('order_number')
                 ->get()
@@ -71,12 +90,13 @@ class GradeBook_Management extends MainController
             $scores = DB::table('gradebook_scores as gs')
                 ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
                 ->where('gc.class_code', $class->class_code)
+                ->where('gc.quarter_id', $quarterId)
                 ->select('gs.*', 'gc.component_type', 'gc.column_name')
                 ->get()
                 ->groupBy('student_number');
 
             // Get quiz scores for online columns
-            $quizScores = $this->getQuizScores($columns, $students);
+            $quizScores = $this->getQuizScores($columns, $students, $quarterId);
 
             $gradebookData = [];
             foreach ($students as $student) {
@@ -105,7 +125,8 @@ class GradeBook_Management extends MainController
                             'score' => $quizScore ?? ($score ? $score->score : null),
                             'max_points' => $col->max_points,
                             'source' => $col->source_type,
-                            'column_id' => $col->id
+                            'column_id' => $col->id,
+                            'is_active' => $col->is_active
                         ];
                     }
                 }
@@ -117,6 +138,7 @@ class GradeBook_Management extends MainController
                 'success' => true,
                 'data' => [
                     'class' => $class,
+                    'quarter' => $quarter,
                     'columns' => $columns,
                     'students' => $gradebookData
                 ]
@@ -125,7 +147,8 @@ class GradeBook_Management extends MainController
         } catch (Exception $e) {
             \Log::error('Failed to load gradebook', [
                 'class_id' => $classId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
@@ -136,9 +159,72 @@ class GradeBook_Management extends MainController
     }
 
     /**
+     * Ensure all columns exist for a quarter
+     */
+    private function ensureColumnsExist($classCode, $quarterId)
+    {
+        $existingColumns = DB::table('gradebook_columns')
+            ->where('class_code', $classCode)
+            ->where('quarter_id', $quarterId)
+            ->get()
+            ->groupBy('component_type');
+
+        // Create WW columns (1-10)
+        $wwCount = $existingColumns->get('WW', collect())->count();
+        for ($i = $wwCount + 1; $i <= self::MAX_WW_COLUMNS; $i++) {
+            DB::table('gradebook_columns')->insert([
+                'class_code' => $classCode,
+                'quarter_id' => $quarterId,
+                'component_type' => 'WW',
+                'column_name' => 'WW' . $i,
+                'max_points' => 10,
+                'order_number' => $i,
+                'source_type' => 'manual',
+                'is_active' => 0,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        // Create PT columns (1-10)
+        $ptCount = $existingColumns->get('PT', collect())->count();
+        for ($i = $ptCount + 1; $i <= self::MAX_PT_COLUMNS; $i++) {
+            DB::table('gradebook_columns')->insert([
+                'class_code' => $classCode,
+                'quarter_id' => $quarterId,
+                'component_type' => 'PT',
+                'column_name' => 'PT' . $i,
+                'max_points' => 10,
+                'order_number' => $i,
+                'source_type' => 'manual',
+                'is_active' => 0,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        // Create QA column (only 1)
+        $qaCount = $existingColumns->get('QA', collect())->count();
+        if ($qaCount === 0) {
+            DB::table('gradebook_columns')->insert([
+                'class_code' => $classCode,
+                'quarter_id' => $quarterId,
+                'component_type' => 'QA',
+                'column_name' => 'QA',
+                'max_points' => 50,
+                'order_number' => 1,
+                'source_type' => 'manual',
+                'is_active' => 0,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+    }
+
+    /**
      * Get quiz scores properly calculated
      */
-    private function getQuizScores($columns, $students)
+    private function getQuizScores($columns, $students, $quarterId)
     {
         $quizScores = [];
         
@@ -150,6 +236,7 @@ class GradeBook_Management extends MainController
                 
                 $attempts = DB::table('student_quiz_attempts as sqa')
                     ->where('quiz_id', $col->quiz_id)
+                    ->where('quarter_id', $quarterId)
                     ->where('status', 'graded')
                     ->select(
                         'student_number',
@@ -171,6 +258,61 @@ class GradeBook_Management extends MainController
         }
         
         return $quizScores;
+    }
+
+    /**
+     * Enable/activate a column
+     */
+    public function toggleColumn(Request $request, $columnId)
+    {
+        try {
+            $validated = $request->validate([
+                'is_active' => 'required|boolean',
+                'max_points' => 'nullable|integer|min:1',
+                'quiz_id' => 'nullable|exists:quizzes,id'
+            ]);
+
+            $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
+
+            if (!$column) {
+                return response()->json(['success' => false, 'message' => 'Column not found'], 404);
+            }
+
+            $updateData = [
+                'is_active' => $validated['is_active'],
+                'updated_at' => now()
+            ];
+
+            // If activating, allow setting max_points and quiz
+            if ($validated['is_active']) {
+                if (isset($validated['max_points'])) {
+                    $updateData['max_points'] = $validated['max_points'];
+                }
+                
+                if (isset($validated['quiz_id']) && $validated['quiz_id']) {
+                    $updateData['quiz_id'] = $validated['quiz_id'];
+                    $updateData['source_type'] = 'online';
+                } else {
+                    $updateData['quiz_id'] = null;
+                    $updateData['source_type'] = 'manual';
+                }
+            }
+
+            DB::table('gradebook_columns')
+                ->where('id', $columnId)
+                ->update($updateData);
+
+            return response()->json([
+                'success' => true,
+                'message' => $validated['is_active'] ? 'Column enabled successfully' : 'Column disabled successfully'
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update column: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -212,66 +354,6 @@ class GradeBook_Management extends MainController
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update column: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Add new column
-     */
-    public function addColumn(Request $request, $classId)
-    {
-        try {
-            $validated = $request->validate([
-                'component_type' => 'required|in:WW,PT,QA'
-            ]);
-
-            $class = DB::table('classes')->where('id', $classId)->first();
-
-            // Check column limit
-            $currentCount = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('component_type', $validated['component_type'])
-                ->where('is_active', 1)
-                ->count();
-
-            if ($currentCount >= self::MAX_COLUMNS_PER_TYPE) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Maximum of " . self::MAX_COLUMNS_PER_TYPE . " columns reached for this component type"
-                ], 400);
-            }
-
-            $maxOrder = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('component_type', $validated['component_type'])
-                ->max('order_number');
-
-            $nextNumber = $maxOrder + 1;
-            $columnName = $validated['component_type'] . $nextNumber;
-
-            $columnId = DB::table('gradebook_columns')->insertGetId([
-                'class_code' => $class->class_code,
-                'component_type' => $validated['component_type'],
-                'column_name' => $columnName,
-                'max_points' => $validated['component_type'] === 'QA' ? 50 : 10,
-                'order_number' => $nextNumber,
-                'source_type' => 'manual',
-                'is_active' => 1,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Column added successfully',
-                'data' => DB::table('gradebook_columns')->find($columnId)
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to add column: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -325,18 +407,24 @@ class GradeBook_Management extends MainController
     /**
      * Get available quizzes for mapping
      */
-    public function getAvailableQuizzes($classId)
+    public function getAvailableQuizzes($classId, Request $request)
     {
         try {
+            $quarterId = $request->input('quarter_id');
             $class = DB::table('classes')->where('id', $classId)->first();
 
             $quizzes = DB::table('quizzes as q')
                 ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
                 ->where('l.class_id', $classId)
-                ->whereNotIn('q.id', function($query) use ($class) {
+                ->where(function($query) use ($quarterId) {
+                    $query->where('q.quarter_id', $quarterId)
+                          ->orWhereNull('q.quarter_id');
+                })
+                ->whereNotIn('q.id', function($query) use ($class, $quarterId) {
                     $query->select('quiz_id')
                         ->from('gradebook_columns')
                         ->where('class_code', $class->class_code)
+                        ->where('quarter_id', $quarterId)
                         ->whereNotNull('quiz_id');
                 })
                 ->select(
@@ -390,7 +478,7 @@ class GradeBook_Management extends MainController
             ->get();
     }
 
-        /**
+    /**
      * Export gradebook to Excel using template
      */
     public function exportGradebook(Request $request, $classId)
@@ -398,7 +486,6 @@ class GradeBook_Management extends MainController
         try {
             $teacher = Auth::guard('teacher')->user();
             
-            // Check access
             $hasAccess = DB::table('teacher_class_matrix')
                 ->where('teacher_id', $teacher->id)
                 ->where('class_id', $classId)
@@ -408,14 +495,13 @@ class GradeBook_Management extends MainController
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
-            $quarter = $request->input('quarter', '1st'); // '1st' or '2nd'
+            $quarterId = $request->input('quarter_id');
             
-            // Get class and related data
             $class = DB::table('classes')->where('id', $classId)->first();
+            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
             $section = $this->getClassSection($classId);
-            $semester = $this->getCurrentSemester();
+            $semester = DB::table('semesters')->where('id', $quarter->semester_id)->first();
             
-            // Load template
             $templatePath = storage_path('app/templates/SHS-E-Class-Record.xlsx');
             
             if (!file_exists($templatePath)) {
@@ -427,23 +513,18 @@ class GradeBook_Management extends MainController
 
             $spreadsheet = IOFactory::load($templatePath);
             
-            // Populate INPUT DATA sheet
-            $this->populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher);
+            $this->populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter);
             
-            // Populate grade sheet based on quarter
-            $sheetName = $quarter === '1st' ? '1ST' : '2ND';
-            $this->populateGradeSheet($spreadsheet, $sheetName, $classId, $class);
+            $sheetName = $quarter->code === 'Q1' ? '1ST' : '2ND';
+            $this->populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId);
             
-            // Generate filename
             $filename = $this->generateFilename($class, $section, $quarter);
             $exportPath = storage_path('app/exports/' . $filename);
             
-            // Ensure exports directory exists
             if (!file_exists(storage_path('app/exports'))) {
                 mkdir(storage_path('app/exports'), 0755, true);
             }
             
-            // Save file
             $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
             $writer->save($exportPath);
             
@@ -463,10 +544,7 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Populate INPUT DATA sheet
-     */
-    private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher)
+    private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter)
     {
         $sheet = $spreadsheet->getSheetByName('INPUT DATA');
         
@@ -474,20 +552,15 @@ class GradeBook_Management extends MainController
             throw new Exception('INPUT DATA sheet not found in template');
         }
 
-        // Basic information
-        $sheet->setCellValue('K7', $section->name ?? ''); // Grade & Section
-        $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name); // Teacher
-        $sheet->setCellValue('S8', $semester->name ?? '1ST'); // Semester
-        $sheet->setCellValue('AE7', $class->class_name); // Subject
-        
-        // Additional metadata
-        $sheet->setCellValue('AE8', $class->class_code); // Store class code for reference
+        $sheet->setCellValue('K7', $section->name ?? '');
+        $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name);
+        $sheet->setCellValue('S8', $semester->name ?? '1ST');
+        $sheet->setCellValue('AE7', $class->class_name);
+        $sheet->setCellValue('AE8', $class->class_code);
 
-        // Get students (male first, then female)
         $maleStudents = $this->getEnrolledStudentsByGender($class->id, 'Male');
         $femaleStudents = $this->getEnrolledStudentsByGender($class->id, 'Female');
         
-        // Populate male students (A13:B62)
         $row = 13;
         foreach ($maleStudents as $student) {
             $sheet->setCellValue('A' . $row, $student->student_number);
@@ -496,7 +569,6 @@ class GradeBook_Management extends MainController
             if ($row > 62) break;
         }
         
-        // Populate female students (A64:B113)
         $row = 64;
         foreach ($femaleStudents as $student) {
             $sheet->setCellValue('A' . $row, $student->student_number);
@@ -506,10 +578,7 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Populate grade sheet (1ST or 2ND)
-     */
-    private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class)
+    private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId)
     {
         $sheet = $spreadsheet->getSheetByName($sheetName);
         
@@ -517,33 +586,27 @@ class GradeBook_Management extends MainController
             throw new Exception($sheetName . ' sheet not found in template');
         }
 
-        // Get columns and scores
         $columns = DB::table('gradebook_columns')
             ->where('class_code', $class->class_code)
+            ->where('quarter_id', $quarterId)
             ->where('is_active', true)
             ->orderBy('component_type')
             ->orderBy('order_number')
             ->get()
             ->groupBy('component_type');
 
-        // Written Work columns (F11:O11)
         $this->populateComponentColumns($sheet, $columns->get('WW', collect()), 'F', 11, 10);
-        
-        // Performance Tasks columns (S11:AB11)
         $this->populateComponentColumns($sheet, $columns->get('PT', collect()), 'S', 11, 10);
         
-        // Quarterly Assessment (AF11)
         $qaColumns = $columns->get('QA', collect());
         if ($qaColumns->isNotEmpty()) {
             $qaMaxScore = $qaColumns->sum('max_points');
             $sheet->setCellValue('AF11', $qaMaxScore);
         }
 
-        // Get students and their scores
         $students = $this->getEnrolledStudentsWithGender($classId);
-        $scores = $this->getStudentScores($class->class_code, $columns);
+        $scores = $this->getStudentScores($class->class_code, $columns, $quarterId);
 
-        // Populate student scores
         $maleRow = 13;
         $femaleRow = 64;
         
@@ -557,13 +620,8 @@ class GradeBook_Management extends MainController
 
             $studentScores = $scores->get($student->student_number, []);
             
-            // Written Work scores (F:O)
             $this->populateStudentScores($sheet, $row, $columns->get('WW', collect()), $studentScores, 'F');
-            
-            // Performance Tasks scores (S:AB)
             $this->populateStudentScores($sheet, $row, $columns->get('PT', collect()), $studentScores, 'S');
-            
-            // Quarterly Assessment score (AF)
             $this->populateQAScore($sheet, $row, $columns->get('QA', collect()), $studentScores);
 
             if ($student->gender === 'Male') {
@@ -574,9 +632,6 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Populate component columns (WW or PT)
-     */
     private function populateComponentColumns($sheet, $columns, $startCol, $row, $maxCols)
     {
         $colIndex = 0;
@@ -589,9 +644,6 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Populate student scores for WW or PT
-     */
     private function populateStudentScores($sheet, $row, $columns, $studentScores, $startCol)
     {
         $colIndex = 0;
@@ -609,14 +661,10 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Populate QA score
-     */
     private function populateQAScore($sheet, $row, $qaColumns, $studentScores)
     {
         if ($qaColumns->isEmpty()) return;
         
-        // Sum all QA scores for this student
         $totalScore = 0;
         foreach ($qaColumns as $column) {
             $score = $studentScores[$column->column_name] ?? 0;
@@ -628,10 +676,7 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Get student scores indexed by student_number and column_name
-     */
-    private function getStudentScores($classCode, $columns)
+    private function getStudentScores($classCode, $columns, $quarterId)
     {
         $columnIds = collect();
         foreach ($columns as $typeColumns) {
@@ -641,6 +686,7 @@ class GradeBook_Management extends MainController
         $scores = DB::table('gradebook_scores as gs')
             ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
             ->whereIn('gs.column_id', $columnIds)
+            ->where('gc.quarter_id', $quarterId)
             ->select('gs.student_number', 'gc.column_name', 'gs.score')
             ->get();
 
@@ -655,9 +701,6 @@ class GradeBook_Management extends MainController
         return collect($grouped);
     }
 
-    /**
-     * Get enrolled students with gender
-     */
     private function getEnrolledStudentsWithGender($classId)
     {
         $class = DB::table('classes')->where('id', $classId)->first();
@@ -683,14 +726,11 @@ class GradeBook_Management extends MainController
             );
 
         return $regular->union($irregular)
-            ->orderBy('gender', 'desc') // Male first
+            ->orderBy('gender', 'desc')
             ->orderBy('full_name')
             ->get();
     }
 
-    /**
-     * Get students by gender
-     */
     private function getEnrolledStudentsByGender($classId, $gender)
     {
         $class = DB::table('classes')->where('id', $classId)->first();
@@ -720,9 +760,6 @@ class GradeBook_Management extends MainController
             ->get();
     }
 
-    /**
-     * Get class section
-     */
     private function getClassSection($classId)
     {
         return DB::table('sections as sec')
@@ -732,25 +769,13 @@ class GradeBook_Management extends MainController
             ->first();
     }
 
-    /**
-     * Get current semester
-     */
-    private function getCurrentSemester()
-    {
-        return DB::table('semesters')
-            ->where('status', 'active')
-            ->first();
-    }
-
-    /**
-     * Generate export filename
-     */
     private function generateFilename($class, $section, $quarter)
     {
         $classCode = str_replace(' ', '_', $class->class_code);
         $sectionName = $section ? str_replace(' ', '_', $section->name) : 'NoSection';
+        $quarterName = str_replace(' ', '_', $quarter->name);
         $timestamp = now()->format('Ymd_His');
         
-        return "{$classCode}_{$sectionName}_{$quarter}Q_{$timestamp}.xlsx";
+        return "{$classCode}_{$sectionName}_{$quarterName}_{$timestamp}.xlsx";
     }
 }

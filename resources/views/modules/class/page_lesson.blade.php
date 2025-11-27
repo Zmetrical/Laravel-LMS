@@ -12,8 +12,16 @@
     .lesson-nav-link {
         cursor: pointer;
     }
+    .quarter-header {
+        transition: background-color 0.2s;
+    }
+    .quarter-header:hover {
+        background-color: #f0f0f0;
+    }
+    .toggle-icon {
+        transition: transform 0.3s;
+    }
 </style>
-
 @endsection
 
 @section('tab-content')
@@ -90,12 +98,22 @@
             <div class="modal-body">
                 <form id="lessonForm">
                     <div class="form-group">
+                        <label for="lessonQuarter">
+                            Quarter <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-control" id="lessonQuarter" required>
+                            <option value="">Select Quarter</option>
+                            @foreach($quarters as $quarter)
+                                <option value="{{ $quarter->id }}">{{ $quarter->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="lessonTitle">
                             Lesson Title <span class="text-danger">*</span>
                         </label>
                         <input type="text" class="form-control" id="lessonTitle" 
                                placeholder="e.g., Introduction to Academic Writing" required>
-                        <small class="form-text text-muted">Enter a clear and descriptive title for this lesson</small>
                     </div>
                     <div class="form-group">
                         <label for="lessonDescription">Description (Optional)</label>
@@ -131,6 +149,17 @@
             <div class="modal-body">
                 <form id="editLessonForm">
                     <input type="hidden" id="editLessonId">
+                    <div class="form-group">
+                        <label for="editLessonQuarter">
+                            Quarter <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-control" id="editLessonQuarter" required>
+                            <option value="">Select Quarter</option>
+                            @foreach($quarters as $quarter)
+                                <option value="{{ $quarter->id }}">{{ $quarter->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label for="editLessonTitle">
                             Lesson Title <span class="text-danger">*</span>

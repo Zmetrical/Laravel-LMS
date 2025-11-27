@@ -19,11 +19,19 @@ class Page_Lesson extends MainController
             abort(404, 'Class not found');
         }
 
+        // Get quarters for the current semester
+        $quarters = DB::table('quarters')
+            ->join('semesters', 'quarters.semester_id', '=', 'semesters.id')
+            ->where('semesters.status', 'active')
+            ->orderBy('quarters.order_number', 'asc')
+            ->select('quarters.*')
+            ->get();
+
         $data = [
             'scripts' => ['class/teacher_lesson.js'],
             'userType' => 'teacher',
             'class' => $class,
-            
+            'quarters' => $quarters
         ];
 
         return view('modules.class.page_lesson', $data);
@@ -40,59 +48,89 @@ class Page_Lesson extends MainController
             abort(404, 'Class not found');
         }
 
-        // TODO: Verify student is enrolled in this class
+        // Get quarters for the current semester
+        $quarters = DB::table('quarters')
+            ->join('semesters', 'quarters.semester_id', '=', 'semesters.id')
+            ->where('semesters.status', 'active')
+            ->orderBy('quarters.order_number', 'asc')
+            ->select('quarters.*')
+            ->get();
+
         $data = [
             'scripts' => ['class/student_lesson.js'],
             'userType' => 'student',
-            'class' => $class
+            'class' => $class,
+            'quarters' => $quarters
         ];
+        
         return view('modules.class.page_lesson', $data);
     }
 
     /**
-     * Get all lessons for a class (Teacher)
+     * Get all lessons for a class grouped by quarters (Teacher)
      */
     public function teacherList($classId)
     {
         try {
-            $lessons = DB::table('lessons')
-                ->where('class_id', $classId)
-                ->where('status', 1)
-                ->orderBy('order_number', 'asc')
-                ->orderBy('created_at', 'asc')
+            // Get active quarters
+            $quarters = DB::table('quarters')
+                ->join('semesters', 'quarters.semester_id', '=', 'semesters.id')
+                ->where('semesters.status', 'active')
+                ->orderBy('quarters.order_number', 'asc')
+                ->select('quarters.*')
                 ->get();
 
-            $lessonsData = [];
+            $quartersData = [];
 
-            foreach ($lessons as $lesson) {
-                // Get lectures
-                $lectures = DB::table('lectures')
-                    ->where('lesson_id', $lesson->id)
+            foreach ($quarters as $quarter) {
+                // Get lessons for this quarter
+                $lessons = DB::table('lessons')
+                    ->where('class_id', $classId)
+                    ->where('quarter_id', $quarter->id)
                     ->where('status', 1)
                     ->orderBy('order_number', 'asc')
-                    ->select('id', 'title', 'content_type', 'order_number')
+                    ->orderBy('created_at', 'asc')
                     ->get();
 
-                // Get quizzes
-                $quizzes = DB::table('quizzes')
-                    ->where('lesson_id', $lesson->id)
-                    ->where('status', 1)
-                    ->select('id', 'title', 'time_limit', 'passing_score')
-                    ->get();
+                $lessonsData = [];
 
-                $lessonsData[] = [
-                    'id' => $lesson->id,
-                    'title' => $lesson->title,
-                    'description' => $lesson->description,
-                    'order_number' => $lesson->order_number,
-                    'lectures' => $lectures,
-                    'quizzes' => $quizzes
+                foreach ($lessons as $lesson) {
+                    // Get lectures
+                    $lectures = DB::table('lectures')
+                        ->where('lesson_id', $lesson->id)
+                        ->where('status', 1)
+                        ->orderBy('order_number', 'asc')
+                        ->select('id', 'title', 'content_type', 'order_number')
+                        ->get();
+
+                    // Get quizzes
+                    $quizzes = DB::table('quizzes')
+                        ->where('lesson_id', $lesson->id)
+                        ->where('status', 1)
+                        ->select('id', 'title', 'time_limit', 'passing_score')
+                        ->get();
+
+                    $lessonsData[] = [
+                        'id' => $lesson->id,
+                        'title' => $lesson->title,
+                        'description' => $lesson->description,
+                        'order_number' => $lesson->order_number,
+                        'lectures' => $lectures,
+                        'quizzes' => $quizzes
+                    ];
+                }
+
+                $quartersData[] = [
+                    'id' => $quarter->id,
+                    'name' => $quarter->name,
+                    'code' => $quarter->code,
+                    'lessons' => $lessonsData
                 ];
             }
 
             return response()->json([
                 'success' => true,
-                'data' => $lessonsData
+                'data' => $quartersData
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -103,51 +141,70 @@ class Page_Lesson extends MainController
     }
 
     /**
-     * Get all lessons for a class (Student)
+     * Get all lessons for a class grouped by quarters (Student)
      */
     public function studentList($classId)
     {
         try {
-            // TODO: Verify student enrollment
-
-            $lessons = DB::table('lessons')
-                ->where('class_id', $classId)
-                ->where('status', 1)
-                ->orderBy('order_number', 'asc')
-                ->orderBy('created_at', 'asc')
+            // Get active quarters
+            $quarters = DB::table('quarters')
+                ->join('semesters', 'quarters.semester_id', '=', 'semesters.id')
+                ->where('semesters.status', 'active')
+                ->orderBy('quarters.order_number', 'asc')
+                ->select('quarters.*')
                 ->get();
 
-            $lessonsData = [];
+            $quartersData = [];
 
-            foreach ($lessons as $lesson) {
-                // Get lectures
-                $lectures = DB::table('lectures')
-                    ->where('lesson_id', $lesson->id)
+            foreach ($quarters as $quarter) {
+                // Get lessons for this quarter
+                $lessons = DB::table('lessons')
+                    ->where('class_id', $classId)
+                    ->where('quarter_id', $quarter->id)
                     ->where('status', 1)
                     ->orderBy('order_number', 'asc')
-                    ->select('id', 'title', 'content_type', 'order_number')
+                    ->orderBy('created_at', 'asc')
                     ->get();
 
-                // Get quizzes
-                $quizzes = DB::table('quizzes')
-                    ->where('lesson_id', $lesson->id)
-                    ->where('status', 1)
-                    ->select('id', 'title', 'time_limit', 'passing_score', 'max_attempts')
-                    ->get();
+                $lessonsData = [];
 
-                $lessonsData[] = [
-                    'id' => $lesson->id,
-                    'title' => $lesson->title,
-                    'description' => $lesson->description,
-                    'order_number' => $lesson->order_number,
-                    'lectures' => $lectures,
-                    'quizzes' => $quizzes
+                foreach ($lessons as $lesson) {
+                    // Get lectures
+                    $lectures = DB::table('lectures')
+                        ->where('lesson_id', $lesson->id)
+                        ->where('status', 1)
+                        ->orderBy('order_number', 'asc')
+                        ->select('id', 'title', 'content_type', 'order_number')
+                        ->get();
+
+                    // Get quizzes
+                    $quizzes = DB::table('quizzes')
+                        ->where('lesson_id', $lesson->id)
+                        ->where('status', 1)
+                        ->select('id', 'title', 'time_limit', 'passing_score', 'max_attempts')
+                        ->get();
+
+                    $lessonsData[] = [
+                        'id' => $lesson->id,
+                        'title' => $lesson->title,
+                        'description' => $lesson->description,
+                        'order_number' => $lesson->order_number,
+                        'lectures' => $lectures,
+                        'quizzes' => $quizzes
+                    ];
+                }
+
+                $quartersData[] = [
+                    'id' => $quarter->id,
+                    'name' => $quarter->name,
+                    'code' => $quarter->code,
+                    'lessons' => $lessonsData
                 ];
             }
 
             return response()->json([
                 'success' => true,
-                'data' => $lessonsData
+                'data' => $quartersData
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -165,16 +222,19 @@ class Page_Lesson extends MainController
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'description' => 'nullable|string'
+                'description' => 'nullable|string',
+                'quarter_id' => 'required|integer|exists:quarters,id'
             ]);
 
-            // Get the next order number
+            // Get the next order number for this quarter
             $maxOrder = DB::table('lessons')
                 ->where('class_id', $classId)
+                ->where('quarter_id', $request->quarter_id)
                 ->max('order_number');
 
             $lessonId = DB::table('lessons')->insertGetId([
                 'class_id' => $classId,
+                'quarter_id' => $request->quarter_id,
                 'title' => $request->title,
                 'description' => $request->description,
                 'order_number' => ($maxOrder ?? 0) + 1,
@@ -212,7 +272,8 @@ class Page_Lesson extends MainController
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'description' => 'nullable|string'
+                'description' => 'nullable|string',
+                'quarter_id' => 'required|integer|exists:quarters,id'
             ]);
 
             // Verify lesson belongs to class
@@ -233,6 +294,7 @@ class Page_Lesson extends MainController
                 ->update([
                     'title' => $request->title,
                     'description' => $request->description,
+                    'quarter_id' => $request->quarter_id,
                     'updated_at' => now()
                 ]);
 

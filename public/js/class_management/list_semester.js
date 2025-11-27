@@ -1,9 +1,11 @@
 $(document).ready(function () {
     let currentSchoolYear = null;
     let semesters = [];
+    let quarters = [];
     let selectedSemesterId = null;
     let selectedClassCode = null;
     let selectedClassName = null;
+    let selectedQuarter = 'all';
     let allStudents = [];
     let allSections = [];
 
@@ -162,15 +164,18 @@ $(document).ready(function () {
         $('.semester-item').removeClass('active');
         $(`.semester-item[data-semester-id="${semesterId}"]`).addClass('active');
 
-        // Reset selected class
+        // Reset selected class and quarter
         selectedClassCode = null;
         selectedClassName = null;
+        selectedQuarter = 'all';
         allStudents = [];
         allSections = [];
 
-        // Hide filters and reset
+        // Hide filters and quarter tabs
         $('#filtersSection').hide();
+        $('#quarterTabsSection').hide();
         resetFilters();
+        resetQuarterTabs();
 
         // Show classes card and hide students
         $('#classesCard').show();
@@ -179,8 +184,27 @@ $(document).ready(function () {
         $('#noStudents').hide();
         $('#studentsLoading').hide();
 
-        // Load classes for this semester
+        // Load quarters and classes for this semester
+        loadQuarters(semesterId);
         loadSemesterClasses(semesterId);
+    }
+
+    // Load Quarters
+    function loadQuarters(semesterId) {
+        const url = API_ROUTES.getQuarters.replace(':semesterId', semesterId);
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    quarters = response.data;
+                }
+            },
+            error: function(xhr) {
+                console.error('Failed to load quarters:', xhr);
+            }
+        });
     }
 
     // Load Semester Classes
@@ -245,6 +269,7 @@ $(document).ready(function () {
     function selectClass(classCode, className) {
         selectedClassCode = classCode;
         selectedClassName = className;
+        selectedQuarter = 'all';
 
         // Update class selection highlight
         $('.class-row').removeClass('table-primary');
@@ -256,6 +281,8 @@ $(document).ready(function () {
         $('#noStudents').hide();
         $('#studentsLoading').show();
         $('#filtersSection').hide();
+        $('#quarterTabsSection').hide();
+        resetQuarterTabs();
 
         loadEnrollmentHistory(classCode);
     }
@@ -282,6 +309,7 @@ $(document).ready(function () {
                     displayEnrollmentHistory(allStudents);
                     $('#studentsContent').show();
                     $('#filtersSection').show();
+                    $('#quarterTabsSection').show();
                     $('#studentCount').text(`${allStudents.length} Student${allStudents.length > 1 ? 's' : ''}`);
                 } else {
                     $('#noStudents').show();
@@ -383,6 +411,32 @@ $(document).ready(function () {
             $('#studentCount').text(`${allStudents.length} Student${allStudents.length > 1 ? 's' : ''}`);
         }
     }
+
+    // Reset Quarter Tabs
+    function resetQuarterTabs() {
+        $('#quarterTabsSection .nav-link').removeClass('active');
+        $('#quarterTabsSection .nav-link[data-quarter="all"]').addClass('active');
+    }
+
+    // Quarter Tab Click Handler
+    $('#quarterTabsSection').on('click', '.nav-link', function(e) {
+        e.preventDefault();
+        
+        $('#quarterTabsSection .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        selectedQuarter = $(this).data('quarter');
+        
+        // For now, just display all students
+        // In the future, this will filter by quarter grades
+        displayEnrollmentHistory(allStudents);
+        
+        // Show info about selected quarter
+        const quarterInfo = quarters.find(q => q.code === selectedQuarter);
+        if (quarterInfo) {
+            console.log('Selected quarter:', quarterInfo.name);
+        }
+    });
 
     // Filter Event Handlers
     $('#studentSearch, #sectionFilter, #remarksFilter').on('input change', applyFilters);

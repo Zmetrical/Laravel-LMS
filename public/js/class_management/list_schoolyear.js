@@ -4,6 +4,7 @@ $(document).ready(function () {
     let currentSemesters = [];
     let isEditMode = false;
     let isSemesterEditMode = false;
+    const MAX_SEMESTERS = window.MAX_SEMESTERS || 3;
 
     // Initialize
     loadSchoolYears();
@@ -86,12 +87,20 @@ $(document).ready(function () {
     $('#addSemesterBtn').click(function () {
         if (!selectedYearId) return;
         
+        // Check if max semesters reached
+        if (currentSemesters.length >= MAX_SEMESTERS) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Maximum Semesters Reached',
+                text: `Only ${MAX_SEMESTERS} semesters are allowed per school year.`
+            });
+            return;
+        }
+        
         isSemesterEditMode = false;
         $('#semModalTitle').text('Add Semester');
         $('#semesterId').val('');
         $('#semesterSchoolYearId').val(selectedYearId);
-        $('#semesterName').val('');
-        $('#semesterCode').val('');
         $('#startDate').val('');
         $('#endDate').val('');
         $('#semStatusGroup').hide();
@@ -114,8 +123,6 @@ $(document).ready(function () {
 
         const formData = {
             school_year_id: $('#semesterSchoolYearId').val(),
-            name: $('#semesterName').val(),
-            code: $('#semesterCode').val().toUpperCase(),
             start_date: $('#startDate').val(),
             end_date: $('#endDate').val()
         };
@@ -264,9 +271,19 @@ $(document).ready(function () {
                     currentSemesters = response.data;
                     displaySemesters(response.data);
                     $('#semestersTableContainer').show();
+                    
+                    // Update Add button state
+                    if (currentSemesters.length >= MAX_SEMESTERS) {
+                        $('#addSemesterBtn').prop('disabled', true)
+                            .attr('title', `Maximum of ${MAX_SEMESTERS} semesters reached`);
+                    } else {
+                        $('#addSemesterBtn').prop('disabled', false)
+                            .attr('title', 'Add Semester');
+                    }
                 } else {
                     currentSemesters = [];
                     $('#noSemesters').show();
+                    $('#addSemesterBtn').prop('disabled', false);
                 }
             },
             error: function () {
@@ -325,11 +342,9 @@ $(document).ready(function () {
         if (!semester) return;
 
         isSemesterEditMode = true;
-        $('#semModalTitle').text('Edit Semester');
+        $('#semModalTitle').text('Edit Semester - ' + semester.name);
         $('#semesterId').val(semester.id);
         $('#semesterSchoolYearId').val(semester.school_year_id);
-        $('#semesterName').val(semester.name);
-        $('#semesterCode').val(semester.code);
         $('#startDate').val(semester.start_date);
         $('#endDate').val(semester.end_date);
         $('#semStatus').val(semester.status);

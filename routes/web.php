@@ -67,6 +67,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
         Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
         Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
+
+        Route::get('/{semesterId}/quarters', [Year_Management::class, 'getQuartersData'])->name('quarters.list');
         Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
     });
 
@@ -288,12 +290,13 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
                 ->name('data');
                 
-            Route::post('/{classId}/column/add', [GradeBook_Management::class, 'addColumn'])
-                ->name('column.add');
-            
+
             Route::put('/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
                 ->name('column.update');
             
+            Route::post('/{classId}/column/{columnId}/toggle', [GradeBook_Management::class, 'toggleColumn'])->name('column.toggle');
+            Route::put('/{classId}/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])->name('column.update');
+
             Route::post('/{classId}/scores/batch', [GradeBook_Management::class, 'batchUpdateScores'])
                 ->name('scores.batch');
             

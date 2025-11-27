@@ -61,7 +61,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ $activeTab === 'grades' ? 'active' : '' }}" 
                            href="{{ route($isTeacher ? 'teacher.class.grades' : 'student.class.grades', $class->id ?? 0) }}">
-                            <i class="fas fa-chart-line"></i> Grades
+                            <i class="fas fa-chart-line"></i> {{ $isTeacher ? 'Grades' : 'Quizzes' }}
                         </a>
                     </li>
                     @if($isTeacher)

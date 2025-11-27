@@ -16,19 +16,35 @@ $(document).ready(function() {
 
     let gradebookData = null;
     let classInfo = null;
+    let quarterInfo = null;
+    let currentQuarterId = null;
     let pendingChanges = {};
     let wwGrid, ptGrid, qaGrid;
 
-    loadGradebook();
+    // Initialize with first quarter
+    if (QUARTERS.length > 0) {
+        currentQuarterId = QUARTERS[0].id;
+        loadGradebook(currentQuarterId);
+    }
 
-    function loadGradebook() {
+    // Quarter selector
+    $('#quarterSelector').change(function() {
+        currentQuarterId = $(this).val();
+        if (currentQuarterId) {
+            loadGradebook(currentQuarterId);
+        }
+    });
+
+    function loadGradebook(quarterId) {
         $.ajax({
             url: API_ROUTES.getGradebook,
             type: 'GET',
+            data: { quarter_id: quarterId },
             success: function(response) {
                 if (response.success) {
                     gradebookData = response.data;
                     classInfo = response.data.class;
+                    quarterInfo = response.data.quarter;
                     pendingChanges = {};
                     
                     initializeGrids();
@@ -47,10 +63,13 @@ $(document).ready(function() {
     }
 
     function updateColumnCounts() {
-        ['WW', 'PT', 'QA'].forEach(type => {
-            const count = (gradebookData.columns[type] || []).length;
-            $(`#${type.toLowerCase()}ColumnCount`).text(`${count}/${MAX_COLUMNS} columns`);
-        });
+        const wwActive = (gradebookData.columns['WW'] || []).filter(c => c.is_active).length;
+        const ptActive = (gradebookData.columns['PT'] || []).filter(c => c.is_active).length;
+        const qaActive = (gradebookData.columns['QA'] || []).filter(c => c.is_active).length;
+        
+        $('#wwColumnCount').text(`${wwActive}/${MAX_WW_COLUMNS} active`);
+        $('#ptColumnCount').text(`${ptActive}/${MAX_PT_COLUMNS} active`);
+        $('#qaColumnCount').text(`${qaActive}/${MAX_QA_COLUMNS} active`);
     }
 
     function initializeGrids() {
@@ -82,16 +101,24 @@ $(document).ready(function() {
         let totalMaxPoints = 0;
 
         columns.forEach(col => {
-            totalMaxPoints += parseFloat(col.max_points);
+            if (col.is_active) {
+                totalMaxPoints += parseFloat(col.max_points);
+            }
+            
             const isOnline = col.source_type === 'online';
+            const isDisabled = !col.is_active;
             
             fields.push({
                 name: col.column_name,
                 title: createColumnHeader(col),
                 type: "number",
                 width: 90,
-                editing: !isOnline,
+                editing: !isOnline && col.is_active,
                 itemTemplate: function(value, item) {
+                    if (isDisabled) {
+                        return '<span class="text-muted">-</span>';
+                    }
+                    
                     const cellId = `cell_${col.id}_${item.student_number}`;
                     const val = value !== null && value !== undefined ? value : '';
                     const key = `${col.id}_${item.student_number}`;
@@ -105,8 +132,8 @@ $(document).ready(function() {
                     return `<span id="${cellId}" class="${changedClass}">${val}</span>`;
                 },
                 editTemplate: function(value, item) {
-                    if (isOnline) {
-                        return `<span class="badge badge-info">${value !== null && value !== undefined ? value : ''}</span>`;
+                    if (isDisabled || isOnline) {
+                        return `<span class="text-muted">-</span>`;
                     }
                     
                     const cellId = `cell_${col.id}_${item.student_number}`;
@@ -143,7 +170,7 @@ $(document).ready(function() {
                     
                     return input;
                 },
-                headerCss: isOnline ? 'online-column' : ''
+                headerCss: isOnline ? 'online-column' : (isDisabled ? 'disabled-column' : '')
             });
         });
 
@@ -157,9 +184,11 @@ $(document).ready(function() {
                 itemTemplate: function(value, item) {
                     let total = 0;
                     columns.forEach(col => {
-                        const score = item[col.column_name];
-                        if (score !== null && score !== undefined && score !== '') {
-                            total += parseFloat(score);
+                        if (col.is_active) {
+                            const score = item[col.column_name];
+                            if (score !== null && score !== undefined && score !== '') {
+                                total += parseFloat(score);
+                            }
                         }
                     });
                     return `<strong>${total.toFixed(2)}</strong>`;
@@ -174,9 +203,11 @@ $(document).ready(function() {
                 itemTemplate: function(value, item) {
                     let total = 0;
                     columns.forEach(col => {
-                        const score = item[col.column_name];
-                        if (score !== null && score !== undefined && score !== '') {
-                            total += parseFloat(score);
+                        if (col.is_active) {
+                            const score = item[col.column_name];
+                            if (score !== null && score !== undefined && score !== '') {
+                                total += parseFloat(score);
+                            }
                         }
                     });
                     const perc = totalMaxPoints > 0 ? (total / totalMaxPoints * 100).toFixed(2) : '0.00';
@@ -217,12 +248,16 @@ $(document).ready(function() {
 
     function createColumnHeader(col) {
         const icon = col.source_type === 'online' ? '<i class="fas fa-wifi text-info"></i> ' : '';
-        const editIcon = col.source_type === 'manual' ? `<i class="fas fa-edit edit-column-btn" data-column-id="${col.id}" title="Edit column"></i>` : '';
+        const statusIcon = col.is_active ? 
+            '<i class="fas fa-toggle-on text-success toggle-column-btn" title="Disable column"></i>' : 
+            '<i class="fas fa-toggle-off text-secondary toggle-column-btn" title="Enable column"></i>';
+        const editIcon = col.is_active && col.source_type === 'manual' ? 
+            `<i class="fas fa-edit edit-column-btn ml-1" data-column-id="${col.id}" title="Edit column"></i>` : '';
         
-        return `<div class="column-header">
-            ${icon}<span class="column-title">${col.column_name}</span>
-            <span class="column-points">${col.max_points}pts</span>
-            ${editIcon}
+        return `<div class="column-header" data-column-id="${col.id}">
+            ${icon}<span class="column-title ${!col.is_active ? 'text-muted' : ''}">${col.column_name}</span>
+            <span class="column-points ${!col.is_active ? 'text-muted' : ''}">${col.max_points}pts</span>
+            <div class="mt-1">${statusIcon}${editIcon}</div>
         </div>`;
     }
 
@@ -245,6 +280,100 @@ $(document).ready(function() {
         } else {
             $('#saveChangesBtn').hide();
         }
+    }
+
+    // Toggle column enable/disable
+    $(document).on('click', '.toggle-column-btn', function(e) {
+        e.stopPropagation();
+        const columnHeader = $(this).closest('.column-header');
+        const columnId = columnHeader.data('column-id');
+        const column = findColumnById(columnId);
+        
+        if (!column) return;
+
+        if (!column.is_active) {
+            // Show config modal before enabling
+            openEnableColumnModal(column);
+        } else {
+            // Directly disable
+            toggleColumnStatus(columnId, false);
+        }
+    });
+
+    function openEnableColumnModal(column) {
+        $('#enableColumnId').val(column.id);
+        $('#enableColumnName').text(column.column_name);
+        $('#enableMaxPoints').val(column.max_points);
+        
+        loadQuizzesForEnable(null);
+        $('#enableColumnModal').modal('show');
+    }
+
+    function loadQuizzesForEnable(currentQuizId) {
+        $.ajax({
+            url: API_ROUTES.getQuizzes,
+            type: 'GET',
+            data: { quarter_id: currentQuarterId },
+            success: function(response) {
+                let options = '<option value="">Manual Entry</option>';
+                if (response.success && response.data) {
+                    response.data.forEach(quiz => {
+                        const selected = quiz.id == currentQuizId ? 'selected' : '';
+                        options += `<option value="${quiz.id}" ${selected} data-points="${quiz.total_points}">
+                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${quiz.total_points}pts)
+                        </option>`;
+                    });
+                }
+                $('#enableQuizId').html(options);
+            }
+        });
+    }
+
+    $('#enableQuizId').change(function() {
+        const selected = $(this).find('option:selected');
+        if (selected.val()) {
+            const points = selected.data('points');
+            if (points) {
+                $('#enableMaxPoints').val(points);
+            }
+        }
+    });
+
+    $('#enableColumnForm').submit(function(e) {
+        e.preventDefault();
+        
+        const columnId = $('#enableColumnId').val();
+        const maxPoints = parseInt($('#enableMaxPoints').val());
+        const quizId = $('#enableQuizId').val();
+
+        toggleColumnStatus(columnId, true, maxPoints, quizId);
+    });
+
+    function toggleColumnStatus(columnId, isActive, maxPoints = null, quizId = null) {
+        const data = { is_active: isActive };
+        
+        if (isActive && maxPoints) {
+            data.max_points = maxPoints;
+            data.quiz_id = quizId || null;
+        }
+
+        $.ajax({
+            url: API_ROUTES.toggleColumn.replace('__COLUMN_ID__', columnId),
+            type: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                    $('#enableColumnModal').modal('hide');
+                    loadGradebook(currentQuarterId);
+                } else {
+                    toastr.error(response.message || 'Failed to update column');
+                }
+            },
+            error: function() {
+                toastr.error('Failed to update column');
+            }
+        });
     }
 
     $(document).on('click', '.edit-column-btn', function(e) {
@@ -278,6 +407,7 @@ $(document).ready(function() {
         $.ajax({
             url: API_ROUTES.getQuizzes,
             type: 'GET',
+            data: { quarter_id: currentQuarterId },
             success: function(response) {
                 let options = '<option value="">Manual Entry</option>';
                 if (response.success && response.data) {
@@ -321,7 +451,7 @@ $(document).ready(function() {
                 if (response.success) {
                     toastr.success('Column updated successfully');
                     $('#editColumnModal').modal('hide');
-                    loadGradebook();
+                    loadGradebook(currentQuarterId);
                 } else {
                     toastr.error(response.message || 'Failed to update column');
                 }
@@ -346,7 +476,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     toastr.success('All changes saved successfully');
-                    loadGradebook();
+                    loadGradebook(currentQuarterId);
                 } else {
                     toastr.error('Failed to save changes');
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
@@ -359,65 +489,43 @@ $(document).ready(function() {
         });
     });
 
-    $('.add-column-btn').click(function() {
-        const type = $(this).data('type');
-        const currentCount = (gradebookData.columns[type] || []).length;
-        
-        if (currentCount >= MAX_COLUMNS) {
-            toastr.warning(`Maximum of ${MAX_COLUMNS} columns reached for ${type}`);
-            return;
-        }
-        
-        $.ajax({
-            url: API_ROUTES.addColumn,
-            type: 'POST',
-            data: { component_type: type },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success('Column added successfully');
-                    loadGradebook();
-                } else {
-                    toastr.error(response.message || 'Failed to add column');
-                }
-            },
-            error: function(xhr) {
-                const msg = xhr.responseJSON?.message || 'Failed to add column';
-                toastr.error(msg);
-            }
-        });
-    });
-
     function calculateSummary() {
         let summaryHtml = '';
         let grades = [];
 
         gradebookData.students.forEach(student => {
             let wwTotal = 0, wwMax = 0;
-            Object.values(student.ww || {}).forEach(item => {
-                if (item.score !== null && item.score !== undefined) {
-                    wwTotal += parseFloat(item.score);
+            Object.entries(student.ww || {}).forEach(([key, item]) => {
+                if (item.is_active) {
+                    if (item.score !== null && item.score !== undefined) {
+                        wwTotal += parseFloat(item.score);
+                    }
+                    wwMax += parseFloat(item.max_points);
                 }
-                wwMax += parseFloat(item.max_points);
             });
             const wwPerc = wwMax > 0 ? (wwTotal / wwMax * 100) : 0;
             const wwWeighted = wwPerc * (classInfo.ww_perc / 100);
 
             let ptTotal = 0, ptMax = 0;
-            Object.values(student.pt || {}).forEach(item => {
-                if (item.score !== null && item.score !== undefined) {
-                    ptTotal += parseFloat(item.score);
+            Object.entries(student.pt || {}).forEach(([key, item]) => {
+                if (item.is_active) {
+                    if (item.score !== null && item.score !== undefined) {
+                        ptTotal += parseFloat(item.score);
+                    }
+                    ptMax += parseFloat(item.max_points);
                 }
-                ptMax += parseFloat(item.max_points);
             });
             const ptPerc = ptMax > 0 ? (ptTotal / ptMax * 100) : 0;
             const ptWeighted = ptPerc * (classInfo.pt_perc / 100);
 
             let qaTotal = 0, qaMax = 0;
-            Object.values(student.qa || {}).forEach(item => {
-                if (item.score !== null && item.score !== undefined) {
-                    qaTotal += parseFloat(item.score);
+            Object.entries(student.qa || {}).forEach(([key, item]) => {
+                if (item.is_active) {
+                    if (item.score !== null && item.score !== undefined) {
+                        qaTotal += parseFloat(item.score);
+                    }
+                    qaMax += parseFloat(item.max_points);
                 }
-                qaMax += parseFloat(item.max_points);
             });
             const qaPerc = qaMax > 0 ? (qaTotal / qaMax * 100) : 0;
             const qaWeighted = qaPerc * (classInfo.qa_perce / 100);
@@ -468,7 +576,6 @@ $(document).ready(function() {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    // Export handlers
     $('#exportBtn').click(function() {
         $('#exportModal').modal('show');
     });
@@ -476,12 +583,10 @@ $(document).ready(function() {
     $('#exportForm').submit(function(e) {
         e.preventDefault();
         
-        const quarter = $('#exportQuarter').val();
         const btn = $('#exportForm button[type="submit"]');
         
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
         
-        // Create a temporary form for file download
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = API_ROUTES.exportGradebook;
@@ -494,15 +599,14 @@ $(document).ready(function() {
         
         const quarterInput = document.createElement('input');
         quarterInput.type = 'hidden';
-        quarterInput.name = 'quarter';
-        quarterInput.value = quarter;
+        quarterInput.name = 'quarter_id';
+        quarterInput.value = currentQuarterId;
         form.appendChild(quarterInput);
         
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
         
-        // Reset button after a delay
         setTimeout(function() {
             btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
             $('#exportModal').modal('hide');

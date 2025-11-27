@@ -28,6 +28,7 @@ CREATE TABLE `classes` (
 CREATE TABLE `gradebook_columns` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `class_code` varchar(100) NOT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
   `component_type` enum('WW','PT','QA') NOT NULL,
   `column_name` varchar(50) NOT NULL,
   `max_points` decimal(8,2) NOT NULL,
@@ -55,31 +56,19 @@ CREATE TABLE `grades_final` (
   `student_number` varchar(100) NOT NULL,
   `class_code` varchar(100) NOT NULL,
   `semester_id` int(11) NOT NULL,
+  `q1_grade` decimal(5,2) DEFAULT NULL,
+  `q2_grade` decimal(5,2) DEFAULT NULL,
   `ww_score` decimal(5,2) DEFAULT NULL,
   `ww_percentage` int(11) NOT NULL,
   `pt_score` decimal(5,2) DEFAULT NULL,
   `pt_percentage` int(11) NOT NULL,
   `qa_score` decimal(5,2) DEFAULT NULL,
   `qa_percentage` int(11) NOT NULL,
-  `final_grade` decimal(5,2) NOT NULL,
+  `final_grade` decimal(5,2) DEFAULT NULL COMMENT 'Average of Q1 and Q2',
   `remarks` enum('PASSED','FAILED','INC','DRP','W') NOT NULL,
   `is_locked` tinyint(1) DEFAULT 0,
   `computed_by` int(11) DEFAULT NULL,
   `computed_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `grade_components` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `student_number` varchar(100) NOT NULL,
-  `class_code` varchar(100) NOT NULL,
-  `semester_id` int(11) NOT NULL,
-  `component_type` enum('WW','PT','QA') NOT NULL,
-  `score` decimal(5,2) DEFAULT NULL,
-  `max_score` decimal(5,2) NOT NULL,
-  `item_name` varchar(255) DEFAULT NULL,
-  `recorded_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -121,9 +110,41 @@ CREATE TABLE `migrations` (
   `batch` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `quarters` (
+  `id` int(11) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `order_number` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `quarter_grades` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `quarter_id` int(11) NOT NULL,
+  `ww_score` decimal(5,2) DEFAULT NULL,
+  `ww_ps` decimal(5,2) DEFAULT NULL,
+  `ww_ws` decimal(5,2) DEFAULT NULL,
+  `pt_score` decimal(5,2) DEFAULT NULL,
+  `pt_ps` decimal(5,2) DEFAULT NULL,
+  `pt_ws` decimal(5,2) DEFAULT NULL,
+  `qa_score` decimal(5,2) DEFAULT NULL,
+  `qa_ps` decimal(5,2) DEFAULT NULL,
+  `qa_ws` decimal(5,2) DEFAULT NULL,
+  `initial_grade` decimal(5,2) DEFAULT NULL,
+  `transmuted_grade` decimal(5,2) DEFAULT NULL,
+  `is_locked` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE `quizzes` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `lesson_id` bigint(20) UNSIGNED NOT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `time_limit` int(11) DEFAULT NULL COMMENT 'in minutes',
@@ -278,6 +299,7 @@ CREATE TABLE `student_quiz_attempts` (
   `student_number` varchar(255) NOT NULL,
   `quiz_id` bigint(20) UNSIGNED NOT NULL,
   `semester_id` int(11) DEFAULT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
   `attempt_number` int(11) NOT NULL DEFAULT 1,
   `score` decimal(5,2) DEFAULT NULL,
   `total_points` decimal(5,2) NOT NULL,

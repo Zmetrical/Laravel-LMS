@@ -21,10 +21,12 @@ $(document).ready(function() {
         const lessonId = $(this).data('id');
         const title = $(this).data('title');
         const description = $(this).data('description');
+        const quarterId = $(this).data('quarter-id');
 
         $('#editLessonId').val(lessonId);
         $('#editLessonTitle').val(title);
         $('#editLessonDescription').val(description);
+        $('#editLessonQuarter').val(quarterId);
         $('#editLessonModal').modal('show');
     });
 
@@ -61,6 +63,12 @@ $(document).ready(function() {
             .replace(':quizId', quizId);
         window.location.href = url;
     });
+
+    // Toggle quarter collapse
+    $(document).on('click', '.quarter-header', function() {
+        const icon = $(this).find('.toggle-icon');
+        icon.toggleClass('fa-chevron-down fa-chevron-up');
+    });
 });
 
 function loadLessons() {
@@ -87,10 +95,17 @@ function loadLessons() {
     });
 }
 
-function renderLessons(lessons) {
+function renderLessons(quarters) {
     $('#loadingState').hide();
     
-    if (!lessons || lessons.length === 0) {
+    if (!quarters || quarters.length === 0) {
+        showEmptyState();
+        return;
+    }
+    
+    const hasLessons = quarters.some(q => q.lessons && q.lessons.length > 0);
+    
+    if (!hasLessons) {
         showEmptyState();
         return;
     }
@@ -103,30 +118,40 @@ function renderLessons(lessons) {
     
     // Build navigation
     let navHtml = '<div class="list-group list-group-flush">';
-    lessons.forEach((lesson, index) => {
-        const lessonNumber = index + 1;
-        const lectureCount = lesson.lectures ? lesson.lectures.length : 0;
-        const quizCount = lesson.quizzes ? lesson.quizzes.length : 0;
-        
-        navHtml += `
-            <a href="#lesson-${lesson.id}" class="list-group-item list-group-item-action lesson-nav-link" data-lesson-id="${lesson.id}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge badge-primary badge-sm mr-2">${lessonNumber}</span>
-                        <small>${escapeHtml(lesson.title)}</small>
-                    </div>
-                    <i class="fas fa-chevron-right text-muted"></i>
+    quarters.forEach(quarter => {
+        if (quarter.lessons && quarter.lessons.length > 0) {
+            navHtml += `
+                <div class="list-group-item bg-light">
+                    <small class="font-weight-bold text-secondary">${escapeHtml(quarter.name)}</small>
                 </div>
-                <div class="mt-1">
-                    <span class="badge badge-light badge-sm mr-1">
-                        <i class="fas fa-chalkboard-teacher"></i> ${lectureCount}
-                    </span>
-                    <span class="badge badge-light badge-sm">
-                        <i class="fas fa-clipboard-check"></i> ${quizCount}
-                    </span>
-                </div>
-            </a>
-        `;
+            `;
+            
+            quarter.lessons.forEach((lesson, index) => {
+                const lessonNumber = index + 1;
+                const lectureCount = lesson.lectures ? lesson.lectures.length : 0;
+                const quizCount = lesson.quizzes ? lesson.quizzes.length : 0;
+                
+                navHtml += `
+                    <a href="#lesson-${lesson.id}" class="list-group-item list-group-item-action lesson-nav-link pl-4" data-lesson-id="${lesson.id}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge badge-primary badge-sm mr-2">${lessonNumber}</span>
+                                <small>${escapeHtml(lesson.title)}</small>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </div>
+                        <div class="mt-1">
+                            <span class="badge badge-light badge-sm mr-1">
+                                <i class="fas fa-chalkboard-teacher"></i> ${lectureCount}
+                            </span>
+                            <span class="badge badge-light badge-sm">
+                                <i class="fas fa-clipboard-check"></i> ${quizCount}
+                            </span>
+                        </div>
+                    </a>
+                `;
+            });
+        }
     });
     navHtml += '</div>';
     navigation.html(navHtml);
@@ -142,107 +167,30 @@ function renderLessons(lessons) {
         }, 500);
     });
     
-    // Render lesson cards
-    lessons.forEach((lesson, index) => {
-        const lessonNumber = index + 1;
-        const lectureCount = lesson.lectures ? lesson.lectures.length : 0;
-        const quizCount = lesson.quizzes ? lesson.quizzes.length : 0;
+    // Render quarter sections
+    quarters.forEach(quarter => {
+        if (!quarter.lessons || quarter.lessons.length === 0) return;
         
-        let lecturesHtml = '';
-        if (lesson.lectures && lesson.lectures.length > 0) {
-            lesson.lectures.forEach(lecture => {
-                const iconClass = getContentTypeIcon(lecture.content_type);
-                lecturesHtml += `
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <div>
-                            <i class="fas fa-${iconClass} text-primary mr-2"></i>
-                            <span>${escapeHtml(lecture.title)}</span>
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary edit-lecture-btn" 
-                                data-lesson-id="${lesson.id}" 
-                                data-lecture-id="${lecture.id}">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                `;
-            });
-        } else {
-            lecturesHtml = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> No lectures available yet</p>';
-        }
-        
-        let quizzesHtml = '';
-        if (lesson.quizzes && lesson.quizzes.length > 0) {
-            lesson.quizzes.forEach(quiz => {
-                quizzesHtml += `
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <div>
-                            <i class="fas fa-clipboard-check text-info mr-2"></i>
-                            <span>${escapeHtml(quiz.title)}</span>
-                        </div>
-                        <button class="btn btn-sm btn-outline-info edit-quiz-btn" 
-                                data-lesson-id="${lesson.id}" 
-                                data-quiz-id="${quiz.id}">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                `;
-            });
-        } else {
-            quizzesHtml = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> No quizzes available yet</p>';
-        }
-        
-        const lessonCard = `
-            <div class="card card-outline card-primary mb-3" id="lesson-${lesson.id}">
-                <div class="card-header">
+        const quarterCard = `
+            <div class="card card-primary mb-3">
+                <div class="card-header quarter-header" data-toggle="collapse" data-target="#quarter-${quarter.id}" style="cursor: pointer;">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">
-                            <span class="badge badge-primary mr-2">${lessonNumber}</span>
-                            <strong>${escapeHtml(lesson.title)}</strong>
-                        </h3>
-                        <div>
-                            <button type="button" class="btn btn-sm btn-primary edit-lesson-btn mr-1" 
-                                    data-id="${lesson.id}" 
-                                    data-title="${escapeHtml(lesson.title)}" 
-                                    data-description="${escapeHtml(lesson.description || '')}">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                        </div>
+                        <h4 class="mb-0">
+                            <i class="fas fa-calendar-alt mr-2"></i>
+                            ${escapeHtml(quarter.name)}
+                        </h4>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    ${lesson.description ? `<p class="text-muted mb-0 mt-2"><small>${escapeHtml(lesson.description)}</small></p>` : ''}
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm create-lecture-btn mr-1" data-lesson-id="${lesson.id}">
-                            <i class="fas fa-plus"></i> Add Lecture
-                        </button>
-                        <button class="btn btn-info btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
-                            <i class="fas fa-plus"></i> Add Quiz
-                        </button>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="mb-0"><i class="fas fa-chalkboard-teacher text-primary"></i> Lectures</h5>
-                            </div>
-                            <div class="mb-3">
-                                ${lecturesHtml}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="mb-0"><i class="fas fa-clipboard-list text-info"></i> Quizzes</h5>
-                            </div>
-                            <div class="mb-3">
-                                ${quizzesHtml}
-                            </div>
-                        </div>
+                <div id="quarter-${quarter.id}" class="collapse show">
+                    <div class="card-body p-2">
+                        ${renderQuarterLessons(quarter)}
                     </div>
                 </div>
             </div>
         `;
         
-        container.append(lessonCard);
+        container.append(quarterCard);
     });
     
     // Highlight active nav item on scroll
@@ -263,6 +211,111 @@ function renderLessons(lessons) {
     });
 }
 
+function renderQuarterLessons(quarter) {
+    let html = '';
+    
+    quarter.lessons.forEach((lesson, index) => {
+        const lessonNumber = index + 1;
+        
+        let lecturesHtml = '';
+        if (lesson.lectures && lesson.lectures.length > 0) {
+            lesson.lectures.forEach(lecture => {
+                const iconClass = getContentTypeIcon(lecture.content_type);
+                lecturesHtml += `
+                    <div class="d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+                        <div>
+                            <i class="fas fa-${iconClass} text-primary mr-2"></i>
+                            <span>${escapeHtml(lecture.title)}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary edit-lecture-btn" 
+                                data-lesson-id="${lesson.id}" 
+                                data-lecture-id="${lecture.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        } else {
+            lecturesHtml = '<p class="text-muted mb-0 px-3 py-2"><small><i class="fas fa-info-circle"></i> No lectures yet</small></p>';
+        }
+        
+        let quizzesHtml = '';
+        if (lesson.quizzes && lesson.quizzes.length > 0) {
+            lesson.quizzes.forEach(quiz => {
+                quizzesHtml += `
+                    <div class="d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+                        <div>
+                            <i class="fas fa-clipboard-check text-info mr-2"></i>
+                            <span>${escapeHtml(quiz.title)}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-info edit-quiz-btn" 
+                                data-lesson-id="${lesson.id}" 
+                                data-quiz-id="${quiz.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        } else {
+            quizzesHtml = '<p class="text-muted mb-0 px-3 py-2"><small><i class="fas fa-info-circle"></i> No quizzes yet</small></p>';
+        }
+        
+        html += `
+            <div class="card mb-2" id="lesson-${lesson.id}">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge badge-primary mr-2">${lessonNumber}</span>
+                            <strong>${escapeHtml(lesson.title)}</strong>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-primary edit-lesson-btn" 
+                                    data-id="${lesson.id}" 
+                                    data-title="${escapeHtml(lesson.title)}" 
+                                    data-description="${escapeHtml(lesson.description || '')}"
+                                    data-quarter-id="${quarter.id}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${lesson.description ? `<p class="text-muted mb-0 mt-2"><small>${escapeHtml(lesson.description)}</small></p>` : ''}
+                </div>
+                <div class="card-body p-0">
+                    <div class="p-2">
+                        <button class="btn btn-primary btn-sm create-lecture-btn mr-1" data-lesson-id="${lesson.id}">
+                            <i class="fas fa-plus"></i> Add Lecture
+                        </button>
+                        <button class="btn btn-info btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
+                            <i class="fas fa-plus"></i> Add Quiz
+                        </button>
+                    </div>
+                    
+                    <div class="row no-gutters">
+                        <div class="col-md-6 border-right">
+                            <div class="p-2 bg-light border-bottom">
+                                <small class="font-weight-bold">
+                                    <i class="fas fa-chalkboard-teacher text-primary"></i> Lectures
+                                </small>
+                            </div>
+                            ${lecturesHtml}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 bg-light border-bottom">
+                                <small class="font-weight-bold">
+                                    <i class="fas fa-clipboard-list text-info"></i> Quizzes
+                                </small>
+                            </div>
+                            ${quizzesHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    return html;
+}
+
 function showEmptyState() {
     $('#loadingState').hide();
     $('#emptyState').show();
@@ -273,19 +326,24 @@ function showEmptyState() {
     `);
 }
 
-function updateCounts(lessons) {
-    const lessonCount = lessons ? lessons.length : 0;
+function updateCounts(quarters) {
+    let totalLessons = 0;
     let totalQuizzes = 0;
     
-    if (lessons) {
-        lessons.forEach(lesson => {
-            if (lesson.quizzes) {
-                totalQuizzes += lesson.quizzes.length;
+    if (quarters) {
+        quarters.forEach(quarter => {
+            if (quarter.lessons) {
+                totalLessons += quarter.lessons.length;
+                quarter.lessons.forEach(lesson => {
+                    if (lesson.quizzes) {
+                        totalQuizzes += lesson.quizzes.length;
+                    }
+                });
             }
         });
     }
     
-    $('#lessonCount').text(lessonCount);
+    $('#lessonCount').text(totalLessons);
     $('#totalQuizCount').text(totalQuizzes);
 }
 
@@ -313,9 +371,15 @@ function escapeHtml(text) {
 function createLesson() {
     const title = $('#lessonTitle').val().trim();
     const description = $('#lessonDescription').val().trim();
+    const quarterId = $('#lessonQuarter').val();
 
     if (!title) {
         toastr.warning('Please enter a lesson title');
+        return;
+    }
+
+    if (!quarterId) {
+        toastr.warning('Please select a quarter');
         return;
     }
 
@@ -331,7 +395,8 @@ function createLesson() {
         },
         data: {
             title: title,
-            description: description
+            description: description,
+            quarter_id: quarterId
         },
         success: function(response) {
             if (response.success) {
@@ -360,9 +425,15 @@ function updateLesson() {
     const lessonId = $('#editLessonId').val();
     const title = $('#editLessonTitle').val().trim();
     const description = $('#editLessonDescription').val().trim();
+    const quarterId = $('#editLessonQuarter').val();
 
     if (!title) {
         toastr.warning('Please enter a lesson title');
+        return;
+    }
+
+    if (!quarterId) {
+        toastr.warning('Please select a quarter');
         return;
     }
 
@@ -379,7 +450,8 @@ function updateLesson() {
         },
         data: JSON.stringify({
             title: title,
-            description: description
+            description: description,
+            quarter_id: quarterId
         }),
         success: function(response) {
             if (response.success) {

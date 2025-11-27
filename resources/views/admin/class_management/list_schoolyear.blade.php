@@ -207,16 +207,6 @@
                 <input type="hidden" id="semesterId">
                 <input type="hidden" id="semesterSchoolYearId">
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label for="semesterName">Semester Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="semesterName" 
-                               placeholder="e.g., First Semester" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="semesterCode">Semester Code <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="semesterCode" 
-                               placeholder="e.g., 1ST-SEM" required>
-                    </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -269,6 +259,9 @@
             semestersPage: "{{ route('admin.semesters.index') }}",
             csrfToken: "{{ csrf_token() }}"
         };
+        
+        const MAX_SEMESTERS = {{ $max_semesters ?? 3 }};
+        window.MAX_SEMESTERS = MAX_SEMESTERS;
     </script>
     @if(isset($scripts))
         @foreach($scripts as $script)

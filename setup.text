@@ -8,6 +8,16 @@ cd "C:\Users\serviceunit\Documents\GitHub\Laravel-LMS"
 
 copy .env.example .env
 
+php.ini
+extension=gd
+extension=zip
+
+extension=mbstring
+extension=openssl
+extension=pdo_mysql
+extension=fileinfo
+
+
 composer install
 
 create database trinity_lms

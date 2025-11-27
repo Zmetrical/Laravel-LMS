@@ -2,6 +2,37 @@
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <style>
+        .quarter-tabs .nav-link {
+            border-radius: 0;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #6c757d;
+            padding: 0.75rem 1.5rem;
+        }
+        .quarter-tabs .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        .quarter-tabs .nav-link.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+            background-color: #fff;
+            font-weight: 600;
+        }
+        .semester-item.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .semester-item.active .text-muted {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+        .semester-item.active .badge {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            color: white;
+        }
+    </style>
 @endsection
 
 @section('breadcrumb')
@@ -107,6 +138,27 @@
                     </div>
                 </div>
 
+                <!-- Quarter Tabs -->
+                <div class="card-header border-0 pb-0 pt-0" id="quarterTabsSection" style="display: none;">
+                    <ul class="nav nav-tabs quarter-tabs card-header-tabs mb-0">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-quarter="all">
+                                <i class="fas fa-layer-group"></i> All Quarters
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-quarter="1ST">
+                                <i class="fas fa-calendar-day"></i> 1st Quarter
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-quarter="2ND">
+                                <i class="fas fa-calendar-day"></i> 2nd Quarter
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
                 <!-- Filters Card -->
                 <div class="card-body pb-0" id="filtersSection" style="display: none;">
                     <div class="row">
@@ -193,6 +245,7 @@
         const API_ROUTES = {
             getSchoolYear: "{{ route('admin.schoolyears.list') }}",
             getSemesters: "{{ route('admin.semesters.list') }}",
+            getQuarters: "{{ route('admin.quarters.list', ['semesterId' => ':semesterId']) }}",
             getSemesterClasses: "{{ route('admin.semesters.classes', ['id' => ':id']) }}",
             getEnrollmentHistory: "{{ route('admin.semesters.enrollment-history', ['semesterId' => ':semesterId', 'classCode' => ':classCode']) }}",
             csrfToken: "{{ csrf_token() }}"
