@@ -4,6 +4,8 @@
     'class' => $class])
 
 @section('page-styles')
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+
 <style>
     .question-item {
         transition: all 0.3s ease;
@@ -54,7 +56,6 @@
 @endsection
 
 @section('tab-content')
-<!-- Breadcrumb -->
 <div class="row mb-3">
     <div class="col-12">
         <a href="{{ route('teacher.class.lessons', $class->id) }}" class="btn btn-default">
@@ -63,7 +64,6 @@
     </div>
 </div>
 
-<!-- Quiz Settings Card -->
 <div class="card card-primary">
     <div class="card-header">
         <h3 class="card-title"><i class="fas fa-cog"></i> Quiz Settings</h3>
@@ -87,41 +87,25 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <label>Description (Optional)</label>
-                <textarea class="form-control" id="quizDescription" rows="2" placeholder="Brief description..."></textarea>
-            </div>
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Time Limit (Minutes)</label>
                         <input type="number" class="form-control" id="timeLimit" value="60" min="0">
                         <small class="form-text text-muted">0 = No limit</small>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Max Attempts <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="maxAttempts" value="1" min="1" max="10" required>
+                        <input type="number" class="form-control" id="maxAttempts" value="1" min="1" max="5" required>
+                        <small class="form-text text-muted">Maximum: 5 attempts</small>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Passing Score (%) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="passingScore" value="75" min="0" max="100" required>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>Options</label>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="showResults" checked>
-                            <label class="custom-control-label" for="showResults">Show Results</label>
-                        </div>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="shuffleQuestions">
-                            <label class="custom-control-label" for="shuffleQuestions">Shuffle Questions</label>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -129,9 +113,7 @@
     </div>
 </div>
 
-<!-- Question Builder -->
 <div class="row">
-    <!-- Question List Sidebar -->
     <div class="col-md-3">
         <div class="card card-primary">
             <div class="card-header">
@@ -151,15 +133,12 @@
         </div>
     </div>
 
-    <!-- Question Builder Area -->
     <div class="col-md-9">
-        <!-- Question Type Selection -->
         <div class="card card-primary card-outline">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-plus-circle"></i> Add New Question</h3>
             </div>
             <div class="card-body">
-                <!-- Step 1: Select Question Type -->
                 <div id="questionTypeSelector">
                     <h5 class="mb-3">Select Question Type</h5>
                     <div class="row">
@@ -199,19 +178,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4 col-6 mb-3">
-                            <div class="card question-type-card text-center" data-type="essay">
-                                <div class="card-body">
-                                    <i class="fas fa-file-alt question-type-icon text-primary"></i>
-                                    <h6>Essay</h6>
-                                    <small class="text-muted">Long form answer</small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Step 2: Question Form (Hidden initially) -->
                 <div id="questionFormContainer" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">
@@ -237,7 +206,6 @@
                         </div>
                     </div>
 
-                    <!-- Options Container (for MC, MA, TF) -->
                     <div id="optionsContainer" style="display: none;">
                         <label>Answer Options <span class="text-danger">*</span></label>
                         <div id="optionsList"></div>
@@ -247,7 +215,6 @@
                         <small class="text-muted d-block mt-1" id="optionLimitHint"></small>
                     </div>
 
-                    <!-- Short Answer Container -->
                     <div id="shortAnswerContainer" style="display: none;">
                         <div class="form-group">
                             <label>Accepted Answers <span class="text-danger">*</span></label>
@@ -276,7 +243,6 @@
             </div>
         </div>
 
-        <!-- Action Buttons -->
         <div class="text-right mb-3">
             <button type="button" class="btn btn-success btn-lg" id="saveQuiz">
                 <i class="fas fa-save"></i> {{ $isEdit ?? false ? 'Update Quiz' : 'Save & Publish Quiz' }}
@@ -285,7 +251,6 @@
     </div>
 </div>
 
-<!-- Question Edit Modal -->
 <div class="modal fade" id="editQuestionModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -303,11 +268,15 @@
 </div>
 @endsection
 
-@section('page-scripts')
+@section('page-scripts')    
+
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
 <script>
     const LESSON_ID = {{ $lesson->id }};
     const IS_EDIT = {{ $isEdit ?? false ? 'true' : 'false' }};
     const MAX_OPTIONS = 10;
+    const QUARTER_ID = {{ $quarterId ?? 'null' }};
     
     @if($isEdit ?? false)
         const QUIZ_ID = {{ $quiz->id ?? 0 }};

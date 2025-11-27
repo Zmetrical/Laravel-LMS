@@ -65,40 +65,82 @@ $(document).ready(function() {
     function renderParticipantsTable(participants) {
         let rows = '';
         
-        participants.forEach(function(participant, index) {
-            const genderBadge = participant.gender.toLowerCase() === 'male' 
-                ? '<span class="badge badge-primary">Male</span>'  
-                : '<span class="badge badge-secondary">Female</span>';
-            
-            const typeBadge = participant.student_type === 'regular'
-                ? '<span class="badge badge-primary">Regular</span>'
-                : '<span class="badge badge-secondary">Irregular</span>';
+        // Sort participants by gender (Male first, then Female)
+        const sortedParticipants = participants.sort((a, b) => {
+            if (a.gender.toLowerCase() === b.gender.toLowerCase()) return 0;
+            return a.gender.toLowerCase() === 'male' ? -1 : 1;
+        });
 
-            const sectionDisplay = participant.section_name !== 'No Section'
-                ? `${participant.section_name}`
-                : '<span class="text-muted">No Section</span>';
+        // Separate by gender
+        const maleParticipants = sortedParticipants.filter(p => p.gender.toLowerCase() === 'male');
+        const femaleParticipants = sortedParticipants.filter(p => p.gender.toLowerCase() === 'female');
 
+        let rowCounter = 1;
+
+        // Render Male Section  
+        if (maleParticipants.length > 0) {
             rows += `
-                <tr>
-                    <td class="text-center"><strong>${index + 1}</strong></td>
-                    <td>
-                        <strong>${participant.full_name}</strong>
-                        <br>
-                        <small class="text-muted">${participant.student_number}</small>
+                <tr class="bg-secondary">
+                    <td colspan="6" class="font-weight-bold">
+                        <i class="fas fa-mars mr-2"></i>MALE (${maleParticipants.length})
                     </td>
-                    <td><small>${participant.email}</small></td>
-                    <td>${sectionDisplay}</td>
-                    <td class="text-center">${genderBadge}</td>
-                    <td class="text-center">${typeBadge}</td>
                 </tr>
             `;
-        });
+
+            maleParticipants.forEach(function(participant) {
+                rows += renderParticipantRow(participant, rowCounter++);
+            });
+        }
+
+        // Render Female Section
+        if (femaleParticipants.length > 0) {
+            rows += `
+                <tr class="bg-secondary">
+                    <td colspan="6" class="font-weight-bold">
+                        <i class="fas fa-venus mr-2"></i>FEMALE (${femaleParticipants.length})
+                    </td>
+                </tr>
+            `;
+
+            femaleParticipants.forEach(function(participant) {
+                rows += renderParticipantRow(participant, rowCounter++);
+            });
+        }
 
         $('#participantsTableBody').html(rows);
         updateFilterResultText(participants.length);
     }
 
+    function renderParticipantRow(participant, index) {
+        const genderBadge = participant.gender.toLowerCase() === 'male' 
+            ? '<span class="badge badge-primary">Male</span>'  
+            : '<span class="badge badge-secondary">Female</span>';
+        
+        const typeBadge = participant.student_type === 'regular'
+            ? '<span class="badge badge-primary">Regular</span>'
+            : '<span class="badge badge-secondary">Irregular</span>';
+
+        const sectionDisplay = participant.section_name !== 'No Section'
+            ? `${participant.section_name}`
+            : '<span class="text-muted">No Section</span>';
+
+        return `
+            <tr>
+                <td >
+                    <strong>${participant.student_number}</strong>
+                </td>
+                <td>
+                    <strong>${participant.full_name}</strong>
+                </td>
+                <td>${sectionDisplay}</td>
+                <td class="text-center">${genderBadge}</td>
+                <td class="text-center">${typeBadge}</td>
+            </tr>
+        `;
+    }
+
     function updateParticipantCount(filtered, total) {
+        
         const text = filtered === total 
             ? `<i class="fas fa-users"></i> ${total} Participant${total !== 1 ? 's' : ''}`
             : `<i class="fas fa-users"></i> ${filtered} of ${total} Participant${total !== 1 ? 's' : ''}`;
@@ -107,8 +149,11 @@ $(document).ready(function() {
 
     function updateFilterResultText(count) {
         const total = allParticipants.length;
+        const maleCount = allParticipants.filter(p => p.gender.toLowerCase() === 'male').length;
+        const femaleCount = allParticipants.filter(p => p.gender.toLowerCase() === 'female').length;
+        
         if (count === total) {
-            $('#filterResultText').text(`Showing all ${total} participant${total !== 1 ? 's' : ''}`);
+            $('#filterResultText').text(`Showing all ${total} participant${total !== 1 ? 's' : ''} (Male: ${maleCount}, Female: ${femaleCount})`);
         } else {
             $('#filterResultText').text(`Showing ${count} of ${total} participant${total !== 1 ? 's' : ''}`);
         }

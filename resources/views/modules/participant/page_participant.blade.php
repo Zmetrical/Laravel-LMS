@@ -63,9 +63,8 @@
                     <table class="table table-hover table-striped mb-0">
                         <thead>
                             <tr>
-                                <th style="width: 5%;" class="text-center">#</th>
+                                <th style="width: 25%;">Student Number</th>
                                 <th style="width: 30%;">Student Information</th>
-                                <th style="width: 25%;">Email</th>
                                 <th style="width: 20%;">Section</th>
                                 <th style="width: 10%;" class="text-center">Gender</th>
                                 <th style="width: 10%;" class="text-center">Type</th>

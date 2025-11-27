@@ -43,7 +43,7 @@
                     <table class="table table-bordered table-hover mb-0" id="gradeTable">
                         <thead>
                             <tr>
-                                <th style="position: sticky; left: 0; z-index: 10; background-color: white;" width="50">#</th>
+                                <th style="position: sticky; left: 0; z-index: 10; background-color: white;" width="50">Student Number</th>
                                 <th style="position: sticky; left: 50px; z-index: 10; background-color: white;">Student Name</th>
                                 <!-- Quiz columns will be added dynamically -->
                             </tr>

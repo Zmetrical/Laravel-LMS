@@ -7,14 +7,11 @@ $(document).ready(function() {
         multiple_choice: { name: 'Multiple Choice', icon: 'fa-check-circle', color: 'primary' },
         multiple_answer: { name: 'Multiple Answer', icon: 'fa-check-double', color: 'primary' },
         true_false: { name: 'True/False', icon: 'fa-toggle-on', color: 'primary' },
-        short_answer: { name: 'Short Answer', icon: 'fa-font', color: 'primary' },
-        essay: { name: 'Essay', icon: 'fa-file-alt', color: 'primary' }
+        short_answer: { name: 'Short Answer', icon: 'fa-font', color: 'primary' }
     };
 
-    // Initialize
     if (IS_EDIT) loadQuizData();
 
-    // Question Type Selection
     $('.question-type-card').on('click', function() {
         selectedType = $(this).data('type');
         $('.question-type-card').removeClass('selected');
@@ -30,23 +27,20 @@ $(document).ready(function() {
         resetQuestionForm();
     });
 
-    // Add Option Button
     $('#addOptionBtn').on('click', function() {
         const count = $('#optionsList .option-item').length;
         if (count >= MAX_OPTIONS) {
-            toastr.warning(`Maximum ${MAX_OPTIONS} options allowed`);
+            showToast('warning', `Maximum ${MAX_OPTIONS} options allowed`);
             return;
         }
         addOptionRow(selectedType);
         updateOptionLimitHint();
     });
 
-    // Add Accepted Answer Button
     $('#addAcceptedAnswerBtn').on('click', function() {
         addAcceptedAnswerRow();
     });
 
-    // Remove Option
     $(document).on('click', '.remove-option-btn', function() {
         const container = $(this).closest('.option-item');
         const minOptions = selectedType === 'true_false' ? 2 : 2;
@@ -55,48 +49,52 @@ $(document).ready(function() {
             updateOptionLetters();
             updateOptionLimitHint();
         } else {
-            toastr.warning(`Minimum ${minOptions} options required`);
+            showToast('warning', `Minimum ${minOptions} options required`);
         }
     });
 
-    // Remove Accepted Answer
     $(document).on('click', '.remove-answer-btn', function() {
         if ($('#acceptedAnswersList .accepted-answer-item').length > 1) {
             $(this).closest('.accepted-answer-item').remove();
         } else {
-            toastr.warning('At least one answer is required');
+            showToast('warning', 'At least one answer is required');
         }
     });
 
-    // Add Question Button
     $('#addQuestionBtn').on('click', function() {
         addQuestion();
     });
 
-    // Edit Question
     $(document).on('click', '.edit-question-btn', function(e) {
         e.stopPropagation();
         const index = $(this).data('index');
         openEditModal(index);
     });
 
-    // Delete Question
     $(document).on('click', '.delete-question-btn', function(e) {
         e.stopPropagation();
         const index = $(this).data('index');
-        if (confirm('Delete this question?')) {
-            questions.splice(index, 1);
-            updateQuestionList();
-            toastr.success('Question deleted');
-        }
+        Swal.fire({
+            title: 'Delete Question?',
+            text: 'This action cannot be undone',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                questions.splice(index, 1);
+                updateQuestionList();
+                showToast('success', 'Question deleted');
+            }
+        });
     });
 
-    // Save Edit
     $('#saveEditBtn').on('click', function() {
         saveEditedQuestion();
     });
 
-    // Save Quiz
     $('#saveQuiz').on('click', saveQuiz);
 
     function showQuestionForm(type) {
@@ -107,8 +105,7 @@ $(document).ready(function() {
         $('#selectedTypeIcon').html(`<i class="fas ${typeInfo.icon} text-${typeInfo.color}"></i>`);
         $('#selectedTypeName').text(typeInfo.name);
 
-        // Reset containers
-        $('#optionsContainer, #shortAnswerContainer, #essayNote').hide();
+        $('#optionsContainer, #shortAnswerContainer').hide();
         $('#optionsList, #acceptedAnswersList').empty();
 
         switch(type) {
@@ -124,16 +121,12 @@ $(document).ready(function() {
             case 'short_answer':
                 setupShortAnswer();
                 break;
-            case 'essay':
-                $('#essayNote').show();
-                $('#questionPoints').val(10);
-                break;
         }
     }
 
     function setupMultipleChoice() {
         $('#optionsContainer').show();
-        $('#addOptionBtn').show();p
+        $('#addOptionBtn').show();
         $('#questionPoints').val(1);
 
         for (let i = 0; i < 4; i++) addOptionRow('multiple_choice');
@@ -237,7 +230,7 @@ $(document).ready(function() {
         });
 
         if (hasDuplicate) {
-            toastr.error('Duplicate options are not allowed');
+            showToast('error', 'Duplicate options are not allowed');
             return false;
         }
         return true;
@@ -259,7 +252,7 @@ $(document).ready(function() {
         });
 
         if (hasDuplicate) {
-            toastr.error('Duplicate answers are not allowed');
+            showToast('error', 'Duplicate answers are not allowed');
             return false;
         }
         return true;
@@ -270,11 +263,11 @@ $(document).ready(function() {
         const points = parseFloat($('#questionPoints').val());
 
         if (!questionText) {
-            toastr.warning('Please enter a question');
+            showToast('warning', 'Please enter a question');
             return;
         }
         if (isNaN(points) || points <= 0) {
-            toastr.warning('Please enter valid points');
+            showToast('warning', 'Please enter valid points');
             return;
         }
 
@@ -284,7 +277,6 @@ $(document).ready(function() {
             points: points
         };
 
-        // Validate and collect data based on type
         switch(selectedType) {
             case 'multiple_choice':
             case 'multiple_answer':
@@ -307,11 +299,11 @@ $(document).ready(function() {
                 });
 
                 if (options.length < 2) {
-                    toastr.warning('Add at least 2 options');
+                    showToast('warning', 'Add at least 2 options');
                     return;
                 }
                 if (!hasCorrect) {
-                    toastr.warning('Select at least one correct answer');
+                    showToast('warning', 'Select at least one correct answer');
                     return;
                 }
                 question.options = options;
@@ -320,7 +312,7 @@ $(document).ready(function() {
             case 'true_false':
                 const tfCorrect = $('input[name="correctOption"]:checked').val();
                 if (tfCorrect === undefined) {
-                    toastr.warning('Select the correct answer');
+                    showToast('warning', 'Select the correct answer');
                     return;
                 }
                 question.options = [
@@ -339,7 +331,7 @@ $(document).ready(function() {
                 });
 
                 if (acceptedAnswers.length === 0) {
-                    toastr.warning('Add at least one accepted answer');
+                    showToast('warning', 'Add at least one accepted answer');
                     return;
                 }
                 question.accepted_answers = acceptedAnswers;
@@ -349,8 +341,24 @@ $(document).ready(function() {
 
         questions.push(question);
         updateQuestionList();
-        resetQuestionForm();
-        toastr.success('Question added');
+        
+        // Clear form but keep the same type
+        $('#questionText').val('');
+        
+        // Reset options/answers based on type
+        if (selectedType === 'multiple_choice' || selectedType === 'multiple_answer') {
+            $('#optionsList').empty();
+            for (let i = 0; i < 4; i++) addOptionRow(selectedType);
+            updateOptionLimitHint();
+        } else if (selectedType === 'short_answer') {
+            $('#acceptedAnswersList').empty();
+            addAcceptedAnswerRow();
+            $('#exactMatch').prop('checked', true);
+        } else if (selectedType === 'true_false') {
+            $('input[name="correctOption"]').prop('checked', false);
+        }
+        
+        showToast('success', 'Question added');
     }
 
     function updateQuestionList() {
@@ -460,10 +468,9 @@ $(document).ready(function() {
         $('#editQuestionBody').html(html);
         $('#editQuestionModal').modal('show');
 
-        // Bind edit modal events
         $('#editAddOption').off('click').on('click', function() {
             const count = $('#editOptionsList .edit-option-item').length;
-            if (count >= MAX_OPTIONS) { toastr.warning(`Max ${MAX_OPTIONS} options`); return; }
+            if (count >= MAX_OPTIONS) { showToast('warning', `Max ${MAX_OPTIONS} options`); return; }
             const letter = String.fromCharCode(65 + count);
             const inputType = q.question_type === 'multiple_answer' ? 'checkbox' : 'radio';
             $('#editOptionsList').append(`
@@ -487,12 +494,12 @@ $(document).ready(function() {
 
         $(document).off('click', '.edit-remove-option').on('click', '.edit-remove-option', function() {
             if ($('#editOptionsList .edit-option-item').length > 2) $(this).closest('.edit-option-item').remove();
-            else toastr.warning('Minimum 2 options required');
+            else showToast('warning', 'Minimum 2 options required');
         });
 
         $(document).off('click', '.edit-remove-accepted').on('click', '.edit-remove-accepted', function() {
             if ($('#editAcceptedList .edit-accepted-item').length > 1) $(this).closest('.edit-accepted-item').remove();
-            else toastr.warning('At least one answer required');
+            else showToast('warning', 'At least one answer required');
         });
     }
 
@@ -501,7 +508,7 @@ $(document).ready(function() {
         q.question_text = $('#editQuestionText').val().trim();
         q.points = parseFloat($('#editQuestionPoints').val());
 
-        if (!q.question_text) { toastr.warning('Enter question text'); return; }
+        if (!q.question_text) { showToast('warning', 'Enter question text'); return; }
 
         if (q.question_type === 'multiple_choice' || q.question_type === 'multiple_answer') {
             const opts = [];
@@ -513,8 +520,8 @@ $(document).ready(function() {
                 if (isCorrect) hasCorrect = true;
                 opts.push({ text, is_correct: isCorrect ? 1 : 0 });
             });
-            if (opts.length < 2) { toastr.warning('Add at least 2 options'); return; }
-            if (!hasCorrect) { toastr.warning('Select correct answer'); return; }
+            if (opts.length < 2) { showToast('warning', 'Add at least 2 options'); return; }
+            if (!hasCorrect) { showToast('warning', 'Select correct answer'); return; }
             q.options = opts;
         } else if (q.question_type === 'true_false') {
             const val = $('input[name="editTFCorrect"]:checked').val();
@@ -528,14 +535,14 @@ $(document).ready(function() {
                 const t = $(this).val().trim();
                 if (t) answers.push(t);
             });
-            if (answers.length === 0) { toastr.warning('Add at least one answer'); return; }
+            if (answers.length === 0) { showToast('warning', 'Add at least one answer'); return; }
             q.accepted_answers = answers;
             q.exact_match = $('#editExactMatch').is(':checked');
         }
 
         updateQuestionList();
         $('#editQuestionModal').modal('hide');
-        toastr.success('Question updated');
+        showToast('success', 'Question updated');
     }
 
     function resetQuestionForm() {
@@ -550,17 +557,16 @@ $(document).ready(function() {
 
     function saveQuiz() {
         const title = $('#quizTitle').val().trim();
-        if (!title) { toastr.warning('Enter quiz title'); return; }
-        if (questions.length === 0) { toastr.warning('Add at least one question'); return; }
+        if (!title) { showToast('warning', 'Enter quiz title'); return; }
+        if (questions.length === 0) { showToast('warning', 'Add at least one question'); return; }
 
         const data = {
             title,
-            description: $('#quizDescription').val().trim(),
+            description: "",
             time_limit: parseInt($('#timeLimit').val()) || null,
             passing_score: parseFloat($('#passingScore').val()),
             max_attempts: parseInt($('#maxAttempts').val()),
-            show_results: $('#showResults').is(':checked') ? 1 : 0,
-            shuffle_questions: $('#shuffleQuestions').is(':checked') ? 1 : 0,
+            quarter_id: QUARTER_ID || null,
             questions
         };
 
@@ -574,17 +580,17 @@ $(document).ready(function() {
             data: JSON.stringify(data),
             success: function(res) {
                 if (res.success) {
-                    toastr.success(res.message || 'Quiz saved');
+                    showToast('success', res.message || 'Quiz saved');
                     setTimeout(() => window.location.href = API_ROUTES.backToLessons, 1000);
                 } else {
-                    toastr.error(res.message || 'Failed');
+                    showToast('error', res.message || 'Failed');
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Quiz');
                 }
             },
             error: function(xhr) {
                 let msg = 'Failed to save';
                 if (xhr.responseJSON?.message) msg = xhr.responseJSON.message;
-                toastr.error(msg);
+                showToast('error', msg);
                 btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Quiz');
             }
         });
@@ -597,20 +603,17 @@ $(document).ready(function() {
             headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
             success: function(res) {
                 if (res.success) populateForm(res.data);
-                else toastr.error(res.message || 'Failed to load');
+                else showToast('error', res.message || 'Failed to load');
             },
-            error: () => toastr.error('Failed to load quiz')
+            error: () => showToast('error', 'Failed to load quiz')
         });
     }
 
     function populateForm(data) {
         $('#quizTitle').val(data.quiz.title);
-        $('#quizDescription').val(data.quiz.description || '');
         $('#timeLimit').val(data.quiz.time_limit || '');
         $('#passingScore').val(data.quiz.passing_score);
         $('#maxAttempts').val(data.quiz.max_attempts);
-        $('#showResults').prop('checked', data.quiz.show_results == 1);
-        $('#shuffleQuestions').prop('checked', data.quiz.shuffle_questions == 1);
 
         questions = data.questions.map(q => {
             const mapped = {
@@ -628,6 +631,22 @@ $(document).ready(function() {
             return mapped;
         });
         updateQuestionList();
+    }
+
+    function showToast(icon, title) {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        Toast.fire({ icon, title });
     }
 
     function escapeHtml(text) {

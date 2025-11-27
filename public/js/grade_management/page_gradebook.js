@@ -24,6 +24,7 @@ $(document).ready(function() {
     // Initialize with first quarter
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
+        $('#quarterSelector').val(currentQuarterId);
         loadGradebook(currentQuarterId);
     }
 
@@ -45,7 +46,11 @@ $(document).ready(function() {
                     gradebookData = response.data;
                     classInfo = response.data.class;
                     quarterInfo = response.data.quarter;
+                    currentQuarterId = quarterId;
                     pendingChanges = {};
+                    
+                    // Update export modal quarter name
+                    $('#exportQuarterName').text(quarterInfo.name);
                     
                     initializeGrids();
                     calculateSummary();
@@ -305,26 +310,44 @@ $(document).ready(function() {
         $('#enableColumnName').text(column.column_name);
         $('#enableMaxPoints').val(column.max_points);
         
-        loadQuizzesForEnable(null);
+        // Load quizzes with current quarter ID
+        loadQuizzesForEnable(column.quiz_id);
         $('#enableColumnModal').modal('show');
     }
 
     function loadQuizzesForEnable(currentQuizId) {
+        console.log('Loading quizzes for quarter:', currentQuarterId);
+        
+        if (!currentQuarterId) {
+            console.error('No quarter ID set');
+            $('#enableQuizId').html('<option value="">Manual Entry</option>');
+            return;
+        }
+        
         $.ajax({
             url: API_ROUTES.getQuizzes,
             type: 'GET',
             data: { quarter_id: currentQuarterId },
             success: function(response) {
+                console.log('Quiz response:', response);
+                
                 let options = '<option value="">Manual Entry</option>';
-                if (response.success && response.data) {
+                if (response.success && response.data && response.data.length > 0) {
                     response.data.forEach(quiz => {
                         const selected = quiz.id == currentQuizId ? 'selected' : '';
                         options += `<option value="${quiz.id}" ${selected} data-points="${quiz.total_points}">
                             ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${quiz.total_points}pts)
                         </option>`;
                     });
+                } else {
+                    console.log('No quizzes available for this quarter');
                 }
                 $('#enableQuizId').html(options);
+            },
+            error: function(xhr) {
+                console.error('Failed to load quizzes:', xhr);
+                toastr.error('Failed to load available quizzes');
+                $('#enableQuizId').html('<option value="">Manual Entry</option>');
             }
         });
     }
@@ -404,13 +427,23 @@ $(document).ready(function() {
     }
 
     function loadQuizzesForEdit(currentQuizId) {
+        console.log('Loading quizzes for edit, quarter:', currentQuarterId);
+        
+        if (!currentQuarterId) {
+            console.error('No quarter ID set');
+            $('#editQuizId').html('<option value="">Manual Entry</option>');
+            return;
+        }
+        
         $.ajax({
             url: API_ROUTES.getQuizzes,
             type: 'GET',
             data: { quarter_id: currentQuarterId },
             success: function(response) {
+                console.log('Quiz response for edit:', response);
+                
                 let options = '<option value="">Manual Entry</option>';
-                if (response.success && response.data) {
+                if (response.success && response.data && response.data.length > 0) {
                     response.data.forEach(quiz => {
                         const selected = quiz.id == currentQuizId ? 'selected' : '';
                         options += `<option value="${quiz.id}" ${selected} data-points="${quiz.total_points}">
@@ -419,6 +452,11 @@ $(document).ready(function() {
                     });
                 }
                 $('#editQuizId').html(options);
+            },
+            error: function(xhr) {
+                console.error('Failed to load quizzes for edit:', xhr);
+                toastr.error('Failed to load available quizzes');
+                $('#editQuizId').html('<option value="">Manual Entry</option>');
             }
         });
     }

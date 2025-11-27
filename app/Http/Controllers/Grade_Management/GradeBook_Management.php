@@ -158,20 +158,32 @@ class GradeBook_Management extends MainController
         }
     }
 
-    /**
-     * Ensure all columns exist for a quarter
-     */
-    private function ensureColumnsExist($classCode, $quarterId)
-    {
-        $existingColumns = DB::table('gradebook_columns')
+/**
+ * Ensure all columns exist for a quarter
+ */
+private function ensureColumnsExist($classCode, $quarterId)
+{
+    // Get existing columns for THIS specific quarter
+    $existingColumns = DB::table('gradebook_columns')
+        ->where('class_code', $classCode)
+        ->where('quarter_id', $quarterId)
+        ->get()
+        ->groupBy('component_type');
+
+    // Create WW columns (1-10) only if they don't exist for this quarter
+    $existingWW = $existingColumns->get('WW', collect());
+    $wwCount = $existingWW->count();
+    
+    for ($i = $wwCount + 1; $i <= self::MAX_WW_COLUMNS; $i++) {
+        // Double-check to prevent duplicates
+        $exists = DB::table('gradebook_columns')
             ->where('class_code', $classCode)
             ->where('quarter_id', $quarterId)
-            ->get()
-            ->groupBy('component_type');
-
-        // Create WW columns (1-10)
-        $wwCount = $existingColumns->get('WW', collect())->count();
-        for ($i = $wwCount + 1; $i <= self::MAX_WW_COLUMNS; $i++) {
+            ->where('component_type', 'WW')
+            ->where('column_name', 'WW' . $i)
+            ->exists();
+            
+        if (!$exists) {
             DB::table('gradebook_columns')->insert([
                 'class_code' => $classCode,
                 'quarter_id' => $quarterId,
@@ -185,10 +197,22 @@ class GradeBook_Management extends MainController
                 'updated_at' => now()
             ]);
         }
+    }
 
-        // Create PT columns (1-10)
-        $ptCount = $existingColumns->get('PT', collect())->count();
-        for ($i = $ptCount + 1; $i <= self::MAX_PT_COLUMNS; $i++) {
+    // Create PT columns (1-10) only if they don't exist for this quarter
+    $existingPT = $existingColumns->get('PT', collect());
+    $ptCount = $existingPT->count();
+    
+    for ($i = $ptCount + 1; $i <= self::MAX_PT_COLUMNS; $i++) {
+        // Double-check to prevent duplicates
+        $exists = DB::table('gradebook_columns')
+            ->where('class_code', $classCode)
+            ->where('quarter_id', $quarterId)
+            ->where('component_type', 'PT')
+            ->where('column_name', 'PT' . $i)
+            ->exists();
+            
+        if (!$exists) {
             DB::table('gradebook_columns')->insert([
                 'class_code' => $classCode,
                 'quarter_id' => $quarterId,
@@ -202,10 +226,22 @@ class GradeBook_Management extends MainController
                 'updated_at' => now()
             ]);
         }
+    }
 
-        // Create QA column (only 1)
-        $qaCount = $existingColumns->get('QA', collect())->count();
-        if ($qaCount === 0) {
+    // Create QA column (only 1) only if it doesn't exist for this quarter
+    $existingQA = $existingColumns->get('QA', collect());
+    $qaCount = $existingQA->count();
+    
+    if ($qaCount === 0) {
+        // Double-check to prevent duplicates
+        $exists = DB::table('gradebook_columns')
+            ->where('class_code', $classCode)
+            ->where('quarter_id', $quarterId)
+            ->where('component_type', 'QA')
+            ->where('column_name', 'QA')
+            ->exists();
+            
+        if (!$exists) {
             DB::table('gradebook_columns')->insert([
                 'class_code' => $classCode,
                 'quarter_id' => $quarterId,
@@ -220,7 +256,7 @@ class GradeBook_Management extends MainController
             ]);
         }
     }
-
+}
     /**
      * Get quiz scores properly calculated
      */
@@ -411,29 +447,70 @@ class GradeBook_Management extends MainController
     {
         try {
             $quarterId = $request->input('quarter_id');
+            
+            \Log::info('Getting quizzes', [
+                'class_id' => $classId,
+                'quarter_id' => $quarterId
+            ]);
+            
+            if (!$quarterId) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Quarter ID is required'
+                ], 400);
+            }
+            
             $class = DB::table('classes')->where('id', $classId)->first();
+            
+            if (!$class) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Class not found'
+                ], 404);
+            }
 
+            // Get all quizzes for this class
+            $allQuizzes = DB::table('quizzes as q')
+                ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
+                ->where('l.class_id', $classId)
+                ->select(
+                    'q.id', 
+                    'q.title', 
+                    'q.quarter_id',
+                    'l.title as lesson_title'
+                )
+                ->get();
+                
+            \Log::info('All quizzes found', ['count' => $allQuizzes->count()]);
+
+            // Get already mapped quizzes for this quarter
+            $mappedQuizIds = DB::table('gradebook_columns')
+                ->where('class_code', $class->class_code)
+                ->where('quarter_id', $quarterId)
+                ->whereNotNull('quiz_id')
+                ->pluck('quiz_id')
+                ->toArray();
+                
+            \Log::info('Mapped quiz IDs', ['ids' => $mappedQuizIds]);
+
+            // Filter available quizzes
             $quizzes = DB::table('quizzes as q')
                 ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
                 ->where('l.class_id', $classId)
                 ->where(function($query) use ($quarterId) {
                     $query->where('q.quarter_id', $quarterId)
-                          ->orWhereNull('q.quarter_id');
+                        ->orWhereNull('q.quarter_id');
                 })
-                ->whereNotIn('q.id', function($query) use ($class, $quarterId) {
-                    $query->select('quiz_id')
-                        ->from('gradebook_columns')
-                        ->where('class_code', $class->class_code)
-                        ->where('quarter_id', $quarterId)
-                        ->whereNotNull('quiz_id');
-                })
+                ->whereNotIn('q.id', $mappedQuizIds)
                 ->select(
                     'q.id', 
                     'q.title', 
                     'l.title as lesson_title',
-                    DB::raw('(SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id) as total_points')
+                    DB::raw('COALESCE((SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id), 0) as total_points')
                 )
                 ->get();
+                
+            \Log::info('Available quizzes', ['count' => $quizzes->count()]);
 
             return response()->json([
                 'success' => true,
@@ -441,13 +518,18 @@ class GradeBook_Management extends MainController
             ]);
 
         } catch (Exception $e) {
+            \Log::error('Failed to load quizzes', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load quizzes'
+                'message' => 'Failed to load quizzes: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+        
     /**
      * Get enrolled students
      */

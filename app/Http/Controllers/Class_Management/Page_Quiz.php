@@ -23,15 +23,47 @@ class Page_Quiz extends MainController
     public function teacherCreate($classId, $lessonId)
     {
         $class = DB::table('classes')->where('id', $classId)->first();
-        $lesson = DB::table('lessons')->where('id', $lessonId)->where('class_id', $classId)->first();
+        $lesson = DB::table('lessons')
+            ->select('lessons.*', 'classes.class_code')
+            ->join('classes', 'lessons.class_id', '=', 'classes.id')
+            ->where('lessons.id', $lessonId)
+            ->where('lessons.class_id', $classId)
+            ->first();
 
         if (!$class || !$lesson) abort(404, 'Class or lesson not found');
+
+        // Get quarter from lesson if it has one
+        $quarterId = null;
+        $lessonQuarter = DB::table('lectures')
+            ->join('quizzes', 'lectures.lesson_id', '=', 'quizzes.lesson_id')
+            ->where('lectures.lesson_id', $lessonId)
+            ->whereNotNull('quizzes.quarter_id')
+            ->value('quizzes.quarter_id');
+
+        if (!$lessonQuarter) {
+            // Try to get from current semester/quarter
+            $currentSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
+            
+            if ($currentSemester) {
+                $currentQuarter = DB::table('quarters')
+                    ->where('semester_id', $currentSemester->id)
+                    ->orderBy('order_number')
+                    ->first();
+                
+                $quarterId = $currentQuarter->id ?? null;
+            }
+        } else {
+            $quarterId = $lessonQuarter;
+        }
 
         return view('modules.quiz.create_quiz', [
             'scripts' => ['class_quiz/teacher_quiz.js'],
             'userType' => 'teacher',
             'class' => $class,
             'lesson' => $lesson,
+            'quarterId' => $quarterId,
             'isEdit' => false
         ]);
     }
@@ -50,6 +82,7 @@ class Page_Quiz extends MainController
             'class' => $class,
             'lesson' => $lesson,
             'quiz' => $quiz,
+            'quarterId' => $quiz->quarter_id,
             'isEdit' => true
         ]);
     }
@@ -72,7 +105,6 @@ class Page_Quiz extends MainController
                     'order_number' => $question->order_number
                 ];
 
-                // Get options for MC, MA, TF
                 if (in_array($question->question_type, ['multiple_choice', 'multiple_answer', 'true_false'])) {
                     $qData['options'] = DB::table('quiz_question_options')
                         ->where('question_id', $question->id)
@@ -80,7 +112,6 @@ class Page_Quiz extends MainController
                         ->get();
                 }
 
-                // Get accepted answers for short_answer
                 if ($question->question_type === 'short_answer') {
                     $answers = DB::table('quiz_short_answers')
                         ->where('question_id', $question->id)
@@ -111,20 +142,17 @@ class Page_Quiz extends MainController
                 'description' => 'nullable|string',
                 'time_limit' => 'nullable|integer|min:1',
                 'passing_score' => 'required|numeric|min:0|max:100',
-                'max_attempts' => 'required|integer|min:1',
-                'show_results' => 'required|boolean',
-                'shuffle_questions' => 'required|boolean',
+                'max_attempts' => 'required|integer|min:1|max:5',
+                'quarter_id' => 'nullable|integer',
                 'questions' => 'required|array|min:1',
                 'questions.*.question_text' => 'required|string',
-                'questions.*.question_type' => 'required|in:multiple_choice,multiple_answer,true_false,short_answer,essay',
+                'questions.*.question_type' => 'required|in:multiple_choice,multiple_answer,true_false,short_answer',
                 'questions.*.points' => 'required|numeric|min:0.01'
             ]);
 
-            // Validate questions
             foreach ($request->questions as $i => $q) {
                 $type = $q['question_type'];
                 
-                // Validate options for MC, MA, TF
                 if (in_array($type, ['multiple_choice', 'multiple_answer', 'true_false'])) {
                     if (!isset($q['options']) || count($q['options']) < 2) {
                         throw new \Exception("Question " . ($i + 1) . " must have at least 2 options");
@@ -133,26 +161,22 @@ class Page_Quiz extends MainController
                         throw new \Exception("Question " . ($i + 1) . " cannot have more than 10 options");
                     }
                     
-                    // Check for duplicates
                     $optTexts = array_map(fn($o) => strtolower(trim($o['text'])), $q['options']);
                     if (count($optTexts) !== count(array_unique($optTexts))) {
                         throw new \Exception("Question " . ($i + 1) . " has duplicate options");
                     }
                     
-                    // Check for correct answer
                     $hasCorrect = array_filter($q['options'], fn($o) => $o['is_correct'] ?? false);
                     if (empty($hasCorrect)) {
                         throw new \Exception("Question " . ($i + 1) . " must have at least one correct answer");
                     }
                 }
                 
-                // Validate short answer
                 if ($type === 'short_answer') {
                     if (!isset($q['accepted_answers']) || count($q['accepted_answers']) < 1) {
                         throw new \Exception("Question " . ($i + 1) . " must have at least one accepted answer");
                     }
                     
-                    // Check for duplicates
                     $answers = array_map(fn($a) => strtolower(trim($a)), $q['accepted_answers']);
                     if (count($answers) !== count(array_unique($answers))) {
                         throw new \Exception("Question " . ($i + 1) . " has duplicate accepted answers");
@@ -160,22 +184,21 @@ class Page_Quiz extends MainController
                 }
             }
 
-            // Create quiz
             $quizId = DB::table('quizzes')->insertGetId([
                 'lesson_id' => $lessonId,
+                'quarter_id' => $request->quarter_id,
                 'title' => $request->title,
                 'description' => $request->description,
                 'time_limit' => $request->time_limit,
                 'passing_score' => $request->passing_score,
                 'max_attempts' => $request->max_attempts,
-                'show_results' => $request->show_results,
-                'shuffle_questions' => $request->shuffle_questions,
+                'show_results' => 1,
+                'shuffle_questions' => 1,
                 'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
 
-            // Create questions
             foreach ($request->questions as $index => $qData) {
                 $questionId = DB::table('quiz_questions')->insertGetId([
                     'quiz_id' => $quizId,
@@ -188,7 +211,6 @@ class Page_Quiz extends MainController
                     'updated_at' => now()
                 ]);
 
-                // Create options for MC, MA, TF
                 if (isset($qData['options']) && is_array($qData['options'])) {
                     foreach ($qData['options'] as $optIndex => $opt) {
                         DB::table('quiz_question_options')->insert([
@@ -202,7 +224,6 @@ class Page_Quiz extends MainController
                     }
                 }
 
-                // Create accepted answers for short_answer
                 if ($qData['question_type'] === 'short_answer' && isset($qData['accepted_answers'])) {
                     foreach ($qData['accepted_answers'] as $answer) {
                         DB::table('quiz_short_answers')->insert([
@@ -236,7 +257,6 @@ class Page_Quiz extends MainController
                 'questions' => 'required|array|min:1'
             ]);
 
-            // Same validation as store
             foreach ($request->questions as $i => $q) {
                 $type = $q['question_type'];
                 
@@ -271,19 +291,16 @@ class Page_Quiz extends MainController
                 }
             }
 
-            // Update quiz
             DB::table('quizzes')->where('id', $quizId)->where('lesson_id', $lessonId)->update([
                 'title' => $request->title,
                 'description' => $request->description,
                 'time_limit' => $request->time_limit,
                 'passing_score' => $request->passing_score,
                 'max_attempts' => $request->max_attempts,
-                'show_results' => $request->show_results,
-                'shuffle_questions' => $request->shuffle_questions,
+                'quarter_id' => $request->quarter_id,
                 'updated_at' => now()
             ]);
 
-            // Delete old questions
             $qIds = DB::table('quiz_questions')->where('quiz_id', $quizId)->pluck('id');
             if ($qIds->count() > 0) {
                 DB::table('quiz_question_options')->whereIn('question_id', $qIds)->delete();
@@ -291,7 +308,6 @@ class Page_Quiz extends MainController
             }
             DB::table('quiz_questions')->where('quiz_id', $quizId)->delete();
 
-            // Create new questions
             foreach ($request->questions as $index => $qData) {
                 $questionId = DB::table('quiz_questions')->insertGetId([
                     'quiz_id' => $quizId,

@@ -173,7 +173,7 @@
         </div>
     </div>
 
-    <button class="btn btn-success" id="saveChangesBtn" style="display: none;">
+    <button class="btn btn-primary" id="saveChangesBtn" style="display: none;">
         <i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>
     </button>
 
@@ -207,7 +207,6 @@
                 <div class="tab-pane fade show active" id="ww" role="tabpanel">
                     <div class="mb-2">
                         <span class="text-muted" id="wwColumnCount"></span>
-                        <span class="text-info ml-2"><i class="fas fa-info-circle"></i> Click toggle icon on column headers to enable/disable</span>
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="wwGrid"></div>
@@ -217,7 +216,6 @@
                 <div class="tab-pane fade" id="pt" role="tabpanel">
                     <div class="mb-2">
                         <span class="text-muted" id="ptColumnCount"></span>
-                        <span class="text-info ml-2"><i class="fas fa-info-circle"></i> Click toggle icon on column headers to enable/disable</span>
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="ptGrid"></div>
@@ -266,7 +264,7 @@
     <div class="modal fade" id="enableColumnModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-success">
+                <div class="modal-header bg-primary">
                     <h5 class="modal-title text-white"><i class="fas fa-toggle-on"></i> Enable Column: <span id="enableColumnName"></span></h5>
                     <button type="button" class="close text-white" data-dismiss="modal">
                         <span>&times;</span>
@@ -275,24 +273,20 @@
                 <form id="enableColumnForm">
                     <input type="hidden" id="enableColumnId">
                     <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Configure the column settings before enabling it.
-                        </div>
                         <div class="form-group">
                             <label>Maximum Points <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="enableMaxPoints" required min="1" step="1">
                         </div>
                         <div class="form-group">
-                            <label>Link to Online Quiz (Optional)</label>
+                            <label>Link to Online Quiz </label>
                             <select class="form-control" id="enableQuizId">
                                 <option value="">Manual Entry</option>
                             </select>
-                            <small class="text-muted">Linking to a quiz will auto-sync scores</small>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-primary">
                             <i class="fas fa-check"></i> Enable Column
                         </button>
                     </div>
@@ -327,7 +321,6 @@
                             <select class="form-control" id="editQuizId">
                                 <option value="">Manual Entry</option>
                             </select>
-                            <small class="text-muted">Linking to a quiz will auto-sync scores</small>
                         </div>
                     </div>
                     <div class="modal-footer">

@@ -48,13 +48,6 @@
                     </div>
                 </div>
 
-                @if($quiz->description)
-                <div class="mt-3">
-                    <strong>Description:</strong>
-                    <p class="text-muted">{{ $quiz->description }}</p>
-                </div>
-                @endif
-
                 <hr>
 
                 <!-- Attempt Status -->
