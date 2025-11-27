@@ -4,9 +4,7 @@
 
 @section('head')
     <meta name="csrf-token" content="{{ csrf_token() }}">
-
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
-
 
 <style>
     :root {
@@ -84,7 +82,6 @@
         margin-bottom: 20px;
     }
     
-    
     .form-group label {
         color: var(--text-dark);
         font-size: 14px;
@@ -103,29 +100,16 @@
     
     .form-control:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(155, 135, 196, 0.15);
+        box-shadow: 0 0 0 0.2rem rgba(20, 29, 92, 0.15);
     }
     
-    .remember-forgot {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .remember-section {
         margin-bottom: 25px;
     }
     
     .custom-control-label {
         color: var(--text-dark);
         font-size: 14px;
-    }
-    
-    .forgot-link {
-        color: var(--text-dark);
-        font-size: 14px;
-        text-decoration: underline;
-    }
-    
-    .forgot-link:hover {
-        color: var(--primary-color);
     }
     
     .btn-signin {
@@ -144,23 +128,105 @@
         color: var(--white);
     }
     
-    @media (max-width: 992px) {
+    /* Mobile Styles - Completely Different Design */
+    @media (max-width: 768px) {
         .login-container {
             flex-direction: column;
+            background: var(--primary-color);
+        }
+        
+        .login-right {
+            display: none;
         }
         
         .login-left {
             max-width: 100%;
-            padding: 40px 30px;
+            padding: 0;
+            background: transparent;
+            justify-content: flex-start;
+            padding-top: 40px;
         }
         
-        .login-right {
-            min-height: 300px;
+        .brand {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 0 20px;
         }
         
-        .school-logo {
-            width: 250px;
-            height: 250px;
+        .brand h4 {
+            color: var(--white);
+            font-size: 20px;
+        }
+        
+        /* Mobile Logo Section */
+        .mobile-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .mobile-logo-circle {
+            width: 120px;
+            height: 120px;
+            background: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .mobile-logo-circle img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: var(--white);
+            font-size: 22px;
+        }
+        
+        /* Mobile Form Card */
+        #loginForm {
+            background: var(--white);
+            border-radius: 20px 20px 0 0;
+            padding: 30px 20px;
+            min-height: calc(100vh - 350px);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            height: 50px;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+        
+        .remember-section {
+            margin-bottom: 20px;
+        }
+        
+        .btn-signin {
+            height: 50px;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+    }
+    
+    /* Hide mobile elements on desktop */
+    @media (min-width: 769px) {
+        .mobile-logo {
+            display: none;
         }
     }
 </style>
@@ -174,35 +240,48 @@
                 <h4>Trinity Polytechnic College</h4>
             </div>
             
+            <!-- Mobile Logo (only visible on mobile) -->
+            <div class="mobile-logo">
+                <div class="mobile-logo-circle">
+                    <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo">
+                </div>
+            </div>
+            
             <div class="login-header">
                 <h1>Student Login</h1>
             </div>
             
-            <form id="loginForm" method="POST">
+            <form id="loginForm" action="{{ route('student.auth') }}" method="POST" autocomplete="on">
                 @csrf
                 
                 <div class="form-group">
                     <label for="student_number">Student Number</label>
-                    <input type="text" class="form-control" 
-                           id="student_number" name="student_number" 
+                    <input type="text" 
+                           class="form-control" 
+                           id="student_number" 
+                           name="student_number"
+                           autocomplete="username"
                            placeholder="Enter your student number"
-                           required autofocus>
+                           required 
+                           autofocus>
                 </div>
                 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" class="form-control" 
-                           id="password" name="password" 
+                    <input type="password" 
+                           class="form-control" 
+                           id="password" 
+                           name="password"
+                           autocomplete="current-password"
                            placeholder="Enter your password"
                            required>
                 </div>
                 
-                <div class="remember-forgot">
+                <div class="remember-section">
                     <div class="custom-control custom-checkbox">
                         <input type="checkbox" class="custom-control-input" id="remember" name="remember">
                         <label class="custom-control-label" for="remember">Remember Me</label>
                     </div>
-                    <a href="#" class="forgot-link">Forgot password?</a>
                 </div>
                 
                 <button type="submit" class="btn btn-signin" id="submitBtn">Sign in</button>
@@ -221,9 +300,9 @@
 @section('foot')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
-@if(isset($scripts))
-    @foreach($scripts as $script)
-        <script src="{{ asset('js/' . $script) }}"></script>
-    @endforeach
-@endif
+    @if(isset($scripts))
+        @foreach($scripts as $script)
+            <script src="{{ asset('js/' . $script) }}"></script>
+        @endforeach
+    @endif
 @endsection
