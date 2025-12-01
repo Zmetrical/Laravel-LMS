@@ -290,12 +290,11 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
                 ->name('data');
                 
-
-            Route::put('/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
-                ->name('column.update');
             
-            Route::post('/{classId}/column/{columnId}/toggle', [GradeBook_Management::class, 'toggleColumn'])->name('column.toggle');
-            Route::put('/{classId}/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])->name('column.update');
+            Route::post('/{classId}/column/{columnId}/toggle', [GradeBook_Management::class, 'toggleColumn'])
+                ->name('column.toggle');
+            Route::put('/{classId}/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
+                ->name('column.update');
 
             Route::post('/{classId}/scores/batch', [GradeBook_Management::class, 'batchUpdateScores'])
                 ->name('scores.batch');

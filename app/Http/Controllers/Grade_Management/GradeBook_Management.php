@@ -299,76 +299,31 @@ private function ensureColumnsExist($classCode, $quarterId)
     /**
      * Enable/activate a column
      */
-    public function toggleColumn(Request $request, $columnId)
-    {
-        try {
-            $validated = $request->validate([
-                'is_active' => 'required|boolean',
-                'max_points' => 'nullable|integer|min:1',
-                'quiz_id' => 'nullable|exists:quizzes,id'
-            ]);
+public function toggleColumn(Request $request, $classId, $columnId)
+{
+    try {
+        $validated = $request->validate([
+            'is_active' => 'required|boolean',
+            'max_points' => 'nullable|integer|min:1',
+            'quiz_id' => 'nullable|exists:quizzes,id'
+        ]);
 
-            $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
+        $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
 
-            if (!$column) {
-                return response()->json(['success' => false, 'message' => 'Column not found'], 404);
-            }
-
-            $updateData = [
-                'is_active' => $validated['is_active'],
-                'updated_at' => now()
-            ];
-
-            // If activating, allow setting max_points and quiz
-            if ($validated['is_active']) {
-                if (isset($validated['max_points'])) {
-                    $updateData['max_points'] = $validated['max_points'];
-                }
-                
-                if (isset($validated['quiz_id']) && $validated['quiz_id']) {
-                    $updateData['quiz_id'] = $validated['quiz_id'];
-                    $updateData['source_type'] = 'online';
-                } else {
-                    $updateData['quiz_id'] = null;
-                    $updateData['source_type'] = 'manual';
-                }
-            }
-
-            DB::table('gradebook_columns')
-                ->where('id', $columnId)
-                ->update($updateData);
-
-            return response()->json([
-                'success' => true,
-                'message' => $validated['is_active'] ? 'Column enabled successfully' : 'Column disabled successfully'
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update column: ' . $e->getMessage()
-            ], 500);
+        if (!$column) {
+            return response()->json(['success' => false, 'message' => 'Column not found'], 404);
         }
-    }
 
-    /**
-     * Update column configuration
-     */
-    public function updateColumn(Request $request, $columnId)
-    {
-        try {
-            $validated = $request->validate([
-                'max_points' => 'required|integer|min:1',
-                'quiz_id' => 'nullable|exists:quizzes,id'
-            ]);
+        $updateData = [
+            'is_active' => $validated['is_active'],
+            'updated_at' => now()
+        ];
 
-            $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
-
-            $updateData = [
-                'max_points' => $validated['max_points'],
-                'updated_at' => now()
-            ];
-
+        if ($validated['is_active']) {
+            if (isset($validated['max_points'])) {
+                $updateData['max_points'] = $validated['max_points'];
+            }
+            
             if (isset($validated['quiz_id']) && $validated['quiz_id']) {
                 $updateData['quiz_id'] = $validated['quiz_id'];
                 $updateData['source_type'] = 'online';
@@ -376,23 +331,67 @@ private function ensureColumnsExist($classCode, $quarterId)
                 $updateData['quiz_id'] = null;
                 $updateData['source_type'] = 'manual';
             }
-
-            DB::table('gradebook_columns')
-                ->where('id', $columnId)
-                ->update($updateData);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Column updated successfully'
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update column: ' . $e->getMessage()
-            ], 500);
         }
+
+        DB::table('gradebook_columns')
+            ->where('id', $columnId)
+            ->update($updateData);
+
+        return response()->json([
+            'success' => true,
+            'message' => $validated['is_active'] ? 'Column enabled successfully' : 'Column disabled successfully'
+        ]);
+
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update column: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+    /**
+     * Update column configuration
+     */
+public function updateColumn(Request $request, $classId, $columnId)
+{
+    try {
+        $validated = $request->validate([
+            'max_points' => 'required|integer|min:1',
+            'quiz_id' => 'nullable|exists:quizzes,id'
+        ]);
+
+        $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
+
+        $updateData = [
+            'max_points' => $validated['max_points'],
+            'updated_at' => now()
+        ];
+
+        if (isset($validated['quiz_id']) && $validated['quiz_id']) {
+            $updateData['quiz_id'] = $validated['quiz_id'];
+            $updateData['source_type'] = 'online';
+        } else {
+            $updateData['quiz_id'] = null;
+            $updateData['source_type'] = 'manual';
+        }
+
+        DB::table('gradebook_columns')
+            ->where('id', $columnId)
+            ->update($updateData);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Column updated successfully'
+        ]);
+
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update column: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     /**
      * Batch update scores
@@ -443,92 +442,95 @@ private function ensureColumnsExist($classCode, $quarterId)
     /**
      * Get available quizzes for mapping
      */
-    public function getAvailableQuizzes($classId, Request $request)
-    {
-        try {
-            $quarterId = $request->input('quarter_id');
-            
-            \Log::info('Getting quizzes', [
-                'class_id' => $classId,
-                'quarter_id' => $quarterId
-            ]);
-            
-            if (!$quarterId) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Quarter ID is required'
-                ], 400);
-            }
-            
-            $class = DB::table('classes')->where('id', $classId)->first();
-            
-            if (!$class) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Class not found'
-                ], 404);
-            }
+public function getAvailableQuizzes($classId, Request $request)
+{
+    try {
+        $quarterId = $request->input('quarter_id');
+        
+        \Log::info('Getting quizzes', [
+            'class_id' => $classId,
+            'quarter_id' => $quarterId
+        ]);
+        
+        if (!$quarterId) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Quarter ID is required'
+            ], 400);
+        }
+        
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        if (!$class) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Class not found'
+            ], 404);
+        }
 
-            // Get all quizzes for this class
-            $allQuizzes = DB::table('quizzes as q')
-                ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
-                ->where('l.class_id', $classId)
-                ->select(
-                    'q.id', 
-                    'q.title', 
-                    'q.quarter_id',
-                    'l.title as lesson_title'
-                )
-                ->get();
+        // Get already mapped quizzes for this quarter AND class
+        $mappedQuizIds = DB::table('gradebook_columns')
+            ->where('class_code', $class->class_code)
+            ->where('quarter_id', $quarterId)
+            ->whereNotNull('quiz_id')
+            ->where('is_active', 1) // Only consider active columns as "mapped"
+            ->pluck('quiz_id')
+            ->toArray();
                 
-            \Log::info('All quizzes found', ['count' => $allQuizzes->count()]);
+        \Log::info('Mapped quiz IDs', ['ids' => $mappedQuizIds]);
 
-            // Get already mapped quizzes for this quarter
-            $mappedQuizIds = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('quarter_id', $quarterId)
-                ->whereNotNull('quiz_id')
-                ->pluck('quiz_id')
-                ->toArray();
+        // Get available quizzes - matching the quarter OR having no quarter assigned
+        $quizzes = DB::table('quizzes as q')
+            ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
+            ->where('l.class_id', $classId)
+            ->where('q.status', 1) // Only active quizzes
+            ->where(function($query) use ($quarterId) {
+                $query->where('q.quarter_id', $quarterId)
+                      ->orWhereNull('q.quarter_id');
+            })
+            ->whereNotIn('q.id', $mappedQuizIds)
+            ->select(
+                'q.id', 
+                'q.title',
+                'q.quarter_id',
+                'l.title as lesson_title',
+                DB::raw('(SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id) as total_points')
+            )
+            ->orderBy('l.title')
+            ->orderBy('q.title')
+            ->get();
                 
-            \Log::info('Mapped quiz IDs', ['ids' => $mappedQuizIds]);
+        \Log::info('Available quizzes', [
+            'count' => $quizzes->count(),
+            'quizzes' => $quizzes->toArray()
+        ]);
 
-            // Filter available quizzes
-            $quizzes = DB::table('quizzes as q')
-                ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
-                ->where('l.class_id', $classId)
-                ->where(function($query) use ($quarterId) {
-                    $query->where('q.quarter_id', $quarterId)
-                        ->orWhereNull('q.quarter_id');
-                })
-                ->whereNotIn('q.id', $mappedQuizIds)
-                ->select(
-                    'q.id', 
-                    'q.title', 
-                    'l.title as lesson_title',
-                    DB::raw('COALESCE((SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id), 0) as total_points')
-                )
-                ->get();
-                
-            \Log::info('Available quizzes', ['count' => $quizzes->count()]);
-
+        // If no quizzes found, return helpful message
+        if ($quizzes->isEmpty()) {
             return response()->json([
                 'success' => true,
-                'data' => $quizzes
+                'data' => [],
+                'message' => 'No available quizzes found for this quarter. Create a quiz first or assign an existing quiz to this quarter.'
             ]);
-
-        } catch (Exception $e) {
-            \Log::error('Failed to load quizzes', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load quizzes: ' . $e->getMessage()
-            ], 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'data' => $quizzes
+        ]);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to load quizzes', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load quizzes: ' . $e->getMessage()
+        ], 500);
     }
+}
         
     /**
      * Get enrolled students

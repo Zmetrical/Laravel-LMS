@@ -346,9 +346,7 @@
                 </div>
                 <form id="exportForm">
                     <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> This will export the currently selected quarter.
-                        </div>
+
                         <p class="mb-0"><strong>Selected Quarter:</strong> <span id="exportQuarterName"></span></p>
                     </div>
                     <div class="modal-footer">
@@ -374,14 +372,14 @@
         const MAX_PT_COLUMNS = 10;
         const MAX_QA_COLUMNS = 1;
         const QUARTERS = @json($quarters);
-        const API_ROUTES = {
-            getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
-            toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
-            updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
-            batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
-            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
-            exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"
-        };
+const API_ROUTES = {
+    getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
+    toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
+    updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
+    batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
+    getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
+    exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"
+};
     </script>
     
     @if(isset($scripts))

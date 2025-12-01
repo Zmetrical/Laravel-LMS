@@ -32,38 +32,37 @@ class Page_Quiz extends MainController
 
         if (!$class || !$lesson) abort(404, 'Class or lesson not found');
 
-        // Get quarter from lesson if it has one
-        $quarterId = null;
-        $lessonQuarter = DB::table('lectures')
-            ->join('quizzes', 'lectures.lesson_id', '=', 'quizzes.lesson_id')
-            ->where('lectures.lesson_id', $lessonId)
-            ->whereNotNull('quizzes.quarter_id')
-            ->value('quizzes.quarter_id');
+        // Get the active semester and its quarters
+        $currentSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
 
-        if (!$lessonQuarter) {
-            // Try to get from current semester/quarter
-            $currentSemester = DB::table('semesters')
-                ->where('status', 'active')
-                ->first();
-            
-            if ($currentSemester) {
-                $currentQuarter = DB::table('quarters')
-                    ->where('semester_id', $currentSemester->id)
-                    ->orderBy('order_number')
-                    ->first();
-                
-                $quarterId = $currentQuarter->id ?? null;
-            }
-        } else {
-            $quarterId = $lessonQuarter;
+        if (!$currentSemester) {
+            return back()->with('error', 'No active semester found. Please activate a semester first.');
         }
+
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $currentSemester->id)
+            ->orderBy('order_number')
+            ->get();
+
+        // Try to get quarter from lesson's existing quizzes
+        $lessonQuarter = DB::table('quizzes')
+            ->where('lesson_id', $lessonId)
+            ->whereNotNull('quarter_id')
+            ->value('quarter_id');
+
+        // Default to first quarter if no existing quiz
+        $defaultQuarterId = $lessonQuarter ?? ($quarters->first()->id ?? null);
 
         return view('modules.quiz.create_quiz', [
             'scripts' => ['class_quiz/teacher_quiz.js'],
             'userType' => 'teacher',
             'class' => $class,
             'lesson' => $lesson,
-            'quarterId' => $quarterId,
+            'quarters' => $quarters,
+            'semesterId' => $currentSemester->id,
+            'defaultQuarterId' => $defaultQuarterId,
             'isEdit' => false
         ]);
     }
@@ -76,13 +75,26 @@ class Page_Quiz extends MainController
 
         if (!$class || !$lesson || !$quiz) abort(404, 'Resource not found');
 
+        // Get semester from quiz or current active semester
+        $semesterId = $quiz->semester_id;
+        if (!$semesterId) {
+            $semesterId = DB::table('semesters')->where('status', 'active')->value('id');
+        }
+
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $semesterId)
+            ->orderBy('order_number')
+            ->get();
+
         return view('modules.quiz.create_quiz', [
             'scripts' => ['class_quiz/teacher_quiz.js'],
             'userType' => 'teacher',
             'class' => $class,
             'lesson' => $lesson,
             'quiz' => $quiz,
-            'quarterId' => $quiz->quarter_id,
+            'quarters' => $quarters,
+            'semesterId' => $semesterId,
+            'defaultQuarterId' => $quiz->quarter_id,
             'isEdit' => true
         ]);
     }
@@ -143,7 +155,8 @@ class Page_Quiz extends MainController
                 'time_limit' => 'nullable|integer|min:1',
                 'passing_score' => 'required|numeric|min:0|max:100',
                 'max_attempts' => 'required|integer|min:1|max:5',
-                'quarter_id' => 'nullable|integer',
+                'quarter_id' => 'required|integer|exists:quarters,id',
+                'semester_id' => 'required|integer|exists:semesters,id',
                 'questions' => 'required|array|min:1',
                 'questions.*.question_text' => 'required|string',
                 'questions.*.question_type' => 'required|in:multiple_choice,multiple_answer,true_false,short_answer',
@@ -186,6 +199,7 @@ class Page_Quiz extends MainController
 
             $quizId = DB::table('quizzes')->insertGetId([
                 'lesson_id' => $lessonId,
+                'semester_id' => $request->semester_id,
                 'quarter_id' => $request->quarter_id,
                 'title' => $request->title,
                 'description' => $request->description,
@@ -254,6 +268,8 @@ class Page_Quiz extends MainController
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
+                'quarter_id' => 'required|integer|exists:quarters,id',
+                'semester_id' => 'required|integer|exists:semesters,id',
                 'questions' => 'required|array|min:1'
             ]);
 
@@ -297,6 +313,7 @@ class Page_Quiz extends MainController
                 'time_limit' => $request->time_limit,
                 'passing_score' => $request->passing_score,
                 'max_attempts' => $request->max_attempts,
+                'semester_id' => $request->semester_id,
                 'quarter_id' => $request->quarter_id,
                 'updated_at' => now()
             ]);

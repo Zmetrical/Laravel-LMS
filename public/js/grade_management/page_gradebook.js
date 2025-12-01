@@ -1,6 +1,6 @@
 console.log("gradebook class");
 
-$(document).ready(function() {
+$(document).ready(function () {
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -29,7 +29,7 @@ $(document).ready(function() {
     }
 
     // Quarter selector
-    $('#quarterSelector').change(function() {
+    $('#quarterSelector').change(function () {
         currentQuarterId = $(this).val();
         if (currentQuarterId) {
             loadGradebook(currentQuarterId);
@@ -41,17 +41,17 @@ $(document).ready(function() {
             url: API_ROUTES.getGradebook,
             type: 'GET',
             data: { quarter_id: quarterId },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     gradebookData = response.data;
                     classInfo = response.data.class;
                     quarterInfo = response.data.quarter;
                     currentQuarterId = quarterId;
                     pendingChanges = {};
-                    
+
                     // Update export modal quarter name
                     $('#exportQuarterName').text(quarterInfo.name);
-                    
+
                     initializeGrids();
                     calculateSummary();
                     updateSaveButton();
@@ -60,7 +60,7 @@ $(document).ready(function() {
                     toastr.error('Failed to load gradebook');
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 toastr.error('Failed to load gradebook data');
                 console.error(xhr);
             }
@@ -71,7 +71,7 @@ $(document).ready(function() {
         const wwActive = (gradebookData.columns['WW'] || []).filter(c => c.is_active).length;
         const ptActive = (gradebookData.columns['PT'] || []).filter(c => c.is_active).length;
         const qaActive = (gradebookData.columns['QA'] || []).filter(c => c.is_active).length;
-        
+
         $('#wwColumnCount').text(`${wwActive}/${MAX_WW_COLUMNS} active`);
         $('#ptColumnCount').text(`${ptActive}/${MAX_PT_COLUMNS} active`);
         $('#qaColumnCount').text(`${qaActive}/${MAX_QA_COLUMNS} active`);
@@ -85,19 +85,19 @@ $(document).ready(function() {
 
     function initGrid(componentType, selector) {
         const columns = gradebookData.columns[componentType] || [];
-        
+
         let fields = [
-            { 
-                name: "student_number", 
-                title: "USN", 
-                type: "text", 
+            {
+                name: "student_number",
+                title: "USN",
+                type: "text",
                 width: 100,
                 editing: false
             },
-            { 
-                name: "full_name", 
-                title: "Student Name", 
-                type: "text", 
+            {
+                name: "full_name",
+                title: "Student Name",
+                type: "text",
                 width: 200,
                 editing: false
             }
@@ -109,38 +109,38 @@ $(document).ready(function() {
             if (col.is_active) {
                 totalMaxPoints += parseFloat(col.max_points);
             }
-            
+
             const isOnline = col.source_type === 'online';
             const isDisabled = !col.is_active;
-            
+
             fields.push({
                 name: col.column_name,
                 title: createColumnHeader(col),
                 type: "number",
                 width: 90,
                 editing: !isOnline && col.is_active,
-                itemTemplate: function(value, item) {
+                itemTemplate: function (value, item) {
                     if (isDisabled) {
                         return '<span class="text-muted">-</span>';
                     }
-                    
+
                     const cellId = `cell_${col.id}_${item.student_number}`;
                     const val = value !== null && value !== undefined ? value : '';
                     const key = `${col.id}_${item.student_number}`;
                     const isChanged = pendingChanges.hasOwnProperty(key);
-                    
+
                     if (isOnline) {
                         return `<span class="badge badge-info">${val}</span>`;
                     }
-                    
+
                     const changedClass = isChanged ? 'changed-cell-value' : '';
                     return `<span id="${cellId}" class="${changedClass}">${val}</span>`;
                 },
-                editTemplate: function(value, item) {
+                editTemplate: function (value, item) {
                     if (isDisabled || isOnline) {
                         return `<span class="text-muted">-</span>`;
                     }
-                    
+
                     const cellId = `cell_${col.id}_${item.student_number}`;
                     const input = $('<input>')
                         .attr('type', 'number')
@@ -152,27 +152,27 @@ $(document).ready(function() {
                         .attr('data-student', item.student_number)
                         .addClass('form-control form-control-sm')
                         .val(value !== null && value !== undefined ? value : '')
-                        .on('input', function() {
+                        .on('input', function () {
                             const val = parseFloat($(this).val());
                             if (val < 0) $(this).val(0);
                             if (val > col.max_points) $(this).val(col.max_points);
                         })
-                        .on('blur', function() {
+                        .on('blur', function () {
                             const newVal = $(this).val();
                             const oldVal = value !== null && value !== undefined ? value : '';
-                            
+
                             if (newVal !== oldVal.toString()) {
                                 markChanged(col.id, item.student_number, newVal, cellId);
                                 item[col.column_name] = newVal === '' ? null : parseFloat(newVal);
                                 $(selector).jsGrid("refresh");
                             }
                         })
-                        .on('keypress', function(e) {
+                        .on('keypress', function (e) {
                             if (e.which === 13) {
                                 $(this).blur();
                             }
                         });
-                    
+
                     return input;
                 },
                 headerCss: isOnline ? 'online-column' : (isDisabled ? 'disabled-column' : '')
@@ -186,7 +186,7 @@ $(document).ready(function() {
                 type: "text",
                 width: 80,
                 editing: false,
-                itemTemplate: function(value, item) {
+                itemTemplate: function (value, item) {
                     let total = 0;
                     columns.forEach(col => {
                         if (col.is_active) {
@@ -205,7 +205,7 @@ $(document).ready(function() {
                 type: "text",
                 width: 80,
                 editing: false,
-                itemTemplate: function(value, item) {
+                itemTemplate: function (value, item) {
                     let total = 0;
                     columns.forEach(col => {
                         if (col.is_active) {
@@ -253,12 +253,12 @@ $(document).ready(function() {
 
     function createColumnHeader(col) {
         const icon = col.source_type === 'online' ? '<i class="fas fa-wifi text-info"></i> ' : '';
-        const statusIcon = col.is_active ? 
-            '<i class="fas fa-toggle-on text-success toggle-column-btn" title="Disable column"></i>' : 
+        const statusIcon = col.is_active ?
+            '<i class="fas fa-toggle-on text-success toggle-column-btn" title="Disable column"></i>' :
             '<i class="fas fa-toggle-off text-secondary toggle-column-btn" title="Enable column"></i>';
-        const editIcon = col.is_active && col.source_type === 'manual' ? 
+        const editIcon = col.is_active && col.source_type === 'manual' ?
             `<i class="fas fa-edit edit-column-btn ml-1" data-column-id="${col.id}" title="Edit column"></i>` : '';
-        
+
         return `<div class="column-header" data-column-id="${col.id}">
             ${icon}<span class="column-title ${!col.is_active ? 'text-muted' : ''}">${col.column_name}</span>
             <span class="column-points ${!col.is_active ? 'text-muted' : ''}">${col.max_points}pts</span>
@@ -273,7 +273,7 @@ $(document).ready(function() {
             student_number: studentNumber,
             score: score === '' ? null : parseFloat(score)
         };
-        
+
         updateSaveButton();
     }
 
@@ -288,28 +288,41 @@ $(document).ready(function() {
     }
 
     // Toggle column enable/disable
-    $(document).on('click', '.toggle-column-btn', function(e) {
+    $(document).on('click', '.toggle-column-btn', function (e) {
+        e.preventDefault(); // Add this to prevent any default action
         e.stopPropagation();
+
         const columnHeader = $(this).closest('.column-header');
         const columnId = columnHeader.data('column-id');
         const column = findColumnById(columnId);
-        
-        if (!column) return;
+
+        console.log('Toggle clicked for column:', columnId, column);
+
+        if (!column) {
+            toastr.error('Column not found');
+            return false; // Explicitly return false
+        }
 
         if (!column.is_active) {
             // Show config modal before enabling
             openEnableColumnModal(column);
         } else {
             // Directly disable
-            toggleColumnStatus(columnId, false);
+            if (confirm('Are you sure you want to disable this column? Scores will be hidden from calculations.')) {
+                toggleColumnStatus(columnId, false);
+            }
         }
+
+        return false; // Prevent any event bubbling
     });
 
     function openEnableColumnModal(column) {
+        console.log('Opening enable modal for column:', column);
+
         $('#enableColumnId').val(column.id);
         $('#enableColumnName').text(column.column_name);
         $('#enableMaxPoints').val(column.max_points);
-        
+
         // Load quizzes with current quarter ID
         loadQuizzesForEnable(column.quiz_id);
         $('#enableColumnModal').modal('show');
@@ -317,54 +330,73 @@ $(document).ready(function() {
 
     function loadQuizzesForEnable(currentQuizId) {
         console.log('Loading quizzes for quarter:', currentQuarterId);
-        
+
         if (!currentQuarterId) {
             console.error('No quarter ID set');
+            toastr.error('Please select a quarter first');
             $('#enableQuizId').html('<option value="">Manual Entry</option>');
             return;
         }
-        
+
+        // Show loading state
+        $('#enableQuizId').html('<option value="">Loading quizzes...</option>');
+
         $.ajax({
             url: API_ROUTES.getQuizzes,
             type: 'GET',
             data: { quarter_id: currentQuarterId },
-            success: function(response) {
+            success: function (response) {
                 console.log('Quiz response:', response);
-                
-                let options = '<option value="">Manual Entry</option>';
-                if (response.success && response.data && response.data.length > 0) {
-                    response.data.forEach(quiz => {
-                        const selected = quiz.id == currentQuizId ? 'selected' : '';
-                        options += `<option value="${quiz.id}" ${selected} data-points="${quiz.total_points}">
-                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${quiz.total_points}pts)
+
+                let options = '<option value="">Manual Entry (No Quiz Link)</option>';
+
+                if (response.success) {
+                    if (response.data && response.data.length > 0) {
+                        response.data.forEach(quiz => {
+                            const selected = quiz.id == currentQuizId ? 'selected' : '';
+                            const points = quiz.total_points || 0;
+                            options += `<option value="${quiz.id}" ${selected} data-points="${points}">
+                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
                         </option>`;
-                    });
+                        });
+                        toastr.info(`Found ${response.data.length} available quiz(zes)`);
+                    } else {
+                        toastr.warning(response.message || 'No quizzes available for this quarter');
+                    }
                 } else {
-                    console.log('No quizzes available for this quarter');
+                    toastr.error(response.message || 'Failed to load quizzes');
                 }
+
                 $('#enableQuizId').html(options);
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 console.error('Failed to load quizzes:', xhr);
-                toastr.error('Failed to load available quizzes');
-                $('#enableQuizId').html('<option value="">Manual Entry</option>');
+                const errorMsg = xhr.responseJSON?.message || 'Failed to load available quizzes';
+                toastr.error(errorMsg);
+                $('#enableQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
             }
         });
     }
 
-    $('#enableQuizId').change(function() {
+    $('#enableQuizId').change(function () {
         const selected = $(this).find('option:selected');
-        if (selected.val()) {
+        const quizId = selected.val();
+
+        console.log('Quiz selected:', quizId);
+
+        if (quizId) {
             const points = selected.data('points');
-            if (points) {
+            console.log('Quiz points:', points);
+
+            if (points && points > 0) {
                 $('#enableMaxPoints').val(points);
+                toastr.info(`Max points set to ${points} from quiz`);
             }
         }
     });
-
-    $('#enableColumnForm').submit(function(e) {
+    $('#enableColumnForm').submit(function (e) {
         e.preventDefault();
-        
+
         const columnId = $('#enableColumnId').val();
         const maxPoints = parseInt($('#enableMaxPoints').val());
         const quizId = $('#enableQuizId').val();
@@ -373,18 +405,24 @@ $(document).ready(function() {
     });
 
     function toggleColumnStatus(columnId, isActive, maxPoints = null, quizId = null) {
-        const data = { is_active: isActive };
-        
+        const data = {
+            is_active: isActive ? 1 : 0  // Ensure it's sent as integer
+        };
+
         if (isActive && maxPoints) {
-            data.max_points = maxPoints;
+            data.max_points = parseInt(maxPoints);
             data.quiz_id = quizId || null;
         }
+
+        console.log('Toggling column:', columnId, data);
 
         $.ajax({
             url: API_ROUTES.toggleColumn.replace('__COLUMN_ID__', columnId),
             type: 'POST',
             data: data,
-            success: function(response) {
+            success: function (response) {
+                console.log('Toggle response:', response);
+
                 if (response.success) {
                     toastr.success(response.message);
                     $('#enableColumnModal').modal('hide');
@@ -393,13 +431,15 @@ $(document).ready(function() {
                     toastr.error(response.message || 'Failed to update column');
                 }
             },
-            error: function() {
-                toastr.error('Failed to update column');
+            error: function (xhr) {
+                console.error('Toggle error:', xhr);
+                const errorMsg = xhr.responseJSON?.message || 'Failed to update column';
+                toastr.error(errorMsg);
             }
         });
     }
 
-    $(document).on('click', '.edit-column-btn', function(e) {
+    $(document).on('click', '.edit-column-btn', function (e) {
         e.stopPropagation();
         const columnId = $(this).data('column-id');
         openEditColumnModal(columnId);
@@ -412,7 +452,7 @@ $(document).ready(function() {
         $('#editColumnId').val(column.id);
         $('#editColumnName').val(column.column_name);
         $('#editMaxPoints').val(column.max_points);
-        
+
         loadQuizzesForEdit(column.quiz_id);
         $('#editColumnModal').modal('show');
     }
@@ -428,52 +468,64 @@ $(document).ready(function() {
 
     function loadQuizzesForEdit(currentQuizId) {
         console.log('Loading quizzes for edit, quarter:', currentQuarterId);
-        
+
         if (!currentQuarterId) {
             console.error('No quarter ID set');
+            toastr.error('Please select a quarter first');
             $('#editQuizId').html('<option value="">Manual Entry</option>');
             return;
         }
-        
+
+        // Show loading state
+        $('#editQuizId').html('<option value="">Loading quizzes...</option>');
+
         $.ajax({
             url: API_ROUTES.getQuizzes,
             type: 'GET',
             data: { quarter_id: currentQuarterId },
-            success: function(response) {
+            success: function (response) {
                 console.log('Quiz response for edit:', response);
-                
-                let options = '<option value="">Manual Entry</option>';
-                if (response.success && response.data && response.data.length > 0) {
-                    response.data.forEach(quiz => {
-                        const selected = quiz.id == currentQuizId ? 'selected' : '';
-                        options += `<option value="${quiz.id}" ${selected} data-points="${quiz.total_points}">
-                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${quiz.total_points}pts)
+
+                let options = '<option value="">Manual Entry (No Quiz Link)</option>';
+
+                if (response.success) {
+                    if (response.data && response.data.length > 0) {
+                        response.data.forEach(quiz => {
+                            const selected = quiz.id == currentQuizId ? 'selected' : '';
+                            const points = quiz.total_points || 0;
+                            options += `<option value="${quiz.id}" ${selected} data-points="${points}">
+                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
                         </option>`;
-                    });
+                        });
+                    }
                 }
+
                 $('#editQuizId').html(options);
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 console.error('Failed to load quizzes for edit:', xhr);
                 toastr.error('Failed to load available quizzes');
-                $('#editQuizId').html('<option value="">Manual Entry</option>');
+                $('#editQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
             }
         });
     }
 
-    $('#editQuizId').change(function() {
+    $('#editQuizId').change(function () {
         const selected = $(this).find('option:selected');
-        if (selected.val()) {
+        const quizId = selected.val();
+
+        if (quizId) {
             const points = selected.data('points');
-            if (points) {
+            if (points && points > 0) {
                 $('#editMaxPoints').val(points);
+                toastr.info(`Max points updated to ${points} from quiz`);
             }
         }
     });
 
-    $('#editColumnForm').submit(function(e) {
+    $('#editColumnForm').submit(function (e) {
         e.preventDefault();
-        
+
         const columnId = $('#editColumnId').val();
         const maxPoints = parseInt($('#editMaxPoints').val());
         const quizId = $('#editQuizId').val();
@@ -485,7 +537,7 @@ $(document).ready(function() {
                 max_points: maxPoints,
                 quiz_id: quizId || null
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     toastr.success('Column updated successfully');
                     $('#editColumnModal').modal('hide');
@@ -494,24 +546,24 @@ $(document).ready(function() {
                     toastr.error(response.message || 'Failed to update column');
                 }
             },
-            error: function() {
+            error: function () {
                 toastr.error('Failed to update column');
             }
         });
     });
 
-    $('#saveChangesBtn').click(function() {
+    $('#saveChangesBtn').click(function () {
         if (Object.keys(pendingChanges).length === 0) return;
 
         const scores = Object.values(pendingChanges);
         const btn = $(this);
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
-        
+
         $.ajax({
             url: API_ROUTES.batchUpdate,
             type: 'POST',
             data: { scores: scores },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     toastr.success('All changes saved successfully');
                     loadGradebook(currentQuarterId);
@@ -520,7 +572,7 @@ $(document).ready(function() {
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
                 }
             },
-            error: function() {
+            error: function () {
                 toastr.error('Failed to save changes');
                 btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
             }
@@ -614,38 +666,42 @@ $(document).ready(function() {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    $('#exportBtn').click(function() {
+
+
+
+    
+    $('#exportBtn').click(function () {
         $('#exportModal').modal('show');
     });
 
-    $('#exportForm').submit(function(e) {
+    $('#exportForm').submit(function (e) {
         e.preventDefault();
-        
+
         const btn = $('#exportForm button[type="submit"]');
-        
+
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
-        
+
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = API_ROUTES.exportGradebook;
-        
+
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = '_token';
         csrfInput.value = $('meta[name="csrf-token"]').attr('content');
         form.appendChild(csrfInput);
-        
+
         const quarterInput = document.createElement('input');
         quarterInput.type = 'hidden';
         quarterInput.name = 'quarter_id';
         quarterInput.value = currentQuarterId;
         form.appendChild(quarterInput);
-        
+
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
-        
-        setTimeout(function() {
+
+        setTimeout(function () {
             btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
             $('#exportModal').modal('hide');
             toastr.success('Export started! Your download should begin shortly.');

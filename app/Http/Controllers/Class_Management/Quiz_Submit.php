@@ -46,7 +46,8 @@ class Quiz_Submit extends MainController
                     'message' => 'No active quiz attempt found'
                 ], 403);
             }
-
+            $quarterId = $quiz->quarter_id;
+            $semesterId = $quiz->semester_id;
             // Check time expiration
             if ($quiz->time_limit) {
                 $startedAt = Carbon::parse($attempt->started_at);
@@ -217,6 +218,8 @@ class Quiz_Submit extends MainController
                 ->where('id', $attempt->id)
                 ->update([
                     'score' => $score,
+                    'semester_id' => $semesterId,  // ADD THIS
+                    'quarter_id' => $quarterId,     // ADD THIS
                     'submitted_at' => now(),
                     'status' => $hasEssay ? 'submitted' : 'graded',
                     'updated_at' => now()

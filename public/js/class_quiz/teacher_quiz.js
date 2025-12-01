@@ -342,10 +342,8 @@ $(document).ready(function() {
         questions.push(question);
         updateQuestionList();
         
-        // Clear form but keep the same type
         $('#questionText').val('');
         
-        // Reset options/answers based on type
         if (selectedType === 'multiple_choice' || selectedType === 'multiple_answer') {
             $('#optionsList').empty();
             for (let i = 0; i < 4; i++) addOptionRow(selectedType);
@@ -557,8 +555,20 @@ $(document).ready(function() {
 
     function saveQuiz() {
         const title = $('#quizTitle').val().trim();
-        if (!title) { showToast('warning', 'Enter quiz title'); return; }
-        if (questions.length === 0) { showToast('warning', 'Add at least one question'); return; }
+        const quarterId = parseInt($('#quizQuarter').val());
+        
+        if (!title) { 
+            showToast('warning', 'Enter quiz title'); 
+            return; 
+        }
+        if (!quarterId || isNaN(quarterId)) {
+            showToast('warning', 'Quarter information is missing');
+            return;
+        }
+        if (questions.length === 0) { 
+            showToast('warning', 'Add at least one question'); 
+            return; 
+        }
 
         const data = {
             title,
@@ -566,7 +576,8 @@ $(document).ready(function() {
             time_limit: parseInt($('#timeLimit').val()) || null,
             passing_score: parseFloat($('#passingScore').val()),
             max_attempts: parseInt($('#maxAttempts').val()),
-            quarter_id: QUARTER_ID || null,
+            semester_id: SEMESTER_ID,
+            quarter_id: quarterId,
             questions
         };
 
@@ -611,6 +622,7 @@ $(document).ready(function() {
 
     function populateForm(data) {
         $('#quizTitle').val(data.quiz.title);
+        $('#quizQuarter').val(data.quiz.quarter_id);
         $('#timeLimit').val(data.quiz.time_limit || '');
         $('#passingScore').val(data.quiz.passing_score);
         $('#maxAttempts').val(data.quiz.max_attempts);

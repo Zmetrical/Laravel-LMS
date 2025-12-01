@@ -74,20 +74,28 @@
     <div class="card-body">
         <form id="quizSettingsForm">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Quiz Title <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="quizTitle" placeholder="e.g., Chapter 1 Quiz" required>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Lesson</label>
                         <input type="text" class="form-control" value="{{ $lesson->title }}" readonly>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Quarter</label>
+                        <input type="text" class="form-control" value="{{ $quarters->firstWhere('id', $defaultQuarterId)->name ?? 'N/A' }}" readonly>
+                        <input type="hidden" id="quizQuarter" value="{{ $defaultQuarterId }}">
+                    </div>
+                </div>
             </div>
             <div class="row">
+
                 <div class="col-md-4">
                     <div class="form-group">
                         <label>Time Limit (Minutes)</label>
@@ -276,7 +284,8 @@
     const LESSON_ID = {{ $lesson->id }};
     const IS_EDIT = {{ $isEdit ?? false ? 'true' : 'false' }};
     const MAX_OPTIONS = 10;
-    const QUARTER_ID = {{ $quarterId ?? 'null' }};
+    const SEMESTER_ID = {{ $semesterId ?? 'null' }};
+    const DEFAULT_QUARTER_ID = {{ $defaultQuarterId ?? 'null' }};
     
     @if($isEdit ?? false)
         const QUIZ_ID = {{ $quiz->id ?? 0 }};
