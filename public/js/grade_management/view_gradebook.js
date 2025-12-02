@@ -328,6 +328,10 @@ $(document).ready(function () {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
+    $('#editBtn').on('click', function() {
+        window.location.href = API_ROUTES.editGradebook;
+    });
+
     $('#exportBtn').click(function () {
         if (!currentQuarterId) {
             toastr.warning('Please select a quarter first');

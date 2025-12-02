@@ -201,6 +201,9 @@
                     </h3>
                 </div>
                 <div class="col-md-6 text-right">
+                    <button class="btn btn-primary btn-sm" id="editBtn">
+                         Edit Gradebook
+                    </button>
                     <button class="btn btn-primary btn-sm" id="exportBtn">
                         <i class="fas fa-file-excel"></i> Export to Excel
                     </button>
@@ -382,6 +385,7 @@
         const QUARTERS = @json($quarters);
         const CLASS_INFO = @json($class);
         const API_ROUTES = {
+            editGradebook: "{{ route('teacher.gradebook.edit', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
             exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"
         };

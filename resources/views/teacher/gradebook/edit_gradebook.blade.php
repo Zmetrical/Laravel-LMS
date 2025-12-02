@@ -155,7 +155,6 @@
                     <h3 class="mb-1">
                         <i class="fas fa-book"></i> <span id="className">{{ $class->class_name }}</span>
                     </h3>
-                    <p class="text-muted mb-0">{{ $class->class_code }}</p>
                 </div>
                 <div class="col-md-6 text-right">
                     <div class="d-inline-block quarter-selector mr-2">
