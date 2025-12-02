@@ -12,16 +12,15 @@
             font-weight: 600;
             vertical-align: top;
             padding: 10px 5px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-        .summary-header th {
-            background-color: #343a40 !important;
-            color: #fff !important;
-            font-weight: 600;
-            vertical-align: top;
-            padding: 10px 5px;
-        }
+
         .jsgrid-cell {
             padding: 8px 5px;
+            text-align: center;
         }
         
         .jsgrid-cell input {
@@ -56,6 +55,10 @@
             background-color: #f5f5f5 !important;
             opacity: 0.6;
         }
+
+        .component-header {
+            background-color: #495057 !important;
+        }
         
         .column-header {
             display: flex;
@@ -75,6 +78,12 @@
             font-size: 11px;
             opacity: 0.9;
             font-weight: normal;
+        }
+
+        .online-badge {
+            font-size: 10px;
+            padding: 2px 5px;
+            margin-left: 3px;
         }
         
         .edit-column-btn, .toggle-column-btn {
@@ -96,6 +105,7 @@
         .table-scroll-wrapper {
             overflow-x: auto;
             margin-bottom: 15px;
+            -webkit-overflow-scrolling: touch;
         }
 
         #saveChangesBtn {
@@ -133,8 +143,68 @@
             font-size: 12px;
         }
 
-        .quarter-selector {
-            max-width: 250px;
+        .gender-separator .jsgrid-cell {
+            background-color: #6c757d !important;
+            color: #fff !important;
+            font-weight: 700;
+            text-align: left !important;
+            padding: 8px 10px !important;
+        }
+
+        .student-info {
+            text-align: left !important;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            background-color: #fff;
+        }
+
+        .student-info::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #dee2e6;
+        }
+
+        .total-cell {
+            background-color: #e9ecef;
+            font-weight: 600;
+        }
+
+        .btn-group-quarter .btn {
+            border-radius: 0;
+        }
+
+        .btn-group-quarter .btn:first-child {
+            border-top-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        .btn-group-quarter .btn:last-child {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            margin: 0;
+            font-weight: 600;
+            white-space: nowrap;
         }
     </style>
 @endsection
@@ -143,7 +213,7 @@
     <ol class="breadcrumb breadcrumb-custom">
         <li class="breadcrumb-item"><a href="{{ route('teacher.home') }}">Home</a></li>
         <li class="breadcrumb-item"><a href="{{ route('teacher.list_class') }}">Classes</a></li>
-        <li class="breadcrumb-item active">Gradebook</li>
+        <li class="breadcrumb-item active">Edit Gradebook</li>
     </ol>
 @endsection
 
@@ -153,20 +223,44 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <h3 class="mb-1">
-                        <i class="fas fa-book"></i> <span id="className">{{ $class->class_name }}</span>
+                        <i class="fas fa-book"></i> {{ $class->class_name }}
                     </h3>
                 </div>
+
                 <div class="col-md-6 text-right">
-                    <div class="d-inline-block quarter-selector mr-2">
-                        <select class="form-control form-control-sm" id="quarterSelector">
-                            @foreach($quarters as $quarter)
-                                <option value="{{ $quarter->id }}">{{ $quarter->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <button class="btn btn-primary btn-sm" id="exportBtn">
-                        <i class="fas fa-file-excel"></i> Export to Excel
+                    <button class="btn btn-outline-secondary btn-sm" id="viewBtn">
+                         Back to View
                     </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <div class="card card-dark card-outline">
+        <div class="card-body">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label>Quarter:</label>
+                    <div class="btn-group btn-group-sm btn-group-quarter" role="group">
+                        @foreach($quarters as $quarter)
+                            <button type="button" 
+                                    class="btn btn-outline-secondary quarter-btn" 
+                                    data-quarter="{{ $quarter->id }}">
+                                {{ $quarter->name }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>Section:</label>
+                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;">
+                        <option value="">All Sections</option>
+                        @foreach($sections as $section)
+                            <option value="{{ $section->id }}">{{ $section->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
         </div>
@@ -194,11 +288,6 @@
                         <i class="fas fa-clipboard-check"></i> Quarterly Assessment
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="summary-tab" data-toggle="pill" href="#summary" role="tab">
-                        <i class="fas fa-chart-bar"></i> Summary
-                    </a>
-                </li>
             </ul>
         </div>
         <div class="card-body">
@@ -224,35 +313,9 @@
                 <div class="tab-pane fade" id="qa" role="tabpanel">
                     <div class="mb-2">
                         <span class="text-muted" id="qaColumnCount"></span>
-                        <span class="text-info ml-2"><i class="fas fa-info-circle"></i> Click toggle icon on column header to enable/disable</span>
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="qaGrid"></div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="summary" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm">
-                            <thead class="summary-header">
-                                <tr>
-                                    <th class="pb-4">USN</th>
-                                    <th class="pb-4">Student Name</th>
-                                    <th class="text-center">Written Work<br><small id="wwPercLabel">({{ $class->ww_perc }}%)</small></th>
-                                    <th class="text-center">Performance Task<br><small id="ptPercLabel">({{ $class->pt_perc }}%)</small></th>
-                                    <th class="text-center">Quarterly Assessment<br><small id="qaPercLabel">({{ $class->qa_perce }}%)</small></th>
-                                    <th class="text-center pb-4">Initial Grade</th>
-                                    <th class="text-center pb-4">Quarterly Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryTableBody">
-                                <tr>
-                                    <td colspan="7" class="text-center">
-                                        <i class="fas fa-spinner fa-spin"></i> Loading...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -332,34 +395,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Export Modal -->
-    <div class="modal fade" id="exportModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary">
-                    <h5 class="modal-title text-white"><i class="fas fa-file-excel"></i> Export Gradebook</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <form id="exportForm">
-                    <div class="modal-body">
-
-                        <p class="mb-0"><strong>Selected Quarter:</strong> <span id="exportQuarterName"></span></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-download"></i> Download Excel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @section('scripts')
@@ -371,14 +406,14 @@
         const MAX_PT_COLUMNS = 10;
         const MAX_QA_COLUMNS = 1;
         const QUARTERS = @json($quarters);
-const API_ROUTES = {
-    getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
-    toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
-    updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
-    batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
-    getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
-    exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"
-};
+        const API_ROUTES = {
+            viewGradebook: "{{ route('teacher.gradebook.view', ['classId' => $classId]) }}",
+            getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
+            toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
+            updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
+            batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
+            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}"
+        };
     </script>
     
     @if(isset($scripts))

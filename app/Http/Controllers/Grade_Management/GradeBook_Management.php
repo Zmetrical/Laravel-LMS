@@ -80,12 +80,18 @@ class GradeBook_Management extends MainController
             ->orderBy('q.order_number')
             ->select('q.*')
             ->get();
-
+        // Get sections for this class
+        $sections = DB::table('sections as sec')
+            ->join('section_class_matrix as scm', 'sec.id', '=', 'scm.section_id')
+            ->where('scm.class_id', $classId)
+            ->select('sec.id', 'sec.name', 'sec.code')
+            ->get();
         $data = [
             'scripts' => ['grade_management/edit_gradebook.js'],
             'classId' => $classId,
             'class' => $class,
-            'quarters' => $quarters
+            'quarters' => $quarters,
+            'sections' => $sections
         ];
 
         return view('teacher.gradebook.edit_gradebook', $data);

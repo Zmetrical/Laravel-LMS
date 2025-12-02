@@ -18,25 +18,46 @@ $(document).ready(function () {
     let classInfo = null;
     let quarterInfo = null;
     let currentQuarterId = null;
+    let currentSectionId = null;
+    let allStudentsData = null;
     let pendingChanges = {};
     let wwGrid, ptGrid, qaGrid;
 
     // Initialize with first quarter
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
-        $('#quarterSelector').val(currentQuarterId);
+        $('.quarter-btn').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
         loadGradebook(currentQuarterId);
     }
 
-    // Quarter selector
-    $('#quarterSelector').change(function () {
-        currentQuarterId = $(this).val();
-        if (currentQuarterId) {
-            loadGradebook(currentQuarterId);
-        }
+    // Quarter button group click
+    $('.quarter-btn').click(function () {
+        const quarterId = $(this).data('quarter');
+        if (quarterId === currentQuarterId) return;
+
+        $('.quarter-btn').removeClass('btn-secondary active').addClass('btn-outline-secondary');
+        $(this).addClass('btn-secondary active').removeClass('btn-outline-secondary');
+        
+        currentQuarterId = quarterId;
+        loadGradebook(currentQuarterId);
+    });
+
+    $('#viewBtn').on('click', function() {
+        window.location.href = API_ROUTES.viewGradebook;
+    });
+
+    // Section filter
+    $('#sectionFilter').change(function () {
+        currentSectionId = $(this).val();
+        filterAndRenderData();
     });
 
     function loadGradebook(quarterId) {
+        showTabLoading();
+        
+        // Destroy existing grids first
+        destroyAllGrids();
+        
         $.ajax({
             url: API_ROUTES.getGradebook,
             type: 'GET',
@@ -46,25 +67,67 @@ $(document).ready(function () {
                     gradebookData = response.data;
                     classInfo = response.data.class;
                     quarterInfo = response.data.quarter;
+                    allStudentsData = response.data.students;
                     currentQuarterId = quarterId;
                     pendingChanges = {};
 
-                    // Update export modal quarter name
-                    $('#exportQuarterName').text(quarterInfo.name);
-
-                    initializeGrids();
-                    calculateSummary();
+                    if (!allStudentsData || allStudentsData.length === 0) {
+                        toastr.info('No students enrolled in this class yet');
+                        clearAllGrids();
+                    } else {
+                        filterAndRenderData();
+                    }
+                    
                     updateSaveButton();
                     updateColumnCounts();
                 } else {
                     toastr.error('Failed to load gradebook');
+                    clearAllGrids();
                 }
             },
             error: function (xhr) {
                 toastr.error('Failed to load gradebook data');
                 console.error(xhr);
+                clearAllGrids();
             }
         });
+    }
+
+    function filterAndRenderData() {
+        if (!allStudentsData) return;
+
+        // Destroy existing grids before re-rendering
+        destroyAllGrids();
+
+        let filteredStudents = allStudentsData;
+
+        // Filter by section if selected
+        if (currentSectionId) {
+            filteredStudents = allStudentsData.filter(s => s.section_id == currentSectionId);
+        }
+
+        if (filteredStudents.length === 0) {
+            toastr.info('No students found for selected filters');
+            clearAllGrids();
+            return;
+        }
+
+        const filteredData = {
+            ...gradebookData,
+            students: filteredStudents
+        };
+
+        initializeGrids(filteredData);
+    }
+
+    function showTabLoading() {
+        const loadingHtml = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        $('#wwGrid, #ptGrid, #qaGrid').html(loadingHtml);
+    }
+
+    function clearAllGrids() {
+        const emptyHtml = '<div style="text-align:center;padding:40px;">No data available</div>';
+        $('#wwGrid, #ptGrid, #qaGrid').html(emptyHtml);
     }
 
     function updateColumnCounts() {
@@ -77,14 +140,20 @@ $(document).ready(function () {
         $('#qaColumnCount').text(`${qaActive}/${MAX_QA_COLUMNS} active`);
     }
 
-    function initializeGrids() {
-        initGrid('WW', '#wwGrid');
-        initGrid('PT', '#ptGrid');
-        initGrid('QA', '#qaGrid');
+    function initializeGrids(data) {
+        initGrid('WW', '#wwGrid', data);
+        initGrid('PT', '#ptGrid', data);
+        initGrid('QA', '#qaGrid', data);
     }
 
-    function initGrid(componentType, selector) {
-        const columns = gradebookData.columns[componentType] || [];
+    function initGrid(componentType, selector, data) {
+        const columns = data.columns[componentType] || [];
+        const students = data.students || [];
+
+        // Group students by gender
+        const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
+        const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
+        const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
 
         let fields = [
             {
@@ -92,14 +161,16 @@ $(document).ready(function () {
                 title: "USN",
                 type: "text",
                 width: 100,
-                editing: false
+                editing: false,
+                css: "student-info"
             },
             {
                 name: "full_name",
                 title: "Student Name",
                 type: "text",
                 width: 200,
-                editing: false
+                editing: false,
+                css: "student-info"
             }
         ];
 
@@ -120,6 +191,10 @@ $(document).ready(function () {
                 width: 90,
                 editing: !isOnline && col.is_active,
                 itemTemplate: function (value, item) {
+                    if (item._isGenderSeparator) {
+                        return '';
+                    }
+
                     if (isDisabled) {
                         return '<span class="text-muted">-</span>';
                     }
@@ -137,7 +212,7 @@ $(document).ready(function () {
                     return `<span id="${cellId}" class="${changedClass}">${val}</span>`;
                 },
                 editTemplate: function (value, item) {
-                    if (isDisabled || isOnline) {
+                    if (item._isGenderSeparator || isDisabled || isOnline) {
                         return `<span class="text-muted">-</span>`;
                     }
 
@@ -164,7 +239,9 @@ $(document).ready(function () {
                             if (newVal !== oldVal.toString()) {
                                 markChanged(col.id, item.student_number, newVal, cellId);
                                 item[col.column_name] = newVal === '' ? null : parseFloat(newVal);
-                                $(selector).jsGrid("refresh");
+                                
+                                // Don't refresh entire grid, just update the display
+                                $(`#${cellId}`).text(newVal === '' ? '' : parseFloat(newVal)).addClass('changed-cell-value');
                             }
                         })
                         .on('keypress', function (e) {
@@ -186,7 +263,12 @@ $(document).ready(function () {
                 type: "text",
                 width: 80,
                 editing: false,
+                css: "total-cell",
                 itemTemplate: function (value, item) {
+                    if (item._isGenderSeparator) {
+                        return '';
+                    }
+
                     let total = 0;
                     columns.forEach(col => {
                         if (col.is_active) {
@@ -197,7 +279,8 @@ $(document).ready(function () {
                         }
                     });
                     return `<strong>${total.toFixed(2)}</strong>`;
-                }
+                },
+                headerCss: "component-header"
             },
             {
                 name: "percentage",
@@ -205,7 +288,12 @@ $(document).ready(function () {
                 type: "text",
                 width: 80,
                 editing: false,
+                css: "total-cell",
                 itemTemplate: function (value, item) {
+                    if (item._isGenderSeparator) {
+                        return '';
+                    }
+
                     let total = 0;
                     columns.forEach(col => {
                         if (col.is_active) {
@@ -217,23 +305,46 @@ $(document).ready(function () {
                     });
                     const perc = totalMaxPoints > 0 ? (total / totalMaxPoints * 100).toFixed(2) : '0.00';
                     return `<strong>${perc}%</strong>`;
-                }
+                },
+                headerCss: "component-header"
             }
         );
 
-        const gridData = gradebookData.students.map(student => {
-            const row = {
-                student_number: student.student_number,
-                full_name: student.full_name
-            };
+        // Build grid data with gender separators
+        let gridData = [];
 
-            columns.forEach(col => {
-                const scoreData = student[componentType.toLowerCase()][col.column_name] || {};
-                row[col.column_name] = scoreData.score !== null ? parseFloat(scoreData.score) : null;
+        if (maleStudents.length > 0) {
+            gridData.push({
+                _isGenderSeparator: true,
+                student_number: '<i class="fas fa-mars"></i> MALE',
+                full_name: ''
             });
+            maleStudents.forEach(student => {
+                gridData.push(buildStudentRow(student, columns, componentType));
+            });
+        }
 
-            return row;
-        });
+        if (femaleStudents.length > 0) {
+            gridData.push({
+                _isGenderSeparator: true,
+                student_number: '<i class="fas fa-venus"></i> FEMALE',
+                full_name: ''
+            });
+            femaleStudents.forEach(student => {
+                gridData.push(buildStudentRow(student, columns, componentType));
+            });
+        }
+
+        if (otherStudents.length > 0) {
+            gridData.push({
+                _isGenderSeparator: true,
+                student_number: '<i class="fas fa-user"></i> OTHER',
+                full_name: ''
+            });
+            otherStudents.forEach(student => {
+                gridData.push(buildStudentRow(student, columns, componentType));
+            });
+        }
 
         $(selector).jsGrid({
             width: "100%",
@@ -243,7 +354,10 @@ $(document).ready(function () {
             paging: false,
             autoload: true,
             data: gridData,
-            fields: fields
+            fields: fields,
+            rowClass: function(item) {
+                return item._isGenderSeparator ? 'gender-separator' : '';
+            }
         });
 
         if (componentType === 'WW') wwGrid = $(selector).data('JSGrid');
@@ -251,8 +365,23 @@ $(document).ready(function () {
         if (componentType === 'QA') qaGrid = $(selector).data('JSGrid');
     }
 
+    function buildStudentRow(student, columns, componentType) {
+        const row = {
+            student_number: student.student_number,
+            full_name: student.full_name,
+            _isGenderSeparator: false
+        };
+
+        columns.forEach(col => {
+            const scoreData = student[componentType.toLowerCase()][col.column_name] || {};
+            row[col.column_name] = scoreData.score !== null ? parseFloat(scoreData.score) : null;
+        });
+
+        return row;
+    }
+
     function createColumnHeader(col) {
-        const icon = col.source_type === 'online' ? '<i class="fas fa-wifi text-info"></i> ' : '';
+        const badge = col.source_type === 'online' ? '<span class="badge badge-info online-badge">Online</span>' : '';
         const statusIcon = col.is_active ?
             '<i class="fas fa-toggle-on text-success toggle-column-btn" title="Disable column"></i>' :
             '<i class="fas fa-toggle-off text-secondary toggle-column-btn" title="Enable column"></i>';
@@ -260,7 +389,8 @@ $(document).ready(function () {
             `<i class="fas fa-edit edit-column-btn ml-1" data-column-id="${col.id}" title="Edit column"></i>` : '';
 
         return `<div class="column-header" data-column-id="${col.id}">
-            ${icon}<span class="column-title ${!col.is_active ? 'text-muted' : ''}">${col.column_name}</span>
+            <span class="column-title ${!col.is_active ? 'text-muted' : ''}">${col.column_name}</span>
+            ${badge}
             <span class="column-points ${!col.is_active ? 'text-muted' : ''}">${col.max_points}pts</span>
             <div class="mt-1">${statusIcon}${editIcon}</div>
         </div>`;
@@ -289,56 +419,45 @@ $(document).ready(function () {
 
     // Toggle column enable/disable
     $(document).on('click', '.toggle-column-btn', function (e) {
-        e.preventDefault(); // Add this to prevent any default action
+        e.preventDefault();
         e.stopPropagation();
 
         const columnHeader = $(this).closest('.column-header');
         const columnId = columnHeader.data('column-id');
         const column = findColumnById(columnId);
 
-        console.log('Toggle clicked for column:', columnId, column);
-
         if (!column) {
             toastr.error('Column not found');
-            return false; // Explicitly return false
+            return false;
         }
 
         if (!column.is_active) {
-            // Show config modal before enabling
             openEnableColumnModal(column);
         } else {
-            // Directly disable
             if (confirm('Are you sure you want to disable this column? Scores will be hidden from calculations.')) {
                 toggleColumnStatus(columnId, false);
             }
         }
 
-        return false; // Prevent any event bubbling
+        return false;
     });
 
     function openEnableColumnModal(column) {
-        console.log('Opening enable modal for column:', column);
-
         $('#enableColumnId').val(column.id);
         $('#enableColumnName').text(column.column_name);
         $('#enableMaxPoints').val(column.max_points);
 
-        // Load quizzes with current quarter ID
         loadQuizzesForEnable(column.quiz_id);
         $('#enableColumnModal').modal('show');
     }
 
     function loadQuizzesForEnable(currentQuizId) {
-        console.log('Loading quizzes for quarter:', currentQuarterId);
-
         if (!currentQuarterId) {
-            console.error('No quarter ID set');
             toastr.error('Please select a quarter first');
             $('#enableQuizId').html('<option value="">Manual Entry</option>');
             return;
         }
 
-        // Show loading state
         $('#enableQuizId').html('<option value="">Loading quizzes...</option>');
 
         $.ajax({
@@ -346,8 +465,6 @@ $(document).ready(function () {
             type: 'GET',
             data: { quarter_id: currentQuarterId },
             success: function (response) {
-                console.log('Quiz response:', response);
-
                 let options = '<option value="">Manual Entry (No Quiz Link)</option>';
 
                 if (response.success) {
@@ -356,8 +473,8 @@ $(document).ready(function () {
                             const selected = quiz.id == currentQuizId ? 'selected' : '';
                             const points = quiz.total_points || 0;
                             options += `<option value="${quiz.id}" ${selected} data-points="${points}">
-                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
-                        </option>`;
+                                ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
+                            </option>`;
                         });
                         toastr.info(`Found ${response.data.length} available quiz(zes)`);
                     } else {
@@ -370,7 +487,6 @@ $(document).ready(function () {
                 $('#enableQuizId').html(options);
             },
             error: function (xhr) {
-                console.error('Failed to load quizzes:', xhr);
                 const errorMsg = xhr.responseJSON?.message || 'Failed to load available quizzes';
                 toastr.error(errorMsg);
                 $('#enableQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
@@ -382,18 +498,15 @@ $(document).ready(function () {
         const selected = $(this).find('option:selected');
         const quizId = selected.val();
 
-        console.log('Quiz selected:', quizId);
-
         if (quizId) {
             const points = selected.data('points');
-            console.log('Quiz points:', points);
-
             if (points && points > 0) {
                 $('#enableMaxPoints').val(points);
                 toastr.info(`Max points set to ${points} from quiz`);
             }
         }
     });
+
     $('#enableColumnForm').submit(function (e) {
         e.preventDefault();
 
@@ -406,7 +519,7 @@ $(document).ready(function () {
 
     function toggleColumnStatus(columnId, isActive, maxPoints = null, quizId = null) {
         const data = {
-            is_active: isActive ? 1 : 0  // Ensure it's sent as integer
+            is_active: isActive ? 1 : 0
         };
 
         if (isActive && maxPoints) {
@@ -414,29 +527,52 @@ $(document).ready(function () {
             data.quiz_id = quizId || null;
         }
 
-        console.log('Toggling column:', columnId, data);
+        const btn = $('#enableColumnForm button[type="submit"], #disableColumnBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
 
         $.ajax({
             url: API_ROUTES.toggleColumn.replace('__COLUMN_ID__', columnId),
             type: 'POST',
             data: data,
             success: function (response) {
-                console.log('Toggle response:', response);
-
                 if (response.success) {
                     toastr.success(response.message);
                     $('#enableColumnModal').modal('hide');
+                    
+                    // Destroy existing grids before reload
+                    destroyAllGrids();
+                    
+                    // Reload gradebook data
                     loadGradebook(currentQuarterId);
                 } else {
                     toastr.error(response.message || 'Failed to update column');
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
                 }
             },
             error: function (xhr) {
-                console.error('Toggle error:', xhr);
                 const errorMsg = xhr.responseJSON?.message || 'Failed to update column';
                 toastr.error(errorMsg);
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
             }
         });
+    }
+
+    function destroyAllGrids() {
+        try {
+            if (wwGrid) $('#wwGrid').jsGrid('destroy');
+            if (ptGrid) $('#ptGrid').jsGrid('destroy');
+            if (qaGrid) $('#qaGrid').jsGrid('destroy');
+        } catch (e) {
+            console.log('Grid destroy error (safe to ignore):', e);
+        }
+        
+        // Clear grid variables
+        wwGrid = null;
+        ptGrid = null;
+        qaGrid = null;
+        
+        // Clear HTML
+        $('#wwGrid, #ptGrid, #qaGrid').empty();
     }
 
     $(document).on('click', '.edit-column-btn', function (e) {
@@ -467,16 +603,12 @@ $(document).ready(function () {
     }
 
     function loadQuizzesForEdit(currentQuizId) {
-        console.log('Loading quizzes for edit, quarter:', currentQuarterId);
-
         if (!currentQuarterId) {
-            console.error('No quarter ID set');
             toastr.error('Please select a quarter first');
             $('#editQuizId').html('<option value="">Manual Entry</option>');
             return;
         }
 
-        // Show loading state
         $('#editQuizId').html('<option value="">Loading quizzes...</option>');
 
         $.ajax({
@@ -484,8 +616,6 @@ $(document).ready(function () {
             type: 'GET',
             data: { quarter_id: currentQuarterId },
             success: function (response) {
-                console.log('Quiz response for edit:', response);
-
                 let options = '<option value="">Manual Entry (No Quiz Link)</option>';
 
                 if (response.success) {
@@ -494,8 +624,8 @@ $(document).ready(function () {
                             const selected = quiz.id == currentQuizId ? 'selected' : '';
                             const points = quiz.total_points || 0;
                             options += `<option value="${quiz.id}" ${selected} data-points="${points}">
-                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
-                        </option>`;
+                                ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
+                            </option>`;
                         });
                     }
                 }
@@ -503,7 +633,6 @@ $(document).ready(function () {
                 $('#editQuizId').html(options);
             },
             error: function (xhr) {
-                console.error('Failed to load quizzes for edit:', xhr);
                 toastr.error('Failed to load available quizzes');
                 $('#editQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
             }
@@ -530,6 +659,9 @@ $(document).ready(function () {
         const maxPoints = parseInt($('#editMaxPoints').val());
         const quizId = $('#editQuizId').val();
 
+        const btn = $(this).find('button[type="submit"]');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+
         $.ajax({
             url: API_ROUTES.updateColumn.replace('__COLUMN_ID__', columnId),
             type: 'PUT',
@@ -541,13 +673,18 @@ $(document).ready(function () {
                 if (response.success) {
                     toastr.success('Column updated successfully');
                     $('#editColumnModal').modal('hide');
+                    
+                    // Destroy grids before reload
+                    destroyAllGrids();
                     loadGradebook(currentQuarterId);
                 } else {
                     toastr.error(response.message || 'Failed to update column');
+                    btn.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
                 }
             },
             error: function () {
                 toastr.error('Failed to update column');
+                btn.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
             }
         });
     });
@@ -566,6 +703,9 @@ $(document).ready(function () {
             success: function (response) {
                 if (response.success) {
                     toastr.success('All changes saved successfully');
+                    
+                    // Destroy grids before reload
+                    destroyAllGrids();
                     loadGradebook(currentQuarterId);
                 } else {
                     toastr.error('Failed to save changes');
@@ -579,81 +719,6 @@ $(document).ready(function () {
         });
     });
 
-    function calculateSummary() {
-        let summaryHtml = '';
-        let grades = [];
-
-        gradebookData.students.forEach(student => {
-            let wwTotal = 0, wwMax = 0;
-            Object.entries(student.ww || {}).forEach(([key, item]) => {
-                if (item.is_active) {
-                    if (item.score !== null && item.score !== undefined) {
-                        wwTotal += parseFloat(item.score);
-                    }
-                    wwMax += parseFloat(item.max_points);
-                }
-            });
-            const wwPerc = wwMax > 0 ? (wwTotal / wwMax * 100) : 0;
-            const wwWeighted = wwPerc * (classInfo.ww_perc / 100);
-
-            let ptTotal = 0, ptMax = 0;
-            Object.entries(student.pt || {}).forEach(([key, item]) => {
-                if (item.is_active) {
-                    if (item.score !== null && item.score !== undefined) {
-                        ptTotal += parseFloat(item.score);
-                    }
-                    ptMax += parseFloat(item.max_points);
-                }
-            });
-            const ptPerc = ptMax > 0 ? (ptTotal / ptMax * 100) : 0;
-            const ptWeighted = ptPerc * (classInfo.pt_perc / 100);
-
-            let qaTotal = 0, qaMax = 0;
-            Object.entries(student.qa || {}).forEach(([key, item]) => {
-                if (item.is_active) {
-                    if (item.score !== null && item.score !== undefined) {
-                        qaTotal += parseFloat(item.score);
-                    }
-                    qaMax += parseFloat(item.max_points);
-                }
-            });
-            const qaPerc = qaMax > 0 ? (qaTotal / qaMax * 100) : 0;
-            const qaWeighted = qaPerc * (classInfo.qa_perce / 100);
-
-            const initialGrade = wwWeighted + ptWeighted + qaWeighted;
-            const quarterlyGrade = Math.round(initialGrade);
-
-            grades.push(quarterlyGrade);
-
-            summaryHtml += `
-                <tr>
-                    <td>${escapeHtml(student.student_number)}</td>
-                    <td>${escapeHtml(student.full_name)}</td>
-                    <td class="text-center">${wwWeighted.toFixed(2)}</td>
-                    <td class="text-center">${ptWeighted.toFixed(2)}</td>
-                    <td class="text-center">${qaWeighted.toFixed(2)}</td>
-                    <td class="text-center">${initialGrade.toFixed(2)}</td>
-                    <td class="text-center bg-secondary"><strong>${quarterlyGrade}</strong></td>
-                </tr>
-            `;
-        });
-
-        $('#summaryTableBody').html(summaryHtml || '<tr><td colspan="7" class="text-center">No data available</td></tr>');
-
-        if (grades.length > 0) {
-            const avg = grades.reduce((a, b) => a + b, 0) / grades.length;
-            const highest = Math.max(...grades);
-            const lowest = Math.min(...grades);
-            const passing = grades.filter(g => g >= 75).length;
-            const passingRate = (passing / grades.length * 100).toFixed(0);
-
-            $('#avgGrade').text(avg.toFixed(2));
-            $('#highestGrade').text(highest.toFixed(2));
-            $('#lowestGrade').text(lowest.toFixed(2));
-            $('#passingRate').text(passingRate + '%');
-        }
-    }
-
     function escapeHtml(text) {
         if (!text) return '';
         const map = {
@@ -665,43 +730,4 @@ $(document).ready(function () {
         };
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
-
-    
-    $('#exportBtn').click(function () {
-        $('#exportModal').modal('show');
-    });
-
-    $('#exportForm').submit(function (e) {
-        e.preventDefault();
-
-        const btn = $('#exportForm button[type="submit"]');
-
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
-
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = API_ROUTES.exportGradebook;
-
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = $('meta[name="csrf-token"]').attr('content');
-        form.appendChild(csrfInput);
-
-        const quarterInput = document.createElement('input');
-        quarterInput.type = 'hidden';
-        quarterInput.name = 'quarter_id';
-        quarterInput.value = currentQuarterId;
-        form.appendChild(quarterInput);
-
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-
-        setTimeout(function () {
-            btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
-            $('#exportModal').modal('hide');
-            toastr.success('Export started! Your download should begin shortly.');
-        }, 1000);
-    });
 });
