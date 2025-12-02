@@ -236,7 +236,6 @@
             
         </div>
     </div>
-
     <div class="card card-dark card-outline">
         <div class="card-body">
             <div class="filter-controls">

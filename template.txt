@@ -10,12 +10,24 @@ B64 to B113
 K7 - Grade & Section
 S7 - Teacher
 S8 - Semester
+// 1ST or 2ND only option
 
 AE7 - Subject
-
+AG5 - School Year
 ----------------------
 1ST (1st Quarter) SHEET
 ----------------------
+
+F9 - =IF('INPUT DATA'!AE8="","",INDEX('Helper(IMPORTANT!)'!$AR$2:$AR$5,MATCH(AE8,'Helper(IMPORTANT!)'!$AQ$2:$AQ$5,0)))
+// Written Work ($percentage of score)
+
+S9 - =IF('INPUT DATA'!AE8="","",INDEX('Helper(IMPORTANT!)'!$AS$2:$AS$5,MATCH(AE8,'Helper(IMPORTANT!)'!$AQ$2:$AQ$5,0)))
+// Performance Task ($percentage of score)
+
+AF9 - =IF('INPUT DATA'!AE8="","",INDEX('Helper(IMPORTANT!)'!$AT$2:$AT$5,MATCH(AE8,'Helper(IMPORTANT!)'!$AQ$2:$AQ$5,0)))
+// Quarterly Assessment ($percentage of score)
+
+
 K7 - ='INPUT DATA'!K7
 S7 - ='INPUT DATA'!S7
 S8 - ='INPUT DATA'!S8
