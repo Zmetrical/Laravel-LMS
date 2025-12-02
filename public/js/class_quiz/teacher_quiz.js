@@ -556,7 +556,9 @@ $(document).ready(function() {
     function saveQuiz() {
         const title = $('#quizTitle').val().trim();
         const quarterId = parseInt($('#quizQuarter').val());
-        
+        const availableFrom = $('#availableFrom').val() || null;
+         const availableUntil = $('#availableUntil').val() || null;
+
         if (!title) { 
             showToast('warning', 'Enter quiz title'); 
             return; 

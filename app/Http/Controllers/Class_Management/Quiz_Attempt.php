@@ -32,6 +32,23 @@ class Quiz_Attempt extends MainController
             abort(404, 'Resource not found');
         }
 
+        // Check quiz availability
+        $now = Carbon::now();
+        $isAvailable = true;
+        $availabilityMessage = '';
+
+        if ($quiz->available_from && $now->lt(Carbon::parse($quiz->available_from))) {
+            $isAvailable = false;
+            $availabilityMessage = 'This quiz will be available on ' . 
+                Carbon::parse($quiz->available_from)->format('F j, Y \a\t g:i A');
+        }
+
+        if ($quiz->available_until && $now->gt(Carbon::parse($quiz->available_until))) {
+            $isAvailable = false;
+            $availabilityMessage = 'This quiz closed on ' . 
+                Carbon::parse($quiz->available_until)->format('F j, Y \a\t g:i A');
+        }
+
         // Check for active in-progress attempt
         $activeAttempt = DB::table('student_quiz_attempts')
             ->where('student_number', $studentNumber)
@@ -93,7 +110,9 @@ class Quiz_Attempt extends MainController
             'attempts' => $attempts,
             'questionCount' => $questionCount,
             'totalPoints' => $totalPoints,
-            'canAttempt' => $totalAttempts < $quiz->max_attempts
+            'canAttempt' => $totalAttempts < $quiz->max_attempts && $isAvailable,
+            'isAvailable' => $isAvailable,
+            'availabilityMessage' => $availabilityMessage
         ];
 
         return view('modules.quiz.view_quiz', $data);
@@ -125,9 +144,32 @@ class Quiz_Attempt extends MainController
             ->where('status', 1)
             ->first();
 
-        if (!$class || !$lesson || !$quiz) {
-            abort(404, 'Resource not found');
-        }
+            if (!$class || !$lesson || !$quiz) {
+                abort(404, 'Resource not found');
+            }
+
+            // ADD THIS NEW CODE:
+            // Check quiz availability before starting
+            $now = Carbon::now();
+            if ($quiz->available_from && $now->lt(Carbon::parse($quiz->available_from))) {
+                DB::rollBack();
+                return redirect()->route('student.class.quiz.view', [
+                    'classId' => $classId,
+                    'lessonId' => $lessonId,
+                    'quizId' => $quizId
+                ])->with('error', 'This quiz is not yet available. It will open on ' . 
+                    Carbon::parse($quiz->available_from)->format('F j, Y \a\t g:i A'));
+            }
+
+            if ($quiz->available_until && $now->gt(Carbon::parse($quiz->available_until))) {
+                DB::rollBack();
+                return redirect()->route('student.class.quiz.view', [
+                    'classId' => $classId,
+                    'lessonId' => $lessonId,
+                    'quizId' => $quizId
+                ])->with('error', 'This quiz has closed. It was available until ' . 
+                    Carbon::parse($quiz->available_until)->format('F j, Y \a\t g:i A'));
+            }
         $quarterId = $quiz->quarter_id;
         $semesterId = $quiz->semester_id;
         DB::beginTransaction();

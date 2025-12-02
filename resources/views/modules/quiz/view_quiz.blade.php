@@ -21,7 +21,7 @@
 
 <div class="row">
     <!-- Quiz Information -->
-    <div class="col-md-8">
+    <div class="col-md-12">
         <div class="card">
             <div class="card-header bg-primary">
                 <h3 class="card-title text-white">
@@ -49,38 +49,75 @@
                 </div>
 
                 <hr>
+                    <div class="row">
+                        @if($quiz->available_from || $quiz->available_until)
+
+                        <div class="col-md-6">
+                            @if($quiz->available_from)
+                                    <p>
+                                        <strong>Available From:</strong> 
+                                        {{ \Carbon\Carbon::parse($quiz->available_from)->format('F j, Y \a\t g:i A') }}
+                                    </p>
+                                @endif
+                                @if($quiz->available_until)
+                                    <p>
+                                        <strong>Available Until:</strong> 
+                                        {{ \Carbon\Carbon::parse($quiz->available_until)->format('F j, Y \a\t g:i A') }}
+                                    </p>
+                                @endif
+                                
+                                @if($isAvailable)
+                                    <span class="badge badge-success">
+                                        <i class="fas fa-check-circle"></i> Currently Available
+                                    </span>
+                                @else
+                                    <span class="badge badge-warning">
+                                        <i class="fas fa-clock"></i> Not Available
+                                    </span>
+                                @endif
+                            </div>
+                        @endif
+
+
+                        <div class="col-md-6">
+                            <p>
+                                <strong>Attempts Used:</strong> 
+                                {{ $attempts->count() }} / {{ $quiz->max_attempts }}
+                            </p>
+                            @if($attempts->count() > 0)
+                                @php
+                                    $bestAttempt = $attempts->sortByDesc('score')->first();
+                                    $percentage = $bestAttempt->total_points > 0 
+                                        ? round(($bestAttempt->score / $bestAttempt->total_points) * 100, 2) 
+                                        : 0;
+                                @endphp
+                                <p>
+                                    <strong>Best Score:</strong> 
+                                    {{ $bestAttempt->score }} / {{ $bestAttempt->total_points }}
+                                    ({{ $percentage }}%)
+                                    @if($percentage >= $quiz->passing_score)
+                                        <span class="badge badge-passed">Passed</span>
+                                    @else
+                                        <span class="badge badge-failed">Failed</span>
+                                    @endif
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                <hr>
 
                 <!-- Attempt Status -->
                 <div class="row">
-                    <div class="col-md-6">
-                        <h5>Your Progress</h5>
-                        <p>
-                            <strong>Attempts Used:</strong> 
-                            {{ $attempts->count() }} / {{ $quiz->max_attempts }}
-                        </p>
-                        @if($attempts->count() > 0)
-                            @php
-                                $bestAttempt = $attempts->sortByDesc('score')->first();
-                                $percentage = $bestAttempt->total_points > 0 
-                                    ? round(($bestAttempt->score / $bestAttempt->total_points) * 100, 2) 
-                                    : 0;
-                            @endphp
-                            <p>
-                                <strong>Best Score:</strong> 
-                                {{ $bestAttempt->score }} / {{ $bestAttempt->total_points }}
-                                ({{ $percentage }}%)
-                                @if($percentage >= $quiz->passing_score)
-                                    <span class="badge badge-passed">Passed</span>
-                                @else
-                                    <span class="badge badge-failed">Failed</span>
-                                @endif
-                            </p>
-                        @endif
-                    </div>
-                    <div class="col-md-6 text-right">
-                        @if($canAttempt)
+
+                    <div class="col-md-12 text-center">
+                        @if(!$isAvailable)
+                            <div class="alert alert-warning">
+                                <i class="fas fa-clock"></i>
+                                {{ $availabilityMessage }}
+                            </div>
+                        @elseif($canAttempt)
                             <a href="{{ route('student.class.quiz.start', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id]) }}" 
-                               class="btn btn-primary btn-lg">
+                            class="btn btn-primary btn-lg">
                                 <i class="fas fa-play"></i> 
                                 @if($attempts->count() > 0)
                                     Take Quiz Again
@@ -95,64 +132,69 @@
                             </div>
                         @endif
                     </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Previous Attempts -->
-        @if($attempts->count() > 0)
-        <div class="card mt-3">
-            <div class="card-header bg-primary">
-                <h3 class="card-title text-white">
-                    <i class="fas fa-history"></i> Previous Attempts
-                </h3>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Attempt</th>
-                            <th>Date & Time</th>
-                            <th>Score</th>
-                            <th>Percentage</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($attempts as $attempt)
-                            @php
-                                $percentage = $attempt->total_points > 0 
-                                    ? round(($attempt->score / $attempt->total_points) * 100, 2) 
-                                    : 0;
-                                $isPassed = $percentage >= $quiz->passing_score;
-                            @endphp
-                            <tr class="attempt-row">
-                                <td><strong>#{{ $attempt->attempt_number }}</strong></td>
-                                <td>{{ date('M d, Y h:i A', strtotime($attempt->submitted_at)) }}</td>
-                                <td>{{ $attempt->score }} / {{ $attempt->total_points }}</td>
-                                <td>
-                                    <strong>{{ $percentage }}%</strong>
-                                </td>
-                                <td>
-                                    @if($attempt->status === 'graded')
-                                        @if($isPassed)
-                                            <span class="badge badge-passed">Passed</span>
-                                        @else
-                                            <span class="badge badge-failed">Failed</span>
-                                        @endif
-                                    @else
-                                        <span class="badge badge-pending">Pending Review</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        @endif
-    </div>
+    
 
+
+</div>
+
+<div class="row-md-6">
+    <!-- Previous Attempts -->
+    @if($attempts->count() > 0)
+    <div class="card mt-3">
+        <div class="card-header bg-primary">
+            <h3 class="card-title text-white">
+                <i class="fas fa-history"></i> Previous Attempts
+            </h3>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Attempt</th>
+                        <th>Date & Time</th>
+                        <th>Score</th>
+                        <th>Percentage</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($attempts as $attempt)
+                        @php
+                            $percentage = $attempt->total_points > 0 
+                                ? round(($attempt->score / $attempt->total_points) * 100, 2) 
+                                : 0;
+                            $isPassed = $percentage >= $quiz->passing_score;
+                        @endphp
+                        <tr class="attempt-row">
+                            <td><strong>#{{ $attempt->attempt_number }}</strong></td>
+                            <td>{{ date('M d, Y h:i A', strtotime($attempt->submitted_at)) }}</td>
+                            <td>{{ $attempt->score }} / {{ $attempt->total_points }}</td>
+                            <td>
+                                <strong>{{ $percentage }}%</strong>
+                            </td>
+                            <td>
+                                @if($attempt->status === 'graded')
+                                    @if($isPassed)
+                                        <span class="badge badge-passed">Passed</span>
+                                    @else
+                                        <span class="badge badge-failed">Failed</span>
+                                    @endif
+                                @else
+                                    <span class="badge badge-pending">Pending Review</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 </div>
 
 
