@@ -284,9 +284,11 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         });
 
         Route::prefix('gradebook')->name('gradebook.')->group(function() {
-            Route::get('/{classId}', [GradeBook_Management::class, 'list_gradebook'])
+            Route::get('/{classId}/edit', [GradeBook_Management::class, 'edit_gradebook'])
+                ->name('edit');
+            Route::get('/{classId}/view', [GradeBook_Management::class, 'view_gradebook'])
                 ->name('view');
-            
+
             Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
                 ->name('data');
                 

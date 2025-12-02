@@ -1,4 +1,4 @@
-console.log("gradebook class");
+console.log("gradebook edit");
 
 $(document).ready(function () {
     $.ajaxSetup({

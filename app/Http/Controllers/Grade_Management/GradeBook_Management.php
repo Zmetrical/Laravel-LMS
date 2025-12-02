@@ -16,7 +16,49 @@ class GradeBook_Management extends MainController
     const MAX_PT_COLUMNS = 10;
     const MAX_QA_COLUMNS = 1;
     
-    public function list_gradebook($classId) 
+
+    /**
+     * View-only gradebook page for exporting
+     */
+    public function view_gradebook($classId) 
+    {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
+
+        if (!$hasAccess) {
+            abort(403, 'Unauthorized access to this class');
+        }
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        // Get active quarters for current semester
+        $quarters = DB::table('quarters as q')
+            ->join('semesters as s', 'q.semester_id', '=', 's.id')
+            ->where('s.status', 'active')
+            ->orderBy('q.order_number')
+            ->select('q.*')
+            ->get();
+        // Get sections for this class
+        $sections = DB::table('sections as sec')
+            ->join('section_class_matrix as scm', 'sec.id', '=', 'scm.section_id')
+            ->where('scm.class_id', $classId)
+            ->select('sec.id', 'sec.name', 'sec.code')
+            ->get();
+        $data = [
+            'scripts' => ['grade_management/view_gradebook.js'],
+            'classId' => $classId,
+            'class' => $class,
+            'quarters' => $quarters,
+            'sections' => $sections
+        ];
+
+        return view('teacher.gradebook.view_gradebook', $data);
+    }
+    public function edit_gradebook($classId) 
     {
         $teacher = Auth::guard('teacher')->user();
         
@@ -40,123 +82,164 @@ class GradeBook_Management extends MainController
             ->get();
 
         $data = [
-            'scripts' => ['grade_management/page_gradebook.js'],
+            'scripts' => ['grade_management/edit_gradebook.js'],
             'classId' => $classId,
             'class' => $class,
             'quarters' => $quarters
         ];
 
-        return view('teacher.gradebook.page_gradebook', $data);
+        return view('teacher.gradebook.edit_gradebook', $data);
     }
 
-    /**
-     * Get gradebook structure and data for a specific quarter
-     */
-    public function getGradebookData($classId, Request $request)
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
-            
-            $hasAccess = DB::table('teacher_class_matrix')
-                ->where('teacher_id', $teacher->id)
-                ->where('class_id', $classId)
-                ->exists();
+/**
+ * Get gradebook structure and data for a specific quarter
+ */
+public function getGradebookData($classId, Request $request)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
 
-            if (!$hasAccess) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $quarterId = $request->input('quarter_id');
-            if (!$quarterId) {
-                return response()->json(['success' => false, 'message' => 'Quarter ID required'], 400);
-            }
-
-            $class = DB::table('classes')->where('id', $classId)->first();
-            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
-
-            // Get or create columns for this quarter
-            $this->ensureColumnsExist($class->class_code, $quarterId);
-
-            $columns = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('quarter_id', $quarterId)
-                ->orderBy('component_type')
-                ->orderBy('order_number')
-                ->get()
-                ->groupBy('component_type');
-
-            $students = $this->getEnrolledStudents($classId);
-
-            $scores = DB::table('gradebook_scores as gs')
-                ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
-                ->where('gc.class_code', $class->class_code)
-                ->where('gc.quarter_id', $quarterId)
-                ->select('gs.*', 'gc.component_type', 'gc.column_name')
-                ->get()
-                ->groupBy('student_number');
-
-            // Get quiz scores for online columns
-            $quizScores = $this->getQuizScores($columns, $students, $quarterId);
-
-            $gradebookData = [];
-            foreach ($students as $student) {
-                $studentScores = $scores->get($student->student_number, collect());
-                
-                $row = [
-                    'student_number' => $student->student_number,
-                    'full_name' => $student->full_name,
-                    'ww' => [],
-                    'pt' => [],
-                    'qa' => []
-                ];
-
-                foreach (['WW', 'PT', 'QA'] as $type) {
-                    $typeColumns = $columns->get($type, collect());
-                    foreach ($typeColumns as $col) {
-                        $score = $studentScores->firstWhere('column_name', $col->column_name);
-                        
-                        // Check if this column has quiz data
-                        $quizScore = null;
-                        if ($col->quiz_id && isset($quizScores[$col->quiz_id][$student->student_number])) {
-                            $quizScore = $quizScores[$col->quiz_id][$student->student_number];
-                        }
-                        
-                        $row[strtolower($type)][$col->column_name] = [
-                            'score' => $quizScore ?? ($score ? $score->score : null),
-                            'max_points' => $col->max_points,
-                            'source' => $col->source_type,
-                            'column_id' => $col->id,
-                            'is_active' => $col->is_active
-                        ];
-                    }
-                }
-
-                $gradebookData[] = $row;
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'class' => $class,
-                    'quarter' => $quarter,
-                    'columns' => $columns,
-                    'students' => $gradebookData
-                ]
-            ]);
-
-        } catch (Exception $e) {
-            \Log::error('Failed to load gradebook', [
-                'class_id' => $classId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load gradebook: ' . $e->getMessage()
-            ], 500);
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
+
+        $quarterId = $request->input('quarter_id');
+        if (!$quarterId) {
+            return response()->json(['success' => false, 'message' => 'Quarter ID required'], 400);
+        }
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        $quarter = DB::table('quarters')->where('id', $quarterId)->first();
+
+        // Get or create columns for this quarter
+        $this->ensureColumnsExist($class->class_code, $quarterId);
+
+        $columns = DB::table('gradebook_columns')
+            ->where('class_code', $class->class_code)
+            ->where('quarter_id', $quarterId)
+            ->orderBy('component_type')
+            ->orderBy('order_number')
+            ->get()
+            ->groupBy('component_type');
+
+        $students = $this->getEnrolledStudents($classId);
+
+        $scores = DB::table('gradebook_scores as gs')
+            ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
+            ->where('gc.class_code', $class->class_code)
+            ->where('gc.quarter_id', $quarterId)
+            ->select('gs.*', 'gc.component_type', 'gc.column_name')
+            ->get()
+            ->groupBy('student_number');
+
+        // Get quiz scores for online columns
+        $quizScores = $this->getQuizScores($columns, $students, $quarterId);
+
+        $gradebookData = [];
+        foreach ($students as $student) {
+            $studentScores = $scores->get($student->student_number, collect());
+            
+            $row = [
+                'student_number' => $student->student_number,
+                'full_name' => $student->full_name,
+                'gender' => $student->gender,
+                'section_id' => $student->section_id,
+                'ww' => [],
+                'pt' => [],
+                'qa' => []
+            ];
+
+            foreach (['WW', 'PT', 'QA'] as $type) {
+                $typeColumns = $columns->get($type, collect());
+                foreach ($typeColumns as $col) {
+                    $score = $studentScores->firstWhere('column_name', $col->column_name);
+                    
+                    // Check if this column has quiz data
+                    $quizScore = null;
+                    if ($col->quiz_id && isset($quizScores[$col->quiz_id][$student->student_number])) {
+                        $quizScore = $quizScores[$col->quiz_id][$student->student_number];
+                    }
+                    
+                    $row[strtolower($type)][$col->column_name] = [
+                        'score' => $quizScore ?? ($score ? $score->score : null),
+                        'max_points' => $col->max_points,
+                        'source' => $col->source_type,
+                        'column_id' => $col->id,
+                        'is_active' => $col->is_active
+                    ];
+                }
+            }
+
+            $gradebookData[] = $row;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'class' => $class,
+                'quarter' => $quarter,
+                'columns' => $columns,
+                'students' => $gradebookData
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to load gradebook', [
+            'class_id' => $classId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load gradebook: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+/**
+ * Get enrolled students with gender and section info
+ */
+private function getEnrolledStudents($classId)
+{
+    $class = DB::table('classes')->where('id', $classId)->first();
+
+    // Regular students (enrolled via section)
+    $regular = DB::table('students as s')
+        ->join('section_class_matrix as scm', 's.section_id', '=', 'scm.section_id')
+        ->where('scm.class_id', $classId)
+        ->where('s.student_type', 'regular')
+        ->select(
+            's.student_number',
+            's.gender',
+            's.section_id',
+            DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
+        );
+
+    // Irregular students (enrolled individually)
+    $irregular = DB::table('students as s')
+        ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
+        ->where('scm.class_code', $class->class_code)
+        ->where('scm.enrollment_status', 'enrolled')
+        ->where('s.student_type', 'irregular')
+        ->select(
+            's.student_number',
+            's.gender',
+            's.section_id',
+            DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
+        );
+
+    // Union both queries and order by gender then name
+    return $regular->union($irregular)
+        ->orderBy('gender')
+        ->orderBy('full_name')
+        ->get();
+}
 
 /**
  * Ensure all columns exist for a quarter
@@ -295,6 +378,8 @@ private function ensureColumnsExist($classCode, $quarterId)
         
         return $quizScores;
     }
+
+
 
     /**
      * Enable/activate a column
@@ -442,125 +527,96 @@ public function updateColumn(Request $request, $classId, $columnId)
     /**
      * Get available quizzes for mapping
      */
-public function getAvailableQuizzes($classId, Request $request)
-{
-    try {
-        $quarterId = $request->input('quarter_id');
-        
-        \Log::info('Getting quizzes', [
-            'class_id' => $classId,
-            'quarter_id' => $quarterId
-        ]);
-        
-        if (!$quarterId) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Quarter ID is required'
-            ], 400);
-        }
-        
-        $class = DB::table('classes')->where('id', $classId)->first();
-        
-        if (!$class) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Class not found'
-            ], 404);
-        }
+    public function getAvailableQuizzes($classId, Request $request)
+    {
+        try {
+            $quarterId = $request->input('quarter_id');
+            
+            \Log::info('Getting quizzes', [
+                'class_id' => $classId,
+                'quarter_id' => $quarterId
+            ]);
+            
+            if (!$quarterId) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Quarter ID is required'
+                ], 400);
+            }
+            
+            $class = DB::table('classes')->where('id', $classId)->first();
+            
+            if (!$class) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Class not found'
+                ], 404);
+            }
 
-        // Get already mapped quizzes for this quarter AND class
-        $mappedQuizIds = DB::table('gradebook_columns')
-            ->where('class_code', $class->class_code)
-            ->where('quarter_id', $quarterId)
-            ->whereNotNull('quiz_id')
-            ->where('is_active', 1) // Only consider active columns as "mapped"
-            ->pluck('quiz_id')
-            ->toArray();
-                
-        \Log::info('Mapped quiz IDs', ['ids' => $mappedQuizIds]);
+            // Get already mapped quizzes for this quarter AND class
+            $mappedQuizIds = DB::table('gradebook_columns')
+                ->where('class_code', $class->class_code)
+                ->where('quarter_id', $quarterId)
+                ->whereNotNull('quiz_id')
+                ->where('is_active', 1) // Only consider active columns as "mapped"
+                ->pluck('quiz_id')
+                ->toArray();
+                    
+            \Log::info('Mapped quiz IDs', ['ids' => $mappedQuizIds]);
 
-        // Get available quizzes - matching the quarter OR having no quarter assigned
-        $quizzes = DB::table('quizzes as q')
-            ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
-            ->where('l.class_id', $classId)
-            ->where('q.status', 1) // Only active quizzes
-            ->where(function($query) use ($quarterId) {
-                $query->where('q.quarter_id', $quarterId)
-                      ->orWhereNull('q.quarter_id');
-            })
-            ->whereNotIn('q.id', $mappedQuizIds)
-            ->select(
-                'q.id', 
-                'q.title',
-                'q.quarter_id',
-                'l.title as lesson_title',
-                DB::raw('(SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id) as total_points')
-            )
-            ->orderBy('l.title')
-            ->orderBy('q.title')
-            ->get();
-                
-        \Log::info('Available quizzes', [
-            'count' => $quizzes->count(),
-            'quizzes' => $quizzes->toArray()
-        ]);
+            // Get available quizzes - matching the quarter OR having no quarter assigned
+            $quizzes = DB::table('quizzes as q')
+                ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
+                ->where('l.class_id', $classId)
+                ->where('q.status', 1) // Only active quizzes
+                ->where(function($query) use ($quarterId) {
+                    $query->where('q.quarter_id', $quarterId)
+                        ->orWhereNull('q.quarter_id');
+                })
+                ->whereNotIn('q.id', $mappedQuizIds)
+                ->select(
+                    'q.id', 
+                    'q.title',
+                    'q.quarter_id',
+                    'l.title as lesson_title',
+                    DB::raw('(SELECT SUM(points) FROM quiz_questions WHERE quiz_id = q.id) as total_points')
+                )
+                ->orderBy('l.title')
+                ->orderBy('q.title')
+                ->get();
+                    
+            \Log::info('Available quizzes', [
+                'count' => $quizzes->count(),
+                'quizzes' => $quizzes->toArray()
+            ]);
 
-        // If no quizzes found, return helpful message
-        if ($quizzes->isEmpty()) {
+            // If no quizzes found, return helpful message
+            if ($quizzes->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'No available quizzes found for this quarter. Create a quiz first or assign an existing quiz to this quarter.'
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
-                'data' => [],
-                'message' => 'No available quizzes found for this quarter. Create a quiz first or assign an existing quiz to this quarter.'
+                'data' => $quizzes
             ]);
+
+        } catch (Exception $e) {
+            \Log::error('Failed to load quizzes', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load quizzes: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $quizzes
-        ]);
-
-    } catch (Exception $e) {
-        \Log::error('Failed to load quizzes', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load quizzes: ' . $e->getMessage()
-        ], 500);
     }
-}
         
-    /**
-     * Get enrolled students
-     */
-    private function getEnrolledStudents($classId)
-    {
-        $class = DB::table('classes')->where('id', $classId)->first();
-
-        $regular = DB::table('students as s')
-            ->join('section_class_matrix as scm', 's.section_id', '=', 'scm.section_id')
-            ->where('scm.class_id', $classId)
-            ->where('s.student_type', 'regular')
-            ->select(
-                's.student_number',
-                DB::raw("CONCAT(s.first_name, ' ', s.last_name) as full_name")
-            );
-
-        $irregular = DB::table('students as s')
-            ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
-            ->where('scm.class_code', $class->class_code)
-            ->where('s.student_type', 'irregular')
-            ->select(
-                's.student_number',
-                DB::raw("CONCAT(s.first_name, ' ', s.last_name) as full_name")
-            );
-
-        return $regular->union($irregular)
-            ->orderBy('full_name')
-            ->get();
-    }
 
     /**
      * Export gradebook to Excel using template
