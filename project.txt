@@ -144,10 +144,14 @@ CREATE TABLE `quarter_grades` (
 CREATE TABLE `quizzes` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `lesson_id` bigint(20) UNSIGNED NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
   `quarter_id` int(11) DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `time_limit` int(11) DEFAULT NULL COMMENT 'in minutes',
+  `available_until`  datetime DEFAULT NULL,
+  `available_from`  datetime DEFAULT NULL,
+
   `passing_score` decimal(5,2) DEFAULT 60.00,
   `max_attempts` int(11) DEFAULT 1,
   `show_results` tinyint(1) NOT NULL DEFAULT 1,

@@ -95,7 +95,6 @@
                 </div>
             </div>
             <div class="row">
-
                 <div class="col-md-4">
                     <div class="form-group">
                         <label>Time Limit (Minutes)</label>
@@ -114,6 +113,22 @@
                     <div class="form-group">
                         <label>Passing Score (%) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="passingScore" value="75" min="0" max="100" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Available From</label>
+                        <input type="datetime-local" class="form-control" id="availableFrom">
+                        <small class="form-text text-muted">Leave empty for immediate availability</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Available Until</label>
+                        <input type="datetime-local" class="form-control" id="availableUntil">
+                        <small class="form-text text-muted">Leave empty for no end date</small>
                     </div>
                 </div>
             </div>

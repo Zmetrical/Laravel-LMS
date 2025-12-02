@@ -666,9 +666,6 @@ $(document).ready(function () {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-
-
-
     
     $('#exportBtn').click(function () {
         $('#exportModal').modal('show');

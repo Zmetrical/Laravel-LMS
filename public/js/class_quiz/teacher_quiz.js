@@ -569,11 +569,20 @@ $(document).ready(function() {
             showToast('warning', 'Add at least one question'); 
             return; 
         }
-
+        if (availableFrom && availableUntil) {
+            const fromDate = new Date(availableFrom);
+            const untilDate = new Date(availableUntil);
+            if (untilDate <= fromDate) {
+                showToast('warning', 'End date must be after start date');
+                return;
+            }
+        }
         const data = {
             title,
             description: "",
             time_limit: parseInt($('#timeLimit').val()) || null,
+            available_from: availableFrom,
+            available_until: availableUntil,
             passing_score: parseFloat($('#passingScore').val()),
             max_attempts: parseInt($('#maxAttempts').val()),
             semester_id: SEMESTER_ID,
@@ -627,6 +636,17 @@ $(document).ready(function() {
         $('#passingScore').val(data.quiz.passing_score);
         $('#maxAttempts').val(data.quiz.max_attempts);
 
+            // Add these lines for date fields
+    if (data.quiz.available_from) {
+        const fromDate = new Date(data.quiz.available_from);
+        $('#availableFrom').val(fromDate.toISOString().slice(0, 16));
+    }
+    if (data.quiz.available_until) {
+        const untilDate = new Date(data.quiz.available_until);
+        $('#availableUntil').val(untilDate.toISOString().slice(0, 16));
+    }
+
+    
         questions = data.questions.map(q => {
             const mapped = {
                 question_text: q.question_text,

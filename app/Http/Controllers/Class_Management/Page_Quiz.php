@@ -153,6 +153,8 @@ class Page_Quiz extends MainController
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'time_limit' => 'nullable|integer|min:1',
+                'available_from' => 'nullable|date',
+                'available_until' => 'nullable|date|after_or_equal:available_from',
                 'passing_score' => 'required|numeric|min:0|max:100',
                 'max_attempts' => 'required|integer|min:1|max:5',
                 'quarter_id' => 'required|integer|exists:quarters,id',
@@ -204,6 +206,8 @@ class Page_Quiz extends MainController
                 'title' => $request->title,
                 'description' => $request->description,
                 'time_limit' => $request->time_limit,
+                'available_from' => $request->available_from,
+                'available_until' => $request->available_until,
                 'passing_score' => $request->passing_score,
                 'max_attempts' => $request->max_attempts,
                 'show_results' => 1,
@@ -270,6 +274,8 @@ class Page_Quiz extends MainController
                 'title' => 'required|string|max:255',
                 'quarter_id' => 'required|integer|exists:quarters,id',
                 'semester_id' => 'required|integer|exists:semesters,id',
+                'available_from' => 'nullable|date',
+                'available_until' => 'nullable|date|after_or_equal:available_from',
                 'questions' => 'required|array|min:1'
             ]);
 
@@ -311,6 +317,8 @@ class Page_Quiz extends MainController
                 'title' => $request->title,
                 'description' => $request->description,
                 'time_limit' => $request->time_limit,
+                'available_from' => $request->available_from,
+                'available_until' => $request->available_until,
                 'passing_score' => $request->passing_score,
                 'max_attempts' => $request->max_attempts,
                 'semester_id' => $request->semester_id,
@@ -381,6 +389,42 @@ class Page_Quiz extends MainController
             return response()->json(['success' => true, 'message' => 'Quiz deleted']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function checkAvailability($classId, $lessonId, $quizId)
+    {
+        try {
+            $quiz = DB::table('quizzes')
+                ->where('id', $quizId)
+                ->where('lesson_id', $lessonId)
+                ->where('status', 1)
+                ->first();
+
+            if (!$quiz) {
+                return response()->json(['available' => false, 'message' => 'Quiz not found'], 404);
+            }
+
+            $now = now();
+            $isAvailable = true;
+            $message = '';
+
+            if ($quiz->available_from && $now->lt($quiz->available_from)) {
+                $isAvailable = false;
+                $message = 'Quiz will be available from ' . date('F j, Y g:i A', strtotime($quiz->available_from));
+            } elseif ($quiz->available_until && $now->gt($quiz->available_until)) {
+                $isAvailable = false;
+                $message = 'Quiz closed on ' . date('F j, Y g:i A', strtotime($quiz->available_until));
+            }
+
+            return response()->json([
+                'available' => $isAvailable,
+                'message' => $message,
+                'available_from' => $quiz->available_from,
+                'available_until' => $quiz->available_until
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['available' => false, 'message' => 'Error checking availability'], 500);
         }
     }
 }
