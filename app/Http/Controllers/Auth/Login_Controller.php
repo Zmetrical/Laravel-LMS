@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User_Management\Student;
+use App\Models\Admin;
 
 class Login_Controller extends MainController
 {
@@ -167,7 +168,7 @@ class Login_Controller extends MainController
         ]);
 
         // Check if admin exists
-        $admin = AdminModel::where('email', $request->email)->first();
+        $admin = Admin::where('email', $request->email)->first();
         
         if (!$admin) {
             Log::warning('Admin not found', [

@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'guest' => \App\Http\Middleware\RedirectMiddleware::class,
+            'admin' => \App\Http\Middleware\RedirectIfNotAdmin::class,
+            'teacher' => \App\Http\Middleware\RedirectIfNotTeacher::class,
+            'student' => \App\Http\Middleware\RedirectIfNotStudent::class,
+
+
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

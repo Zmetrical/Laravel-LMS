@@ -210,14 +210,14 @@
                 </div>
 
                 <!-- Logout Button at Bottom -->
-                <div class="sidebar-bottom p-3">
-                    <form id="logoutForm" action="{{ route('student.logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-danger btn-block">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                        </button>
-                    </form>
-                </div>
+                    <div class="sidebar-bottom p-3">
+                        <form method="POST" action="{{ route('student.logout') }}" id="student-logout-form">
+                            @csrf
+                            <button type="submit" class="btn btn-danger btn-block">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </button>
+                        </form>
+                    </div>
             </aside>
 
             <!-- Content Wrapper -->
