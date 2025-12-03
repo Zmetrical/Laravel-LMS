@@ -44,10 +44,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Auth Routes (accessible without authentication)
     Route::middleware('guest:admin')->group(function () {
         Route::get('/login', [Admin::class, 'login'])->name('login');
-        Route::post('/auth', [Admin::class, 'auth_admin'])->name('auth');
+        Route::post('/auth', [Login_Controller::class, 'auth_admin'])->name('auth');
     });
 
-    Route::post('/logout', [Admin::class, 'logout_admin'])->name('logout');
+    Route::post('/logout', [Login_Controller::class, 'logout_admin'])->name('logout');
 
     // Protected Routes (require authentication)
     Route::middleware('auth:admin')->group(function () {
