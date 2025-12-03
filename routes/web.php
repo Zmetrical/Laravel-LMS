@@ -33,7 +33,7 @@ use App\Http\Middleware\QuizAttemptMiddleware;
 // PUBLIC ROUTES
 // ===========================================================================
 
-Route::get('/', [DeveloperController::class, 'index']);
+Route::get('/', [DeveloperController::class, 'index'])->name('index');
 
 
 // ===========================================================================
@@ -51,7 +51,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Protected Routes (require authentication)
     Route::middleware('auth:admin')->group(function () {
-        Route::get('/', [Admin::class, 'index'])->name('home');
+        Route::get('/home', [Admin::class, 'index'])->name('home');
 
         // ---------------------------------------------------------------------------
         // School Year MANAGEMENT
@@ -171,7 +171,7 @@ Route::prefix('student')->name('student.')->group(function () {
 
     // Authenticated Routes
     Route::middleware('auth:student')->group(function () {
-        Route::get('/', [StudentController::class, 'index'])->name('home');
+        Route::get('/home', [StudentController::class, 'index'])->name('home');
         Route::post('/logout', [Login_Controller::class, 'logout_student'])->name('logout');
 
         // Class Pages
@@ -186,7 +186,7 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/my_grades/details/{classId}', [Grade_list::class, 'getClassGradeDetails'])
             ->name('grades.details');
 
-        // Class Content Pages
+        // Class Content Pagesz
         Route::prefix('class/{classId}')->name('class.')->group(function () {
             // Lessons Page
             Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('lessons');

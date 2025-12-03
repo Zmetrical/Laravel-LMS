@@ -14,13 +14,24 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'guest' => \App\Http\Middleware\RedirectMiddleware::class,
-            'admin' => \App\Http\Middleware\RedirectIfNotAdmin::class,
-            'teacher' => \App\Http\Middleware\RedirectIfNotTeacher::class,
-            'student' => \App\Http\Middleware\RedirectIfNotStudent::class,
-
+            'guest' => \App\Http\Middleware\RedirectMiddleware::class
 
         ]);
+
+        $middleware->redirectGuestsTo(function ($request) {
+            // Check which guard is being used based on the URL
+            if ($request->is('admin/*')) {
+                return route('admin.login');
+            }
+            if ($request->is('teacher/*')) {
+                return route('teacher.login');
+            }
+            if ($request->is('student/*')) {
+                return route('student.login');
+            }
+            
+            return route('index'); // default fallback
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
