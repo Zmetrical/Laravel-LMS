@@ -97,6 +97,7 @@ class GradeBook_Management extends MainController
         return view('teacher.gradebook.edit_gradebook', $data);
     }
 
+    
 /**
  * Get gradebook structure and data for a specific quarter
  */

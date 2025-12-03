@@ -49,7 +49,11 @@ return [
         'teacher' => [
             'driver' => 'session',
             'provider' => 'teachers',
-        ]
+        ],
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
     ],
 
     /*
@@ -85,6 +89,12 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\User_Management\Teacher::class,
         ],
+        // Add this admin provider
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Admin::class,
+        ],
+
     ],
 
     /*

@@ -34,7 +34,6 @@ use App\Http\Middleware\QuizAttemptMiddleware;
 // ===========================================================================
 
 Route::get('/', [DeveloperController::class, 'index']);
-Route::get('/login', fn() => view('auth.login'));
 
 
 // ===========================================================================
@@ -42,118 +41,91 @@ Route::get('/login', fn() => view('auth.login'));
 // ===========================================================================
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    // Auth Routes
-    Route::get('/login', [Admin::class, 'login'])->name('login');
-    Route::get('/', [Admin::class, 'index'])->name('home');
-
-
-    // ---------------------------------------------------------------------------
-    // School Year MANAGEMENT
-    // ---------------------------------------------------------------------------
-    Route::prefix('schoolyears')->group(function () {
-        Route::get('/', [Year_Management::class, 'list_schoolyear'])->name('schoolyears.index');
-        Route::get('/list', [Year_Management::class, 'getSchoolYearsData'])->name('schoolyears.list');
-        Route::post('/create', [Year_Management::class, 'createSchoolYear'])->name('schoolyears.create');
-        Route::put('/{id}/update', [Year_Management::class, 'updateSchoolYear'])->name('schoolyears.update');
-        Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
-
+    // Auth Routes (accessible without authentication)
+    Route::middleware('guest:admin')->group(function () {
+        Route::get('/login', [Admin::class, 'login'])->name('login');
+        Route::post('/auth', [Admin::class, 'auth_admin'])->name('auth');
     });
 
-    // Semester Management Routes
-    Route::prefix('semesters')->group(function () {
-        Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
-        Route::get('/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
-        Route::post('/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
-        Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
-        Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
-        Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
+    Route::post('/logout', [Admin::class, 'logout_admin'])->name('logout');
 
-        Route::get('/{semesterId}/quarters', [Year_Management::class, 'getQuartersData'])->name('quarters.list');
-        Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
-    });
+    // Protected Routes (require authentication)
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/', [Admin::class, 'index'])->name('home');
 
-    Route::prefix('grades')->name('grades.')->group(function () {
-        // View page
-        Route::get('/list', [Grade_Management::class, 'list_grades'])->name('list');
-        
-        // AJAX endpoints
-        Route::get('/api/classes', [Grade_Management::class, 'getClassesForFilter'])->name('classes');
-        Route::get('/api/semesters', [Grade_Management::class, 'getSemestersForFilter'])->name('semesters');
-        Route::get('/api/search', [Grade_Management::class, 'searchGrades'])->name('search');
-        Route::get('/api/details/{id}', [Grade_Management::class, 'getGradeDetails'])->name('details');
-    });
-
-    // ---------------------------------------------------------------------------
-    // USER MANAGEMENT
-    // ---------------------------------------------------------------------------
-    
-    Route::prefix('user_management')->group(function () {
-        // Student Pages
-        Route::get('/create_student', [User_Management::class, 'create_student'])->name('create_student');
-        Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
-        
-        Route::get('/get_sections/filter', [User_Management::class, 'getSectionsForFilter'])->name('sections.filter');
-
-        // Teacher Pages
-        Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
-        Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
-    });
-
-    // ---------------------------------------------------------------------------
-    // ENROLLMENT MANAGEMENT
-    // ---------------------------------------------------------------------------
-    
-    Route::prefix('enrollment_management')->group(function () {
-        // Section Pages
-        Route::get('/enroll_class', [Enroll_Management::class, 'enroll_class'])->name('enroll_class');
-        
-        // Route::get('/section-class-enrollment', [Enroll_Management::class, 'sectionClassEnrollment'])->name('section_class_enrollment');
-        
-        Route::prefix('sections')->group(function () {
-            Route::get('/', [SectionController::class, 'index'])
-                ->name('enrollment.sections');
-            
-            Route::get('/list', [SectionController::class, 'getSectionsList'])
-                ->name('sections.list');
-            
-            Route::get('/{id}/details', [SectionController::class, 'getSectionDetails'])
-                ->name('sections.details');
-            
-            Route::get('/{sectionId}/available-classes', [SectionController::class, 'getAvailableClasses'])
-                ->name('classes.available');
-            
-            Route::post('/{id}/enroll', [SectionController::class, 'enrollClass'])
-                ->name('sections.enroll');
-            
-            Route::delete('/{sectionId}/classes/{classId}', [SectionController::class, 'removeClass'])
-                ->name('sections.remove-class');
+        // ---------------------------------------------------------------------------
+        // School Year MANAGEMENT
+        // ---------------------------------------------------------------------------
+        Route::prefix('schoolyears')->group(function () {
+            Route::get('/', [Year_Management::class, 'list_schoolyear'])->name('schoolyears.index');
+            Route::get('/list', [Year_Management::class, 'getSchoolYearsData'])->name('schoolyears.list');
+            Route::post('/create', [Year_Management::class, 'createSchoolYear'])->name('schoolyears.create');
+            Route::put('/{id}/update', [Year_Management::class, 'updateSchoolYear'])->name('schoolyears.update');
+            Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
         });
 
-        // Student Pages
-        Route::get('/student_irreg_enroll', [Enroll_Management::class, 'studentIrregEnrollment'])->name('student_irreg_class_enrollment');
-        Route::get('/students/{id}/enrollment', [Enroll_Management::class, 'studentClassEnrollment'])->name('student_class_enrollment');
-        
-        // Class Pages
-        Route::get('/class-students', [Enroll_Management::class, 'classes_enrollment'])->name('classes.students.index');
-    });
+        // Semester Management Routes
+        Route::prefix('semesters')->group(function () {
+            Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
+            Route::get('/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
+            Route::post('/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
+            Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
+            Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
+            Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
+            Route::get('/{semesterId}/quarters', [Year_Management::class, 'getQuartersData'])->name('quarters.list');
+            Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
+        });
 
-    // ---------------------------------------------------------------------------
-    // CLASS MANAGEMENT
-    // ---------------------------------------------------------------------------
-    
-    Route::prefix('class_management')->group(function () {
-        Route::post('/insert_class', [Class_Management::class, 'insert_class'])->name('insert_class');
-        Route::get('/list_class', [Class_Management::class, 'list_class'])->name('list_class');
-        Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');
-        Route::get('/list_section', [Class_Management::class, 'list_section'])->name('list_section');
-    
-        Route::get('/get_class/{id}', [Class_Management::class, 'getClassData'])
-            ->name('get_class');
+        Route::prefix('grades')->name('grades.')->group(function () {
+            Route::get('/list', [Grade_Management::class, 'list_grades'])->name('list');
+            Route::get('/api/classes', [Grade_Management::class, 'getClassesForFilter'])->name('classes');
+            Route::get('/api/semesters', [Grade_Management::class, 'getSemestersForFilter'])->name('semesters');
+            Route::get('/api/search', [Grade_Management::class, 'searchGrades'])->name('search');
+            Route::get('/api/details/{id}', [Grade_Management::class, 'getGradeDetails'])->name('details');
+        });
 
-        // Update Class
-        Route::put('/update_class/{id}', [Class_Management::class, 'updateClass'])
-            ->name('update_class');
-    
+        // ---------------------------------------------------------------------------
+        // USER MANAGEMENT
+        // ---------------------------------------------------------------------------
+        Route::prefix('user_management')->group(function () {
+            Route::get('/create_student', [User_Management::class, 'create_student'])->name('create_student');
+            Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
+            Route::get('/get_sections/filter', [User_Management::class, 'getSectionsForFilter'])->name('sections.filter');
+            Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
+            Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
+        });
+
+        // ---------------------------------------------------------------------------
+        // ENROLLMENT MANAGEMENT
+        // ---------------------------------------------------------------------------
+        Route::prefix('enrollment_management')->group(function () {
+            Route::get('/enroll_class', [Enroll_Management::class, 'enroll_class'])->name('enroll_class');
+            
+            Route::prefix('sections')->group(function () {
+                Route::get('/', [SectionController::class, 'index'])->name('enrollment.sections');
+                Route::get('/list', [SectionController::class, 'getSectionsList'])->name('sections.list');
+                Route::get('/{id}/details', [SectionController::class, 'getSectionDetails'])->name('sections.details');
+                Route::get('/{sectionId}/available-classes', [SectionController::class, 'getAvailableClasses'])->name('classes.available');
+                Route::post('/{id}/enroll', [SectionController::class, 'enrollClass'])->name('sections.enroll');
+                Route::delete('/{sectionId}/classes/{classId}', [SectionController::class, 'removeClass'])->name('sections.remove-class');
+            });
+
+            Route::get('/student_irreg_enroll', [Enroll_Management::class, 'studentIrregEnrollment'])->name('student_irreg_class_enrollment');
+            Route::get('/students/{id}/enrollment', [Enroll_Management::class, 'studentClassEnrollment'])->name('student_class_enrollment');
+            Route::get('/class-students', [Enroll_Management::class, 'classes_enrollment'])->name('classes.students.index');
+        });
+
+        // ---------------------------------------------------------------------------
+        // CLASS MANAGEMENT
+        // ---------------------------------------------------------------------------
+        Route::prefix('class_management')->group(function () {
+            Route::post('/insert_class', [Class_Management::class, 'insert_class'])->name('insert_class');
+            Route::get('/list_class', [Class_Management::class, 'list_class'])->name('list_class');
+            Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');
+            Route::get('/list_section', [Class_Management::class, 'list_section'])->name('list_section');
+            Route::get('/get_class/{id}', [Class_Management::class, 'getClassData'])->name('get_class');
+            Route::put('/update_class/{id}', [Class_Management::class, 'updateClass'])->name('update_class');
+        });
     });
 });
 
@@ -193,6 +165,9 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/login', [StudentController::class, 'login'])->name('login');
         Route::post('/auth', [Login_Controller::class, 'auth_student'])->name('auth');
     });
+
+    // Logout - accessible when authenticated
+    Route::post('/logout', [Login_Controller::class, 'logout_student'])->name('logout');
 
     // Authenticated Routes
     Route::middleware('auth:student')->group(function () {
@@ -249,8 +224,13 @@ Route::prefix('student')->name('student.')->group(function () {
 
 Route::prefix('teacher')->name('teacher.')->group(function () {
     // Guest Routes
-    Route::get('/login', [TeacherController::class, 'login'])->name('login');
-    Route::post('/auth', [Login_Controller::class, 'auth_teacher'])->name('auth');
+    Route::middleware('guest:teacher')->group(function () {
+        Route::get('/login', [TeacherController::class, 'login'])->name('login');
+        Route::post('/auth', [Login_Controller::class, 'auth_teacher'])->name('auth');
+    });
+
+    // Logout - accessible when authenticated
+    Route::post('/logout', [Login_Controller::class, 'logout_teacher'])->name('logout');
 
     // Authenticated Routes
     Route::middleware('auth:teacher')->group(function () {
