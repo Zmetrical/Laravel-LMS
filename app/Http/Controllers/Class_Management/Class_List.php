@@ -64,6 +64,10 @@ public function getStudentClasses()
             $class->progress_percentage = $progress['percentage'];
             $class->completed_lectures = $progress['completed'];
             $class->total_lectures = $progress['total'];
+            
+            // ADD THIS: Get next incomplete lecture
+            $nextLecture = $this->getNextIncompleteLecture($student->student_number, $class->id);
+            $class->next_lecture = $nextLecture;
         }
 
         return response()->json([
@@ -82,6 +86,40 @@ public function getStudentClasses()
             'message' => 'Failed to load classes: ' . $e->getMessage()
         ], 500);
     }
+}
+
+/**
+ * Get the next incomplete lecture for a student in a class
+ */
+private function getNextIncompleteLecture($studentNumber, $classId)
+{
+    // Get the first lecture that is NOT completed
+    $nextLecture = DB::table('lectures')
+        ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+        ->leftJoin('student_lecture_progress as slp', function($join) use ($studentNumber) {
+            $join->on('lectures.id', '=', 'slp.lecture_id')
+                 ->where('slp.student_number', '=', $studentNumber);
+        })
+        ->where('lessons.class_id', $classId)
+        ->where('lectures.status', 1)
+        ->where('lessons.status', 1)
+        ->where(function($query) {
+            $query->whereNull('slp.is_completed')
+                  ->orWhere('slp.is_completed', 0);
+        })
+        ->select(
+            'lectures.id as lecture_id',
+            'lessons.id as lesson_id',
+            'lessons.title as lesson_title',
+            'lectures.title as lecture_title'
+        )
+        ->orderBy('lessons.order_number', 'asc')
+        ->orderBy('lessons.created_at', 'asc')
+        ->orderBy('lectures.order_number', 'asc')
+        ->orderBy('lectures.created_at', 'asc')
+        ->first();
+    
+    return $nextLecture;
 }
 
 /**

@@ -71,67 +71,97 @@ function displayClasses(classes) {
     grid.empty();
 
     classes.forEach(function(classData) {
-        let teacherInfo = '';
+        // Teacher info
+        let teacherName = 'No teacher assigned';
         if (classData.teacher_name && classData.teacher_name.trim() !== '') {
-            teacherInfo = `
-                <div class="mb-3">
-                    <p class="mb-1">
-                        <i class="fas fa-chalkboard-teacher"></i> ${escapeHtml(classData.teacher_name)}
-                    </p>
-                </div>
-            `;
-        } else {
-            teacherInfo = `
-                <div class="mb-3">
-                    <p class="mb-1 text-muted">
-                        <i class="fas fa-user-slash"></i> No teacher assigned
-                    </p>
-                </div>
-            `;
+            teacherName = escapeHtml(classData.teacher_name);
         }
         
-        // Progress with actual data
+        // Progress calculation (lessons instead of lectures)
         const progress = classData.progress_percentage || 0;
         const completed = classData.completed_lectures || 0;
         const total = classData.total_lectures || 0;
         
-        let progressHtml = `
-            <div class="mt-auto">
-                <small class="text-muted d-block mb-2">
-                    <i class="fas fa-chart-line"></i> Progress: ${completed}/${total} lectures
-                </small>
-                <div class="progress" style="height: 8px;">
-                    <div class="progress-bar ${progress === 100 ? 'bg-success' : 'bg-primary'}" 
-                         role="progressbar" 
-                         style="width: ${progress}%" 
-                         aria-valuenow="${progress}" 
-                         aria-valuemin="0" 
-                         aria-valuemax="100">
-                    </div>
-                </div>
-                <small class="text-muted">${progress}% complete</small>
-            </div>
-        `;
+        // Next lesson info
+        let nextLessonBadge = '';
+        let actionButton = '';
+        
+        if (classData.next_lecture) {
+            // Has next incomplete lecture - show lesson name
+            nextLessonBadge = `
+                <span class="badge badge-primary">
+                    <i class="fas fa-book-reader"></i> ${escapeHtml(classData.next_lecture.lesson_title)}
+                </span>
+            `;
+            
+            actionButton = `
+                <button class="btn btn-primary btn-sm btn-block continue-lecture-btn" 
+                        data-class-id="${classData.id}"
+                        data-lesson-id="${classData.next_lecture.lesson_id}"
+                        data-lecture-id="${classData.next_lecture.lecture_id}">
+                    <i class="fas fa-play"></i> Continue
+                </button>
+            `;
+        } else if (total > 0) {
+            // All completed
+            nextLessonBadge = `
+                <span class="badge badge-success">
+                    <i class="fas fa-check-circle"></i> All lessons completed
+                </span>
+            `;
+            
+            actionButton = `
+                <button class="btn btn-success btn-sm btn-block view-class-btn" 
+                        data-class-id="${classData.id}">
+                    <i class="fas fa-redo"></i> Review
+                </button>
+            `;
+        } else {
+            // No lessons yet
+            nextLessonBadge = `
+                <span class="badge badge-secondary">
+                    <i class="fas fa-info-circle"></i> No lessons available
+                </span>
+            `;
+            
+            actionButton = `
+                <button class="btn btn-secondary btn-sm btn-block" disabled>
+                    <i class="fas fa-book-open"></i> View Lessons
+                </button>
+            `;
+        }
         
         let card = `
             <div class="col-md-4 col-sm-6 mb-4">
-                <div class="card card-primary card-outline h-100">
+                <div class="card card-primary card-outline h-100 d-flex flex-column">
                     <div class="card-header">
                         <h3 class="card-title">
                             <i class="fas fa-book"></i> ${escapeHtml(classData.class_name)}
                         </h3>
                     </div>
-                    <div class="card-body">
-                        ${teacherInfo}
-                        ${progressHtml}
+                    <div class="card-body flex-grow-1">
+                        <p class="mb-2">
+                            <i class="fas fa-chalkboard-teacher"></i> ${teacherName}
+                        </p>
+                        
+                        <div class="mb-3">
+                            ${nextLessonBadge}
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <small class="text-muted d-block mb-2">
+                                Progress: ${completed}/${total} lessons
+                            </small>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar ${progress === 100 ? 'bg-success' : 'bg-primary'}" 
+                                     style="width: ${progress}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">${progress}%</small>
+                        </div>
                     </div>
                     <div class="card-footer">
-                        <button class="btn btn-primary btn-sm btn-block view-class-btn" 
-                                data-class-id="${classData.id}"
-                                data-class-code="${escapeHtml(classData.class_code)}"
-                                data-class-name="${escapeHtml(classData.class_name)}">
-                            <i class="fas fa-book-open"></i> View Lessons
-                        </button>
+                        ${actionButton}
                     </div>
                 </div>
             </div>
@@ -140,6 +170,16 @@ function displayClasses(classes) {
     });
 }
 
+// Handler for continue button
+$(document).on('click', '.continue-lecture-btn', function() {
+    let classId = $(this).data('class-id');
+    let lessonId = $(this).data('lesson-id');
+    let lectureId = $(this).data('lecture-id');
+    
+    $(this).html('<i class="fas fa-spinner fa-spin"></i> Loading...').prop('disabled', true);
+    
+    window.location.href = `/student/class/${classId}/lesson/${lessonId}/lecture/${lectureId}`;
+});
     /**
      * Show empty state
      */
