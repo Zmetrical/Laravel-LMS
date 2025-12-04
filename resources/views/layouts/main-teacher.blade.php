@@ -173,7 +173,7 @@
                 <div class="sidebar-bottom p-3">
                     <form method="POST" action="{{ route('teacher.logout') }}" id="teacher-logout-form">
                         @csrf
-                        <button type="submit" class="btn btn-danger btn-block">
+                        <button type="submit" class="btn btn-warning btn-block">
                             <i class="fas fa-sign-out-alt mr-2"></i> Logout
                         </button>
                     </form>

@@ -529,82 +529,82 @@ class Quiz_Attempt extends MainController
     /**
      * Auto-submit an attempt (helper method)
      */
-private function autoSubmitAttempt($attemptId)
-{
-    DB::beginTransaction();
-    try {
-        $attempt = DB::table('student_quiz_attempts')->where('id', $attemptId)->first();
-        
-        if (!$attempt || $attempt->status !== 'in_progress') {
-            DB::rollBack();
-            return;
-        }
+    private function autoSubmitAttempt($attemptId)
+    {
+        DB::beginTransaction();
+        try {
+            $attempt = DB::table('student_quiz_attempts')->where('id', $attemptId)->first();
+            
+            if (!$attempt || $attempt->status !== 'in_progress') {
+                DB::rollBack();
+                return;
+            }
 
-        // Get quiz details for quarter_id and semester_id
-        $quiz = DB::table('quizzes')->where('id', $attempt->quiz_id)->first();
-        if (!$quiz) {
-            DB::rollBack();
-            return;
-        }
+            // Get quiz details for quarter_id and semester_id
+            $quiz = DB::table('quizzes')->where('id', $attempt->quiz_id)->first();
+            if (!$quiz) {
+                DB::rollBack();
+                return;
+            }
 
-        $score = 0;
-        $hasEssay = false;
+            $score = 0;
+            $hasEssay = false;
 
-        $savedAnswers = DB::table('student_quiz_answers as sa')
-            ->join('quiz_questions as q', 'sa.question_id', '=', 'q.id')
-            ->leftJoin('quiz_question_options as o', 'sa.option_id', '=', 'o.id')
-            ->where('sa.attempt_id', $attemptId)
-            ->select('sa.*', 'q.question_type', 'q.points', 'o.is_correct')
-            ->get();
+            $savedAnswers = DB::table('student_quiz_answers as sa')
+                ->join('quiz_questions as q', 'sa.question_id', '=', 'q.id')
+                ->leftJoin('quiz_question_options as o', 'sa.option_id', '=', 'o.id')
+                ->where('sa.attempt_id', $attemptId)
+                ->select('sa.*', 'q.question_type', 'q.points', 'o.is_correct')
+                ->get();
 
-        foreach ($savedAnswers as $answer) {
-            if ($answer->question_type === 'essay') {
-                $hasEssay = true;
-                DB::table('student_quiz_answers')
-                    ->where('id', $answer->id)
-                    ->update([
-                        'is_correct' => null,
-                        'points_earned' => 0,
-                        'updated_at' => now()
-                    ]);
-            } else {
-                if ($answer->option_id && $answer->is_correct == 1) {
-                    $score += $answer->points;
+            foreach ($savedAnswers as $answer) {
+                if ($answer->question_type === 'essay') {
+                    $hasEssay = true;
                     DB::table('student_quiz_answers')
                         ->where('id', $answer->id)
                         ->update([
-                            'is_correct' => 1,
-                            'points_earned' => $answer->points,
-                            'updated_at' => now()
-                        ]);
-                } else {
-                    DB::table('student_quiz_answers')
-                        ->where('id', $answer->id)
-                        ->update([
-                            'is_correct' => 0,
+                            'is_correct' => null,
                             'points_earned' => 0,
                             'updated_at' => now()
                         ]);
+                } else {
+                    if ($answer->option_id && $answer->is_correct == 1) {
+                        $score += $answer->points;
+                        DB::table('student_quiz_answers')
+                            ->where('id', $answer->id)
+                            ->update([
+                                'is_correct' => 1,
+                                'points_earned' => $answer->points,
+                                'updated_at' => now()
+                            ]);
+                    } else {
+                        DB::table('student_quiz_answers')
+                            ->where('id', $answer->id)
+                            ->update([
+                                'is_correct' => 0,
+                                'points_earned' => 0,
+                                'updated_at' => now()
+                            ]);
+                    }
                 }
             }
+
+            DB::table('student_quiz_attempts')
+                ->where('id', $attemptId)
+                ->update([
+                    'score' => $score,
+                    'semester_id' => $quiz->semester_id,  // ADD THIS
+                    'quarter_id' => $quiz->quarter_id,    // ADD THIS
+                    'submitted_at' => now(),
+                    'status' => $hasEssay ? 'submitted' : 'graded',
+                    'updated_at' => now()
+                ]);
+
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error("Failed to auto-submit attempt {$attemptId}: " . $e->getMessage());
         }
-
-        DB::table('student_quiz_attempts')
-            ->where('id', $attemptId)
-            ->update([
-                'score' => $score,
-                'semester_id' => $quiz->semester_id,  // ADD THIS
-                'quarter_id' => $quiz->quarter_id,    // ADD THIS
-                'submitted_at' => now(),
-                'status' => $hasEssay ? 'submitted' : 'graded',
-                'updated_at' => now()
-            ]);
-
-        DB::commit();
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        \Log::error("Failed to auto-submit attempt {$attemptId}: " . $e->getMessage());
     }
-}
 }

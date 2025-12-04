@@ -14,6 +14,7 @@
     <style>
         :root {
             --trinity-blue: #2a347e;
+            --trinity-yellow: #ebae00;
         }
 
         /* Use the variable */
@@ -35,6 +36,15 @@
         .text-primary{
             color: var(--trinity-blue) !important;
         }
+
+        .badge-warning{
+            background-color: var(--trinity-yellow) !important;
+        }
+
+        .btn-warning{
+            background-color: var(--trinity-yellow) !important;
+        }
+
     .question-nav-btn.answered {
         background-color: #28a745 !important;
         border-color: #28a745 !important;

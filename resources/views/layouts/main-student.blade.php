@@ -187,11 +187,16 @@
 
                             @forelse($studentClasses as $class)
                                 <li class="nav-item">
-                                    <a href="{{ route('student.class.lessons', $class->id) }}" 
+                                    <a href="{{ route('student.class.grades', $class->id) }}" 
                                     class="nav-link {{ Request::is('student/class/' . $class->id . '*') ? 'active' : '' }}">
                                         <i class="nav-icon fas fa-book"></i>
                                         <p>
                                             {{ Str::limit($class->class_name, 15) }}
+                                            @if(isset($pendingQuizzes[$class->id]) && $pendingQuizzes[$class->id] > 0)
+                                                <span class="badge badge-warning float-right">
+                                                    {{ $pendingQuizzes[$class->id] }}
+                                                </span>
+                                            @endif
                                         </p>
                                     </a>
                                 </li>
@@ -213,7 +218,7 @@
                     <div class="sidebar-bottom p-3">
                         <form method="POST" action="{{ route('student.logout') }}" id="student-logout-form">
                             @csrf
-                            <button type="submit" class="btn btn-danger btn-block">
+                            <button type="submit" class="btn btn-warning btn-block">
                                 <i class="fas fa-sign-out-alt mr-2"></i> Logout
                             </button>
                         </form>

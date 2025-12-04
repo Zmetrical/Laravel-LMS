@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\MainController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 class Quiz_Submit extends MainController
@@ -46,8 +47,10 @@ class Quiz_Submit extends MainController
                     'message' => 'No active quiz attempt found'
                 ], 403);
             }
+            
             $quarterId = $quiz->quarter_id;
             $semesterId = $quiz->semester_id;
+            
             // Check time expiration
             if ($quiz->time_limit) {
                 $startedAt = Carbon::parse($attempt->started_at);
@@ -218,12 +221,23 @@ class Quiz_Submit extends MainController
                 ->where('id', $attempt->id)
                 ->update([
                     'score' => $score,
-                    'semester_id' => $semesterId,  // ADD THIS
-                    'quarter_id' => $quarterId,     // ADD THIS
+                    'semester_id' => $semesterId,
+                    'quarter_id' => $quarterId,
                     'submitted_at' => now(),
                     'status' => $hasEssay ? 'submitted' : 'graded',
                     'updated_at' => now()
                 ]);
+
+            // **INVALIDATE CACHE** - Force sidebar badge to update
+            $student = Auth::guard('student')->user();
+            $activeSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
+            
+            if ($activeSemester) {
+                $quizzesSessionKey = 'pending_quizzes_' . $student->id . '_sem_' . $activeSemester->id;
+                Session::forget($quizzesSessionKey);
+            }
 
             DB::commit();
 
