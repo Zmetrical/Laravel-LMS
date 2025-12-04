@@ -113,9 +113,10 @@
 
 @section('page-scripts')
 <script>
-    // Lecture-specific constants
     const API_ROUTES = {
         getLectureData: "{{ route('student.class.lecture.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
+        getProgress: "{{ route('student.class.lecture.progress', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
+        markComplete: "{{ route('student.class.lecture.markComplete', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
         backToLessons: "{{ route('student.class.lessons', $class->id) }}"
     };
     
@@ -123,6 +124,7 @@
     const LECTURE_ID = {{ $lectureId }};
     const BASE_URL = "{{ url('/') }}";
 </script>
+
 
 @if(isset($scripts))
     @foreach($scripts as $script)

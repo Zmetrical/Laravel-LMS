@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Auth;
 
 class Page_Lecture extends MainController
 {
@@ -501,4 +502,113 @@ public function update(Request $request, $classId, $lessonId, $lectureId)
             ], 500);
         }
     }
+
+    /**
+ * Mark lecture as complete (Student)
+ */
+public function markAsComplete(Request $request, $classId, $lessonId, $lectureId)
+{
+    try {
+        $student = Auth::guard('student')->user();
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Verify lecture exists and is active
+        $lecture = DB::table('lectures')
+            ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+            ->where('lectures.id', $lectureId)
+            ->where('lessons.id', $lessonId)
+            ->where('lessons.class_id', $classId)
+            ->where('lectures.status', 1)
+            ->where('lessons.status', 1)
+            ->select('lectures.*')
+            ->first();
+
+        if (!$lecture) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lecture not found'
+            ], 404);
+        }
+
+        // Check if already exists
+        $existing = DB::table('student_lecture_progress')
+            ->where('student_number', $student->student_number)
+            ->where('lecture_id', $lectureId)
+            ->first();
+
+        if ($existing) {
+            // Update existing record
+            DB::table('student_lecture_progress')
+                ->where('id', $existing->id)
+                ->update([
+                    'is_completed' => true,
+                    'completed_at' => now(),
+                    'updated_at' => now()
+                ]);
+        } else {
+            // Create new record
+            DB::table('student_lecture_progress')->insert([
+                'student_number' => $student->student_number,
+                'lecture_id' => $lectureId,
+                'lesson_id' => $lessonId,
+                'class_id' => $classId,
+                'is_completed' => true,
+                'completed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lecture marked as complete'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to mark lecture as complete: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get lecture progress for student
+ */
+public function getProgress($classId, $lessonId, $lectureId)
+{
+    try {
+        $student = Auth::guard('student')->user();
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $progress = DB::table('student_lecture_progress')
+            ->where('student_number', $student->student_number)
+            ->where('lecture_id', $lectureId)
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'is_completed' => $progress ? (bool)$progress->is_completed : false,
+                'completed_at' => $progress ? $progress->completed_at : null
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to get progress: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

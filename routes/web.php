@@ -201,7 +201,14 @@ Route::prefix('student')->name('student.')->group(function () {
                 Route::get('lecture/{lectureId}', [Page_Lecture::class, 'view'])->name('lectures.view');
                 Route::get('/{lectureId}/download/{filename}', [Page_Lecture::class, 'download'])->name('download');
                 Route::get('/{lectureId}/stream/{filename}', [Page_Lecture::class, 'stream'])->name('stream');
-
+                
+                Route::post('/lecture/{lectureId}/mark-complete', 
+                    [Page_Lecture::class, 'markAsComplete'])
+                    ->name('lecture.markComplete');
+                Route::get('/lecture/{lectureId}/progress', 
+                    [Page_Lecture::class, 'getProgress'])
+                    ->name('lecture.progress');
+                    
                 // Quiz Pages
                 Route::get('quiz/{quizId}', [Quiz_Attempt::class, 'viewQuiz'])->name('quiz.view');
 

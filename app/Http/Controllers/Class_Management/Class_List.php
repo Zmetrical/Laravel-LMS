@@ -25,7 +25,7 @@ class Class_List extends MainController
     }
 
 /**
- * Get student's enrolled classes FOR ACTIVE SEMESTER
+ * Get classes with progress FOR ACTIVE SEMESTER
  */
 public function getStudentClasses()
 {
@@ -39,7 +39,6 @@ public function getStudentClasses()
             ], 401);
         }
 
-        // Get active semester
         $activeSemester = DB::table('semesters')
             ->where('status', 'active')
             ->first();
@@ -53,11 +52,18 @@ public function getStudentClasses()
             ]);
         }
 
-        // Get classes based on student type FOR ACTIVE SEMESTER
         if ($student->student_type === 'regular') {
             $classes = $this->getRegularStudentClasses($student, $activeSemester->id);
         } else {
             $classes = $this->getIrregularStudentClasses($student, $activeSemester->id);
+        }
+
+        // Calculate progress for each class
+        foreach ($classes as $class) {
+            $progress = $this->calculateClassProgress($student->student_number, $class->id);
+            $class->progress_percentage = $progress['percentage'];
+            $class->completed_lectures = $progress['completed'];
+            $class->total_lectures = $progress['total'];
         }
 
         return response()->json([
@@ -76,6 +82,45 @@ public function getStudentClasses()
             'message' => 'Failed to load classes: ' . $e->getMessage()
         ], 500);
     }
+}
+
+/**
+ * Calculate class progress for student
+ */
+private function calculateClassProgress($studentNumber, $classId)
+{
+    // Get total active lectures in this class
+    $totalLectures = DB::table('lectures')
+        ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+        ->where('lessons.class_id', $classId)
+        ->where('lectures.status', 1)
+        ->where('lessons.status', 1)
+        ->count();
+
+    if ($totalLectures === 0) {
+        return [
+            'percentage' => 0,
+            'completed' => 0,
+            'total' => 0
+        ];
+    }
+
+    // Get completed lectures
+    $completedLectures = DB::table('student_lecture_progress as slp')
+        ->join('lectures', 'slp.lecture_id', '=', 'lectures.id')
+        ->join('lessons', 'lectures.lesson_id', '=', 'lessons.id')
+        ->where('slp.student_number', $studentNumber)
+        ->where('lessons.class_id', $classId)
+        ->where('slp.is_completed', 1)
+        ->count();
+
+    $percentage = round(($completedLectures / $totalLectures) * 100, 1);
+
+    return [
+        'percentage' => $percentage,
+        'completed' => $completedLectures,
+        'total' => $totalLectures
+    ];
 }
 
 /**

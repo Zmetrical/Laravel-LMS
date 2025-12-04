@@ -62,77 +62,83 @@ $(document).ready(function() {
     /**
      * Display classes for student (card grid view with teacher info)
      */
-    function displayClasses(classes) {
-        $('#loadingState').hide();
-        $('#emptyState').hide();
-        $('#classesGrid').show();
+function displayClasses(classes) {
+    $('#loadingState').hide();
+    $('#emptyState').hide();
+    $('#classesGrid').show();
 
-        let grid = $('#classesGrid');
-        grid.empty();
+    let grid = $('#classesGrid');
+    grid.empty();
 
-        classes.forEach(function(classData) {
-            let teacherInfo = '';
-            if (classData.teacher_name && classData.teacher_name.trim() !== '') {
-                teacherInfo = `
-                    <div class="mb-3">
-                        <p class="mb-1">
-                            <i class="fas fa-chalkboard-teacher"></i> ${escapeHtml(classData.teacher_name)}
-                        </p>
-                    </div>
-                `;
-            } else {
-                teacherInfo = `
-                    <div class="mb-3">
-                        <p class="mb-1 text-muted">
-                            <i class="fas fa-user-slash"></i> No teacher assigned
-                        </p>
-                    </div>
-                `;
-            }
-            
-            // Progress placeholder (can be calculated from actual data later)
-            let progressHtml = `
-                <div class="mt-auto">
-                    <small class="text-muted d-block mb-2">
-                        <i class="fas fa-chart-line"></i> Progress
-                    </small>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-primary" role="progressbar" 
-                             style="width: 0%" 
-                             aria-valuenow="0" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                        </div>
-                    </div>
+    classes.forEach(function(classData) {
+        let teacherInfo = '';
+        if (classData.teacher_name && classData.teacher_name.trim() !== '') {
+            teacherInfo = `
+                <div class="mb-3">
+                    <p class="mb-1">
+                        <i class="fas fa-chalkboard-teacher"></i> ${escapeHtml(classData.teacher_name)}
+                    </p>
                 </div>
             `;
-            
-            let card = `
-                <div class="col-md-4 col-sm-6 mb-4">
-                    <div class="card card-primary card-outline h-100">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-book"></i> ${escapeHtml(classData.class_name)}
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            ${teacherInfo}
-                            ${progressHtml}
-                        </div>
-                        <div class="card-footer">
-                            <button class="btn btn-primary btn-sm btn-block view-class-btn" 
-                                    data-class-id="${classData.id}"
-                                    data-class-code="${escapeHtml(classData.class_code)}"
-                                    data-class-name="${escapeHtml(classData.class_name)}">
-                                <i class="fas fa-book-open"></i> View Lessons
-                            </button>
-                        </div>
-                    </div>
+        } else {
+            teacherInfo = `
+                <div class="mb-3">
+                    <p class="mb-1 text-muted">
+                        <i class="fas fa-user-slash"></i> No teacher assigned
+                    </p>
                 </div>
             `;
-            grid.append(card);
-        });
-    }
+        }
+        
+        // Progress with actual data
+        const progress = classData.progress_percentage || 0;
+        const completed = classData.completed_lectures || 0;
+        const total = classData.total_lectures || 0;
+        
+        let progressHtml = `
+            <div class="mt-auto">
+                <small class="text-muted d-block mb-2">
+                    <i class="fas fa-chart-line"></i> Progress: ${completed}/${total} lectures
+                </small>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar ${progress === 100 ? 'bg-success' : 'bg-primary'}" 
+                         role="progressbar" 
+                         style="width: ${progress}%" 
+                         aria-valuenow="${progress}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+                <small class="text-muted">${progress}% complete</small>
+            </div>
+        `;
+        
+        let card = `
+            <div class="col-md-4 col-sm-6 mb-4">
+                <div class="card card-primary card-outline h-100">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-book"></i> ${escapeHtml(classData.class_name)}
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        ${teacherInfo}
+                        ${progressHtml}
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary btn-sm btn-block view-class-btn" 
+                                data-class-id="${classData.id}"
+                                data-class-code="${escapeHtml(classData.class_code)}"
+                                data-class-name="${escapeHtml(classData.class_name)}">
+                            <i class="fas fa-book-open"></i> View Lessons
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        grid.append(card);
+    });
+}
 
     /**
      * Show empty state

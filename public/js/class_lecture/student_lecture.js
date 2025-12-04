@@ -1,9 +1,19 @@
 $(document).ready(function() {
     loadLectureData();
     
-    // Back button handler
     $('#backToLessons').on('click', function() {
         window.location.href = API_ROUTES.backToLessons;
+    });
+    
+    // Mark as complete button handler
+    $(document).on('click', '#markCompleteBtn', function() {
+        markLectureComplete();
+    });
+    
+    // Download button handler
+    $(document).on('click', '#downloadBtn', function() {
+        const fileUrl = $(this).data('file-url');
+        window.open(fileUrl, '_blank');
     });
 });
 
@@ -17,6 +27,7 @@ function loadLectureData() {
         success: function(response) {
             if (response.success) {
                 displayLecture(response.data);
+                loadProgress();
             } else {
                 showError(response.message || 'Failed to load lecture');
             }
@@ -28,19 +39,83 @@ function loadLectureData() {
     });
 }
 
+function loadProgress() {
+    $.ajax({
+        url: API_ROUTES.getProgress,
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': CSRF_TOKEN
+        },
+        success: function(response) {
+            if (response.success && response.data.is_completed) {
+                updateCompletionUI(true, response.data.completed_at);
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading progress:', xhr);
+        }
+    });
+}
+
+function markLectureComplete() {
+    const btn = $('#markCompleteBtn');
+    const originalHtml = btn.html();
+    
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Marking...').prop('disabled', true);
+    
+    $.ajax({
+        url: API_ROUTES.markComplete,
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': CSRF_TOKEN
+        },
+        success: function(response) {
+            if (response.success) {
+                updateCompletionUI(true, new Date().toISOString());
+                toastr.success('Lecture marked as complete!');
+            } else {
+                toastr.error(response.message || 'Failed to mark as complete');
+                btn.html(originalHtml).prop('disabled', false);
+            }
+        },
+        error: function(xhr) {
+            console.error('Error marking complete:', xhr);
+            toastr.error('Failed to mark lecture as complete');
+            btn.html(originalHtml).prop('disabled', false);
+        }
+    });
+}
+
+function updateCompletionUI(isCompleted, completedAt) {
+    if (isCompleted) {
+        const date = new Date(completedAt);
+        const formattedDate = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        $('#markCompleteBtn').replaceWith(`
+            <button type="button" class="btn btn-success" disabled>
+                <i class="fas fa-check-circle"></i> Completed
+            </button>
+            <small class="text-muted ml-2">
+                <i class="far fa-clock"></i> ${escapeHtml(formattedDate)}
+            </small>
+        `);
+    }
+}
+
 function displayLecture(data) {
-    // Hide loading, show content
     $('#loadingState').hide();
     $('#lectureContent').show();
     
-    // Set titles
     $('#lessonTitle').text(data.lesson_title || 'Lesson');
     $('#lectureTitle').text(data.title);
     
-    // Render content based on type
     renderContent(data);
-    
-    // Build navigation
     buildNavigation(data.all_lectures, data.lecture_id, data.lesson_id);
 }
 
@@ -76,6 +151,11 @@ function renderTextContent(content, container) {
         <div class="card">
             <div class="card-body lecture-text-content">
                 ${content}
+            </div>
+            <div class="card-footer">
+                <button type="button" id="markCompleteBtn" class="btn btn-primary">
+                    <i class="fas fa-check-circle"></i> Mark as Done
+                </button>
             </div>
         </div>
     `);
@@ -115,10 +195,13 @@ function renderVideoContent(videoUrl, container) {
                     </iframe>
                 </div>
             </div>
-            <div class="card-footer">
+            <div class="card-footer d-flex justify-content-between align-items-center">
                 <a href="${escapeHtml(videoUrl)}" target="_blank" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-external-link-alt"></i> Open in New Tab
                 </a>
+                <button type="button" id="markCompleteBtn" class="btn btn-primary btn-sm">
+                    <i class="fas fa-check-circle"></i> Mark as Done
+                </button>
             </div>
         </div>
     `);
@@ -140,9 +223,14 @@ function renderPdfContent(filePath, fileName, container) {
                         <i class="fas fa-file-pdf text-danger"></i>
                         <strong>${escapeHtml(fileName)}</strong>
                     </div>
-                    <a href="${fileUrl}" class="btn btn-primary btn-sm" download>
-                        <i class="fas fa-download"></i> Download PDF
-                    </a>
+                    <div>
+                        <button type="button" id="downloadBtn" class="btn btn-primary btn-sm" data-file-url="${fileUrl}">
+                            <i class="fas fa-download"></i> Download PDF
+                        </button>
+                        <button type="button" id="markCompleteBtn" class="btn btn-success btn-sm ml-2">
+                            <i class="fas fa-check-circle"></i> Mark as Done
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -177,9 +265,14 @@ function renderFileContent(filePath, fileName, container) {
                 <p class="text-muted mb-4">
                     File Type: <span class="badge badge-primary">${fileExt.toUpperCase()}</span>
                 </p>
-                <a href="${fileUrl}" class="btn btn-primary btn-lg" download>
+                <button type="button" id="downloadBtn" class="btn btn-primary btn-lg" data-file-url="${fileUrl}">
                     <i class="fas fa-download"></i> Download File
-                </a>
+                </button>
+            </div>
+            <div class="card-footer text-center">
+                <button type="button" id="markCompleteBtn" class="btn btn-success">
+                    <i class="fas fa-check-circle"></i> Mark as Done
+                </button>
             </div>
         </div>
     `);
@@ -221,7 +314,6 @@ function buildNavigation(lectures, currentLectureId, lessonId) {
 }
 
 function getVideoEmbedUrl(url) {
-    // YouTube patterns
     const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const youtubeMatch = url.match(youtubeRegex);
     
@@ -229,7 +321,6 @@ function getVideoEmbedUrl(url) {
         return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
     }
     
-    // Vimeo patterns
     const vimeoRegex = /(?:vimeo\.com\/)(\d+)/;
     const vimeoMatch = url.match(vimeoRegex);
     
@@ -237,7 +328,6 @@ function getVideoEmbedUrl(url) {
         return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
     }
     
-    // If already an embed URL
     if (url.includes('youtube.com/embed/') || url.includes('player.vimeo.com/video/')) {
         return url;
     }
