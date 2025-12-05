@@ -671,10 +671,10 @@ public function showProfile()
 
     $data = [
         'student' => $studentData,
-        'scripts' => ['student/profile_student.js']
+        'scripts' => ['student/student_profile.js']
     ];
 
-    return view('student.profile_student', $data);
+    return view('student.student_profile', $data);
 }
 
 /**

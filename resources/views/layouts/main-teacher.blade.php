@@ -106,27 +106,30 @@
     <body class="hold-transition layout-fixed">
         <div class="wrapper">
 
-            <!-- Navbar -->
-            <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
-                    </li>
-                </ul>
+<!-- Navbar -->
+<nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <ul class="navbar-nav">
+        <li class="nav-item">
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+        </li>
+    </ul>
 
-                <!-- Breadcrumb in Navbar -->
-                <ul class="navbar-nav ml-3 flex-grow-1">
-                    <li class="nav-item d-flex align-items-center">
-                        @yield('breadcrumb')
-                    </li>
-                </ul>
+    <!-- Breadcrumb in Navbar -->
+    <ul class="navbar-nav ml-3 flex-grow-1">
+        <li class="nav-item d-flex align-items-center">
+            @yield('breadcrumb')
+        </li>
+    </ul>
 
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item dropdown">
-                        <i class="fas fa-user mr-2"></i> Teacher
-                    </li>
-                </ul>
-            </nav>
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+            <a href="{{ route('teacher.profile') }}" class="nav-link">
+                <i class="fas fa-user-tie mr-2"></i>
+                {{ Auth::guard('teacher')->user()->first_name ?? 'Teacher' }} {{ Auth::guard('teacher')->user()->last_name ?? '' }}
+            </a>
+        </li>
+    </ul>
+</nav>
 
 
             <!-- Main Sidebar -->

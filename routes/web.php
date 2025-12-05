@@ -180,7 +180,7 @@ Route::prefix('student')->name('student.')->group(function () {
     Route::get('/profile/enrollment-history', [StudentController::class, 'getEnrollmentHistory'])->name('profile.enrollment_history');
     Route::get('/profile/enrolled-classes', [StudentController::class, 'getProfileEnrolledClasses'])->name('profile.enrolled_classes');
 
-    
+
     // Dashboard API endpoints
     Route::prefix('student/dashboard')->name('dashboard.')->group(function () {
        Route::get('/quarterly-grades', [StudentController::class, 'getQuarterlyGrades'])
@@ -267,6 +267,11 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::get('/home', [TeacherController::class, 'index'])->name('home');
         Route::post('/logout', [Login_Controller::class, 'logout_teacher'])->name('logout');
 
+            Route::get('/profile', [TeacherController::class, 'show_profile'])->name('profile');
+            Route::get('/profile/edit', [TeacherController::class, 'edit_profile'])->name('profile.edit');
+            Route::post('/profile/update', [TeacherController::class, 'update_profile'])->name('profile.update');
+            Route::post('/profile/change-password', [TeacherController::class, 'change_password'])->name('profile.change_password');
+            
         // Class Pages
         Route::get('/list_class', [Class_List::class, 'teacher_class_list'])->name('list_class');
 
