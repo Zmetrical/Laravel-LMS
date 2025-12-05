@@ -171,8 +171,18 @@ Route::prefix('student')->name('student.')->group(function () {
 
     // Authenticated Routes
     Route::middleware('auth:student')->group(function () {
-        Route::get('/home', [StudentController::class, 'index'])->name('home');
         Route::post('/logout', [Login_Controller::class, 'logout_student'])->name('logout');
+
+        Route::get('/dashboard', [StudentController::class, 'index'])->name('home');
+
+    Route::prefix('dashboard')->name('dashboard.')->group(function () {
+        Route::get('/stats', [StudentController::class, 'getDashboardStats'])->name('stats');
+        Route::get('/classes', [StudentController::class, 'getClasses'])->name('classes');
+        Route::get('/class-performance', [StudentController::class, 'getClassPerformance'])->name('class-performance');
+        Route::get('/detailed-breakdown', [StudentController::class, 'getDetailedBreakdown'])->name('detailed-breakdown');
+        Route::get('/quarter-comparison', [StudentController::class, 'getQuarterComparison'])->name('quarter-comparison');
+        Route::get('/all-classes-performance', [StudentController::class, 'getAllClassesPerformance'])->name('all-classes-performance');
+    });
 
         // Class Pages
         Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
@@ -183,9 +193,10 @@ Route::prefix('student')->name('student.')->group(function () {
             ->name('grades.list');
         
         // Get Class Grade Details (AJAX)
-        Route::get('/my_grades/details/{classId}', [Grade_list::class, 'getClassGradeDetails'])
+        Route::get('/my_grades/details/{classId}', [Grade_list::class, 'student_grade_details'])
             ->name('grades.details');
-
+        Route::get('/my_grades/details/{classId}/data', [Grade_list::class, 'getClassGradeDetails'])
+            ->name('grades.details.data');
         // Class Content Pagesz
         Route::prefix('class/{classId}')->name('class.')->group(function () {
             // Lessons Page
@@ -214,7 +225,8 @@ Route::prefix('student')->name('student.')->group(function () {
 
                 Route::get('/quiz/{quizId}/start', [Quiz_Attempt::class, 'startQuiz'])
                     ->middleware(QuizAttemptMiddleware::class)
-                    ->name('quiz.start');                
+                    ->name('quiz.start');       
+
                 Route::get('/quiz/{quizId}/save-progress', [Quiz_Attempt::class, 'saveProgress'])->name('quiz.save-progress');
 
                 Route::post('/quiz/{quizId}/submit', [Quiz_Submit::class, 'submitQuiz'])->name('quiz.submit');

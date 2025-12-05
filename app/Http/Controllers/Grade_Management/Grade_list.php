@@ -50,6 +50,51 @@ class Grade_list extends MainController
     }
     
     /**
+     * Show student grade details page for a specific class
+     */
+    public function student_grade_details($classId)
+    {
+        $student = Auth::guard('student')->user();
+        
+        // Get class info
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        if (!$class) {
+            return redirect()->route('student.grades.index')
+                ->with('error', 'Class not found');
+        }
+        
+        // Get active semester
+        $activeSemester = DB::table('semesters as s')
+            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+            ->where('s.status', 'active')
+            ->select(
+                's.id as semester_id',
+                's.name as semester_name',
+                's.code as semester_code',
+                'sy.year_start',
+                'sy.year_end'
+            )
+            ->first();
+        
+        // Get quarters for this semester
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $activeSemester->semester_id)
+            ->orderBy('order_number')
+            ->get();
+        
+        $data = [
+            'scripts' => ['student/details_gradebook.js'],
+            'class' => $class,
+            'activeSemester' => $activeSemester,
+            'quarters' => $quarters,
+            'classId' => $classId
+        ];
+        
+        return view('student.details_gradebook', $data);
+    }
+    
+    /**
      * Get student's grades for all enrolled classes
      */
     public function getStudentGrades()
@@ -122,7 +167,7 @@ class Grade_list extends MainController
     }
     
     /**
-     * Get detailed grade breakdown for a specific class
+     * Get detailed grade breakdown for a specific class (AJAX)
      */
     public function getClassGradeDetails($classId)
     {
@@ -158,46 +203,37 @@ class Grade_list extends MainController
                 ], 404);
             }
             
-            // Get gradebook columns and scores
-            $columns = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('is_active', true)
-                ->orderBy('component_type')
+            // Get quarters
+            $quarters = DB::table('quarters')
+                ->where('semester_id', $activeSemester->id)
                 ->orderBy('order_number')
                 ->get();
             
-            $detailedScores = [];
+            $quarterData = [];
             
-            foreach ($columns as $column) {
-                $score = null;
+            foreach ($quarters as $quarter) {
+                // Get quarter grades
+                $quarterGrade = DB::table('quarter_grades')
+                    ->where('student_number', $student->student_number)
+                    ->where('class_code', $class->class_code)
+                    ->where('quarter_id', $quarter->id)
+                    ->first();
                 
-                if ($column->source_type === 'online' && $column->quiz_id) {
-                    // Get quiz score
-                    $quizScore = $this->getQuizScore($student->student_number, $column->quiz_id, $column->max_points);
-                    $score = $quizScore;
-                } else {
-                    // Get manual score
-                    $manualScore = DB::table('gradebook_scores')
-                        ->where('column_id', $column->id)
-                        ->where('student_number', $student->student_number)
-                        ->first();
-                    
-                    $score = $manualScore ? $manualScore->score : null;
-                }
+                // Get detailed scores for this quarter
+                $scores = $this->getQuarterDetailedScores(
+                    $student->student_number, 
+                    $class->class_code, 
+                    $quarter->id
+                );
                 
-                $detailedScores[] = [
-                    'column_name' => $column->column_name,
-                    'component_type' => $column->component_type,
-                    'score' => $score,
-                    'max_points' => $column->max_points,
-                    'source' => $column->source_type,
-                    'percentage' => $score && $column->max_points > 0 
-                        ? round(($score / $column->max_points) * 100, 2) 
-                        : 0
+                $quarterData[] = [
+                    'quarter' => $quarter,
+                    'grades' => $quarterGrade,
+                    'scores' => $scores
                 ];
             }
             
-            // Get final grade if exists
+            // Get final grade
             $finalGrade = DB::table('grades_final')
                 ->where('student_number', $student->student_number)
                 ->where('class_code', $class->class_code)
@@ -208,7 +244,7 @@ class Grade_list extends MainController
                 'success' => true,
                 'data' => [
                     'class' => $class,
-                    'scores' => $detailedScores,
+                    'quarters' => $quarterData,
                     'final_grade' => $finalGrade
                 ]
             ]);
@@ -219,6 +255,51 @@ class Grade_list extends MainController
                 'message' => 'Failed to load grade details: ' . $e->getMessage()
             ], 500);
         }
+    }
+    
+    /**
+     * Get detailed scores for a specific quarter
+     */
+    private function getQuarterDetailedScores($studentNumber, $classCode, $quarterId)
+    {
+        $columns = DB::table('gradebook_columns')
+            ->where('class_code', $classCode)
+            ->where('quarter_id', $quarterId)
+            ->where('is_active', true)
+            ->orderBy('component_type')
+            ->orderBy('order_number')
+            ->get();
+        
+        $detailedScores = [];
+        
+        foreach ($columns as $column) {
+            $score = null;
+            
+            if ($column->source_type === 'online' && $column->quiz_id) {
+                $score = $this->getQuizScore($studentNumber, $column->quiz_id, $column->max_points);
+            } else {
+                $manualScore = DB::table('gradebook_scores')
+                    ->where('column_id', $column->id)
+                    ->where('student_number', $studentNumber)
+                    ->first();
+                
+                $score = $manualScore ? $manualScore->score : null;
+            }
+            
+            $detailedScores[] = [
+                'column_id' => $column->id,
+                'column_name' => $column->column_name,
+                'component_type' => $column->component_type,
+                'score' => $score,
+                'max_points' => $column->max_points,
+                'source_type' => $column->source_type,
+                'percentage' => $score && $column->max_points > 0 
+                    ? round(($score / $column->max_points) * 100, 2) 
+                    : 0
+            ];
+        }
+        
+        return $detailedScores;
     }
     
     /**
