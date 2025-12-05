@@ -277,6 +277,7 @@ CREATE TABLE `student_lecture_progress` (
   `lecture_id` bigint(20) UNSIGNED NOT NULL,
   `lesson_id` bigint(20) UNSIGNED NOT NULL,
   `class_id` int(11) NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
   `is_completed` tinyint(1) NOT NULL DEFAULT 0,
   `completed_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,

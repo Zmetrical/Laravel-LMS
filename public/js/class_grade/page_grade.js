@@ -1,13 +1,21 @@
-console.log("page grade");
+console.log("Enhanced Grade Page - Clean Design");
+
+let gradesData = [];
+let quartersData = [];
 
 $(document).ready(function() {
     loadGrades();
 
+    // Toggle quarter collapse
+    $(document).on('click', '.quarter-header', function() {
+        const icon = $(this).find('.toggle-icon');
+        icon.toggleClass('fa-chevron-down fa-chevron-up');
+    });
 
-
-    // Quiz title click handler - redirect to quiz
-    $(document).on('click', '.quiz-title-link', function(e) {
+    // View quiz button click
+    $(document).on('click', '.btn-view-quiz', function(e) {
         e.preventDefault();
+        
         const lessonId = $(this).data('lesson-id');
         const quizId = $(this).data('quiz-id');
         
@@ -23,180 +31,303 @@ $(document).ready(function() {
 function loadGrades() {
     showLoadingState();
     
-    return $.ajax({
+    $.ajax({
         url: API_ROUTES.getGrades,
         type: 'GET',
         dataType: 'json',
         success: function(response) {
             console.log('Grades response:', response);
             
-            if (response.grades && response.grades.length > 0) {
-                populateGrades(response.grades);
-                showTableState();
+            gradesData = response.grades || [];
+            quartersData = response.quarters || [];
+            
+            if (gradesData.length > 0) {
+                renderQuarters();
+                showMainContent();
             } else {
                 showEmptyState();
             }
         },
         error: function(xhr, status, error) {
-            console.error('Error loading grades:', {
-                status: xhr.status,
-                error: error,
-                response: xhr.responseText
-            });
-            
+            console.error('Error loading grades:', error);
             showEmptyState();
             
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Failed to load grades. Please try again.',
+                text: 'Failed to load grades. Please refresh the page.',
                 confirmButtonColor: '#007bff'
             });
         }
     });
 }
 
-function populateGrades(grades) {
-    populateMobileView(grades);
-    populateDesktopView(grades);
+function renderQuarters() {
+    const $container = $('#quartersContainer');
+    $container.empty();
+    
+    // Group quizzes by quarter
+    const quarterGroups = {};
+    
+    gradesData.forEach(function(lesson) {
+        lesson.quizzes.forEach(function(quiz) {
+            const quarterId = quiz.quarter_id || 'unassigned';
+            const quarterName = quiz.quarter_name || 'Unassigned';
+            
+            if (!quarterGroups[quarterId]) {
+                quarterGroups[quarterId] = {
+                    id: quarterId,
+                    name: quarterName,
+                    quizzes: []
+                };
+            }
+            
+            quarterGroups[quarterId].quizzes.push({
+                ...quiz,
+                lesson_id: lesson.lesson_id,
+                lesson_title: lesson.lesson_title
+            });
+        });
+    });
+    
+    // Sort quarters
+    const sortedQuarters = Object.values(quarterGroups).sort((a, b) => {
+        if (a.id === 'unassigned') return 1;
+        if (b.id === 'unassigned') return -1;
+        return a.id - b.id;
+    });
+    
+    // Render each quarter
+    sortedQuarters.forEach(function(quarter) {
+        $container.append(buildQuarterSection(quarter));
+    });
 }
 
-function populateMobileView(grades) {
-    const $container = $('#mobileGradesContainer');
-    $container.empty();
-
-    grades.forEach(function(grade) {
-        const percentage = grade.percentage !== null ? grade.percentage.toFixed(2) : '-';
-        const score = grade.score !== null ? grade.score.toFixed(2) : '-';
-        const total = grade.total_points !== null ? grade.total_points.toFixed(2) : '-';
-        
-        // Format date - shorter for mobile
-        const submittedDate = grade.submitted_at 
-            ? new Date(grade.submitted_at).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-            })
-            : 'Not submitted';
-
-        // Determine pass/fail status
-        const passed = grade.percentage >= grade.passing_score;
-        const statusBadge = grade.percentage !== null 
-            ? (passed 
-                ? '<span class="badge badge-success">Passed</span>' 
-                : '<span class="badge badge-danger">Failed</span>')
-            : '<span class="badge badge-secondary">Pending</span>';
-
-        const card = `
-            <div class="card mb-3">
-                <div class="card-body p-3">
-                    <!-- Quiz Title -->
-                    <div class="mb-3">
-                        <a href="#" class="quiz-title-link text-dark font-weight-bold d-block" 
-                           data-lesson-id="${grade.lesson_id}" 
-                           data-quiz-id="${grade.quiz_id}"
-                           style="text-decoration: none; font-size: 1.1rem; line-height: 1.4;">
-                            ${grade.quiz_title || '-'}
-                            <i class="fas fa-chevron-right text-primary ml-1" style="font-size: 0.8rem;"></i>
-                        </a>
-                        <small class="text-muted">${submittedDate}</small>
-                    </div>
-                    
-                    <!-- Score Display -->
-                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                        <div>
-                            <div class="text-muted" style="font-size: 0.85rem;">Your Score</div>
-                            <div class="font-weight-bold" style="font-size: 1.3rem;">${score} <span class="text-muted">/ ${total}</span></div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-primary font-weight-bold" style="font-size: 1.5rem;">${percentage}%</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Status and Passing Info -->
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <small class="text-muted d-block">Passing: ${grade.passing_score}%</small>
-                        </div>
-                        <div>
-                            ${statusBadge}
-                        </div>
+function buildQuarterSection(quarter) {
+    // Build quiz rows
+    let quizRowsHtml = '';
+    quarter.quizzes.forEach(function(quiz) {
+        quizRowsHtml += buildQuizRow(quiz);
+    });
+    
+    return `
+        <div class="card card-primary mb-3">
+            <div class="card-header quarter-header" data-toggle="collapse" data-target="#quarter-${quarter.id}" style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        ${escapeHtml(quarter.name)}
+                    </h4>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
+            </div>
+            <div id="quarter-${quarter.id}" class="collapse show">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th width="30%">Quiz</th>
+                                    <th width="12%" class="text-center">Score</th>
+                                    <th width="12%" class="text-center">Percentage</th>
+                                    <th width="15%" class="text-center">Status</th>
+                                    <th width="21%">Date</th>
+                                    <th width="10%" class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${quizRowsHtml}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        `;
-        
-        $container.append(card);
-    });
-}
-function populateDesktopView(grades) {
-    const $tbody = $('#gradeTableBody');
-    $tbody.empty();
-
-    grades.forEach(function(grade) {
-        const percentage = grade.percentage !== null ? grade.percentage.toFixed(2) : '-';
-        const score = grade.score !== null ? grade.score.toFixed(2) : '-';
-        const total = grade.total_points !== null ? grade.total_points.toFixed(2) : '-';
-        
-        // Format date
-        const submittedDate = grade.submitted_at 
-            ? new Date(grade.submitted_at).toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })
-            : 'Not submitted';
-
-        // Quiz title as clickable link
-        const quizTitleHtml = `
-            <a href="#" class="quiz-title-link text-primary font-weight-bold" 
-               data-lesson-id="${grade.lesson_id}" 
-               data-quiz-id="${grade.quiz_id}"
-               style="text-decoration: none;">
-                ${grade.quiz_title || '-'}
-                <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
-            </a>
-        `;
-
-        const row = `
-            <tr>
-                <td>${quizTitleHtml}</td>
-                <td class="text-center">
-                    <strong>${score} / ${total}</strong>
-                </td>
-                <td class="text-center">
-                    <strong class="text-primary">${percentage}%</strong>
-                </td>
-                <td class="text-center">
-                    ${grade.passing_score}%
-                </td>
-                <td class="text-center">
-                    ${submittedDate}
-                </td>
-            </tr>
-        `;
-        
-        $tbody.append(row);
-    });
+        </div>
+    `;
 }
 
+function buildQuizRow(quiz) {
+    const now = new Date();
+    const availableFrom = quiz.available_from ? new Date(quiz.available_from) : null;
+    const availableUntil = quiz.available_until ? new Date(quiz.available_until) : null;
+    
+    // Determine actual quiz state based on dates
+    let quizState = 'unknown';
+    let rowClass = '';
+    
+    if (quiz.submitted_at) {
+        // Already submitted
+        quizState = 'submitted';
+        rowClass = 'quiz-submitted';
+    } else if (availableFrom && now < availableFrom) {
+        // Not yet open (upcoming)
+        quizState = 'upcoming';
+        rowClass = 'quiz-upcoming';
+    } else if (availableUntil && now > availableUntil) {
+        // Already closed
+        quizState = 'closed';
+        rowClass = 'quiz-closed';
+    } else if (quiz.is_available) {
+        // Currently available
+        quizState = 'available';
+        rowClass = 'quiz-available';
+    } else {
+        // Not available (no dates or other reason)
+        quizState = 'unavailable';
+        rowClass = 'quiz-closed';
+    }
+    
+    // Status badge based on submission
+    let statusBadge = '';
+    if (quiz.status === 'passed') {
+        statusBadge = '<span class="badge badge-primary">Passed</span>';
+    } else if (quiz.status === 'failed') {
+        statusBadge = '<span class="badge badge-danger">Failed</span>';
+    } else if (quizState === 'available') {
+        statusBadge = '<span class="badge badge-secondary">Not Taken</span>';
+    }
+    
+    // Availability badge
+    let availabilityBadge = '';
+    if (quizState === 'upcoming') {
+        availabilityBadge = '<span class="badge badge-secondary ml-1">Upcoming</span>';
+    } else if (quizState === 'closed') {
+        availabilityBadge = '<span class="badge badge-warning ml-1">Closed</span>';
+    }
+    
+    // Score display
+    let scoreHtml = '<span class="text-muted">—</span>';
+    let percentageHtml = '<span class="text-muted">—</span>';
+    
+    if (quiz.score !== null) {
+        // Has a score - show it
+        scoreHtml = `<strong class="text-primary">${quiz.score}/${quiz.total_points}</strong>`;
+        percentageHtml = `${quiz.percentage}%`;
+    } else if (quizState === 'closed') {
+        // Closed and not taken = 0
+        scoreHtml = `<strong class="text-danger">0/${quiz.total_points || 0}</strong>`;
+        percentageHtml = `<span class="text-danger">0%</span>`;
+    }
+    
+    // Date info with visual indicators
+    let dateHtml = '';
+    if (quizState === 'submitted') {
+        dateHtml = `
+            <div class="quiz-date">
+                <i class="fas fa-check-circle text-primary mr-1"></i>
+                <small class="text-muted">Submitted: ${formatDate(quiz.submitted_at)}</small>
+            </div>
+        `;
+    } else if (quizState === 'upcoming') {
+        dateHtml = `
+            <div class="quiz-date">
+                <i class="fas fa-clock text-info mr-1"></i>
+                <small class="text-secondary">Opens: ${formatDate(availableFrom)}</small>
+            </div>
+        `;
+    } else if (quizState === 'available') {
+        dateHtml = `
+            <div class="quiz-date">
+                <i class="fas fa-circle text-primary mr-1" style="font-size: 8px;"></i>
+                <small class="text-primary font-weight-bold">Available Now</small>
+                ${availableUntil ? `<br><small class="text-muted ml-3">Closes: ${formatDate(availableUntil)}</small>` : ''}
+            </div>
+        `;
+    } else if (quizState === 'closed') {
+        dateHtml = `
+            <div class="quiz-date">
+                <i class="fas fa-lock text-warning mr-1"></i>
+                <small class="text-muted">Closed: ${formatDate(availableUntil)}</small>
+            </div>
+        `;
+    } else {
+        dateHtml = `
+            <div class="quiz-date">
+                <i class="fas fa-ban text-danger mr-1"></i>
+                <small class="text-muted">Unavailable</small>
+            </div>
+        `;
+    }
+    
+    // Action button - only show for available quizzes
+    let actionButton = '';
+    if (quizState === 'available' || quizState === 'submitted') {
+        actionButton = `
+            <button class="btn btn-primary btn-sm btn-view-quiz" 
+                    data-lesson-id="${quiz.lesson_id}"
+                    data-quiz-id="${quiz.quiz_id}">
+                <i class="fas fa-eye"></i> View
+            </button>
+        `;
+    } else {
+        actionButton = '<span class="text-muted">—</span>';
+    }
+    
+    return `
+        <tr class="${rowClass}">
+            <td class="align-middle">
+                <strong>${escapeHtml(quiz.quiz_title)}</strong>
+                ${quiz.lesson_title ? `<br><small class="text-muted">${escapeHtml(quiz.lesson_title)}</small>` : ''}
+            </td>
+            <td class="align-middle text-center">
+                ${scoreHtml}
+            </td>
+            <td class="align-middle text-center">
+                ${percentageHtml}
+            </td>
+            <td class="align-middle text-center">
+                ${statusBadge}
+                ${availabilityBadge}
+            </td>
+            <td class="align-middle">
+                ${dateHtml}
+            </td>
+            <td class="align-middle text-center">
+                ${actionButton}
+            </td>
+        </tr>
+    `;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
 
 function showLoadingState() {
     $('#loadingState').show();
     $('#emptyState').hide();
-    $('#gradeTableContainer').hide();
+    $('#mainContent').hide();
 }
 
 function showEmptyState() {
     $('#loadingState').hide();
     $('#emptyState').show();
-    $('#gradeTableContainer').hide();
+    $('#mainContent').hide();
 }
 
-function showTableState() {
+function showMainContent() {
     $('#loadingState').hide();
     $('#emptyState').hide();
-    $('#gradeTableContainer').show();
+    $('#mainContent').show();
 }

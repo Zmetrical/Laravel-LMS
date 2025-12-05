@@ -97,13 +97,17 @@ function updateCompletionUI(isCompleted, completedAt) {
             minute: '2-digit'
         });
         
-        $('#markCompleteBtn').replaceWith(`
-            <button type="button" class="btn btn-success" disabled>
-                <i class="fas fa-check-circle"></i> Completed
-            </button>
-            <small class="text-muted ml-2">
-                <i class="far fa-clock"></i> ${escapeHtml(formattedDate)}
-            </small>
+        $('#markCompleteContainer').html(`
+            <div class="text-right">
+                <button type="button" class="btn btn-success" disabled>
+                    <i class="fas fa-check-circle"></i> Completed
+                </button>
+                <div class="mt-1">
+                    <small class="text-muted">
+                        <i class="far fa-clock"></i> ${escapeHtml(formattedDate)}
+                    </small>
+                </div>
+            </div>
         `);
     }
 }
@@ -122,6 +126,9 @@ function displayLecture(data) {
 function renderContent(data) {
     const contentArea = $('#contentArea');
     contentArea.empty();
+    
+    // Hide download footer by default
+    $('#downloadFooter').hide();
     
     switch(data.content_type) {
         case 'text':
@@ -152,11 +159,6 @@ function renderTextContent(content, container) {
             <div class="card-body lecture-text-content">
                 ${content}
             </div>
-            <div class="card-footer">
-                <button type="button" id="markCompleteBtn" class="btn btn-primary">
-                    <i class="fas fa-check-circle"></i> Mark as Done
-                </button>
-            </div>
         </div>
     `);
 }
@@ -175,7 +177,7 @@ function renderVideoContent(videoUrl, container) {
                 <i class="fas fa-exclamation-circle"></i> Invalid video URL
             </div>
             <div class="card">
-                <div class="card-body">
+                <div class="card-body text-center">
                     <a href="${escapeHtml(videoUrl)}" target="_blank" class="btn btn-primary">
                         <i class="fas fa-external-link-alt"></i> Open Video Link
                     </a>
@@ -195,13 +197,10 @@ function renderVideoContent(videoUrl, container) {
                     </iframe>
                 </div>
             </div>
-            <div class="card-footer d-flex justify-content-between align-items-center">
-                <a href="${escapeHtml(videoUrl)}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <div class="card-footer text-center">
+                <a href="${escapeHtml(videoUrl)}" target="_blank" class="btn btn-outline-primary">
                     <i class="fas fa-external-link-alt"></i> Open in New Tab
                 </a>
-                <button type="button" id="markCompleteBtn" class="btn btn-primary btn-sm">
-                    <i class="fas fa-check-circle"></i> Mark as Done
-                </button>
             </div>
         </div>
     `);
@@ -223,14 +222,6 @@ function renderPdfContent(filePath, fileName, container) {
                         <i class="fas fa-file-pdf text-danger"></i>
                         <strong>${escapeHtml(fileName)}</strong>
                     </div>
-                    <div>
-                        <button type="button" id="downloadBtn" class="btn btn-primary btn-sm" data-file-url="${fileUrl}">
-                            <i class="fas fa-download"></i> Download PDF
-                        </button>
-                        <button type="button" id="markCompleteBtn" class="btn btn-success btn-sm ml-2">
-                            <i class="fas fa-check-circle"></i> Mark as Done
-                        </button>
-                    </div>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -243,6 +234,9 @@ function renderPdfContent(filePath, fileName, container) {
             </div>
         </div>
     `);
+    
+    // Show download footer for PDF
+    showDownloadFooter(fileUrl, 'Download PDF');
 }
 
 function renderFileContent(filePath, fileName, container) {
@@ -265,17 +259,18 @@ function renderFileContent(filePath, fileName, container) {
                 <p class="text-muted mb-4">
                     File Type: <span class="badge badge-primary">${fileExt.toUpperCase()}</span>
                 </p>
-                <button type="button" id="downloadBtn" class="btn btn-primary btn-lg" data-file-url="${fileUrl}">
-                    <i class="fas fa-download"></i> Download File
-                </button>
-            </div>
-            <div class="card-footer text-center">
-                <button type="button" id="markCompleteBtn" class="btn btn-success">
-                    <i class="fas fa-check-circle"></i> Mark as Done
-                </button>
             </div>
         </div>
     `);
+    
+    // Show download footer for file
+    showDownloadFooter(fileUrl, 'Download File');
+}
+
+function showDownloadFooter(fileUrl, buttonText) {
+    $('#downloadBtn').attr('data-file-url', fileUrl);
+    $('#downloadBtnText').text(buttonText);
+    $('#downloadFooter').show();
 }
 
 function buildNavigation(lectures, currentLectureId, lessonId) {

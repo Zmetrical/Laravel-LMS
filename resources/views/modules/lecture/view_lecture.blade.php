@@ -25,18 +25,36 @@
             <!-- Lecture Header -->
             <div class="card">
                 <div class="card-body">
-                    <div class="mb-2">
-                        <small class="text-muted">
-                            <i class="fas fa-book"></i> Lesson: <span id="lessonTitle"></span>
-                        </small>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-book"></i> Lesson: <span id="lessonTitle"></span>
+                                </small>
+                            </div>
+                            <h3 class="mb-0" id="lectureTitle"></h3>
+                        </div>
+                        <div id="markCompleteContainer">
+                            <button type="button" id="markCompleteBtn" class="btn btn-primary">
+                                <i class="fas fa-check-circle"></i> Mark as Done
+                            </button>
+                        </div>
                     </div>
-                    <h3 class="mb-0" id="lectureTitle"></h3>
                 </div>
             </div>
 
             <!-- Content Area -->
             <div id="contentArea" class="mt-3">
                 <!-- Content will be dynamically loaded here -->
+            </div>
+
+            <!-- Download Footer (will be shown only for file-based content) -->
+            <div id="downloadFooter" class="card mt-3" style="display: none;">
+                <div class="card-footer text-center py-3">
+                    <button type="button" id="downloadBtn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-download"></i> <span id="downloadBtnText">Download File</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -55,8 +73,6 @@
                 </div>
             </div>
         </div>
-
-
     </div>
 </div>
 @endsection
@@ -108,6 +124,10 @@
 .embed-responsive-16by9::before {
     padding-top: 56.25%;
 }
+
+#markCompleteContainer {
+    min-width: 150px;
+}
 </style>
 @endsection
 
@@ -124,7 +144,6 @@
     const LECTURE_ID = {{ $lectureId }};
     const BASE_URL = "{{ url('/') }}";
 </script>
-
 
 @if(isset($scripts))
     @foreach($scripts as $script)
