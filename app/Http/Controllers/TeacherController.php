@@ -33,5 +33,5 @@ class TeacherController extends Controller
 
         return view('admin.login', $data);
     }
-
+    
 }

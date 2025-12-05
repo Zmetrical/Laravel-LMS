@@ -73,10 +73,10 @@ public function show_student($id)
         'student' => $student,
         'enrolledSemesters' => $enrolledSemesters,
         'mode' => 'view',
-        'scripts' => ['profile_management/profile_student.js']
+        'scripts' => ['profile_management/view_profile_student.js']
     ];
 
-    return view('modules.profile.profile_student', $data);
+    return view('modules.profile.view_profile_student', $data);
 }
 
 // Edit form
@@ -137,10 +137,10 @@ public function edit_student($id)
         'student' => $student,
         'enrolledSemesters' => $enrolledSemesters,
         'mode' => 'edit',
-        'scripts' => ['profile_management/profile_student.js']
+        'scripts' => ['profile_management/view_profile_student.js']
     ];
 
-    return view('modules.profile.profile_student', $data);
+    return view('modules.profile.view_profile_student', $data);
 }
     public function update_student(Request $request, $id)
     {
@@ -275,11 +275,11 @@ public function edit_student($id)
 
         $data = [
             'mode' => 'view',
-            'scripts' => ['profile_management/profile_teacher.js'],
+            'scripts' => ['profile_management/view_profile_teacher.js'],
             'teacher' => $teacher
         ];
 
-        return view('modules.profile.profile_teacher', $data);
+        return view('modules.profile.view_profile_teacher', $data);
     }
 
     public function edit_teacher($id)
@@ -295,11 +295,11 @@ public function edit_student($id)
 
         $data = [
             'mode' => 'edit',
-            'scripts' => ['profile_management/profile_teacher.js'],
+            'scripts' => ['profile_management/view_profile_teacher.js'],
             'teacher' => $teacher
         ];
 
-        return view('modules.profile.profile_teacher', $data);
+        return view('modules.profile.view_profile_teacher', $data);
     }
 
     public function update_teacher(Request $request, $id)

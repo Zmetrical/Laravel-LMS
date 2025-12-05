@@ -121,18 +121,15 @@
                     </li>
                 </ul>
 
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link" data-toggle="dropdown" href="#">
-                            <i class="far fa-user"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                            <a href="#" class="dropdown-item">Profile</a>
-                            <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item">Logout</a>
-                        </div>
-                    </li>
-                </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a href="{{ route('student.profile', ['id' => auth()->user()->id]) }}" 
+                class="nav-link d-flex align-items-center">
+                    <i class="far fa-user mr-2"></i>
+                    <span>{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</span>
+                </a>
+            </li>
+        </ul>
             </nav>
 
 

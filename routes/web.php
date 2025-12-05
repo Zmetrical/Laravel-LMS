@@ -175,6 +175,12 @@ Route::prefix('student')->name('student.')->group(function () {
 
         Route::get('/dashboard', [StudentController::class, 'index'])->name('home');
 
+            // Student Profile Routes
+    Route::get('/profile', [StudentController::class, 'showProfile'])->name('profile');
+    Route::get('/profile/enrollment-history', [StudentController::class, 'getEnrollmentHistory'])->name('profile.enrollment_history');
+    Route::get('/profile/enrolled-classes', [StudentController::class, 'getProfileEnrolledClasses'])->name('profile.enrolled_classes');
+
+    
     // Dashboard API endpoints
     Route::prefix('student/dashboard')->name('dashboard.')->group(function () {
        Route::get('/quarterly-grades', [StudentController::class, 'getQuarterlyGrades'])

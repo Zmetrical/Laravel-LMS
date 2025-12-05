@@ -434,14 +434,14 @@ public function getTeacherGrades($classId)
                 $fullName .= ' ' . $student->middle_name;
             }
             
-$studentGrades = [
-    'student_number' => $student->student_number,
-    'full_name' => $fullName,
-    'gender' => strtolower($student->gender ?? 'unknown'),
-    'student_type' => strtolower($student->student_type ?? 'regular'),  // ← Added this
-    'section_name' => $student->section_name ?? 'No Section',  // ← Added this
-    'quizzes' => []
-];
+                $studentGrades = [
+                    'student_number' => $student->student_number,
+                    'full_name' => $fullName,
+                    'gender' => strtolower($student->gender ?? 'unknown'),
+                    'student_type' => strtolower($student->student_type ?? 'regular'),  // ← Added this
+                    'section_name' => $student->section_name ?? 'No Section',  // ← Added this
+                    'quizzes' => []
+                ];
             foreach ($quizzes as $quiz) {
                 // Get best attempt for this quiz
                 $bestAttempt = DB::table('student_quiz_attempts')

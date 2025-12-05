@@ -641,4 +641,194 @@ class StudentController extends Controller
                 ->get();
         }
     }
+
+    // Add these methods to your StudentController.php
+
+/**
+ * Show student's own profile
+ */
+public function showProfile()
+{
+    $student = Auth::guard('student')->user();
+    
+    if (!$student) {
+        return redirect()->route('student.login')->with('error', 'Please login first');
+    }
+
+    // Get student with section, level, and strand information
+    $studentData = DB::table('students')
+        ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
+        ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
+        ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
+        ->select(
+            'students.*',
+            'sections.name as section',
+            'levels.name as level',
+            'strands.code as strand'
+        )
+        ->where('students.id', '=', $student->id)
+        ->first();
+
+    $data = [
+        'student' => $studentData,
+        'scripts' => ['student/profile_student.js']
+    ];
+
+    return view('student.profile_student', $data);
+}
+
+/**
+ * Get enrollment history for logged-in student
+ */
+public function getEnrollmentHistory()
+{
+    try {
+        $student = Auth::guard('student')->user();
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Get enrolled semesters based on student type
+        if ($student->student_type === 'regular') {
+            // For regular students, get semesters from section_class_matrix
+            $enrolledSemesters = DB::table('section_class_matrix as scm')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'sem.id as semester_id',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'sy.code as school_year_code'
+                )
+                ->where('scm.section_id', '=', $student->section_id)
+                ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->get();
+        } else {
+            // For irregular students, get semesters from student_class_matrix
+            $enrolledSemesters = DB::table('student_class_matrix as scm')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'sem.id as semester_id',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'sy.code as school_year_code'
+                )
+                ->where('scm.student_number', '=', $student->student_number)
+                ->where('scm.enrollment_status', '=', 'enrolled')
+                ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->get();
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $enrolledSemesters
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Failed to get enrollment history', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load enrollment history'
+        ], 500);
+    }
+}
+
+/**
+ * Get enrolled classes for logged-in student
+ */
+public function getProfileEnrolledClasses()
+{
+    try {
+        $student = Auth::guard('student')->user();
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Check student type
+        if ($student->student_type === 'regular') {
+            // For regular students, get classes from section_class_matrix
+            $enrolledClasses = DB::table('section_class_matrix as scm')
+                ->join('classes as c', 'scm.class_id', '=', 'c.id')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'c.class_code',
+                    'c.class_name',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'scm.semester_id'
+                )
+                ->where('scm.section_id', '=', $student->section_id)
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->orderBy('c.class_name', 'asc')
+                ->get();
+        } else {
+            // For irregular students, get classes from student_class_matrix
+            $enrolledClasses = DB::table('student_class_matrix as scm')
+                ->join('classes as c', function ($join) {
+                    $join->on(
+                        DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
+                        '=',
+                        DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
+                    );
+                })
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'c.class_code',
+                    'c.class_name',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'scm.semester_id',
+                    'scm.enrollment_status'
+                )
+                ->where('scm.student_number', '=', $student->student_number)
+                ->where('scm.enrollment_status', '=', 'enrolled')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->orderBy('c.class_name', 'asc')
+                ->get();
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $enrolledClasses,
+            'student_type' => $student->student_type
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Failed to fetch enrolled classes', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch enrolled classes'
+        ], 500);
+    }
+}
+
 }
