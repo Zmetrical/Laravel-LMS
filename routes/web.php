@@ -175,13 +175,18 @@ Route::prefix('student')->name('student.')->group(function () {
 
         Route::get('/dashboard', [StudentController::class, 'index'])->name('home');
 
-    Route::prefix('dashboard')->name('dashboard.')->group(function () {
-        Route::get('/stats', [StudentController::class, 'getDashboardStats'])->name('stats');
-        Route::get('/classes', [StudentController::class, 'getClasses'])->name('classes');
-        Route::get('/class-performance', [StudentController::class, 'getClassPerformance'])->name('class-performance');
-        Route::get('/detailed-breakdown', [StudentController::class, 'getDetailedBreakdown'])->name('detailed-breakdown');
-        Route::get('/quarter-comparison', [StudentController::class, 'getQuarterComparison'])->name('quarter-comparison');
-        Route::get('/all-classes-performance', [StudentController::class, 'getAllClassesPerformance'])->name('all-classes-performance');
+    // Dashboard API endpoints
+    Route::prefix('student/dashboard')->name('dashboard.')->group(function () {
+       Route::get('/quarterly-grades', [StudentController::class, 'getQuarterlyGrades'])
+            ->name('quarterly-grades');
+        
+        Route::get('/grade-trends', [StudentController::class, 'getGradeTrends'])
+            ->name('grade-trends');
+        
+        Route::get('/semester-summary', [StudentController::class, 'getSemesterSummary'])
+            ->name('semester-summary');
+        Route::get('/grade-breakdown', [StudentController::class, 'getGradeBreakdown'])
+            ->name('grade-breakdown');
     });
 
         // Class Pages

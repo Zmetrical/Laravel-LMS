@@ -1,411 +1,233 @@
 $(document).ready(function() {
-    let performanceChart = null;
+    let gradeBreakdownChart = null;
+    let breakdownData = null;
+    let selectedQuarterIndex = 0;
 
-    // Load all dashboard data
-    loadDashboardStats();
-    loadAvailableQuizzes();
-    loadRecentGrades();
-    loadPerformanceChart();
+    // Load all data
+    loadQuarterlyGrades();
+    loadSemesterSummary();
+    loadGradeBreakdown();
 
     // Refresh buttons
-    $('#refreshQuizzes').on('click', function() {
+    $('#refreshSummary').on('click', function() {
         $(this).find('i').addClass('fa-spin');
-        loadAvailableQuizzes();
+        loadSemesterSummary();
+    });
+
+    $('#refreshBreakdown').on('click', function() {
+        $(this).find('i').addClass('fa-spin');
+        loadGradeBreakdown();
     });
 
     $('#refreshGrades').on('click', function() {
         $(this).find('i').addClass('fa-spin');
-        loadRecentGrades();
-    });
-
-    $('#refreshChart').on('click', function() {
-        $(this).find('i').addClass('fa-spin');
-        loadPerformanceChart();
+        loadQuarterlyGrades();
     });
 
     /**
-     * Load dashboard statistics
+     * Load semester summary
      */
-    function loadDashboardStats() {
+    function loadSemesterSummary() {
         $.ajax({
-            url: API_ROUTES.getStats,
+            url: API_ROUTES.getSemesterSummary,
             method: 'GET',
             success: function(response) {
-                if (response.success) {
-                    updateStatistics(response.data);
-                } else {
-                    showStatsError();
-                }
-            },
-            error: function(xhr) {
-                showStatsError();
-                toastr.error('Failed to load statistics');
-            }
-        });
-    }
-
-    /**
-     * Update statistics display
-     */
-    function updateStatistics(data) {
-        $('#enrolledClassesCount').html(data.enrolled_classes);
-        $('#completedLessonsCount').html(data.completed_lessons);
-        $('#pendingQuizzesCount').html(data.pending_quizzes);
-        
-        const avgGrade = data.average_grade > 0 ? data.average_grade : 'N/A';
-        $('#averageGrade').html(avgGrade);
-    }
-
-    /**
-     * Show error state for statistics
-     */
-    function showStatsError() {
-        $('.info-box-number').html('<span class="text-danger">-</span>');
-    }
-
-    /**
-     * Load available quizzes
-     */
-    function loadAvailableQuizzes() {
-        $.ajax({
-            url: API_ROUTES.getQuizzes,
-            method: 'GET',
-            success: function(response) {
-                $('#refreshQuizzes i').removeClass('fa-spin');
+                $('#refreshSummary i').removeClass('fa-spin');
                 
                 if (response.success) {
-                    displayQuizzes(response.data);
+                    displaySemesterSummary(response.data);
                 } else {
-                    showQuizzesError(response.message);
+                    showSummaryError();
                 }
             },
             error: function(xhr) {
-                $('#refreshQuizzes i').removeClass('fa-spin');
-                const message = xhr.responseJSON?.message || 'Failed to load quizzes';
-                showQuizzesError(message);
+                $('#refreshSummary i').removeClass('fa-spin');
+                showSummaryError();
+                toastr.error('Failed to load semester summary');
             }
         });
     }
 
     /**
-     * Display quizzes list
+     * Display semester summary as table
      */
-    function displayQuizzes(quizzes) {
-        const container = $('#quizzesContainer');
-        container.empty();
+    function displaySemesterSummary(data) {
+        const container = $('#semesterSummary');
+        
+        const q1AvgHtml = data.q1_average !== null 
+            ? `<span class="${getGradeClass(data.q1_average)}">${data.q1_average}</span>`
+            : '<span class="grade-pending">N/A</span>';
+        
+        const q2AvgHtml = data.q2_average !== null 
+            ? `<span class="${getGradeClass(data.q2_average)}">${data.q2_average}</span>`
+            : '<span class="grade-pending">N/A</span>';
+        
+        const semAvgHtml = data.semester_average !== null 
+            ? `<span class="${getGradeClass(data.semester_average)}">${data.semester_average}</span>`
+            : '<span class="grade-pending">N/A</span>';
+        
+        const html = `
+            <table class="table table-hover table-grades">
+                <thead>
+                    <tr>
+                        <th class="text-center">1st Quarter Average</th>
+                        <th class="text-center">2nd Quarter Average</th>
+                        <th class="text-center">Semester Average</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-center" style="font-size: 1.5em;">${q1AvgHtml}</td>
+                        <td class="text-center" style="font-size: 1.5em;">${q2AvgHtml}</td>
+                        <td class="text-center final-grade-col" style="font-size: 1.5em;">${semAvgHtml}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+        
+        container.html(html);
+    }
 
-        if (quizzes.length === 0) {
-            container.html(`
-                <div class="text-center py-4">
-                    <i class="fas fa-inbox fa-3x text-muted mb-2"></i>
-                    <p class="text-muted mb-0">No available quizzes at the moment</p>
-                    <small class="text-muted">Check back later for new quizzes</small>
-                </div>
-            `);
+    /**
+     * Show summary error
+     */
+    function showSummaryError() {
+        $('#semesterSummary').html(`
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-circle fa-2x text-danger mb-2"></i>
+                <p class="text-muted">Failed to load semester summary</p>
+            </div>
+        `);
+    }
+
+    /**
+     * Load grade breakdown
+     */
+    function loadGradeBreakdown() {
+        $.ajax({
+            url: API_ROUTES.getGradeBreakdown,
+            method: 'GET',
+            success: function(response) {
+                $('#refreshBreakdown i').removeClass('fa-spin');
+                
+                if (response.success) {
+                    breakdownData = response.data;
+                    renderQuarterButtons();
+                    displayGradeBreakdown();
+                } else {
+                    showBreakdownError();
+                }
+            },
+            error: function(xhr) {
+                $('#refreshBreakdown i').removeClass('fa-spin');
+                showBreakdownError();
+                toastr.error('Failed to load grade breakdown');
+            }
+        });
+    }
+
+    /**
+     * Render quarter toggle buttons
+     */
+    function renderQuarterButtons() {
+        const container = $('#quarterToggle');
+        
+        if (!breakdownData || breakdownData.length === 0) {
+            container.html('');
             return;
         }
-
-        quizzes.forEach(function(quiz) {
-            const card = createQuizCard(quiz);
-            container.append(card);
-        });
-    }
-
-    /**
-     * Create quiz card
-     */
-    function createQuizCard(quiz) {
-        const now = new Date();
-        const deadline = quiz.available_until ? new Date(quiz.available_until) : null;
-        const timeLeft = deadline ? Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) : null;
         
-        let urgentClass = '';
-        let deadlineHtml = '';
-        
-        if (deadline) {
-            if (timeLeft <= 1) {
-                urgentClass = 'urgent';
-                deadlineHtml = `
-                    <small class="text-danger">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Due ${timeLeft === 0 ? 'today' : 'tomorrow'}
-                    </small>
-                `;
-            } else if (timeLeft <= 3) {
-                urgentClass = 'urgent';
-                deadlineHtml = `
-                    <small class="text-warning">
-                        <i class="fas fa-clock"></i>
-                        Due in ${timeLeft} days
-                    </small>
-                `;
-            } else {
-                deadlineHtml = `
-                    <small class="text-muted">
-                        <i class="fas fa-clock"></i>
-                        Due in ${timeLeft} days
-                    </small>
-                `;
-            }
-        } else {
-            deadlineHtml = `
-                <small class="text-muted">
-                    <i class="fas fa-infinity"></i>
-                    No deadline
-                </small>
+        let buttonsHtml = '';
+        breakdownData.forEach((quarter, index) => {
+            const activeClass = index === selectedQuarterIndex ? 'btn-primary' : 'btn-secondary';
+            buttonsHtml += `
+                <button type="button" class="btn ${activeClass} quarter-btn" data-index="${index}">
+                    ${escapeHtml(quarter.quarter_name)}
+                </button>
             `;
-        }
-
-        const attemptsHtml = quiz.max_attempts > 0 
-            ? `${quiz.attempts_taken}/${quiz.max_attempts} attempts`
-            : `${quiz.attempts_taken} attempts`;
-
-        const card = `
-            <div class="quiz-card ${urgentClass} p-3 mb-2 bg-white rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">
-                            <strong>${escapeHtml(quiz.title)}</strong>
-                        </h6>
-                        <p class="text-muted mb-1 small">
-                            <i class="fas fa-book"></i> ${escapeHtml(quiz.class_name)}
-                        </p>
-                        <p class="text-muted mb-2 small">
-                            <i class="fas fa-bookmark"></i> ${escapeHtml(quiz.lesson_title)}
-                        </p>
-                        <div class="d-flex flex-wrap gap-2">
-                            ${deadlineHtml}
-                            ${quiz.time_limit ? `
-                                <small class="text-muted ml-3">
-                                    <i class="fas fa-hourglass-half"></i>
-                                    ${quiz.time_limit} mins
-                                </small>
-                            ` : ''}
-                            <small class="text-muted ml-3">
-                                <i class="fas fa-redo"></i>
-                                ${attemptsHtml}
-                            </small>
-                        </div>
-                    </div>
-                    <div class="ml-2">
-                        <button class="btn btn-primary btn-sm take-quiz-btn" 
-                                data-quiz-id="${quiz.id}">
-                            <i class="fas fa-play"></i> Take Quiz
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return card;
-    }
-
-    /**
-     * Show quizzes error
-     */
-    function showQuizzesError(message) {
-        $('#quizzesContainer').html(`
-            <div class="text-center py-4">
-                <i class="fas fa-exclamation-circle fa-2x text-danger mb-2"></i>
-                <p class="text-muted mb-0">${escapeHtml(message)}</p>
-            </div>
-        `);
-    }
-
-    /**
-     * Load recent grades
-     */
-    function loadRecentGrades() {
-        $.ajax({
-            url: API_ROUTES.getRecentGrades,
-            method: 'GET',
-            success: function(response) {
-                $('#refreshGrades i').removeClass('fa-spin');
-                
-                if (response.success) {
-                    displayRecentGrades(response.data);
-                } else {
-                    showGradesError(response.message);
-                }
-            },
-            error: function(xhr) {
-                $('#refreshGrades i').removeClass('fa-spin');
-                const message = xhr.responseJSON?.message || 'Failed to load grades';
-                showGradesError(message);
-            }
+        });
+        
+        container.html(buttonsHtml);
+        
+        // Bind click events
+        $('.quarter-btn').on('click', function() {
+            selectedQuarterIndex = parseInt($(this).data('index'));
+            $('.quarter-btn').removeClass('btn-primary').addClass('btn-secondary');
+            $(this).removeClass('btn-secondary').addClass('btn-primary');
+            displayGradeBreakdown();
         });
     }
 
     /**
-     * Display recent grades
+     * Display grade breakdown chart
      */
-    function displayRecentGrades(grades) {
-        const container = $('#recentGradesContainer');
-        container.empty();
-
-        if (grades.length === 0) {
+    function displayGradeBreakdown() {
+        const container = $('#breakdownChartContainer');
+        const ctx = document.getElementById('gradeBreakdownChart');
+        
+        if (!breakdownData || breakdownData.length === 0) {
             container.html(`
                 <div class="text-center py-4">
-                    <i class="fas fa-inbox fa-3x text-muted mb-2"></i>
-                    <p class="text-muted mb-0">No recent grades</p>
-                    <small class="text-muted">Complete quizzes to see your grades here</small>
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No grade data available yet</p>
                 </div>
             `);
             return;
         }
-
-        grades.forEach(function(grade) {
-            const item = createGradeItem(grade);
-            container.append(item);
-        });
-    }
-
-    /**
-     * Create grade item
-     */
-    function createGradeItem(grade) {
-        const percentage = parseFloat(grade.percentage);
-        let gradeClass = 'grade-item';
-        let badgeClass = 'secondary';
         
-        if (percentage >= 90) {
-            gradeClass += ' excellent';
-            badgeClass = 'success';
-        } else if (percentage >= 80) {
-            gradeClass += ' good';
-            badgeClass = 'primary';
-        } else if (percentage >= 75) {
-            gradeClass += ' needs-improvement';
-            badgeClass = 'warning';
-        } else {
-            gradeClass += ' poor';
-            badgeClass = 'danger';
-        }
-
-        const submittedDate = new Date(grade.submitted_at);
-        const formattedDate = submittedDate.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-
-        const item = `
-            <div class="${gradeClass} rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">
-                            <strong>${escapeHtml(grade.quiz_title)}</strong>
-                        </h6>
-                        <p class="text-muted mb-1 small">
-                            <i class="fas fa-book"></i> ${escapeHtml(grade.class_name)}
-                        </p>
-                        <small class="text-muted">
-                            <i class="fas fa-calendar"></i> ${formattedDate}
-                        </small>
-                    </div>
-                    <div class="text-right">
-                        <h5 class="mb-0">
-                            <span class="badge badge-${badgeClass}">
-                                ${percentage.toFixed(2)}%
-                            </span>
-                        </h5>
-                        <small class="text-muted">
-                            ${grade.score}/${grade.total_points}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return item;
-    }
-
-    /**
-     * Show grades error
-     */
-    function showGradesError(message) {
-        $('#recentGradesContainer').html(`
-            <div class="text-center py-4">
-                <i class="fas fa-exclamation-circle fa-2x text-danger mb-2"></i>
-                <p class="text-muted mb-0">${escapeHtml(message)}</p>
-            </div>
-        `);
-    }
-
-    /**
-     * Load performance chart
-     */
-    function loadPerformanceChart() {
-        $.ajax({
-            url: API_ROUTES.getPerformanceChart,
-            method: 'GET',
-            success: function(response) {
-                $('#refreshChart i').removeClass('fa-spin');
-                
-                if (response.success) {
-                    displayPerformanceChart(response.data);
-                } else {
-                    showChartError();
-                }
-            },
-            error: function(xhr) {
-                $('#refreshChart i').removeClass('fa-spin');
-                showChartError();
-                toastr.error('Failed to load performance chart');
-            }
-        });
-    }
-
-    /**
-     * Display performance chart
-     */
-    function displayPerformanceChart(data) {
-        if (data.length === 0) {
-            $('#performanceChart').parent().html(`
+        const quarterData = breakdownData[selectedQuarterIndex];
+        
+        if (!quarterData || quarterData.classes.length === 0) {
+            container.html(`
                 <div class="text-center py-4">
-                    <i class="fas fa-chart-area fa-3x text-muted mb-2"></i>
-                    <p class="text-muted mb-0">No performance data available</p>
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No classes for this quarter</p>
                 </div>
             `);
             return;
         }
-
-        const labels = data.map(item => item.class_name);
-        const wwData = data.map(item => item.ww_avg);
-        const ptData = data.map(item => item.pt_avg);
-        const qaData = data.map(item => item.qa_avg);
-
-        const ctx = document.getElementById('performanceChart');
         
-        // Destroy existing chart if it exists
-        if (performanceChart) {
-            performanceChart.destroy();
+        // Prepare data for stacked bar chart with multi-line labels
+        const labels = quarterData.classes.map(c => {
+            const transmuted = c.transmuted_grade || 'N/A';
+            return [
+                c.class_name,
+                `Grade: ${transmuted}`
+            ];
+        });
+        
+        const wwData = quarterData.classes.map(c => c.ww_ws || 0);
+        const ptData = quarterData.classes.map(c => c.pt_ws || 0);
+        const qaData = quarterData.classes.map(c => c.qa_ws || 0);
+        
+        if (gradeBreakdownChart) {
+            gradeBreakdownChart.destroy();
         }
-
-        performanceChart = new Chart(ctx, {
+        
+        gradeBreakdownChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Written Works',
+                        label: 'Written Work (WW)',
                         data: wwData,
-                        backgroundColor: 'rgba(108, 117, 125, 0.7)',
-                        borderColor: 'rgb(108, 117, 125)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Performance Tasks',
-                        data: ptData,
-                        backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.8)',
                         borderColor: 'rgb(0, 123, 255)',
                         borderWidth: 1
                     },
                     {
-                        label: 'Quarterly Assessment',
-                        data: qaData,
-                        backgroundColor: 'rgba(108, 117, 125, 0.5)',
+                        label: 'Performance Task (PT)',
+                        data: ptData,
+                        backgroundColor: 'rgba(108, 117, 125, 0.8)',
                         borderColor: 'rgb(108, 117, 125)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Quarterly Assessment (QA)',
+                        data: qaData,
+                        backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                        borderColor: 'rgb(40, 167, 69)',
                         borderWidth: 1
                     }
                 ]
@@ -414,13 +236,26 @@ $(document).ready(function() {
                 responsive: true,
                 maintainAspectRatio: true,
                 scales: {
+                    x: {
+                        stacked: true,
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
                     y: {
+                        stacked: true,
                         beginAtZero: true,
                         max: 100,
                         ticks: {
                             callback: function(value) {
-                                return value + '%';
+                                return value;
                             }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Weighted Score'
                         }
                     }
                 },
@@ -431,9 +266,26 @@ $(document).ready(function() {
                     },
                     tooltip: {
                         callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                const classData = quarterData.classes[index];
+                                return classData.class_name;
+                            },
                             label: function(context) {
-                                return context.dataset.label + ': ' + 
-                                       context.parsed.y.toFixed(2) + '%';
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y || 0;
+                                return label + ': ' + value.toFixed(2);
+                            },
+                            footer: function(context) {
+                                const index = context[0].dataIndex;
+                                const classData = quarterData.classes[index];
+                                return [
+                                    '---',
+                                    'Weight Distribution:',
+                                    'WW: ' + classData.ww_perc + '%',
+                                    'PT: ' + classData.pt_perc + '%',
+                                    'QA: ' + classData.qa_perc + '%'
+                                ];
                             }
                         }
                     }
@@ -443,25 +295,160 @@ $(document).ready(function() {
     }
 
     /**
-     * Show chart error
+     * Show breakdown error
      */
-    function showChartError() {
-        $('#performanceChart').parent().html(`
+    function showBreakdownError() {
+        $('#breakdownChartContainer').html(`
             <div class="text-center py-4">
                 <i class="fas fa-exclamation-circle fa-2x text-danger mb-2"></i>
-                <p class="text-muted mb-0">Failed to load performance chart</p>
+                <p class="text-muted">Failed to load grade breakdown</p>
             </div>
         `);
     }
 
     /**
-     * Take quiz button handler
+     * Load quarterly grades
      */
-    $(document).on('click', '.take-quiz-btn', function() {
-        const quizId = $(this).data('quiz-id');
-        // TODO: Navigate to quiz taking page
-        toastr.info('Quiz taking feature will be implemented');
-    });
+    function loadQuarterlyGrades() {
+        $.ajax({
+            url: API_ROUTES.getQuarterlyGrades,
+            method: 'GET',
+            success: function(response) {
+                $('#refreshGrades i').removeClass('fa-spin');
+                
+                if (response.success) {
+                    displayQuarterlyGrades(response.data, response.quarters);
+                } else {
+                    showGradesError();
+                }
+            },
+            error: function(xhr) {
+                $('#refreshGrades i').removeClass('fa-spin');
+                showGradesError();
+                toastr.error('Failed to load grades');
+            }
+        });
+    }
+
+    /**
+     * Display quarterly grades table
+     */
+    function displayQuarterlyGrades(data, quarters) {
+        const container = $('#gradesTableContainer');
+        
+        if (data.length === 0) {
+            container.html(`
+                <div class="text-center py-4">
+                    <i class="fas fa-table fa-3x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No grades available</p>
+                </div>
+            `);
+            return;
+        }
+
+        let tableHtml = `
+            <table class="table table-hover table-grades">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+        `;
+        
+        // Add quarter headers
+        quarters.forEach(q => {
+            tableHtml += `<th class="text-center">${escapeHtml(q.name)}</th>`;
+        });
+        
+        tableHtml += `
+                        <th class="text-center">Semester Final</th>
+                        <th class="text-center">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        // Add grade rows
+        data.forEach(classData => {
+            tableHtml += `<tr>`;
+            tableHtml += `<td><strong>${escapeHtml(classData.class_name)}</strong></td>`;
+            
+            // Add quarter grades
+            classData.quarters.forEach(quarter => {
+                const grade = quarter.transmuted_grade;
+                if (grade !== null) {
+
+                    tableHtml += `
+                        <td class="text-center ${getGradeClass(grade)}">
+                            ${grade}
+                        </td>
+                    `;
+                } else {
+                    tableHtml += `<td class="text-center grade-pending">N/A</td>`;
+                }
+            });
+            
+            // Add semester final grade
+            if (classData.semester_final && classData.semester_final.final_grade !== null) {
+                const finalGrade = classData.semester_final.final_grade;
+                
+                tableHtml += `
+                    <td class="text-center final-grade-col ${getGradeClass(finalGrade)}">
+                        ${finalGrade}
+                    </td>
+                `;
+                
+                // Add remarks
+                const remarks = classData.semester_final.remarks;
+                let remarksClass = '';
+                if (remarks === 'PASSED') remarksClass = 'text-success';
+                else if (remarks === 'FAILED') remarksClass = 'text-danger';
+                else remarksClass = 'text-warning';
+                
+                tableHtml += `
+                    <td class="text-center ${remarksClass}">
+                        <strong>${remarks}</strong>
+                    </td>
+                `;
+            } else {
+                tableHtml += `
+                    <td class="text-center final-grade-col grade-pending">N/A</td>
+                    <td class="text-center grade-pending">-</td>
+                `;
+            }
+            
+            tableHtml += `</tr>`;
+        });
+        
+        tableHtml += `
+                </tbody>
+            </table>
+        `;
+        
+        container.html(tableHtml);
+    }
+
+    /**
+     * Show grades error
+     */
+    function showGradesError() {
+        $('#gradesTableContainer').html(`
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-circle fa-2x text-danger mb-2"></i>
+                <p class="text-muted">Failed to load grades</p>
+            </div>
+        `);
+    }
+
+    /**
+     * Get grade CSS class based on value
+     */
+    function getGradeClass(grade) {
+        if (grade === null) return 'grade-pending';
+        if (grade >= 90) return 'grade-excellent';
+        if (grade >= 85) return 'grade-very-good';
+        if (grade >= 80) return 'grade-good';
+        if (grade >= 75) return 'grade-fair';
+        return 'grade-poor';
+    }
 
     /**
      * Helper function to escape HTML

@@ -20,15 +20,11 @@
             border-left: 4px solid #007bff;
         }
         .quarter-card.locked {
-            opacity: 0.9;
+            opacity: 0.95;
             background-color: #f8f9fa;
         }
-        .component-card {
-            transition: all 0.2s;
-        }
-        .component-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .card.border-dark {
+            border-width: 1px !important;
         }
         @media (max-width: 768px) {
             .filter-btn-group .btn {
@@ -59,9 +55,6 @@
                         <i class="fas fa-book"></i> 
                         <strong>{{ $class->class_name }}</strong>
                     </h4>
-                    <p class="text-muted mb-0">
-                        <small>{{ $class->class_code }}</small>
-                    </p>
                 </div>
                 <div class="col-md-4 text-right">
                     <a href="{{ route('student.list_grade') }}" class="btn btn-secondary">
@@ -77,39 +70,16 @@
         <div class="card-body py-3">
             <div class="row">
                 <!-- Quarter Filter -->
-                <div class="col-md-6 mb-2 mb-md-0">
-                    <label class="mb-2"><strong>Select Period:</strong></label>
+                <div class="col-md-12 mb-2 mb-md-0">
+                    <label class="mb-2"><strong><i class="fas fa-calendar-alt"></i> Select Period:</strong></label>
                     <div class="filter-btn-group">
-                        <button type="button" class="btn btn-outline-primary quarter-filter-btn active" data-filter="all">
-                            <i class="fas fa-th"></i> All
+                        @foreach($quarters as $quarter)
+                        <button type="button" class="btn {{ $loop->first ? 'btn-primary' : 'btn-outline-primary' }} quarter-filter-btn {{ $loop->first ? 'active' : '' }}" data-filter="{{ $quarter->order_number }}">
+                            <i class="fas fa-calendar"></i> {{ $quarter->name }}
                         </button>
-                        <button type="button" class="btn btn-outline-primary quarter-filter-btn" data-filter="1">
-                            <i class="fas fa-calendar"></i> Q1
-                        </button>
-                        <button type="button" class="btn btn-outline-primary quarter-filter-btn" data-filter="2">
-                            <i class="fas fa-calendar"></i> Q2
-                        </button>
+                        @endforeach
                         <button type="button" class="btn btn-outline-primary quarter-filter-btn" data-filter="final">
-                            <i class="fas fa-trophy"></i> Final
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Component Filter -->
-                <div class="col-md-6">
-                    <label class="mb-2"><strong>Filter Component:</strong></label>
-                    <div class="filter-btn-group">
-                        <button type="button" class="btn btn-outline-secondary component-filter-btn active" data-filter="all">
-                            <i class="fas fa-list"></i> All
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary component-filter-btn" data-filter="WW">
-                            WW ({{ $class->ww_perc }}%)
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary component-filter-btn" data-filter="PT">
-                            PT ({{ $class->pt_perc }}%)
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary component-filter-btn" data-filter="QA">
-                            QA ({{ $class->qa_perce }}%)
+                            <i class="fas fa-trophy"></i> Final Grade
                         </button>
                     </div>
                 </div>

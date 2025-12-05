@@ -7,32 +7,92 @@
         @endforeach
     @endif
     <style>
-        .grade-card {
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .grade-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .component-badge {
-            font-size: 0.75rem;
-            padding: 0.35rem 0.65rem;
-        }
-        .score-display {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        .grade-progress {
-            height: 8px;
-        }
-        @media (max-width: 768px) {
-            .score-display {
-                font-size: 1.2rem;
-            }
-            .grade-card {
-                margin-bottom: 1rem;
-            }
-        }
+/* Simplified Card Styling */
+.grade-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-width: 2px;
+}
+.grade-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Unified Grade Box Styling */
+.grade-box {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px 6px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+.grade-box.has-grade {
+    border-color: #007bff;
+    background: #e7f3ff;
+}
+.grade-box.final-box.has-grade {
+    border-color: #28a745;
+    background: #e8f5e9;
+}
+.grade-box.no-grade {
+    border-style: dashed;
+}
+
+.grade-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.grade-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #495057;
+    line-height: 1;
+}
+.grade-box.has-grade .grade-value {
+    color: #007bff;
+}
+.grade-box.final-box.has-grade .grade-value {
+    color: #28a745;
+}
+.grade-box.no-grade .grade-value {
+    color: #adb5bd;
+}
+
+/* Compact row spacing */
+.row.g-2 {
+    margin-left: -4px;
+    margin-right: -4px;
+}
+.row.g-2 > [class*='col-'] {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+/* Badge styling */
+.badge-light {
+    background: #e9ecef;
+    color: #495057;
+    font-weight: 600;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+}
+
+.gap-3 {
+    gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .grade-value {
+        font-size: 1.3rem;
+    }
+    .grade-label {
+        font-size: 0.65rem;
+    }
+}
     </style>
 @endsection
 
@@ -44,58 +104,7 @@
 @endsection
 
 @section('content')
-<br>
 <div class="container-fluid">
-    <!-- Active Semester Info -->
-    <div class="alert alert-dark alert-dismissible">
-        <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <h5>
-            <i class="fas fa-calendar-alt"></i> 
-            {{ $activeSemesterDisplay ?? 'No Active Semester' }}
-        </h5>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 col-12 mb-3">
-            <div class="info-box">
-                <span class="info-box-icon bg-primary"><i class="fas fa-book"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Total Classes</span>
-                    <span class="info-box-number" id="totalClassesCount">-</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-12 mb-3">
-            <div class="info-box">
-                <span class="info-box-icon bg-secondary"><i class="fas fa-hourglass-half"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Pending Grades</span>
-                    <span class="info-box-number" id="pendingCount">-</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-12 mb-3">
-            <div class="info-box">
-                <span class="info-box-icon bg-primary"><i class="fas fa-check-circle"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">With Final Grades</span>
-                    <span class="info-box-number" id="withFinalCount">-</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-12 mb-3">
-            <div class="info-box">
-                <span class="info-box-icon bg-secondary"><i class="fas fa-chart-line"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Overall Average</span>
-                    <span class="info-box-number" id="overallAverage">-</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Grades List -->
     <div id="gradesContainer">
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">

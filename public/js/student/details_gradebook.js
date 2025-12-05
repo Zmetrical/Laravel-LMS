@@ -1,39 +1,29 @@
 $(document).ready(function() {
     let gradeData = null;
-    let currentComponentFilter = 'all';
-    let currentQuarterFilter = 'all';
+    let currentQuarterFilter = '1';
 
-    // Load grade details on page load
     loadGradeDetails();
 
-    /**
-     * Component filter buttons
-     */
-    $(document).on('click', '.component-filter-btn', function() {
-        $('.component-filter-btn').removeClass('active btn-primary').addClass('btn-outline-primary');
-        $(this).removeClass('btn-outline-primary').addClass('active btn-primary');
-        
-        currentComponentFilter = $(this).data('filter');
-        applyFilters();
-    });
-
-    /**
-     * Quarter filter buttons
-     */
     $(document).on('click', '.quarter-filter-btn', function() {
         $('.quarter-filter-btn').removeClass('active btn-primary').addClass('btn-outline-primary');
         $(this).removeClass('btn-outline-primary').addClass('active btn-primary');
-        
         currentQuarterFilter = $(this).data('filter');
         displayFilteredData();
     });
 
-    /**
-     * Load grade details
-     */
+    $(document).on('click', '.component-tab', function() {
+        const quarter = $(this).data('quarter');
+        const component = $(this).data('component');
+        
+        $(`.component-tab[data-quarter="${quarter}"]`).removeClass('active');
+        $(this).addClass('active');
+        
+        $(`.component-content[data-quarter="${quarter}"]`).hide();
+        $(`#${quarter}-${component}`).show();
+    });
+
     function loadGradeDetails() {
         showLoading();
-
         $.ajax({
             url: API_ROUTES.getDetails,
             method: 'GET',
@@ -53,9 +43,6 @@ $(document).ready(function() {
         });
     }
 
-    /**
-     * Display filtered data based on quarter selection
-     */
     function displayFilteredData() {
         if (!gradeData) return;
 
@@ -76,253 +63,136 @@ $(document).ready(function() {
             return;
         }
 
-        if (currentQuarterFilter === 'all') {
-            // Display all quarters
-            quarters.forEach(function(quarterData, index) {
-                const quarterCard = createQuarterCard(quarterData, index + 1);
+        if (currentQuarterFilter === 'final') {
+            displayComputedFinalGrade(quarters, final_grade);
+        } else {
+            const quarterIndex = parseInt(currentQuarterFilter) - 1;
+            if (quarters[quarterIndex]) {
+                const quarterCard = createQuarterCard(quarters[quarterIndex], quarterIndex + 1);
                 container.append(quarterCard);
-            });
-        } else if (currentQuarterFilter === 'final') {
-            // Display final grade
-            if (final_grade) {
-                displayFinalGradeView(final_grade, quarters);
             } else {
                 container.html(`
                     <div class="card">
                         <div class="card-body text-center py-5">
                             <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
-                            <h5>Final Grade Not Available</h5>
-                            <p class="text-muted">Final grade has not been computed yet.</p>
+                            <h5>No Data Available</h5>
+                            <p class="text-muted">This quarter has no data yet.</p>
                         </div>
                     </div>
                 `);
             }
-        } else {
-            // Display specific quarter
-            const quarterIndex = parseInt(currentQuarterFilter) - 1;
-            if (quarters[quarterIndex]) {
-                const quarterCard = createQuarterCard(quarters[quarterIndex], quarterIndex + 1);
-                container.append(quarterCard);
-            }
         }
-
-        applyFilters();
     }
 
-    /**
-     * Create quarter card with calculations
-     */
     function createQuarterCard(quarterData, quarterNumber) {
         const { quarter, grades, scores } = quarterData;
-        
         const isLocked = grades && grades.is_locked;
-        const lockedClass = isLocked ? 'locked' : '';
-        const lockIcon = isLocked ? '<i class="fas fa-lock text-warning ml-2"></i>' : '';
 
-        // Group scores by component type
         const wwScores = scores.filter(s => s.component_type === 'WW');
         const ptScores = scores.filter(s => s.component_type === 'PT');
         const qaScores = scores.filter(s => s.component_type === 'QA');
 
-        // Calculate totals and percentages
-        const wwTotals = calculateComponentTotals(wwScores);
-        const ptTotals = calculateComponentTotals(ptScores);
-        const qaTotals = calculateComponentTotals(qaScores);
+        const wwCalc = calculateComponentStats(wwScores, CLASS_INFO.ww_perc);
+        const ptCalc = calculateComponentStats(ptScores, CLASS_INFO.pt_perc);
+        const qaCalc = calculateComponentStats(qaScores, CLASS_INFO.qa_perc);
+
+        const quarterGrade = (parseFloat(wwCalc.weightedScore) + parseFloat(ptCalc.weightedScore) + parseFloat(qaCalc.weightedScore)).toFixed(2);
+        const quarterId = `q${quarterNumber}`;
 
         const card = `
-            <div class="card quarter-card ${lockedClass} mb-3">
-                <div class="card-header bg-primary">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar-alt"></i> 
-                        ${escapeHtml(quarter.name)}
-                        ${lockIcon}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    ${grades ? `
-                        <!-- Component Summary Cards -->
-                        <div class="row mb-3">
-                            <!-- WW Component -->
-                            <div class="col-md-4 component-section" data-component="WW">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="text-muted mb-3 text-center">
-                                            <i class="fas fa-pencil-alt"></i> Written Works
-                                        </h6>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Total Score:</small>
-                                                <strong>${wwTotals.earned} / ${wwTotals.max}</strong>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Percentage Score:</small>
-                                                <span class="badge badge-secondary">${grades.ww_ps || '0.00'}%</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Weight (${CLASS_INFO.ww_perc}%):</small>
-                                                <span class="badge badge-primary">${grades.ww_ws || '0.00'}</span>
-                                            </div>
-                                        </div>
-
-                                        <hr class="my-2">
-                                        
-                                        <div class="d-flex justify-content-between">
-                                            <small class="text-muted">Contribution to Grade:</small>
-                                            <strong class="text-primary">${grades.ww_ws || '0.00'} pts</strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- PT Component -->
-                            <div class="col-md-4 component-section" data-component="PT">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="text-muted mb-3 text-center">
-                                            <i class="fas fa-tasks"></i> Performance Tasks
-                                        </h6>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Total Score:</small>
-                                                <strong>${ptTotals.earned} / ${ptTotals.max}</strong>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Percentage Score:</small>
-                                                <span class="badge badge-secondary">${grades.pt_ps || '0.00'}%</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Weight (${CLASS_INFO.pt_perc}%):</small>
-                                                <span class="badge badge-primary">${grades.pt_ws || '0.00'}</span>
-                                            </div>
-                                        </div>
-
-                                        <hr class="my-2">
-                                        
-                                        <div class="d-flex justify-content-between">
-                                            <small class="text-muted">Contribution to Grade:</small>
-                                            <strong class="text-primary">${grades.pt_ws || '0.00'} pts</strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- QA Component -->
-                            <div class="col-md-4 component-section" data-component="QA">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="text-muted mb-3 text-center">
-                                            <i class="fas fa-clipboard-check"></i> Quarterly Assessment
-                                        </h6>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Total Score:</small>
-                                                <strong>${qaTotals.earned} / ${qaTotals.max}</strong>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Percentage Score:</small>
-                                                <span class="badge badge-secondary">${grades.qa_ps || '0.00'}%</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">Weight (${CLASS_INFO.qa_perc}%):</small>
-                                                <span class="badge badge-primary">${grades.qa_ws || '0.00'}</span>
-                                            </div>
-                                        </div>
-
-                                        <hr class="my-2">
-                                        
-                                        <div class="d-flex justify-content-between">
-                                            <small class="text-muted">Contribution to Grade:</small>
-                                            <strong class="text-primary">${grades.qa_ws || '0.00'} pts</strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h4 class="mb-1">${escapeHtml(quarter.name)}</h4>
+                            <small class="text-muted">
+                                ${isLocked ? '<i class="fas fa-lock"></i> Locked' : '<i class="fas fa-unlock"></i> In Progress'}
+                            </small>
                         </div>
-
-                        <!-- Quarter Summary -->
-                        <div class="card card-outline card-primary">
-                            <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Initial Grade</small>
-                                        <h3 class="text-secondary mb-0">${grades.initial_grade || '-'}</h3>
-                                        <small class="text-muted">(Sum of Weighted Scores)</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Transmuted Grade</small>
-                                        <h3 class="text-primary mb-0">${grades.transmuted_grade || '-'}</h3>
-                                        <small class="text-muted">(Based on Grading Scale)</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Status</small>
-                                        <h5 class="mb-0">
-                                            ${isLocked ? 
-                                                '<span class="badge badge-warning"><i class="fas fa-lock"></i> Locked</span>' : 
-                                                '<span class="badge badge-secondary"><i class="fas fa-unlock"></i> In Progress</span>'
-                                            }
-                                        </h5>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="text-right">
+                            <div class="display-4 font-weight-bold mb-0">${quarterGrade > 0 ? quarterGrade : '-'}</div>
+                            <small class="text-muted">Initial Grade</small>
                         </div>
-                    ` : `
-                        <div class="alert alert-secondary text-center">
-                            <i class="fas fa-info-circle"></i> No grades recorded for this quarter yet
-                        </div>
-                    `}
+                    </div>
 
-                    <!-- Detailed Scores Table -->
                     ${scores.length > 0 ? `
-                        <div class="card card-outline card-secondary mt-3">
-                            <div class="card-header">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-list"></i> Individual Scores
-                                </h6>
+                        <div class="row mb-4">
+                            <div class="col-4 text-center">
+                                <div class="mb-1">
+                                    <span class="text-muted small">Written Works</span>
+                                    <span class="badge badge-primary ml-1">${CLASS_INFO.ww_perc}%</span>
+                                </div>
+                                <div class="h5 mb-0">${wwCalc.weightedScore}</div>
+                                <small class="text-muted">${wwCalc.totalEarned}/${wwCalc.totalMax}</small>
                             </div>
-                            <div class="card-body p-0">
+                            <div class="col-4 text-center border-left border-right">
+                                <div class="mb-1">
+                                    <span class="text-muted small">Performance Tasks</span>
+                                    <span class="badge badge-primary ml-1">${CLASS_INFO.pt_perc}%</span>
+                                </div>
+                                <div class="h5 mb-0">${ptCalc.weightedScore}</div>
+                                <small class="text-muted">${ptCalc.totalEarned}/${ptCalc.totalMax}</small>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="mb-1">
+                                    <span class="text-muted small">Assessment</span>
+                                    <span class="badge badge-primary ml-1">${CLASS_INFO.qa_perc}%</span>
+                                </div>
+                                <div class="h5 mb-0">${qaCalc.weightedScore}</div>
+                                <small class="text-muted">${qaCalc.totalEarned}/${qaCalc.totalMax}</small>
+                            </div>
+                        </div>
+
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link component-tab active" data-quarter="${quarterId}" data-component="all" href="#">All Items</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link component-tab" data-quarter="${quarterId}" data-component="ww" href="#">WW</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link component-tab" data-quarter="${quarterId}" data-component="pt" href="#">PT</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link component-tab" data-quarter="${quarterId}" data-component="qa" href="#">QA</a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content border-left border-right border-bottom p-3">
+                            <div class="component-content" data-quarter="${quarterId}" id="${quarterId}-all">
                                 <div class="table-responsive">
-                                    <table class="table table-hover table-sm mb-0">
+                                    <table class="table table-sm table-hover mb-0">
                                         <thead>
                                             <tr>
-                                                <th>Component</th>
+                                                <th>Type</th>
                                                 <th>Item</th>
                                                 <th class="text-center">Score</th>
-                                                <th class="text-center">Max</th>
                                                 <th class="text-center">%</th>
-                                                <th class="text-center">Source</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            ${createScoreRows(wwScores, 'WW')}
-                                            ${createScoreRows(ptScores, 'PT')}
-                                            ${createScoreRows(qaScores, 'QA')}
+                                            ${createSimpleScoreRows(wwScores, 'WW')}
+                                            ${createSimpleScoreRows(ptScores, 'PT')}
+                                            ${createSimpleScoreRows(qaScores, 'QA')}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
+                            <div class="component-content" data-quarter="${quarterId}" id="${quarterId}-ww" style="display: none;">
+                                ${createComponentDetail(wwScores, 'WW', 'Written Works', wwCalc)}
+                            </div>
+                            <div class="component-content" data-quarter="${quarterId}" id="${quarterId}-pt" style="display: none;">
+                                ${createComponentDetail(ptScores, 'PT', 'Performance Tasks', ptCalc)}
+                            </div>
+                            <div class="component-content" data-quarter="${quarterId}" id="${quarterId}-qa" style="display: none;">
+                                ${createComponentDetail(qaScores, 'QA', 'Quarterly Assessment', qaCalc)}
+                            </div>
                         </div>
-                    ` : ''}
+                    ` : `
+                        <div class="alert alert-light text-center mb-0">
+                            <i class="fas fa-info-circle"></i> No scores recorded yet
+                        </div>
+                    `}
                 </div>
             </div>
         `;
@@ -330,57 +200,55 @@ $(document).ready(function() {
         return card;
     }
 
-    /**
-     * Calculate component totals
-     */
-    function calculateComponentTotals(scores) {
-        let earned = 0;
-        let max = 0;
+    function createComponentDetail(scores, type, name, calc) {
+        if (scores.length === 0) {
+            return `<div class="text-center py-4 text-muted">No ${name} items yet</div>`;
+        }
 
-        scores.forEach(function(score) {
-            if (score.score !== null) {
-                earned += parseFloat(score.score);
-            }
-            max += parseFloat(score.max_points);
-        });
-
-        return {
-            earned: earned.toFixed(2),
-            max: max.toFixed(2),
-            percentage: max > 0 ? ((earned / max) * 100).toFixed(2) : '0.00'
-        };
+        return `
+            <div class="mb-3 p-3 bg-light">
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">Total Score</small>
+                        <div class="h5 mb-0">${calc.totalEarned} / ${calc.totalMax}</div>
+                    </div>
+                    <div class="col-6 text-right">
+                        <small class="text-muted">Weighted Score</small>
+                        <div class="h5 mb-0">${calc.weightedScore}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-center">Score</th>
+                            <th class="text-center">%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${createDetailedScoreRows(scores)}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
-    /**
-     * Create score table rows
-     */
-    function createScoreRows(scores, componentType) {
+    function createSimpleScoreRows(scores, componentType) {
         if (scores.length === 0) return '';
 
         let rows = '';
         scores.forEach(function(score) {
-            const componentColor = 'secondary';
-            const sourceIcon = score.source_type === 'online' ? 
-                '<i class="fas fa-laptop text-primary"></i>' : 
-                '<i class="fas fa-pencil-alt text-secondary"></i>';
-            
-            const sourceText = score.source_type === 'online' ? 'Online' : 'Manual';
-            const scoreDisplay = score.score !== null ? score.score : '-';
+            const scoreDisplay = score.score !== null ? `${score.score}/${score.max_points}` : '-';
             const percentageDisplay = score.percentage > 0 ? score.percentage + '%' : '-';
 
             rows += `
-                <tr class="score-row" data-component="${componentType}">
-                    <td>
-                        <span class="badge badge-${componentColor}">${componentType}</span>
-                    </td>
+                <tr>
+                    <td><span class="badge badge-light">${componentType}</span></td>
                     <td>${escapeHtml(score.column_name)}</td>
-                    <td class="text-center"><strong>${scoreDisplay}</strong></td>
-                    <td class="text-center">${score.max_points}</td>
+                    <td class="text-center">${scoreDisplay}</td>
                     <td class="text-center">${percentageDisplay}</td>
-                    <td class="text-center">
-                        ${sourceIcon}
-                        <small class="d-block text-muted">${sourceText}</small>
-                    </td>
                 </tr>
             `;
         });
@@ -388,77 +256,112 @@ $(document).ready(function() {
         return rows;
     }
 
-    /**
-     * Display final grade view
-     */
-    function displayFinalGradeView(finalGrade, quarters) {
+    function createDetailedScoreRows(scores) {
+        let rows = '';
+        scores.forEach(function(score) {
+            const scoreDisplay = score.score !== null ? `${score.score}/${score.max_points}` : '-';
+            const percentageDisplay = score.percentage > 0 ? score.percentage + '%' : '-';
+
+            rows += `
+                <tr>
+                    <td>${escapeHtml(score.column_name)}</td>
+                    <td class="text-center">${scoreDisplay}</td>
+                    <td class="text-center">${percentageDisplay}</td>
+                </tr>
+            `;
+        });
+
+        return rows;
+    }
+
+    function displayComputedFinalGrade(quarters, storedFinalGrade) {
         const container = $('#gradesContent');
         
-        const q1Data = quarters[0] || null;
-        const q2Data = quarters[1] || null;
+        let q1Grade = null;
+        let q2Grade = null;
+
+        if (quarters[0]) {
+            const q1Scores = quarters[0].scores;
+            const wwCalc = calculateComponentStats(q1Scores.filter(s => s.component_type === 'WW'), CLASS_INFO.ww_perc);
+            const ptCalc = calculateComponentStats(q1Scores.filter(s => s.component_type === 'PT'), CLASS_INFO.pt_perc);
+            const qaCalc = calculateComponentStats(q1Scores.filter(s => s.component_type === 'QA'), CLASS_INFO.qa_perc);
+            
+            q1Grade = (parseFloat(wwCalc.weightedScore) + parseFloat(ptCalc.weightedScore) + parseFloat(qaCalc.weightedScore)).toFixed(2);
+        }
+
+        if (quarters[1]) {
+            const q2Scores = quarters[1].scores;
+            const wwCalc = calculateComponentStats(q2Scores.filter(s => s.component_type === 'WW'), CLASS_INFO.ww_perc);
+            const ptCalc = calculateComponentStats(q2Scores.filter(s => s.component_type === 'PT'), CLASS_INFO.pt_perc);
+            const qaCalc = calculateComponentStats(q2Scores.filter(s => s.component_type === 'QA'), CLASS_INFO.qa_perc);
+            
+            q2Grade = (parseFloat(wwCalc.weightedScore) + parseFloat(ptCalc.weightedScore) + parseFloat(qaCalc.weightedScore)).toFixed(2);
+        }
+
+        let computedFinalGrade = null;
+        let computedRemarks = 'Incomplete';
+
+        if (q1Grade && q2Grade) {
+            computedFinalGrade = Math.round((parseFloat(q1Grade) + parseFloat(q2Grade)) / 2);
+            computedRemarks = computedFinalGrade >= 75 ? 'Passed' : 'Failed';
+        }
+
+        const isLocked = storedFinalGrade && storedFinalGrade.is_locked;
 
         const finalView = `
-            <div class="card card-outline card-primary">
-                <div class="card-header bg-primary">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-trophy"></i> Final Semester Grade
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <!-- Quarter Breakdown -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">1st Quarter</h6>
-                                    <h2 class="text-primary mb-0">${finalGrade.q1_grade || '-'}</h2>
-                                    ${q1Data && q1Data.grades ? `
-                                        <small class="text-muted d-block mt-2">
-                                            WW: ${q1Data.grades.ww_ws} | 
-                                            PT: ${q1Data.grades.pt_ws} | 
-                                            QA: ${q1Data.grades.qa_ws}
-                                        </small>
-                                    ` : ''}
+            <div class="card shadow-sm">
+                <div class="card-body p-5 text-center">
+                    <h3 class="mb-4 text-muted">Final Grade</h3>
+                    
+                    ${computedFinalGrade ? `
+                        <div class="display-1 font-weight-bold mb-3" style="font-size: 5rem;">${computedFinalGrade}</div>
+                        <h4 class="mb-4 ${computedRemarks === 'Passed' ? 'text-success' : 'text-danger'}">${computedRemarks}</h4>
+                        
+                        <div class="row justify-content-center mt-5 mb-4">
+                            <div class="col-md-3 col-6">
+                                <div class="p-3">
+                                    <small class="text-muted d-block mb-2">1st Quarter</small>
+                                    <div class="h3 mb-0">${q1Grade}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="p-3">
+                                    <small class="text-muted d-block mb-2">2nd Quarter</small>
+                                    <div class="h3 mb-0">${q2Grade}</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">2nd Quarter</h6>
-                                    <h2 class="text-primary mb-0">${finalGrade.q2_grade || '-'}</h2>
-                                    ${q2Data && q2Data.grades ? `
-                                        <small class="text-muted d-block mt-2">
-                                            WW: ${q2Data.grades.ww_ws} | 
-                                            PT: ${q2Data.grades.pt_ws} | 
-                                            QA: ${q2Data.grades.qa_ws}
-                                        </small>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Final Grade Summary -->
-                    <div class="card card-outline card-primary">
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col-md-6">
-                                    <small class="text-muted d-block">Final Grade</small>
-                                    <h1 class="display-3 text-primary mb-0">${finalGrade.final_grade || '-'}</h1>
-                                    <small class="text-muted">(Average of Q1 and Q2)</small>
+                        <small class="text-muted">
+                            ${isLocked ? '<i class="fas fa-lock"></i> Grade Locked' : '<i class="fas fa-unlock"></i> In Progress'}
+                        </small>
+                    ` : `
+                        <div class="py-5">
+                            <i class="fas fa-hourglass-half fa-3x text-muted mb-4"></i>
+                            <h5 class="text-muted mb-4">Final grade will be available when both quarters are complete</h5>
+                            
+                            <div class="row justify-content-center">
+                                <div class="col-md-4 col-6 mb-3">
+                                    <div class="p-3 border">
+                                        <small class="text-muted d-block mb-2">1st Quarter</small>
+                                        ${q1Grade ? 
+                                            `<div class="h4 mb-0 text-success"><i class="fas fa-check"></i> ${q1Grade}</div>` : 
+                                            `<div class="text-muted"><i class="fas fa-minus"></i> N/A</div>`
+                                        }
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <small class="text-muted d-block mb-3">Remarks</small>
-                                    ${getRemarksDisplay(finalGrade.remarks)}
-                                    ${finalGrade.is_locked ? 
-                                        '<div class="mt-3"><span class="badge badge-warning"><i class="fas fa-lock"></i> Locked</span></div>' : 
-                                        '<div class="mt-3"><span class="badge badge-secondary"><i class="fas fa-unlock"></i> In Progress</span></div>'
-                                    }
+                                <div class="col-md-4 col-6 mb-3">
+                                    <div class="p-3 border">
+                                        <small class="text-muted d-block mb-2">2nd Quarter</small>
+                                        ${q2Grade ? 
+                                            `<div class="h4 mb-0 text-success"><i class="fas fa-check"></i> ${q2Grade}</div>` : 
+                                            `<div class="text-muted"><i class="fas fa-minus"></i> N/A</div>`
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    `}
                 </div>
             </div>
         `;
@@ -466,53 +369,38 @@ $(document).ready(function() {
         container.html(finalView);
     }
 
-    /**
-     * Get remarks display HTML
-     */
-    function getRemarksDisplay(remarks) {
-        let badgeClass = 'badge-secondary';
-        let icon = 'fas fa-minus';
-        
-        if (remarks === 'PASSED') {
-            badgeClass = 'badge-success';
-            icon = 'fas fa-check-circle';
-        } else if (remarks === 'FAILED') {
-            badgeClass = 'badge-danger';
-            icon = 'fas fa-times-circle';
-        } else if (remarks === 'INC') {
-            badgeClass = 'badge-warning';
-            icon = 'fas fa-exclamation-circle';
-        }
-        
-        return `<h2><span class="badge ${badgeClass}"><i class="${icon}"></i> ${remarks || '-'}</span></h2>`;
+    function calculateComponentStats(scores, weight) {
+        let totalEarned = 0;
+        let totalMax = 0;
+        let count = 0;
+
+        scores.forEach(function(score) {
+            if (score.score !== null && score.score !== undefined) {
+                totalEarned += parseFloat(score.score) || 0;
+                count++;
+            }
+            totalMax += parseFloat(score.max_points) || 0;
+        });
+
+        const percentage = totalMax > 0 ? (totalEarned / totalMax) * 100 : 0;
+        const weightedScore = (percentage / 100) * parseFloat(weight);
+
+        return {
+            totalEarned: totalEarned.toFixed(2),
+            totalMax: totalMax.toFixed(2),
+            percentage: percentage.toFixed(2),
+            weightedScore: weightedScore.toFixed(2),
+            count: count
+        };
     }
 
-    /**
-     * Apply component filters
-     */
-    function applyFilters() {
-        if (currentComponentFilter === 'all') {
-            $('.component-section').show();
-            $('.score-row').show();
-        } else {
-            $('.component-section').hide();
-            $('.score-row').hide();
-            
-            $(`.component-section[data-component="${currentComponentFilter}"]`).show();
-            $(`.score-row[data-component="${currentComponentFilter}"]`).show();
-        }
-    }
-
-    /**
-     * Helper functions
-     */
     function showLoading() {
         $('#gradesContent').html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="sr-only">Loading...</span>
                 </div>
-                <p class="mt-3 text-muted">Loading grade details...</p>
+                <p class="mt-3 text-muted">Loading grades...</p>
             </div>
         `);
     }
@@ -522,7 +410,7 @@ $(document).ready(function() {
             <div class="card">
                 <div class="card-body text-center py-5">
                     <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h5>Error Loading Grade Details</h5>
+                    <h5>Error Loading Grades</h5>
                     <p class="text-muted">${escapeHtml(message)}</p>
                     <button class="btn btn-primary" onclick="location.reload()">
                         <i class="fas fa-redo"></i> Retry

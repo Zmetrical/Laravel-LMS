@@ -7,59 +7,38 @@
         @endforeach
     @endif
     <style>
-        .info-box {
-            min-height: 90px;
-            transition: transform 0.2s, box-shadow 0.2s;
+        
+        .grade-excellent { color: #28a745; font-weight: bold; }
+        .grade-very-good { color: #007bff; font-weight: bold; }
+        .grade-good { color: #17a2b8; font-weight: bold; }
+        .grade-fair { color: #ffc107; font-weight: bold; }
+        .grade-poor { color: #dc3545; font-weight: bold; }
+        .grade-pending { color: #6c757d; font-style: italic; }
+        
+        .table-grades th {
+            background-color: #f8f9fa;
+            font-weight: 600;
         }
-        .info-box:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        
+        .table-grades td {
+            vertical-align: middle;
         }
-        .quiz-card {
-            transition: all 0.2s;
-            border-left: 3px solid #007bff;
-        }
-        .quiz-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .quiz-card.urgent {
-            border-left-color: #dc3545;
-        }
-        .grade-item {
-            padding: 10px;
-            border-left: 3px solid #6c757d;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-        }
-        .grade-item.excellent {
-            border-left-color: #28a745;
-        }
-        .grade-item.good {
-            border-left-color: #007bff;
-        }
-        .grade-item.needs-improvement {
-            border-left-color: #ffc107;
-        }
-        .grade-item.poor {
-            border-left-color: #dc3545;
-        }
-        @media (max-width: 768px) {
-            .info-box {
-                margin-bottom: 1rem;
-            }
+        
+        .final-grade-col {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 1.1em;
         }
     </style>
 @endsection
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
-        <li class="breadcrumb-item active">Dashboard</li>
+        <li class="breadcrumb-item active">Performance Overview</li>
     </ol>
 @endsection
 
 @section('content')
-<br>
 <div class="container-fluid">
     <!-- Active Semester Info -->
     <div class="alert alert-dark alert-dismissible">
@@ -70,93 +49,13 @@
         </h5>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Detailed Grade Report -->
     <div class="row">
-        <div class="col-lg-3 col-md-6 col-12">
-            <div class="info-box">
-                <span class="info-box-icon bg-primary"><i class="fas fa-book"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Enrolled Classes</span>
-                    <span class="info-box-number" id="enrolledClassesCount">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 col-12">
-            <div class="info-box">
-                <span class="info-box-icon bg-secondary"><i class="fas fa-check-circle"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Completed Lessons</span>
-                    <span class="info-box-number" id="completedLessonsCount">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 col-12">
-            <div class="info-box">
-                <span class="info-box-icon bg-primary"><i class="fas fa-clipboard-list"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Pending Quizzes</span>
-                    <span class="info-box-number" id="pendingQuizzesCount">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 col-12">
-            <div class="info-box">
-                <span class="info-box-icon bg-secondary"><i class="fas fa-chart-line"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Average Grade</span>
-                    <span class="info-box-number" id="averageGrade">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <!-- Available Quizzes -->
-        <div class="col-lg-6 col-12">
+        <div class="col-12">
             <div class="card card-outline card-primary">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-clipboard-check"></i> Available Quizzes
-                    </h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-tool" id="refreshQuizzes">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                    <div id="quizzesContainer">
-                        <div class="text-center py-4">
-                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                            <p class="text-muted mt-2">Loading quizzes...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer text-center">
-                    <a href="#" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye"></i> View All Quizzes
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Grades -->
-        <div class="col-lg-6 col-12">
-            <div class="card card-outline card-secondary">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-star"></i> Recent Grades
+                        <i class="fas fa-table"></i> Detailed Grade Report
                     </h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" id="refreshGrades">
@@ -164,100 +63,94 @@
                         </button>
                     </div>
                 </div>
-                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                    <div id="recentGradesContainer">
+                <div class="card-body table-responsive p-0">
+                    <div id="gradesTableContainer">
                         <div class="text-center py-4">
-                            <i class="fas fa-spinner fa-spin fa-2x text-secondary"></i>
+                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
                             <p class="text-muted mt-2">Loading grades...</p>
                         </div>
                     </div>
-                </div>
-                <div class="card-footer text-center">
-                    <a href="{{ route('student.list_grade') }}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-chart-bar"></i> View All Grades
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Performance Chart -->
+
+    <!-- Grade Component Breakdown Chart -->
     <div class="row mt-4">
         <div class="col-12">
             <div class="card card-outline card-primary">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-chart-area"></i> Performance Overview
+                        <i class="fas fa-chart-bar"></i> Grade Component Breakdown
                     </h3>
                     <div class="card-tools">
-                        <button type="button" class="btn btn-tool" id="refreshChart">
+                        <div class="btn-group btn-group-sm mr-2" id="quarterToggle">
+                            <!-- Buttons will be populated dynamically -->
+                        </div>
+                        <button type="button" class="btn btn-tool" id="refreshBreakdown">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <canvas id="performanceChart" height="80"></canvas>
+                    <div id="breakdownChartContainer">
+                        <canvas id="gradeBreakdownChart" height="80"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Quick Links -->
+    <!-- Semester Summary -->
     <div class="row mt-4">
-        <div class="col-lg-3 col-md-6 col-12">
-            <a href="{{ route('student.list_class') }}" class="text-decoration-none">
-                <div class="small-box bg-primary">
-                    <div class="inner">
-                        <h3><i class="fas fa-book-reader"></i></h3>
-                        <p>My Classes</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-book-reader"></i>
+        <div class="col-12">
+            <div class="card card-outline card-secondary">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-line"></i> Semester Summary
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" id="refreshSummary">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
                     </div>
                 </div>
-            </a>
+                <div class="card-body table-responsive p-0">
+                    <div id="semesterSummary">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-secondary"></i>
+                            <p class="text-muted mt-2">Loading summary...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="col-lg-3 col-md-6 col-12">
-            <a href="#" class="text-decoration-none">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        <h3><i class="fas fa-clipboard-list"></i></h3>
-                        <p>My Quizzes</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                </div>
-            </a>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 col-12">
-            <a href="{{ route('student.list_grade') }}" class="text-decoration-none">
-                <div class="small-box bg-primary">
-                    <div class="inner">
-                        <h3><i class="fas fa-chart-bar"></i></h3>
-                        <p>My Grades</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-chart-bar"></i>
+    </div>
+    <!-- Legend -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="mb-2"><strong>Grade Legend:</strong></h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small>
+                                <span class="grade-excellent">● 90-100</span> - Outstanding<br>
+                                <span class="grade-very-good">● 85-89</span> - Very Satisfactory<br>
+                                <span class="grade-good">● 80-84</span> - Satisfactory
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <small>
+                                <span class="grade-fair">● 75-79</span> - Fairly Satisfactory<br>
+                                <span class="grade-poor">● Below 75</span> - Did Not Meet Expectations<br>
+                                <span class="grade-pending">● N/A</span> - Not Yet Available
+                            </small>
+                        </div>
                     </div>
                 </div>
-            </a>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 col-12">
-            <a href="#" class="text-decoration-none">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        <h3><i class="fas fa-user"></i></h3>
-                        <p>My Profile</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user"></i>
-                    </div>
-                </div>
-            </a>
+            </div>
         </div>
     </div>
 </div>
@@ -267,10 +160,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
         const API_ROUTES = {
-            getStats: "{{ route('student.dashboard.stats') }}",
-            getQuizzes: "{{ route('student.dashboard.quizzes') }}",
-            getRecentGrades: "{{ route('student.dashboard.recent-grades') }}",
-            getPerformanceChart: "{{ route('student.dashboard.performance') }}"
+            getQuarterlyGrades: "{{ route('student.dashboard.quarterly-grades') }}",
+            getGradeBreakdown: "{{ route('student.dashboard.grade-breakdown') }}",
+            getSemesterSummary: "{{ route('student.dashboard.semester-summary') }}"
         };
     </script>
     

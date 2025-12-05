@@ -94,78 +94,161 @@ class Grade_list extends MainController
         return view('student.details_gradebook', $data);
     }
     
-    /**
-     * Get student's grades for all enrolled classes
-     */
-    public function getStudentGrades()
-    {
-        try {
-            $student = Auth::guard('student')->user();
-            
-            if (!$student) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 401);
-            }
-            
-            // Get active semester
-            $activeSemester = DB::table('semesters')
-                ->where('status', 'active')
-                ->first();
-            
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => true,
-                    'data' => [],
-                    'message' => 'No active semester'
-                ]);
-            }
-            
-            // Get enrolled classes
-            $classes = $this->getStudentEnrolledClasses($student, $activeSemester->id);
-            
-            $gradesData = [];
-            
-            foreach ($classes as $class) {
-                $gradeInfo = $this->getClassGradeInfo($student->student_number, $class->class_code, $activeSemester->id);
-                
-                $gradesData[] = [
-                    'class_id' => $class->id,
-                    'class_code' => $class->class_code,
-                    'class_name' => $class->class_name,
-                    'teacher_name' => $class->teacher_name,
-                    'ww_percentage' => $class->ww_perc,
-                    'pt_percentage' => $class->pt_perc,
-                    'qa_percentage' => $class->qa_perce,
-                    'components' => $gradeInfo['components'],
-                    'final_grade' => $gradeInfo['final_grade'],
-                    'has_final' => $gradeInfo['has_final']
-                ];
-            }
-            
-            return response()->json([
-                'success' => true,
-                'data' => $gradesData,
-                'semester' => [
-                    'id' => $activeSemester->id,
-                    'name' => $activeSemester->name,
-                    'code' => $activeSemester->code
-                ]
-            ]);
-            
-        } catch (Exception $e) {
-            \Log::error('Failed to get student grades', [
-                'error' => $e->getMessage()
-            ]);
-            
+public function getStudentGrades()
+{
+    try {
+        $student = Auth::guard('student')->user();
+        
+        if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load grades: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        
+        $activeSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
+        
+        if (!$activeSemester) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'No active semester'
+            ]);
+        }
+        
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $activeSemester->id)
+            ->orderBy('order_number')
+            ->get()
+            ->keyBy('order_number');
+        
+        $classes = $this->getStudentEnrolledClasses($student, $activeSemester->id);
+        
+        $allFinalGrades = DB::table('grades_final')
+            ->where('student_number', $student->student_number)
+            ->whereIn('class_code', $classes->pluck('class_code'))
+            ->where('semester_id', $activeSemester->id)
+            ->get()
+            ->keyBy('class_code');
+        
+        $gradesData = [];
+        
+        foreach ($classes as $class) {
+            // Use the SAME method as details page
+            $quarterGrades = ['q1' => null, 'q2' => null];
+            
+            foreach ($quarters as $orderNumber => $quarter) {
+                // Get detailed scores using the SAME method as details page
+                $scores = $this->getQuarterDetailedScores(
+                    $student->student_number,
+                    $class->class_code,
+                    $quarter->id
+                );
+                
+                // Calculate grade from detailed scores
+                $calculatedGrade = $this->calculateGradeFromScores(
+                    $scores,
+                    $class->ww_perc,
+                    $class->pt_perc,
+                    $class->qa_perce
+                );
+                
+                if ($calculatedGrade !== null) {
+                    $quarterGrades['q' . $orderNumber] = $calculatedGrade;
+                }
+            }
+            
+            $finalGrade = $allFinalGrades->get($class->class_code);
+            
+            $gradesData[] = [
+                'class_id' => $class->id,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'teacher_name' => $class->teacher_name,
+                'ww_percentage' => $class->ww_perc,
+                'pt_percentage' => $class->pt_perc,
+                'qa_percentage' => $class->qa_perce,
+                'quarter_grades' => $quarterGrades,
+                'final_grade' => $finalGrade ? (object)[
+                    'final_grade' => round($finalGrade->final_grade, 2),
+                    'remarks' => $finalGrade->remarks
+                ] : null,
+                'has_final' => $finalGrade !== null
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'data' => $gradesData,
+            'semester' => [
+                'id' => $activeSemester->id,
+                'name' => $activeSemester->name,
+                'code' => $activeSemester->code
+            ]
+        ]);
+        
+    } catch (Exception $e) {
+        \Log::error('Failed to get student grades', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load grades'
+        ], 500);
+    }
+}
+
+private function calculateGradeFromScores($scores, $wwPerc, $ptPerc, $qaPerc)
+{
+    if (empty($scores)) {
+        return null;
+    }
+    
+    $components = [
+        'WW' => ['total' => 0, 'max' => 0],
+        'PT' => ['total' => 0, 'max' => 0],
+        'QA' => ['total' => 0, 'max' => 0]
+    ];
+    
+    foreach ($scores as $score) {
+        $type = $score['component_type'];
+        
+        // ALWAYS add to max_points
+        $components[$type]['max'] += $score['max_points'];
+        
+        // Only add to total if score exists
+        if ($score['score'] !== null) {
+            $components[$type]['total'] += $score['score'];
         }
     }
     
+    $weightedScore = 0;
+    $hasAnyScore = false;
+    
+    if ($components['WW']['max'] > 0) {
+        $percentage = ($components['WW']['total'] / $components['WW']['max']) * 100;
+        $weightedScore += $percentage * ($wwPerc / 100);
+        $hasAnyScore = true;
+    }
+    
+    if ($components['PT']['max'] > 0) {
+        $percentage = ($components['PT']['total'] / $components['PT']['max']) * 100;
+        $weightedScore += $percentage * ($ptPerc / 100);
+        $hasAnyScore = true;
+    }
+    
+    if ($components['QA']['max'] > 0) {
+        $percentage = ($components['QA']['total'] / $components['QA']['max']) * 100;
+        $weightedScore += $percentage * ($qaPerc / 100);
+        $hasAnyScore = true;
+    }
+    
+    return $hasAnyScore ? round($weightedScore, 2) : null;
+}
     /**
      * Get detailed grade breakdown for a specific class (AJAX)
      */
