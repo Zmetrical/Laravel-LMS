@@ -2,6 +2,8 @@
     'activeTab' => 'grades', 
     'userType' => $userType, 
     'class' => $class])
+    
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
 
 @section('tab-content')
 <div class="row">
@@ -71,16 +73,20 @@
 @endsection
 
 @section('page-scripts')
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
 <script>
+
     // API Routes Configuration
     const API_ROUTES = {
         getGrades: "{{ route('teacher.class.grades.list', ['classId' => $class->id]) }}",
+        getParticipants: "{{ route('teacher.class.participants.list', ['classId' => $class->id]) }}",
         classId: {{ $class->id }}
     };
 </script>
-    @if(isset($scripts))
-        @foreach($scripts as $script)
-            <script src="{{ asset('js/' . $script) }}"></script>
-        @endforeach
-    @endif
+@if(isset($scripts))
+    @foreach($scripts as $script)
+        <script src="{{ asset('js/' . $script) }}"></script>
+    @endforeach
+@endif
 @endsection

@@ -250,4 +250,226 @@ class Page_Grade extends MainController
             ]
         ]);
     }
+
+    public function getGrades($classId)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        // Verify the class exists and belongs to the teacher
+        $class = DB::table('classes')
+            ->where('id', $classId)
+            ->where('teacher_id', $teacher->id)
+            ->first();
+
+        if (!$class) {
+            return response()->json(['error' => 'Class not found'], 404);
+        }
+
+        // Get all quizzes for this class with lesson information
+        $quizzes = DB::table('quizzes as q')
+            ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
+            ->where('l.class_id', $classId)
+            ->where('q.status', 1)
+            ->select(
+                'q.id',
+                'q.title',
+                'q.total_points',
+                'l.title as lesson_title',
+                'l.order_number as lesson_order'
+            )
+            ->orderBy('l.order_number')
+            ->orderBy('q.id')
+            ->get();
+
+        // Get all enrolled students
+        $students = DB::table('students as s')
+            ->leftJoin('student_class_matrix as scm', function($join) use ($class) {
+                $join->on('s.student_number', '=', 'scm.student_number')
+                     ->where('scm.class_code', '=', $class->class_code);
+            })
+            ->leftJoin('section_class_matrix as secm', function($join) use ($classId) {
+                $join->on('s.section_id', '=', 'secm.section_id')
+                     ->where('secm.class_id', '=', $classId);
+            })
+            ->where(function($query) {
+                $query->whereNotNull('scm.student_number')
+                      ->orWhereNotNull('secm.section_id');
+            })
+            ->select(
+                's.student_number',
+                's.first_name',
+                's.middle_name',
+                's.last_name',
+                's.gender'
+            )
+            ->distinct()
+            ->get();
+
+        // Build grades array
+        $grades = [];
+        
+        foreach ($students as $student) {
+            $fullName = trim($student->first_name . ' ' . 
+                           ($student->middle_name ? $student->middle_name[0] . '. ' : '') . 
+                           $student->last_name);
+            
+            $studentData = [
+                'student_number' => $student->student_number,
+                'full_name' => $fullName,
+                'gender' => $student->gender,
+                'quizzes' => []
+            ];
+
+            // Get quiz attempts for this student
+            foreach ($quizzes as $quiz) {
+                $bestAttempt = DB::table('student_quiz_attempts')
+                    ->where('student_number', $student->student_number)
+                    ->where('quiz_id', $quiz->id)
+                    ->where('status', 'graded')
+                    ->orderBy('score', 'desc')
+                    ->first();
+
+                $studentData['quizzes'][$quiz->id] = [
+                    'score' => $bestAttempt ? $bestAttempt->score : null,
+                    'total' => $quiz->total_points,
+                    'percentage' => $bestAttempt && $quiz->total_points > 0 
+                        ? round(($bestAttempt->score / $quiz->total_points) * 100, 2) 
+                        : null
+                ];
+            }
+
+            $grades[] = $studentData;
+        }
+
+        return response()->json([
+            'grades' => $grades,
+            'quizzes' => $quizzes,
+            'class' => [
+                'id' => $class->id,
+                'code' => $class->class_code,
+                'name' => $class->class_name
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error fetching grades: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to fetch grades'], 500);
+    }
+}
+public function getTeacherGrades($classId)
+{
+    try {
+        // Verify class exists
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        if (!$class) {
+            return response()->json(['error' => 'Class not found'], 404);
+        }
+
+        // Get all enrolled students (both direct and section-based) with FULL DETAILS
+        $directStudents = DB::table('student_class_matrix as scm')
+            ->join('students as s', 'scm.student_number', '=', 's.student_number')
+            ->where('scm.class_code', $class->class_code)
+            ->select(
+                's.student_number', 
+                's.first_name', 
+                's.middle_name', 
+                's.last_name', 
+                's.gender'
+            )
+            ->get();
+
+        $sectionStudents = DB::table('section_class_matrix as scm')
+            ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+            ->join('students as s', 's.section_id', '=', 'sec.id')
+            ->where('scm.class_id', $classId)
+            ->select(
+                's.student_number', 
+                's.first_name', 
+                's.middle_name', 
+                's.last_name', 
+                's.gender'
+            )
+            ->get();
+
+        // Merge and remove duplicates
+        $allStudents = $directStudents->merge($sectionStudents)
+            ->unique('student_number')
+            ->sortBy([
+                ['gender', 'asc'],      // Male first, then Female
+                ['last_name', 'asc'],   // Then by last name ascending
+                ['first_name', 'asc']   // Then by first name ascending
+            ]);
+
+        // Get all quizzes for this class
+        $quizzes = DB::table('quizzes as q')
+            ->join('lessons as l', 'q.lesson_id', '=', 'l.id')
+            ->where('l.class_id', $classId)
+            ->where('q.status', 1)
+            ->where('l.status', 1)
+            ->select(
+                'q.id',
+                'q.title',
+                'q.lesson_id',
+                'l.title as lesson_title',
+                'l.order_number as lesson_order'
+            )
+            ->orderBy('l.order_number')
+            ->orderBy('q.id')
+            ->get();
+
+        // Build grades array
+        $grades = [];
+        
+        foreach ($allStudents as $student) {
+            // Format name properly: Last Name, First Name Middle Name
+            $fullName = $student->last_name . ', ' . $student->first_name;
+            if (!empty($student->middle_name)) {
+                $fullName .= ' ' . $student->middle_name;
+            }
+            
+            $studentGrades = [
+                'student_number' => $student->student_number,
+                'full_name' => $fullName,
+                'gender' => strtolower($student->gender ?? 'unknown'),
+                'quizzes' => []
+            ];
+
+            foreach ($quizzes as $quiz) {
+                // Get best attempt for this quiz
+                $bestAttempt = DB::table('student_quiz_attempts')
+                    ->where('student_number', $student->student_number)
+                    ->where('quiz_id', $quiz->id)
+                    ->where('status', 'graded')
+                    ->orderBy('score', 'desc')
+                    ->first();
+
+                $studentGrades['quizzes'][$quiz->id] = [
+                    'score' => $bestAttempt ? $bestAttempt->score : null,
+                    'total' => $bestAttempt ? $bestAttempt->total_points : 0,
+                    'percentage' => $bestAttempt && $bestAttempt->total_points > 0 
+                        ? round(($bestAttempt->score / $bestAttempt->total_points) * 100, 2) 
+                        : 0
+                ];
+            }
+
+            $grades[] = $studentGrades;
+        }
+
+        return response()->json([
+            'grades' => $grades,
+            'quizzes' => $quizzes,
+            'class' => [
+                'id' => $class->id,
+                'code' => $class->class_code,
+                'name' => $class->class_name
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error fetching teacher grades: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to load grades'], 500);
+    }
+}
 }

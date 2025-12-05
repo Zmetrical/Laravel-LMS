@@ -270,7 +270,10 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('lessons');
             Route::get('/quizzes', [Page_Quiz::class, 'teacherIndex'])->name('quizzes');
             Route::get('/grades', [Page_Grade::class, 'teacherIndex'])->name('grades');
+            Route::get('/grades/list', [Page_Grade::class, 'getTeacherGrades'])->name('grades.list');
+
             Route::get('/participants', [Page_Participant::class, 'teacherIndex'])->name('participants');
+            Route::get('/participants/list', [Page_Participant::class, 'getParticipants'])->name('participants.list');
 
             // Lecture Management Pages
             Route::prefix('lesson/{lessonId}/lecture')->name('lectures.')->group(function () {

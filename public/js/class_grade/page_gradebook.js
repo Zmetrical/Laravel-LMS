@@ -60,92 +60,82 @@ $(document).ready(function() {
         });
     }
     
-    function renderGradeTable(grades) {
-        const $thead = $('#gradeTable thead tr');
-        const $tbody = $('#gradeTableBody');
-        
-        // Clear existing content (keep first two columns)
-        $thead.find('th:not(:first):not(:nth-child(2))').remove();
-        $tbody.empty();
-        
-        // Add quiz columns
-        allQuizzes.forEach(quiz => {
-            $thead.append(`
-                <th class="text-center" title="${quiz.lesson_title}">
-                    ${quiz.title}
-                </th>
-            `);
-        });
-        
-        // Add summary columns
+function renderGradeTable(grades) {
+    const $thead = $('#gradeTable thead tr');
+    const $tbody = $('#gradeTableBody');
+    
+    // Clear existing content (keep first two columns)
+    $thead.find('th:not(:first):not(:nth-child(2))').remove();
+    $tbody.empty();
+    
+    // Add quiz columns
+    allQuizzes.forEach(quiz => {
         $thead.append(`
-            <th class="text-center bg-light">Total Score</th>
-            <th class="text-center bg-light">Average %</th>
+            <th class="text-center" title="${quiz.lesson_title}">
+                ${quiz.title}
+            </th>
         `);
-        
-        // Get student details and merge with grades
-        $.ajax({
-            url: API_ROUTES.getStudents,
-            method: 'GET',
-            async: false,
-            success: function(response) {
-                // Create a map of student details
-                const studentDetailsMap = {};
-                response.students.forEach(student => {
-                    studentDetailsMap[student.student_number] = student;
-                });
+    });
+    
+    // Add summary columns
+    $thead.append(`
+        <th class="text-center bg-light">Total Score</th>
+        <th class="text-center bg-light">Average %</th>
+    `);
 
-                // Add gender info to grades
-                grades.forEach(grade => {
-                    const details = studentDetailsMap[grade.student_number];
-                    grade.gender = details ? details.gender : 'unknown';
-                });
-            }
+    // Separate by gender (already sorted by backend)
+    const maleGrades = grades.filter(g => g.gender === 'male');
+    const femaleGrades = grades.filter(g => g.gender === 'female');
+    const unknownGrades = grades.filter(g => g.gender === 'unknown');
+
+    let rowCounter = 1;
+    const quizCount = allQuizzes.length + 2; // +2 for summary columns
+
+    // Render Male Section
+    if (maleGrades.length > 0) {
+        $tbody.append(`
+            <tr class="bg-secondary">
+                <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
+                    <i class="fas fa-mars mr-2"></i>MALE (${maleGrades.length})
+                </td>
+            </tr>
+        `);
+
+        maleGrades.forEach(student => {
+            $tbody.append(renderStudentRow(student, rowCounter++));
         });
-
-        // Sort grades by gender (Male first, then Female)
-        const sortedGrades = grades.sort((a, b) => {
-            if (a.gender.toLowerCase() === b.gender.toLowerCase()) return 0;
-            return a.gender.toLowerCase() === 'male' ? -1 : 1;
-        });
-
-        // Separate by gender
-        const maleGrades = sortedGrades.filter(g => g.gender.toLowerCase() === 'male');
-        const femaleGrades = sortedGrades.filter(g => g.gender.toLowerCase() === 'female');
-
-        let rowCounter = 1;
-        const quizCount = allQuizzes.length + 2; // +2 for summary columns
-
-        // Render Male Section
-        if (maleGrades.length > 0) {
-            $tbody.append(`
-                <tr class="bg-secondary">
-                    <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
-                        <i class="fas fa-mars mr-2"></i>MALE (${maleGrades.length})
-                    </td>
-                </tr>
-            `);
-
-            maleGrades.forEach(student => {
-                $tbody.append(renderStudentRow(student, rowCounter++));
-            });
-        }
-
-        // Render Female Section
-        if (femaleGrades.length > 0) {
-            $tbody.append(`
-                <tr class="bg-secondary">
-                    <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
-                        <i class="fas fa-venus mr-2"></i>FEMALE (${femaleGrades.length})
-                    </td>
-                </tr>
-            `);
-
-            femaleGrades.forEach(student => {
-                $tbody.append(renderStudentRow(student, rowCounter++));
-            });
-        }
     }
+
+    // Render Female Section
+    if (femaleGrades.length > 0) {
+        $tbody.append(`
+            <tr class="bg-secondary">
+                <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
+                    <i class="fas fa-venus mr-2"></i>FEMALE (${femaleGrades.length})
+                </td>
+            </tr>
+        `);
+
+        femaleGrades.forEach(student => {
+            $tbody.append(renderStudentRow(student, rowCounter++));
+        });
+    }
+
+    // Render Unknown Gender Section (if any)
+    if (unknownGrades.length > 0) {
+        $tbody.append(`
+            <tr class="bg-secondary">
+                <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
+                    <i class="fas fa-question mr-2"></i>OTHER (${unknownGrades.length})
+                </td>
+            </tr>
+        `);
+
+        unknownGrades.forEach(student => {
+            $tbody.append(renderStudentRow(student, rowCounter++));
+        });
+    }
+}
 
     function renderStudentRow(student, index) {
         let row = `
