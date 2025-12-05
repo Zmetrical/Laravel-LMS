@@ -6,6 +6,7 @@ $(document).ready(function() {
     let allGrades = [];
     let allQuizzes = [];
     let classInfo = null;
+    let uniqueSections = new Set();
     
     function loadGrades() {
         $('#loadingState').show();
@@ -40,6 +41,9 @@ $(document).ready(function() {
                 allQuizzes = response.quizzes;
                 classInfo = response.class;
                 
+                // Populate section filter
+                populateSectionFilter();
+                
                 console.log('Rendering grade table...');
                 renderGradeTable(allGrades);
                 $('#gradeTableContainer').show();
@@ -59,88 +63,105 @@ $(document).ready(function() {
             }
         });
     }
+
+    function populateSectionFilter() {
+        uniqueSections.clear();
+        allGrades.forEach(function(student) {
+            if (student.section_name && student.section_name !== 'No Section') {
+                uniqueSections.add(student.section_name);
+            }
+        });
+
+        const $sectionFilter = $('#sectionFilter');
+        $sectionFilter.find('option:not(:first)').remove();
+        
+        Array.from(uniqueSections).sort().forEach(function(section) {
+            $sectionFilter.append(`<option value="${section}">${section}</option>`);
+        });
+    }
     
-function renderGradeTable(grades) {
-    const $thead = $('#gradeTable thead tr');
-    const $tbody = $('#gradeTableBody');
-    
-    // Clear existing content (keep first two columns)
-    $thead.find('th:not(:first):not(:nth-child(2))').remove();
-    $tbody.empty();
-    
-    // Add quiz columns
-    allQuizzes.forEach(quiz => {
+    function renderGradeTable(grades) {
+        const $thead = $('#gradeTable thead tr');
+        const $tbody = $('#gradeTableBody');
+        
+        // Clear existing content (keep first two columns)
+        $thead.find('th:not(:first):not(:nth-child(2))').remove();
+        $tbody.empty();
+        
+        // Add quiz columns
+        allQuizzes.forEach(quiz => {
+            $thead.append(`
+                <th class="text-center" title="${quiz.lesson_title}">
+                    ${quiz.title}
+                </th>
+            `);
+        });
+        
+        // Add summary columns
         $thead.append(`
-            <th class="text-center" title="${quiz.lesson_title}">
-                ${quiz.title}
-            </th>
-        `);
-    });
-    
-    // Add summary columns
-    $thead.append(`
-        <th class="text-center bg-light">Total Score</th>
-        <th class="text-center bg-light">Average %</th>
-    `);
-
-    // Separate by gender (already sorted by backend)
-    const maleGrades = grades.filter(g => g.gender === 'male');
-    const femaleGrades = grades.filter(g => g.gender === 'female');
-    const unknownGrades = grades.filter(g => g.gender === 'unknown');
-
-    let rowCounter = 1;
-    const quizCount = allQuizzes.length + 2; // +2 for summary columns
-
-    // Render Male Section
-    if (maleGrades.length > 0) {
-        $tbody.append(`
-            <tr class="bg-secondary">
-                <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
-                    <i class="fas fa-mars mr-2"></i>MALE (${maleGrades.length})
-                </td>
-            </tr>
+            <th class="text-center bg-light">Total Score</th>
+            <th class="text-center bg-light">Average %</th>
         `);
 
-        maleGrades.forEach(student => {
-            $tbody.append(renderStudentRow(student, rowCounter++));
-        });
+        // Separate by gender (already sorted by backend)
+        const maleGrades = grades.filter(g => g.gender === 'male');
+        const femaleGrades = grades.filter(g => g.gender === 'female');
+        const unknownGrades = grades.filter(g => g.gender === 'unknown');
+
+        let rowCounter = 1;
+        const quizCount = allQuizzes.length + 2; // +2 for summary columns
+
+        // Render Male Section
+        if (maleGrades.length > 0) {
+            $tbody.append(`
+                <tr class="bg-secondary">
+                    <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
+                        <i class="fas fa-mars mr-2"></i>MALE (${maleGrades.length})
+                    </td>
+                </tr>
+            `);
+
+            maleGrades.forEach(student => {
+                $tbody.append(renderStudentRow(student, rowCounter++));
+            });
+        }
+
+        // Render Female Section
+        if (femaleGrades.length > 0) {
+            $tbody.append(`
+                <tr class="bg-secondary">
+                    <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
+                        <i class="fas fa-venus mr-2"></i>FEMALE (${femaleGrades.length})
+                    </td>
+                </tr>
+            `);
+
+            femaleGrades.forEach(student => {
+                $tbody.append(renderStudentRow(student, rowCounter++));
+            });
+        }
+
+        // Render Unknown Gender Section (if any)
+        if (unknownGrades.length > 0) {
+            $tbody.append(`
+                <tr class="bg-secondary">
+                    <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
+                        <i class="fas fa-question mr-2"></i>OTHER (${unknownGrades.length})
+                    </td>
+                </tr>
+            `);
+
+            unknownGrades.forEach(student => {
+                $tbody.append(renderStudentRow(student, rowCounter++));
+            });
+        }
+
     }
-
-    // Render Female Section
-    if (femaleGrades.length > 0) {
-        $tbody.append(`
-            <tr class="bg-secondary">
-                <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
-                    <i class="fas fa-venus mr-2"></i>FEMALE (${femaleGrades.length})
-                </td>
-            </tr>
-        `);
-
-        femaleGrades.forEach(student => {
-            $tbody.append(renderStudentRow(student, rowCounter++));
-        });
-    }
-
-    // Render Unknown Gender Section (if any)
-    if (unknownGrades.length > 0) {
-        $tbody.append(`
-            <tr class="bg-secondary">
-                <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
-                    <i class="fas fa-question mr-2"></i>OTHER (${unknownGrades.length})
-                </td>
-            </tr>
-        `);
-
-        unknownGrades.forEach(student => {
-            $tbody.append(renderStudentRow(student, rowCounter++));
-        });
-    }
-}
 
     function renderStudentRow(student, index) {
         let row = `
             <tr>
-                <td >
+                <td>
                     <strong>${student.student_number}</strong>
                 </td>
                 <td>
@@ -186,30 +207,46 @@ function renderGradeTable(grades) {
         
         return row;
     }
+
     
     // ========================================================================
     // GRADE FILTERS
     // ========================================================================
     function applyGradeFilters() {
         const searchTerm = $('#gradeSearchFilter').val().toLowerCase();
+        const sectionFilter = $('#sectionFilter').val();
+        const genderFilter = $('#genderFilter').val();
+        const typeFilter = $('#typeFilter').val();
 
         const filtered = allGrades.filter(student => {
             const matchSearch = !searchTerm || 
                 student.student_number.toLowerCase().includes(searchTerm) ||
                 student.full_name.toLowerCase().includes(searchTerm);
+
+            const matchSection = !sectionFilter || 
+                student.section_name === sectionFilter;
+
+            const matchGender = !genderFilter || 
+                student.gender === genderFilter.toLowerCase();
+
+            const matchType = !typeFilter || 
+                student.student_type === typeFilter.toLowerCase();
             
-            return matchSearch;
+            return matchSearch && matchSection && matchGender && matchType;
         });
 
         renderGradeTable(filtered);
     }
 
-    $('#gradeSearchFilter').on('input change', function() {
+    $('#gradeSearchFilter, #sectionFilter, #genderFilter, #typeFilter').on('input change', function() {
         applyGradeFilters();
     });
 
     $('#resetGradeFiltersBtn').click(function() {
         $('#gradeSearchFilter').val('');
+        $('#sectionFilter').val('');
+        $('#genderFilter').val('');
+        $('#typeFilter').val('');
         renderGradeTable(allGrades);
     });
     

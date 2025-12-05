@@ -23,7 +23,7 @@
             <!-- Filters Section -->
             <div class="card-body pb-2">
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="input-group input-group-sm">
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -33,11 +33,31 @@
                         </div>
                     </div>
                     <div class="col-md-2">
+                        <select class="form-control form-control-sm" id="sectionFilter">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control form-control-sm" id="genderFilter">
+                            <option value="">All Genders</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control form-control-sm" id="typeFilter">
+                            <option value="">All Types</option>
+                            <option value="regular">Regular</option>
+                            <option value="irregular">Irregular</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <button class="btn btn-secondary btn-sm btn-block" id="resetGradeFiltersBtn">
                             <i class="fas fa-redo"></i> Reset
                         </button>
                     </div>
                 </div>
+
             </div>
 
             <div class="card-body p-0 m-0">

@@ -370,28 +370,33 @@ public function getTeacherGrades($classId)
         // Get all enrolled students (both direct and section-based) with FULL DETAILS
         $directStudents = DB::table('student_class_matrix as scm')
             ->join('students as s', 'scm.student_number', '=', 's.student_number')
+            ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')  // ← Added this join
             ->where('scm.class_code', $class->class_code)
             ->select(
                 's.student_number', 
                 's.first_name', 
                 's.middle_name', 
                 's.last_name', 
-                's.gender'
+                's.gender',
+                's.student_type',        // ← Added this
+                'sec.name as section_name'  // ← Added this
             )
             ->get();
 
-        $sectionStudents = DB::table('section_class_matrix as scm')
-            ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
-            ->join('students as s', 's.section_id', '=', 'sec.id')
-            ->where('scm.class_id', $classId)
-            ->select(
-                's.student_number', 
-                's.first_name', 
-                's.middle_name', 
-                's.last_name', 
-                's.gender'
-            )
-            ->get();
+    $sectionStudents = DB::table('section_class_matrix as scm')
+        ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+        ->join('students as s', 's.section_id', '=', 'sec.id')
+        ->where('scm.class_id', $classId)
+        ->select(
+            's.student_number', 
+            's.first_name', 
+            's.middle_name', 
+            's.last_name', 
+            's.gender',
+            's.student_type',        // ← Added this
+            'sec.name as section_name'  // ← Added this
+        )
+    ->get();
 
         // Merge and remove duplicates
         $allStudents = $directStudents->merge($sectionStudents)
@@ -429,13 +434,14 @@ public function getTeacherGrades($classId)
                 $fullName .= ' ' . $student->middle_name;
             }
             
-            $studentGrades = [
-                'student_number' => $student->student_number,
-                'full_name' => $fullName,
-                'gender' => strtolower($student->gender ?? 'unknown'),
-                'quizzes' => []
-            ];
-
+$studentGrades = [
+    'student_number' => $student->student_number,
+    'full_name' => $fullName,
+    'gender' => strtolower($student->gender ?? 'unknown'),
+    'student_type' => strtolower($student->student_type ?? 'regular'),  // ← Added this
+    'section_name' => $student->section_name ?? 'No Section',  // ← Added this
+    'quizzes' => []
+];
             foreach ($quizzes as $quiz) {
                 // Get best attempt for this quiz
                 $bestAttempt = DB::table('student_quiz_attempts')
