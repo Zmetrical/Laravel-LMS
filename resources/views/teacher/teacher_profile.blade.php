@@ -3,6 +3,74 @@
 @section('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <style>
+        .expand-btn {
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: none;
+            background: transparent;
+            padding: 0.25rem 0.5rem;
+            color: #6c757d;
+        }
+        .expand-btn:hover {
+            color: #007bff;
+        }
+        .expand-btn.expanded {
+            transform: rotate(90deg);
+        }
+        .expand-btn i {
+            font-size: 1rem;
+        }
+        
+        .classes-detail-row {
+            background-color: #f8f9fa;
+        }
+        .classes-detail-cell {
+            padding: 1rem !important;
+            border-top: none !important;
+        }
+        .classes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 0.75rem;
+        }
+        .class-item {
+            padding: 0.75rem;
+            background: white;
+            border-left: 3px solid #007bff;
+            border-radius: 0.25rem;
+        }
+        .class-header {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+        .class-code {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+        .sections-list {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #dee2e6;
+        }
+        .section-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            margin: 0.125rem;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+        .no-classes {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 2rem;
+        }
+    </style>
 @endsection
 
 @section('breadcrumb')
@@ -16,8 +84,8 @@
 <br>
     <div class="container-fluid">
         <div class="row">
-            <!-- Left Column - Profile Card -->
-            <div class="col-md-4">
+            <!-- Left Column - Profile Picture -->
+            <div class="col-md-3">
                 <div class="card card-primary card-outline">
                     <div class="card-body box-profile">
                         <div class="text-center">
@@ -57,12 +125,13 @@
                                     {{ $teacher->created_at ? date('M d, Y', strtotime($teacher->created_at)) : 'N/A' }}
                                 </span>
                             </li>
+                        </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Column - Update Information -->
-            <div class="col-md-8">
+            <!-- Right Column - Personal Information -->
+            <div class="col-md-9">
                 <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title">Personal Information</h3>
@@ -184,10 +253,65 @@
                 </div>
             </div>
         </div>
+
+        <!-- Classes Handled Section - Full Width -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-secondary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-book mr-2"></i>Classes Handled
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0" id="classesTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"></th>
+                                        <th>Class Name</th>
+                                        <th class="text-center">Sections</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if(count($classes) > 0)
+                                        @foreach($classes as $class)
+                                            <tr data-class-id="{{ $class->id }}" data-sections="{{ $class->sections }}">
+                                                <td class="text-center">
+                                                    <button class="expand-btn" data-class-id="{{ $class->id }}" title="Show Sections">
+                                                        <i class="fas fa-chevron-right"></i>
+                                                    </button>
+                                                </td>
+                                                <td>{{ $class->class_name }}</td>
+                                                <td class="text-center">
+                                                    @if($class->sections)
+                                                        <span class="badge badge-primary">
+                                                            {{ count(explode(', ', $class->sections)) }}
+                                                        </span>
+                                                    @else
+                                                        <span class="badge badge-secondary">0</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="4" class="text-center">
+                                                <div class="no-classes">
+                                                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                    <p>No classes assigned</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-
-
 @endsection
 
 @section('scripts')
