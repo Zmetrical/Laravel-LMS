@@ -48,7 +48,7 @@
                         <option value="">All Semesters</option>
                         @foreach($semesters as $sem)
                             <option value="{{ $sem->id }}" 
-                                {{ isset($activeSemester) && $activeSemester->semester_id == $sem->id ? 'selected' : '' }}>
+                                {{ isset($activeSemester) && $activeSemester->id == $sem->id ? 'selected' : '' }}>
                                 {{ $sem->display_name }}
                             </option>
                         @endforeach
@@ -125,7 +125,7 @@
                                 <td>{{ $student->last_name }}, {{ $student->first_name }}</td>
                                 <td>{{ $student->strand }}</td>
                                 <td>{{ $student->level }}</td>
-                                <td>{{ $student->section }}</td>
+                                <td>{{ $student->enrolled_section_name ?? $student->current_section }}</td>
                                 <td>
                                     @php
                                         $type = $student->student_type ?? 'regular';
@@ -137,14 +137,11 @@
                                     @endphp
                                     <span class="badge {{ $badgeClass }}">{{ ucfirst($type) }}</span>
                                 </td>
-                                <td data-semester="{{ $student->semester_id ?? '' }}">
-                                    @if($student->semester_id)
-                                        @php
-                                            $semester = $semesters->firstWhere('id', $student->semester_id);
-                                        @endphp
-                                        {{ $semester ? $semester->display_name : 'N/A' }}
+                                <td data-semester-id="{{ $student->semester_id ?? '' }}">
+                                    @if($student->semester_display)
+                                        {{ $student->semester_display }}
                                     @else
-                                        <span class="text-muted">Not enrolled</span>
+                                        <span class="text-muted">No enrollment</span>
                                     @endif
                                 </td>
                                 <td class="text-center">

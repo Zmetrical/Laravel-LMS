@@ -297,63 +297,74 @@ class User_Management extends MainController
         return Str::random(10);
     }
 
-    public function list_students(Request $request)
-    {
-        $strands = Strand::all();
-        $levels = Level::all();
-        $sections = Section::all();
-        
-        // Get semesters for filter
-        $semesters = DB::table('semesters as s')
-            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-            ->select(
-                's.id',
-                's.name',
-                's.code',
-                'sy.code as school_year_code',
-                DB::raw("CONCAT(sy.code, ' - ', s.name) as display_name")
-            )
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('s.code', 'asc')
-            ->get();
+public function list_students(Request $request)
+{
+    $strands = Strand::all();
+    $levels = Level::all();
+    $sections = Section::all();
+    
+    // Get semesters for filter
+    $semesters = DB::table('semesters as s')
+        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+        ->select(
+            's.id',
+            's.name',
+            's.code',
+            'sy.code as school_year_code',
+            DB::raw("CONCAT(sy.code, ' - ', s.name) as display_name"),
+            's.status'
+        )
+        ->orderBy('sy.year_start', 'desc')
+        ->orderBy('s.code', 'asc')
+        ->get();
 
-        $students = DB::table('students')
-            ->join('sections', 'students.section_id', '=', 'sections.id')
-            ->join('levels', 'sections.level_id', '=', 'levels.id')
-            ->join('strands', 'sections.strand_id', '=', 'strands.id')
-            ->leftJoin('student_semester_enrollment as sse', function($join) {
-                $join->on('students.student_number', '=', 'sse.student_number')
-                    ->whereIn('sse.semester_id', function($query) {
-                        $query->select('id')
-                            ->from('semesters')
-                            ->where('status', 'active');
-                    });
-            })
-            ->select(
-                'students.*',
-                'sections.name as section',
-                'levels.name as level',
-                'strands.code as strand',
-                'sse.semester_id',
-                'sse.enrollment_status'
-            )
-            ->get();
+    // Get active semester for default selection
+    $activeSemester = $semesters->where('status', 'active')->first();
 
-        $data = [
-            'scripts' => [
-                'user_management/list_student.js',
-            ],
+    // Get ALL enrollment records - each enrollment is a separate row
+    $students = DB::table('students')
+        ->join('sections', 'students.section_id', '=', 'sections.id')
+        ->join('levels', 'sections.level_id', '=', 'levels.id')
+        ->join('strands', 'sections.strand_id', '=', 'strands.id')
+        ->leftJoin('student_semester_enrollment as sse', 'students.student_number', '=', 'sse.student_number')
+        ->leftJoin('semesters as sem', 'sse.semester_id', '=', 'sem.id')
+        ->leftJoin('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+        ->leftJoin('sections as enrolled_section', 'sse.section_id', '=', 'enrolled_section.id')
+        ->select(
+            'students.id',
+            'students.student_number',
+            'students.first_name',
+            'students.middle_name',
+            'students.last_name',
+            'students.student_type',
+            'sections.name as current_section',
+            'levels.name as level',
+            'strands.code as strand',
+            'sse.semester_id',
+            'enrolled_section.name as enrolled_section_name',
+            'sse.enrollment_status',
+            'sse.enrollment_date',
+            DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display")
+        )
+        ->orderBy('students.last_name')
+        ->orderBy('students.first_name')
+        ->orderBy('sem.id', 'desc')
+        ->get();
 
-            'strands' => $strands,
-            'levels' => $levels,
-            'sections' => $sections,
-            'semesters' => $semesters,
-            'students' => $students
-        ];
+    $data = [
+        'scripts' => [
+            'user_management/list_student.js',
+        ],
+        'strands' => $strands,
+        'levels' => $levels,
+        'sections' => $sections,
+        'semesters' => $semesters,
+        'students' => $students,
+        'activeSemester' => $activeSemester
+    ];
 
-        return view('admin.user_management.list_student', $data);
-    }
-
+    return view('admin.user_management.list_student', $data);
+}
     public function getSectionsForFilter(Request $request)
     {
         try {

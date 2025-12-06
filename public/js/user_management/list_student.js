@@ -52,6 +52,7 @@ $(document).ready(function () {
         SEMESTER: 6
     };
 
+    // Search by student number or name
     $('#searchStudent').on('keyup', function() {
         const searchValue = this.value;
         
@@ -69,39 +70,53 @@ $(document).ready(function () {
         $.fn.dataTable.ext.search.pop();
     });
 
+    // Filter by semester - Shows students with ANY enrollment in selected semester
     $('#semester').on('change', function() {
-        const val = $(this).val();
+        const selectedSemesterId = $(this).val();
         
-        if (!val) {
-            dataTable.column(COL.SEMESTER).search('').draw();
+        if (!selectedSemesterId) {
+            // Show all students
+            $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(f => !f.name || f.name !== 'semesterFilter');
+            dataTable.draw();
             return;
         }
         
-        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-            const row = dataTable.row(dataIndex).node();
-            const semesterId = $(row).find('td').eq(COL.SEMESTER).data('semester');
-            return semesterId == val;
-        });
+        // Remove previous semester filter if exists
+        $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(f => !f.name || f.name !== 'semesterFilter');
         
+        // Add new semester filter
+        const semesterFilter = function(settings, data, dataIndex) {
+            const row = dataTable.row(dataIndex).node();
+            const rowSemesterId = $(row).find('td').eq(COL.SEMESTER).data('semester-id');
+            
+            // Show row if semester matches (includes enrolled, completed, dropped)
+            return String(rowSemesterId) === String(selectedSemesterId);
+        };
+        semesterFilter.name = 'semesterFilter';
+        
+        $.fn.dataTable.ext.search.push(semesterFilter);
         dataTable.draw();
-        $.fn.dataTable.ext.search.pop();
     });
 
+    // Filter by student type
     $('#studentType').on('change', function() {
         const val = $(this).val();
         dataTable.column(COL.TYPE).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
     });
 
+    // Filter by strand
     $('#strand').on('change', function() {
         const val = $(this).val();
         dataTable.column(COL.STRAND).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
     });
 
+    // Filter by level
     $('#level').on('change', function() {
         const val = $(this).val();
         dataTable.column(COL.LEVEL).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
     });
 
+    // Filter by section
     $('#section').on('change', function() {
         const val = $(this).val();
         dataTable.column(COL.SECTION).search(val ? '^' + escapeRegex(val) + '$' : '', true, false).draw();
@@ -111,6 +126,7 @@ $(document).ready(function () {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
+    // Load sections based on strand/level selection
     $('#strand, #level').on('change', function() {
         const strandCode = $('#strand').val();
         const levelName = $('#level').val();
@@ -165,6 +181,7 @@ $(document).ready(function () {
         });
     }
 
+    // Clear all filters
     $('#clearFilters').on('click', function() {
         $('#searchStudent').val('');
         $('#semester').val('');
@@ -173,6 +190,9 @@ $(document).ready(function () {
         $('#level').val('');
         $('#section').html('<option value="">All Sections</option>');
 
+        // Clear custom search filters
+        $.fn.dataTable.ext.search = [];
+        
         dataTable.search('').columns().search('').draw();
     });
 

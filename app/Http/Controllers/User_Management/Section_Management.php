@@ -70,7 +70,6 @@ class Section_Management extends MainController
      */
     public function search_students(Request $request)
     {
-        // Accept both GET and POST
         $search = $request->input('search');
         
         if (!$search || strlen($search) < 2) {
@@ -82,7 +81,6 @@ class Section_Management extends MainController
         }
 
         try {
-
             $students = DB::table('students')
                 ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
                 ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
@@ -133,9 +131,7 @@ class Section_Management extends MainController
 
     /**
      * Load students from a source section
-     * Filters by semester if provided:
-     * - Regular students: Must have section enrolled in that semester (via section_class_matrix)
-     * - Irregular students: Must be enrolled individually in that semester (via student_class_matrix)
+     * Filters by semester if provided
      */
     public function load_students_from_section(Request $request)
     {
@@ -149,9 +145,9 @@ class Section_Management extends MainController
             $sourceSemesterId = $request->source_semester_id;
 
             if ($sourceSemesterId) {
-                // FILTER BY SEMESTER - Check actual enrollment records
+                // FILTER BY SEMESTER - Check enrollment records
                 
-                // Get regular students: section was active in that semester
+                // Get regular students enrolled in semester via section
                 $regularStudents = DB::table('students')
                     ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
                     ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
@@ -179,7 +175,7 @@ class Section_Management extends MainController
                     )
                     ->get();
 
-                // Get irregular students: individually enrolled in that semester
+                // Get irregular students enrolled individually
                 $irregularStudents = DB::table('students')
                     ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
                     ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
@@ -208,7 +204,6 @@ class Section_Management extends MainController
                     )
                     ->get();
 
-                // Merge both collections
                 $students = $regularStudents->merge($irregularStudents)
                     ->sortBy([
                         ['last_name', 'asc'],
@@ -217,7 +212,7 @@ class Section_Management extends MainController
                     ->values();
 
             } else {
-                // NO SEMESTER FILTER - Get all students in section
+                // NO SEMESTER FILTER
                 $students = DB::table('students')
                     ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
                     ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
@@ -261,7 +256,7 @@ class Section_Management extends MainController
     }
 
     /**
-     * Assign students to new section and enroll in semester
+     * Assign students to new section and enroll in target semester
      */
     public function assign_students(Request $request)
     {
@@ -294,13 +289,55 @@ class Section_Management extends MainController
                         continue;
                     }
 
+                    // 1. Update student's section and type
                     $student->update([
                         'section_id' => $newSectionId,
                         'student_type' => $studentType,
                         'updated_at' => now()
                     ]);
 
+                    // 2. Handle semester enrollment record
+                    $existingEnrollment = DB::table('student_semester_enrollment')
+                        ->where('student_number', $studentNumber)
+                        ->where('semester_id', $semesterId)
+                        ->first();
+
+                    if ($existingEnrollment) {
+                        // UPDATE: Same semester, just changing section
+                        DB::table('student_semester_enrollment')
+                            ->where('id', $existingEnrollment->id)
+                            ->update([
+                                'section_id' => $newSectionId,
+                                'enrollment_status' => 'enrolled',
+                                'updated_at' => now()
+                            ]);
+                    } else {
+                        // INSERT: New semester enrollment
+                        
+                        // Mark previous enrollments as completed
+                        DB::table('student_semester_enrollment')
+                            ->where('student_number', $studentNumber)
+                            ->where('enrollment_status', 'enrolled')
+                            ->update([
+                                'enrollment_status' => 'completed',
+                                'updated_at' => now()
+                            ]);
+
+                        // Create new enrollment for target semester
+                        DB::table('student_semester_enrollment')->insert([
+                            'student_number' => $studentNumber,
+                            'semester_id' => $semesterId,
+                            'section_id' => $newSectionId,
+                            'enrollment_status' => 'enrolled',
+                            'enrollment_date' => now()->toDateString(),
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                    }
+
+                    // 3. Handle class enrollments based on student type
                     if ($studentType === 'regular') {
+                        // REGULAR: Remove individual class enrollments (they follow section)
                         $sectionClasses = DB::table('section_class_matrix')
                             ->where('section_id', $newSectionId)
                             ->where('semester_id', $semesterId)
@@ -319,6 +356,7 @@ class Section_Management extends MainController
                         }
 
                     } else {
+                        // IRREGULAR: Enroll in all section classes individually
                         $sectionClasses = DB::table('section_class_matrix')
                             ->where('section_id', $newSectionId)
                             ->where('semester_id', $semesterId)
