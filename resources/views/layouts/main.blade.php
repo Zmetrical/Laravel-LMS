@@ -257,10 +257,10 @@
                                     </li>
 
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.sections.assign') }}" 
-                                        class="nav-link {{ Request::routeIs('admin.sections.assign') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.assign_section') }}" 
+                                        class="nav-link {{ Request::routeIs('admin.assign_section') ? 'active' : '' }}">
                                             <i class="nav-icon fas fa-exchange-alt"></i>
-                                            <p>Section Assignment</p>
+                                            <p>Update Student</p>
                                         </a>
                                     </li>
                                 </ul>
