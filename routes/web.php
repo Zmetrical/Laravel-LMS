@@ -65,27 +65,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
         });
 
-        // Replace your existing Section Management Routes with this:
 
-        Route::prefix('sections')->name('sections.')->group(function () {
-            Route::get('/assign', [Section_Management::class, 'assignSections'])
-                ->name('assign');
-            
-            Route::get('/students/filter', [Section_Management::class, 'getStudentsByFilter'])
-                ->name('students.filter');
-            
-            Route::get('/available', [Section_Management::class, 'getAvailableSections'])
-                ->name('available');
-            
-            Route::post('/assign/students', [Section_Management::class, 'assignStudentsToSection'])
-                ->name('assign.students');
-            
-            Route::get('/promotion/summary', [Section_Management::class, 'getPromotionSummary'])
-                ->name('promotion.summary');
-            
-            Route::post('/promotion/bulk', [Section_Management::class, 'bulkPromoteStudents'])
-                ->name('promotion.bulk');
-        });
 
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {
