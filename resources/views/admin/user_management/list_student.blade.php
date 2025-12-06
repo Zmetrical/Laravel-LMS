@@ -43,6 +43,18 @@
                     <input type="text" class="form-control" id="searchStudent" placeholder="Number or Name...">
                 </div>
                 <div class="col-md-2">
+                    <label>Semester</label>
+                    <select class="form-control" id="semester">
+                        <option value="">All Semesters</option>
+                        @foreach($semesters as $sem)
+                            <option value="{{ $sem->id }}" 
+                                {{ isset($activeSemester) && $activeSemester->semester_id == $sem->id ? 'selected' : '' }}>
+                                {{ $sem->display_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label>Student Type</label>
                     <select class="form-control" id="studentType">
                         <option value="">All Types</option>
@@ -50,19 +62,19 @@
                         <option value="irregular">Irregular</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label>Strand</label>
                     <select class="form-control" id="strand">
-                        <option value="">All Strands</option>
+                        <option value="">All</option>
                         @foreach($strands as $strand)
                             <option value="{{ $strand->code }}">{{ $strand->code }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label>Year Level</label>
+                <div class="col-md-1">
+                    <label>Level</label>
                     <select class="form-control" id="level">
-                        <option value="">All Levels</option>
+                        <option value="">All</option>
                         @foreach($levels as $level)
                             <option value="{{ $level->name }}">{{ $level->name }}</option>
                         @endforeach
@@ -75,7 +87,7 @@
                     </select>
                 </div>
                 <div class="col-md-1 d-flex">
-                    <button class="btn btn-outline-secondary btn-block" id="clearFilters" title="Clear Filters">
+                    <button class="btn btn-secondary btn-block" id="clearFilters" title="Clear Filters">
                         <i class="fas fa-undo"></i>
                     </button>
                 </div>
@@ -102,6 +114,7 @@
                             <th>Level</th>
                             <th>Section</th>
                             <th>Type</th>
+                            <th>Semester</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -115,22 +128,32 @@
                                 <td>{{ $student->section }}</td>
                                 <td>
                                     @php
-                                        $type = $student->type ?? 'regular';
+                                        $type = $student->student_type ?? 'regular';
                                         $badgeClass = match($type) {
                                             'regular' => 'badge-primary',
                                             'irregular' => 'badge-secondary',
                                             default => 'badge-primary'
                                         };
                                     @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $type }}</span>
+                                    <span class="badge {{ $badgeClass }}">{{ ucfirst($type) }}</span>
+                                </td>
+                                <td data-semester="{{ $student->semester_id ?? '' }}">
+                                    @if($student->semester_id)
+                                        @php
+                                            $semester = $semesters->firstWhere('id', $student->semester_id);
+                                        @endphp
+                                        {{ $semester ? $semester->display_name : 'N/A' }}
+                                    @else
+                                        <span class="text-muted">Not enrolled</span>
+                                    @endif
                                 </td>
                                 <td class="text-center">
                                     <a href="{{ route('profile.student.show', $student->id) }}" 
-                                        class="btn btn-sm btn-outline-secondary" title="View Profile">
+                                        class="btn btn-sm btn-secondary" title="View Profile">
                                         <i class="fas fa-user"></i>
                                     </a>
                                     <a href="{{ route('profile.student.edit', $student->id) }}"
-                                        class="btn btn-sm btn-outline-primary" title="Edit">
+                                        class="btn btn-sm btn-primary" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 </td>

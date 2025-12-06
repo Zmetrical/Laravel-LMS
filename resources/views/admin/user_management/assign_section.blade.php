@@ -27,15 +27,15 @@
             <!-- Left Sidebar -->
             <div class="col-lg-3">
                 <!-- Source Selection Card -->
-                <div class="card card-primary card-outline">
+                <div class="card card-secondary card-outline">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
                     </div>
                     <div class="card-body">
                         <div class="form-group">
-                            <label>Previous Semester</label>
+                            <label>Previous Semester </label>
                             <select class="form-control" id="source_semester">
-                                <option value="">Any Semester</option>
+                                <option value="">All Students in Section</option>
                                 @foreach($semesters as $semester)
                                     <option value="{{ $semester->id }}">
                                         {{ $semester->year_code }} - {{ $semester->semester_name }}
@@ -177,6 +177,12 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Info Alert -->
+                        <div class="alert alert-secondary mt-3">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Instructions:</strong> Select source section or search for students, choose target section where they will be assigned, and select students to assign.
                         </div>
                     </div>
 

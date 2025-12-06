@@ -133,6 +133,9 @@ class Section_Management extends MainController
 
     /**
      * Load students from a source section
+     * Filters by semester if provided:
+     * - Regular students: Must have section enrolled in that semester (via section_class_matrix)
+     * - Irregular students: Must be enrolled individually in that semester (via student_class_matrix)
      */
     public function load_students_from_section(Request $request)
     {
@@ -145,28 +148,98 @@ class Section_Management extends MainController
             $sourceSectionId = $request->source_section_id;
             $sourceSemesterId = $request->source_semester_id;
 
-            $baseQuery = DB::table('students')
-                ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
-                ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
-                ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
-                ->where('students.section_id', $sourceSectionId);
+            if ($sourceSemesterId) {
+                // FILTER BY SEMESTER - Check actual enrollment records
+                
+                // Get regular students: section was active in that semester
+                $regularStudents = DB::table('students')
+                    ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
+                    ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
+                    ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
+                    ->whereExists(function($query) use ($sourceSectionId, $sourceSemesterId) {
+                        $query->select(DB::raw(1))
+                            ->from('section_class_matrix')
+                            ->where('section_class_matrix.section_id', $sourceSectionId)
+                            ->where('section_class_matrix.semester_id', $sourceSemesterId);
+                    })
+                    ->where('students.section_id', $sourceSectionId)
+                    ->where('students.student_type', 'regular')
+                    ->select(
+                        'students.id',
+                        'students.student_number',
+                        'students.first_name',
+                        'students.middle_name',
+                        'students.last_name',
+                        'students.student_type',
+                        'students.section_id as current_section_id',
+                        'sections.name as current_section',
+                        'sections.code as current_section_code',
+                        'levels.name as current_level',
+                        'strands.code as current_strand'
+                    )
+                    ->get();
 
-            $students = $baseQuery->select(
-                    'students.id',
-                    'students.student_number',
-                    'students.first_name',
-                    'students.middle_name',
-                    'students.last_name',
-                    'students.student_type',
-                    'students.section_id as current_section_id',
-                    'sections.name as current_section',
-                    'sections.code as current_section_code',
-                    'levels.name as current_level',
-                    'strands.code as current_strand'
-                )
-                ->orderBy('students.last_name')
-                ->orderBy('students.first_name')
-                ->get();
+                // Get irregular students: individually enrolled in that semester
+                $irregularStudents = DB::table('students')
+                    ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
+                    ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
+                    ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
+                    ->whereExists(function($query) use ($sourceSemesterId) {
+                        $query->select(DB::raw(1))
+                            ->from('student_class_matrix')
+                            ->whereColumn('student_class_matrix.student_number', 'students.student_number')
+                            ->where('student_class_matrix.semester_id', $sourceSemesterId)
+                            ->where('student_class_matrix.enrollment_status', 'enrolled');
+                    })
+                    ->where('students.section_id', $sourceSectionId)
+                    ->where('students.student_type', 'irregular')
+                    ->select(
+                        'students.id',
+                        'students.student_number',
+                        'students.first_name',
+                        'students.middle_name',
+                        'students.last_name',
+                        'students.student_type',
+                        'students.section_id as current_section_id',
+                        'sections.name as current_section',
+                        'sections.code as current_section_code',
+                        'levels.name as current_level',
+                        'strands.code as current_strand'
+                    )
+                    ->get();
+
+                // Merge both collections
+                $students = $regularStudents->merge($irregularStudents)
+                    ->sortBy([
+                        ['last_name', 'asc'],
+                        ['first_name', 'asc']
+                    ])
+                    ->values();
+
+            } else {
+                // NO SEMESTER FILTER - Get all students in section
+                $students = DB::table('students')
+                    ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
+                    ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
+                    ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
+                    ->where('students.section_id', $sourceSectionId)
+                    ->select(
+                        'students.id',
+                        'students.student_number',
+                        'students.first_name',
+                        'students.middle_name',
+                        'students.last_name',
+                        'students.student_type',
+                        'students.section_id as current_section_id',
+                        'sections.name as current_section',
+                        'sections.code as current_section_code',
+                        'levels.name as current_level',
+                        'strands.code as current_strand'
+                    )
+                    ->orderBy('students.last_name')
+                    ->orderBy('students.first_name')
+                    ->get();
+            }
 
             return response()->json([
                 'success' => true,

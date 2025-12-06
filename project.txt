@@ -9,6 +9,8 @@ student_class_matrix - is for irregular student
 section_class_matrix - is for regular student
 
 i dont use current semester of students table
+
+
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
   `admin_name` varchar(100) NOT NULL,
@@ -274,6 +276,19 @@ CREATE TABLE `students` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `student_semester_enrollment` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `student_number` VARCHAR(100) NOT NULL,
+    `semester_id` INT NOT NULL,
+    `section_id` BIGINT UNSIGNED NULL,
+    `enrollment_status` ENUM('enrolled', 'dropped', 'completed') NOT NULL DEFAULT 'enrolled',
+    `enrollment_date` DATE NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`)
+);
+
 
 CREATE TABLE `student_lecture_progress` (
   `id` bigint(20) UNSIGNED NOT NULL,
