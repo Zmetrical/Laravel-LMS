@@ -25,7 +25,8 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\User_Management\Profile_Management;
 use App\Http\Controllers\User_Management\User_Management;
-use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\User_Management\Section_Management;
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\QuizAttemptMiddleware;
 
@@ -62,6 +63,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/create', [Year_Management::class, 'createSchoolYear'])->name('schoolyears.create');
             Route::put('/{id}/update', [Year_Management::class, 'updateSchoolYear'])->name('schoolyears.update');
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
+        });
+
+        // Replace your existing Section Management Routes with this:
+
+        Route::prefix('sections')->name('sections.')->group(function () {
+            Route::get('/assign', [Section_Management::class, 'assignSections'])
+                ->name('assign');
+            
+            Route::get('/students/filter', [Section_Management::class, 'getStudentsByFilter'])
+                ->name('students.filter');
+            
+            Route::get('/available', [Section_Management::class, 'getAvailableSections'])
+                ->name('available');
+            
+            Route::post('/assign/students', [Section_Management::class, 'assignStudentsToSection'])
+                ->name('assign.students');
+            
+            Route::get('/promotion/summary', [Section_Management::class, 'getPromotionSummary'])
+                ->name('promotion.summary');
+            
+            Route::post('/promotion/bulk', [Section_Management::class, 'bulkPromoteStudents'])
+                ->name('promotion.bulk');
         });
 
         // Semester Management Routes
@@ -270,7 +293,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/profile', [TeacherController::class, 'show_profile'])->name('profile');
             Route::get('/profile/edit', [TeacherController::class, 'edit_profile'])->name('profile.edit');
             Route::post('/profile/update', [TeacherController::class, 'update_profile'])->name('profile.update');
-            Route::post('/profile/change-password', [TeacherController::class, 'change_password'])->name('profile.change_password');
             
         // Class Pages
         Route::get('/list_class', [Class_List::class, 'teacher_class_list'])->name('list_class');

@@ -176,19 +176,19 @@
                                         <li class="nav-item">
                                             <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Class Enrollment</p>
+                                                <p>Assign teacher</p>
                                             </a>
                                         </li>
                                         <li class="nav-item">
                                             <a href="{{ route('admin.enrollment.sections') }}" class="nav-link {{ Request::routeIs('admin.enrollment.sections') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Section Enrollment</p>
+                                                <p>Enroll Regular</p>
                                             </a>
                                         </li>
                                         <li class="nav-item">
                                             <a href="{{ route('admin.student_irreg_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Student Enrollment</p>
+                                                <p>Enroll Irregular</p>
                                             </a>
                                         </li>
                                     </ul>
@@ -253,6 +253,14 @@
                                             class="nav-link {{ Request::routeIs('admin.list_teacher') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>List Teachers</p>
+                                        </a>
+                                    </li>
+
+                                    <li class="nav-item">
+                                        <a href="{{ route('admin.sections.assign') }}" 
+                                        class="nav-link {{ Request::routeIs('admin.sections.assign') ? 'active' : '' }}">
+                                            <i class="nav-icon fas fa-exchange-alt"></i>
+                                            <p>Section Assignment</p>
                                         </a>
                                     </li>
                                 </ul>
