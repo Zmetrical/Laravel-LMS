@@ -5,9 +5,7 @@ namespace App\Http\Controllers\User_Management;
 use App\Http\Controllers\MainController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\User_Management\Strand;
 use App\Models\User_Management\Section;
-use App\Models\User_Management\Level;
 use App\Models\User_Management\Student;
 use Exception;
 
@@ -18,8 +16,6 @@ class Section_Management extends MainController
      */
     public function assign_section(Request $request)
     {
-        $strands = Strand::where('status', 1)->get();
-        $levels = Level::all();
         $sections = Section::where('status', 1)->get();
         
         // Get semesters
@@ -39,8 +35,6 @@ class Section_Management extends MainController
             'scripts' => [
                 'user_management/assign_section.js',
             ],
-            'strands' => $strands,
-            'levels' => $levels,
             'sections' => $sections,
             'semesters' => $semesters,
         ];
@@ -49,8 +43,96 @@ class Section_Management extends MainController
     }
 
     /**
+     * Search sections by name or code
+     */
+    public function search_sections(Request $request)
+    {
+        $query = Section::where('status', 1);
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('code', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $sections = $query->select('id', 'code', 'name')
+            ->orderBy('name')
+            ->limit(50)
+            ->get();
+
+        return response()->json($sections);
+    }
+
+    /**
+     * Search students by number or name
+     */
+    public function search_students(Request $request)
+    {
+        // Accept both GET and POST
+        $search = $request->input('search');
+        
+        if (!$search || strlen($search) < 2) {
+            return response()->json([
+                'success' => true,
+                'students' => [],
+                'count' => 0
+            ]);
+        }
+
+        try {
+
+            $students = DB::table('students')
+                ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
+                ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
+                ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
+                ->where(function($query) use ($search) {
+                    $query->where('students.student_number', 'LIKE', "%{$search}%")
+                          ->orWhere('students.first_name', 'LIKE', "%{$search}%")
+                          ->orWhere('students.last_name', 'LIKE', "%{$search}%")
+                          ->orWhere(DB::raw("CONCAT(students.first_name, ' ', students.last_name)"), 'LIKE', "%{$search}%")
+                          ->orWhere(DB::raw("CONCAT(students.last_name, ' ', students.first_name)"), 'LIKE', "%{$search}%");
+                })
+                ->select(
+                    'students.id',
+                    'students.student_number',
+                    'students.first_name',
+                    'students.middle_name',
+                    'students.last_name',
+                    'students.student_type',
+                    'students.section_id as current_section_id',
+                    'sections.name as current_section',
+                    'sections.code as current_section_code',
+                    'levels.name as current_level',
+                    'strands.code as current_strand'
+                )
+                ->orderBy('students.last_name')
+                ->orderBy('students.first_name')
+                ->limit(50)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'students' => $students,
+                'count' => count($students)
+            ]);
+
+        } catch (Exception $e) {
+            \Log::error('Failed to search students', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Load students from a source section
-     * Includes both regular students (via section) and irregular students (via individual enrollment)
      */
     public function load_students_from_section(Request $request)
     {
@@ -63,7 +145,6 @@ class Section_Management extends MainController
             $sourceSectionId = $request->source_section_id;
             $sourceSemesterId = $request->source_semester_id;
 
-            // Get all students from this section
             $baseQuery = DB::table('students')
                 ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
                 ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
@@ -108,7 +189,6 @@ class Section_Management extends MainController
 
     /**
      * Assign students to new section and enroll in semester
-     * Handles both regular students (section-based) and irregular students (individual enrollment)
      */
     public function assign_students(Request $request)
     {
@@ -134,7 +214,6 @@ class Section_Management extends MainController
                     $newSectionId = $studentData['new_section_id'];
                     $studentType = $studentData['student_type'];
 
-                    // Get student
                     $student = Student::where('student_number', $studentNumber)->first();
                     
                     if (!$student) {
@@ -142,17 +221,13 @@ class Section_Management extends MainController
                         continue;
                     }
 
-                    // Update student's section and type
                     $student->update([
                         'section_id' => $newSectionId,
                         'student_type' => $studentType,
                         'updated_at' => now()
                     ]);
 
-                    // Enroll student based on their type
                     if ($studentType === 'regular') {
-                        // REGULAR STUDENTS: Enrolled via section_class_matrix
-                        // Get all classes for the section in this semester
                         $sectionClasses = DB::table('section_class_matrix')
                             ->where('section_id', $newSectionId)
                             ->where('semester_id', $semesterId)
@@ -163,7 +238,6 @@ class Section_Management extends MainController
                                 ->where('id', $sectionClass->class_id)
                                 ->value('class_code');
 
-                            // Remove any existing individual enrollments for this student/class/semester
                             DB::table('student_class_matrix')
                                 ->where('student_number', $studentNumber)
                                 ->where('class_code', $classCode)
@@ -172,8 +246,6 @@ class Section_Management extends MainController
                         }
 
                     } else {
-                        // IRREGULAR STUDENTS: Enrolled individually via student_class_matrix
-                        // Get all classes for the section in this semester
                         $sectionClasses = DB::table('section_class_matrix')
                             ->where('section_id', $newSectionId)
                             ->where('semester_id', $semesterId)
@@ -184,7 +256,6 @@ class Section_Management extends MainController
                                 ->where('id', $sectionClass->class_id)
                                 ->value('class_code');
 
-                            // Check if already enrolled
                             $exists = DB::table('student_class_matrix')
                                 ->where('student_number', $studentNumber)
                                 ->where('class_code', $classCode)
@@ -235,24 +306,5 @@ class Section_Management extends MainController
                 'message' => 'An error occurred: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Get sections filtered by strand and level
-     */
-    public function get_sections(Request $request)
-    {
-        $query = Section::where('status', 1);
-
-        if ($request->strand_id) {
-            $query->where('strand_id', $request->strand_id);
-        }
-        if ($request->level_id) {
-            $query->where('level_id', $request->level_id);
-        }
-
-        $sections = $query->select('id', 'code', 'name')->get();
-
-        return response()->json($sections);
     }
 }

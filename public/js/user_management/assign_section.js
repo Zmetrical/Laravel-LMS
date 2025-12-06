@@ -2,51 +2,117 @@ $(document).ready(function() {
     let loadedStudents = [];
 
     // =========================================================================
-    // SOURCE SECTION - Load sections when strand or level changes
+    // SELECT2 INITIALIZATION
     // =========================================================================
-    $('#source_strand, #source_level').on('change', function() {
-        const strandId = $('#source_strand').val();
-        const levelId = $('#source_level').val();
+    
+    // Source Section Select2
+    $('#source_section').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Search for section...',
+        allowClear: true,
+        ajax: {
+            url: API_ROUTES.searchSections,
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    search: params.term
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.map(function(section) {
+                        return {
+                            id: section.id,
+                            text: section.name + ' (' + section.code + ')'
+                        };
+                    })
+                };
+            },
+            cache: true
+        },
+        minimumInputLength: 0
+    });
 
-        if (strandId && levelId) {
-            loadSections('source', strandId, levelId);
-        }
+    // Target Section Select2
+    $('#target_section').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Search for section...',
+        allowClear: true,
+        ajax: {
+            url: API_ROUTES.searchSections,
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    search: params.term
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.map(function(section) {
+                        return {
+                            id: section.id,
+                            text: section.name + ' (' + section.code + ')'
+                        };
+                    })
+                };
+            },
+            cache: true
+        },
+        minimumInputLength: 0
+    });
+
+    // Source Student Select2
+    $('#source_student').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Type student number or name...',
+        allowClear: true,
+        ajax: {
+            url: API_ROUTES.searchStudents,
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    search: params.term
+                };
+            },
+            processResults: function(data) {
+                if (!data.success) {
+                    return { results: [] };
+                }
+                return {
+                    results: data.students.map(function(student) {
+                        const fullName = student.last_name + ', ' + student.first_name + ' ' + (student.middle_name || '');
+                        return {
+                            id: student.student_number,
+                            text: student.student_number + ' - ' + fullName,
+                            student: student
+                        };
+                    })
+                };
+            },
+            cache: true
+        },
+        minimumInputLength: 2
     });
 
     // =========================================================================
-    // TARGET SECTION - Load sections when strand or level changes
+    // SOURCE TYPE TOGGLE
     // =========================================================================
-    $('#target_strand, #target_level').on('change', function() {
-        const strandId = $('#target_strand').val();
-        const levelId = $('#target_level').val();
-
-        if (strandId && levelId) {
-            loadSections('target', strandId, levelId);
-        }
+    $('#sourceSectionBtn').on('click', function() {
+        $(this).addClass('active btn-secondary').removeClass('btn-default');
+        $('#sourceStudentBtn').removeClass('active btn-secondary').addClass('btn-default');
+        $('#sourceSectionGroup').show();
+        $('#sourceStudentGroup').hide();
     });
 
-    function loadSections(type, strandId, levelId) {
-        const sectionDropdown = type === 'source' ? '#source_section' : '#target_section';
-        const route = type === 'source' ? API_ROUTES.getSourceSections : API_ROUTES.getTargetSections;
-
-        $.ajax({
-            url: route,
-            type: 'GET',
-            data: {
-                strand_id: strandId,
-                level_id: levelId
-            },
-            success: function(sections) {
-                $(sectionDropdown).html('<option value="" selected disabled>Select Section</option>');
-                sections.forEach(function(section) {
-                    $(sectionDropdown).append(`<option value="${section.id}">${section.name}</option>`);
-                });
-            },
-            error: function() {
-                Swal.fire('Error', 'Failed to load sections', 'error');
-            }
-        });
-    }
+    $('#sourceStudentBtn').on('click', function() {
+        $(this).addClass('active btn-secondary').removeClass('btn-default');
+        $('#sourceSectionBtn').removeClass('active btn-secondary').addClass('btn-default');
+        $('#sourceStudentGroup').show();
+        $('#sourceSectionGroup').hide();
+    });
 
     // =========================================================================
     // LOAD STUDENTS FROM SOURCE SECTION
@@ -101,6 +167,92 @@ $(document).ready(function() {
             }
         });
     });
+
+    // =========================================================================
+    // ADD INDIVIDUAL STUDENT
+    // =========================================================================
+    $('#addStudentBtn').on('click', function() {
+        const selectedData = $('#source_student').select2('data');
+        
+        if (!selectedData || selectedData.length === 0 || !selectedData[0].id) {
+            Swal.fire('Missing Selection', 'Please search and select a student first', 'warning');
+            return;
+        }
+
+        const student = selectedData[0].student;
+
+        // Check if student already exists in table
+        const exists = $(`#assignmentTableBody tr[data-student-number="${student.student_number}"]`).length > 0;
+        if (exists) {
+            Swal.fire('Already Added', 'This student is already in the list', 'info');
+            return;
+        }
+
+        // Add student to loaded students array
+        loadedStudents.push(student);
+        
+        // Add row to table
+        addStudentRow(student);
+        
+        // Clear selection
+        $('#source_student').val(null).trigger('change');
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Student Added',
+            text: 'Student added to the list',
+            timer: 1500,
+            showConfirmButton: false
+        });
+
+        updateStudentCount();
+        $('#submitBtn').prop('disabled', false);
+    });
+
+    // =========================================================================
+    // ADD STUDENT ROW
+    // =========================================================================
+    function addStudentRow(student) {
+        const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
+        const currentSection = student.current_section || 'N/A';
+        const currentInfo = student.current_strand && student.current_level 
+            ? `${student.current_strand} - ${student.current_level}` 
+            : '';
+
+        const studentType = student.student_type || 'regular';
+        const typeIcon = studentType === 'regular' ? 'fa-user-check' : 'fa-user-clock';
+        const typeText = studentType === 'regular' ? 'Regular' : 'Irregular';
+
+        // Remove empty state if exists
+        if ($('#assignmentTableBody tr').first().find('.student-checkbox').length === 0) {
+            $('#assignmentTableBody').empty();
+        }
+
+        const rowCount = $('#assignmentTableBody tr').length + 1;
+
+        const row = `
+            <tr data-student-number="${student.student_number}" data-selected="true">
+                <td class="text-center align-middle">
+                    <input type="checkbox" class="student-checkbox" checked>
+                </td>
+                <td class="text-center align-middle">${rowCount}</td>
+                <td>${student.student_number}</td>
+                <td><strong>${fullName}</strong></td>
+                <td>
+                    <small>${currentSection}</small><br>
+                    <small class="text-muted">${currentInfo}</small>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-default btn-sm btn-block type-toggle" data-type="${studentType}">
+                        <i class="fas ${typeIcon}"></i> ${typeText}
+                    </button>
+                    <input type="hidden" class="type-input" value="${studentType}">
+                </td>
+            </tr>
+        `;
+
+        $('#assignmentTableBody').append(row);
+    }
 
     // =========================================================================
     // POPULATE STUDENT TABLE
@@ -161,12 +313,36 @@ $(document).ready(function() {
     }
 
     // =========================================================================
+    // TABLE SEARCH
+    // =========================================================================
+    $('#tableSearchInput').on('keyup', function() {
+        const searchValue = $(this).val().toLowerCase();
+        
+        $('#assignmentTableBody tr').each(function() {
+            const $row = $(this);
+            if ($row.find('.student-checkbox').length === 0) return; // Skip empty state row
+            
+            const text = $row.text().toLowerCase();
+            if (text.indexOf(searchValue) > -1) {
+                $row.show();
+            } else {
+                $row.hide();
+            }
+        });
+    });
+
+    $('#clearTableSearchBtn').on('click', function() {
+        $('#tableSearchInput').val('');
+        $('#assignmentTableBody tr').show();
+    });
+
+    // =========================================================================
     // CHECKBOX HANDLERS
     // =========================================================================
     $('#selectAllCheckbox').on('change', function() {
         const isChecked = $(this).is(':checked');
-        $('.student-checkbox').prop('checked', isChecked);
-        $('.student-checkbox').each(function() {
+        $('.student-checkbox:visible').prop('checked', isChecked);
+        $('.student-checkbox:visible').each(function() {
             $(this).closest('tr').attr('data-selected', isChecked);
         });
         updateStudentCount();
@@ -177,9 +353,8 @@ $(document).ready(function() {
         $(this).closest('tr').attr('data-selected', isChecked);
         updateStudentCount();
         
-        // Update "select all" checkbox
-        const totalCheckboxes = $('.student-checkbox').length;
-        const checkedCheckboxes = $('.student-checkbox:checked').length;
+        const totalCheckboxes = $('.student-checkbox:visible').length;
+        const checkedCheckboxes = $('.student-checkbox:visible:checked').length;
         $('#selectAllCheckbox').prop('checked', totalCheckboxes === checkedCheckboxes);
     });
 
@@ -252,15 +427,19 @@ $(document).ready(function() {
     // =========================================================================
     function renumberRows() {
         $('#assignmentTableBody tr').each(function(index) {
-            $(this).find('td:eq(1)').text(index + 1);
+            if ($(this).find('.student-checkbox').length > 0) {
+                $(this).find('td:eq(1)').text(index + 1);
+            }
         });
     }
 
     function updateStudentCount() {
-        const totalStudents = $('#assignmentTableBody tr').length;
+        const totalStudents = $('#assignmentTableBody tr').filter(function() {
+            return $(this).find('.student-checkbox').length > 0;
+        }).length;
         const selectedStudents = $('.student-checkbox:checked').length;
         
-        if (totalStudents > 0 && !$('#assignmentTableBody tr').first().find('.student-checkbox').length) {
+        if (totalStudents === 0) {
             $('#studentCount').text('0 Students');
             return;
         }
@@ -274,18 +453,16 @@ $(document).ready(function() {
     $('#assign_section_form').on('submit', function(e) {
         e.preventDefault();
 
-        // Validate target semester and section
         if (!$('#target_semester').val()) {
             Swal.fire('Missing Selection', 'Please select a target semester', 'warning');
             return;
         }
 
         if (!$('#target_section').val()) {
-            Swal.fire('Missing Selection', 'Please select target strand, level, and section', 'warning');
+            Swal.fire('Missing Selection', 'Please select a target section', 'warning');
             return;
         }
 
-        // Get selected students
         const students = [];
         $('.student-checkbox:checked').each(function() {
             const $row = $(this).closest('tr');
@@ -301,9 +478,7 @@ $(document).ready(function() {
             return;
         }
 
-        // Confirm assignment
-        const sourceSectionName = $('#source_section option:selected').text();
-        const targetSectionName = $('#target_section option:selected').text();
+        const targetSectionText = $('#target_section option:selected').text() || $('#target_section').select2('data')[0].text;
         const targetSemesterName = $('#target_semester option:selected').text();
 
         Swal.fire({
@@ -312,8 +487,7 @@ $(document).ready(function() {
                 <div class="text-left">
                     <p><strong>Assigning ${students.length} student(s)</strong></p>
                     <hr>
-                    <p><strong>From:</strong> ${sourceSectionName}</p>
-                    <p><strong>To:</strong> ${targetSectionName}</p>
+                    <p><strong>To:</strong> ${targetSectionText}</p>
                     <p><strong>Semester:</strong> ${targetSemesterName}</p>
                     <hr>
                     <p class="text-muted small">This will:</p>

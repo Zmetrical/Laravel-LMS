@@ -72,11 +72,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/section-assignment/get-sections', [Section_Management::class, 'get_sections'])
         ->name('section_assignment.get_sections');
     
-    Route::post('/section-assignment/load-students', [Section_Management::class, 'load_students_from_section'])
-        ->name('section_assignment.load_students');
-    
-    Route::post('/section-assignment/assign-students', [Section_Management::class, 'assign_students'])
-        ->name('section_assignment.assign_students');
+// Section Assignment Routes
+        Route::get('/section_assignment/search_sections', [Section_Management::class, 'search_sections'])->name('section_assignment.search_sections');
+        Route::get('/section_assignment/search_students', [Section_Management::class, 'search_students'])->name('section_assignment.search_students'); // Changed to GET
+        Route::post('/section_assignment/load_students', [Section_Management::class, 'load_students_from_section'])->name('section_assignment.load_students');
+        Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
 
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {

@@ -5,6 +5,10 @@ dont use info or any other colors
 this is in laravel, make use of its built it system for efficiency
 make use ajax and jquery 
 
+student_class_matrix - is for irregular student
+section_class_matrix - is for regular student
+
+i dont use current semester of students table
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
   `admin_name` varchar(100) NOT NULL,

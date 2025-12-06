@@ -7,6 +7,8 @@
         @endforeach
     @endif
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 @endsection
 
 @section('breadcrumb')
@@ -24,16 +26,12 @@
         <div class="row">
             <!-- Left Sidebar -->
             <div class="col-lg-3">
-                <!-- Source Section Card -->
-                <div class="card card-secondary card-outline sticky-top" style="top: 70px;">
+                <!-- Source Selection Card -->
+                <div class="card card-primary card-outline">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Section</h3>
+                        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-secondary">
-                            <small><i class="fas fa-info-circle"></i> Select the previous section to load students</small>
-                        </div>
-
                         <div class="form-group">
                             <label>Previous Semester</label>
                             <select class="form-control" id="source_semester">
@@ -44,39 +42,48 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">Optional: Filter by semester</small>
                         </div>
 
+                        <!-- Source Type Toggle -->
                         <div class="form-group">
-                            <label>Source Strand</label>
-                            <select class="form-control" id="source_strand">
-                                <option value="" selected disabled>Select Strand</option>
-                                @foreach($strands as $strand)
-                                    <option value="{{ $strand->id }}">{{ $strand->code }} - {{ $strand->name }}</option>
-                                @endforeach
-                            </select>
+                            <label>Source Type</label>
+                            <div class="btn-group btn-block">
+                                <button type="button" class="btn btn-secondary active" id="sourceSectionBtn">
+                                    <i class="fas fa-users"></i> Section
+                                </button>
+                                <button type="button" class="btn btn-default" id="sourceStudentBtn">
+                                    <i class="fas fa-user"></i> Student
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Source Year Level</label>
-                            <select class="form-control" id="source_level">
-                                <option value="" selected disabled>Select Year Level</option>
-                                @foreach($levels as $level)
-                                    <option value="{{ $level->id }}">{{ $level->name }}</option>
-                                @endforeach
-                            </select>
+                        <!-- Source Section -->
+                        <div id="sourceSectionGroup">
+                            <div class="form-group">
+                                <label>Source Section <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="source_section" style="width: 100%;">
+                                    <option value="">Search for section...</option>
+                                </select>
+                            </div>
+
+                            <button type="button" class="btn btn-secondary btn-block" id="loadStudentsBtn">
+                                <i class="fas fa-download mr-2"></i> Load Students
+                            </button>
                         </div>
 
-                        <div class="form-group">
-                            <label>Source Section <span class="text-danger">*</span></label>
-                            <select class="form-control" id="source_section">
-                                <option value="" selected disabled>Select Section</option>
-                            </select>
-                        </div>
+                        <!-- Source Student -->
+                        <div id="sourceStudentGroup" style="display: none;">
+                            <div class="form-group">
+                                <label>Search Student <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="source_student" style="width: 100%;">
+                                    <option value="">Type student number or name...</option>
+                                </select>
+                            </div>
 
-                        <button type="button" class="btn btn-secondary btn-block" id="loadStudentsBtn">
-                            <i class="fas fa-download mr-2"></i> Load Students
-                        </button>
+                            <button type="button" class="btn btn-secondary btn-block" id="addStudentBtn">
+                                <i class="fas fa-user-plus mr-2"></i> Add Student
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -86,10 +93,6 @@
                         <h3 class="card-title"><i class="fas fa-bullseye mr-2"></i>Target Section</h3>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-primary">
-                            <small><i class="fas fa-info-circle"></i> Where students will be assigned</small>
-                        </div>
-
                         <div class="form-group">
                             <label>Target Semester <span class="text-danger">*</span></label>
                             <select class="form-control" id="target_semester" name="semester_id" required>
@@ -105,29 +108,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Target Strand <span class="text-danger">*</span></label>
-                            <select class="form-control" id="target_strand" required>
-                                <option value="" selected disabled>Select Strand</option>
-                                @foreach($strands as $strand)
-                                    <option value="{{ $strand->id }}">{{ $strand->code }} - {{ $strand->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Target Year Level <span class="text-danger">*</span></label>
-                            <select class="form-control" id="target_level" required>
-                                <option value="" selected disabled>Select Year Level</option>
-                                @foreach($levels as $level)
-                                    <option value="{{ $level->id }}">{{ $level->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="form-group">
                             <label>Target Section <span class="text-danger">*</span></label>
-                            <select class="form-control" id="target_section" name="section_id" required>
-                                <option value="" selected disabled>Select Section</option>
+                            <select class="form-control select2" id="target_section" name="section_id" style="width: 100%;" required>
+                                <option value="">Search for section...</option>
                             </select>
                         </div>
                     </div>
@@ -155,7 +138,16 @@
                                 </button>
                             </div>
                             <div class="col-md-6 text-right">
-                                <button type="button" class="btn btn-secondary" id="removeSelectedBtn">
+                                <!-- Search Student Table -->
+                                <div class="input-group" style="width: 250px; display: inline-flex;">
+                                    <input type="text" class="form-control" id="tableSearchInput" placeholder="Search table...">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-default" id="clearTableSearchBtn">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-secondary ml-2" id="removeSelectedBtn">
                                     <i class="fas fa-trash mr-1"></i> Remove Selected
                                 </button>
                             </div>
@@ -180,23 +172,11 @@
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-5">
                                             <i class="fas fa-arrow-left fa-2x mb-3"></i>
-                                            <p>Select a source section and click <strong>"Load Students"</strong> to begin</p>
+                                            <p>Select a source section or search for a student to begin</p>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
-                        </div>
-
-                        <!-- Info Alert -->
-                        <div class="alert alert-secondary mt-3">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            <strong>Instructions:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>Select source section from the left to load existing students</li>
-                                <li>Choose target section where students will be assigned</li>
-                                <li>Select students you want to assign (or use Select All)</li>
-                                <li>Students will be enrolled in the target semester and all section classes</li>
-                            </ul>
                         </div>
                     </div>
 
@@ -214,11 +194,12 @@
 
 @section('scripts')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
 
 <script>
 const API_ROUTES = {
-    getSourceSections: "{{ route('admin.section_assignment.get_sections') }}",
-    getTargetSections: "{{ route('admin.section_assignment.get_sections') }}",
+    searchSections: "{{ route('admin.section_assignment.search_sections') }}",
+    searchStudents: "{{ route('admin.section_assignment.search_students') }}",
     loadStudents: "{{ route('admin.section_assignment.load_students') }}",
     assignStudents: "{{ route('admin.section_assignment.assign_students') }}",
     redirectAfterSubmit: "{{ route('admin.list_student') }}"
