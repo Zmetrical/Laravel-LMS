@@ -1,7 +1,7 @@
 @extends('layouts.main-teacher')
-{{-- view gradebook --}}
+
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         .table-gradebook {
@@ -26,12 +26,6 @@
             text-align: center;
         }
         
-        .table-gradebook .student-info {
-            text-align: left;
-            position: sticky;
-            left: 0;
-            z-index: 5;
-        }
 
         .table-gradebook .student-info::after {
             content: '';
@@ -117,11 +111,13 @@
             position: sticky;
             left: 0;
             z-index: 11;
+            background-color: #343a40;
         }
 
         .summary-header th:nth-child(2) {
             left: 120px;
         }
+
         .disabled-column {
             background-color: #f5f5f5 !important;
             opacity: 0.6;
@@ -140,11 +136,14 @@
             position: sticky;
             left: 0;
             z-index: 8;
+            background-color: #6c757d;
         }
 
-        .loading-row td {
+        .loading-row td,
+        .empty-state-row td {
             text-align: center !important;
             padding: 40px !important;
+            background-color: #fff;
         }
 
         .btn-group-quarter .btn {
@@ -179,6 +178,20 @@
             font-weight: 600;
             white-space: nowrap;
         }
+
+        .remarks-passed {
+            color: #28a745;
+            font-weight: 700;
+        }
+
+        .remarks-failed {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        #finalGradeTable {
+            display: none;
+        }
     </style>
 @endsection
 
@@ -191,7 +204,7 @@
 @endsection
 
 @section('content')
-    <div class="card card-dark card-outline">
+    <div class="card">
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-6">
@@ -200,8 +213,8 @@
                     </h3>
                 </div>
                 <div class="col-md-6 text-right">
-                    <button class="btn btn-primary btn-sm" id="editBtn">
-                         Edit Gradebook
+                    <button class="btn btn-secondary btn-sm" id="editBtn">
+                        <i class="fas fa-edit"></i> Edit Gradebook
                     </button>
                     <button class="btn btn-primary btn-sm" id="exportBtn">
                         <i class="fas fa-file-excel"></i> Export to Excel
@@ -211,38 +224,37 @@
         </div>
     </div>
 
-    <div class="card card-dark card-outline">
+    <div class="card ">
         <div class="card-body">
             <div class="filter-controls">
+                <div class="filter-group">
+                    <label>View:</label>
+                    <div class="btn-group btn-group-sm btn-group-quarter" role="group">
+                        @foreach($quarters as $quarter)
+                            <button type="button" 
+                                    class="btn btn-outline-secondary quarter-btn" 
+                                    data-quarter="{{ $quarter->id }}"
+                                    data-type="quarter">
+                                {{ $quarter->name }}
+                            </button>
+                        @endforeach
+                        <button type="button" 
+                                class="btn btn-outline-secondary quarter-btn" 
+                                data-type="final">
+                            Final Grade
+                        </button>
+                    </div>
+                </div>
 
-<div class="filter-group">
-    <label>View:</label>
-    <div class="btn-group btn-group-sm btn-group-quarter" role="group" id="quarterBtnGroup">
-        @foreach($quarters as $quarter)
-            <button type="button" 
-                    class="btn btn-outline-secondary quarter-btn" 
-                    data-quarter="{{ $quarter->id }}"
-                    data-type="quarter">
-                {{ $quarter->name }}
-            </button>
-        @endforeach
-        <button type="button" 
-                class="btn btn-outline-secondary quarter-btn" 
-                data-type="final">
-            Final Grade
-        </button>
-    </div>
-</div>
-
-<div class="filter-group">
-    <label>Section:</label>
-    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
-        <option value="">Select Section</option>
-        @foreach($sections as $section)
-            <option value="{{ $section->id }}">{{ $section->name }}</option>
-        @endforeach
-    </select>
-</div>
+                <div class="filter-group">
+                    <label><i class="fas fa-users"></i> Section:</label>
+                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
+                        <option value="">Select Section</option>
+                        @foreach($sections as $section)
+                            <option value="{{ $section->id }}">{{ $section->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -276,82 +288,74 @@
             <div class="tab-content" id="custom-tabs-content">
                 <div class="tab-pane fade show active" id="ww" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm table-gradebook" id="wwTable">
+                        <table class="table table-bordered table-hover table-sm table-gradebook">
                             <thead>
                                 <tr id="wwHeaderRow"></tr>
                             </thead>
-                            <tbody id="wwBody">
-                                <tr class="loading-row">
-                                    <td colspan="100">
-                                        <i class="fas fa-spinner fa-spin"></i> Loading...
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody id="wwBody"></tbody>
                         </table>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="pt" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm table-gradebook" id="ptTable">
+                        <table class="table table-bordered table-hover table-sm table-gradebook">
                             <thead>
                                 <tr id="ptHeaderRow"></tr>
                             </thead>
-                            <tbody id="ptBody">
-                                <tr class="loading-row">
-                                    <td colspan="100">
-                                        <i class="fas fa-spinner fa-spin"></i> Loading...
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody id="ptBody"></tbody>
                         </table>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="qa" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm table-gradebook" id="qaTable">
+                        <table class="table table-bordered table-hover table-sm table-gradebook">
                             <thead>
                                 <tr id="qaHeaderRow"></tr>
                             </thead>
-                            <tbody id="qaBody">
-                                <tr class="loading-row">
-                                    <td colspan="100">
-                                        <i class="fas fa-spinner fa-spin"></i> Loading...
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody id="qaBody"></tbody>
                         </table>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="summary" role="tabpanel">
+                    <!-- Quarter Summary Table -->
                     <div class="summary-table-wrapper">
                         <table class="table table-bordered table-hover table-sm">
                             <thead class="summary-header">
                                 <tr>
                                     <th class="pb-4">USN</th>
                                     <th class="pb-4">Student Name</th>
-                                    <th class="text-center">Written Work<br><small id="wwPercLabel">({{ $class->ww_perc }}%)</small></th>
-                                    <th class="text-center">Performance Task<br><small id="ptPercLabel">({{ $class->pt_perc }}%)</small></th>
-                                    <th class="text-center">Quarterly Assessment<br><small id="qaPercLabel">({{ $class->qa_perce }}%)</small></th>
+                                    <th class="text-center">Written Work<br><small>({{ $class->ww_perc }}%)</small></th>
+                                    <th class="text-center">Performance Task<br><small>({{ $class->pt_perc }}%)</small></th>
+                                    <th class="text-center">Quarterly Assessment<br><small>({{ $class->qa_perce }}%)</small></th>
                                     <th class="text-center pb-4">Initial Grade</th>
                                     <th class="text-center pb-4">Quarterly Grade</th>
                                 </tr>
                             </thead>
-                            <tbody id="summaryTableBody">
-                                <tr class="loading-row">
-                                    <td colspan="7">
-                                        <i class="fas fa-spinner fa-spin"></i> Loading...
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody id="summaryTableBody"></tbody>
                         </table>
                     </div>
 
-                    
+                    <!-- Final Grade Table (Hidden by default) -->
+                    <div class="table-responsive" id="finalGradeTable">
+                        <table class="table table-bordered table-hover table-sm">
+                            <thead class="summary-header">
+                                <tr>
+                                    <th class="pb-4">USN</th>
+                                    <th class="pb-4">Student Name</th>
+                                    <th class="text-center pb-4">Q1 Grade</th>
+                                    <th class="text-center pb-4">Q2 Grade</th>
+                                    <th class="text-center pb-4">Semester Average</th>
+                                    <th class="text-center pb-4">Final Grade</th>
+                                    <th class="text-center pb-4">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalGradeTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
-                
             </div>
         </div>
     </div>
@@ -388,7 +392,7 @@
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const CLASS_ID = {{ $classId }};
         const QUARTERS = @json($quarters);

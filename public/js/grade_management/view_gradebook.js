@@ -7,26 +7,36 @@ $(document).ready(function () {
         }
     });
 
-    toastr.options = {
-        closeButton: true,
-        progressBar: true,
-        positionClass: 'toast-top-right',
-        timeOut: 3000
-    };
-
     let currentQuarterId = null;
     let currentSectionId = null;
-    let currentViewType = 'quarter'; // 'quarter' or 'final'
+    let currentViewType = 'quarter';
     let gradebookData = null;
     let classInfo = null;
     let allStudentsData = null;
 
-    // Section filter is required
+    // Initialize first quarter as active
+    if (QUARTERS.length > 0) {
+        currentQuarterId = QUARTERS[0].id;
+        $('.quarter-btn[data-type="quarter"]').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
+    }
+
+    // Show initial empty state
+    showEmptyState();
+
+    // Section filter change handler
     $('#sectionFilter').change(function () {
         currentSectionId = $(this).val();
         
         if (!currentSectionId) {
-            toastr.warning('Please select a section');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
             clearAllTables();
             return;
         }
@@ -40,18 +50,20 @@ $(document).ready(function () {
         }
     });
 
-    // Initialize first quarter as active
-    if (QUARTERS.length > 0) {
-        currentQuarterId = QUARTERS[0].id;
-        $('.quarter-btn[data-type="quarter"]').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
-    }
-
     // Quarter/Final Grade button group click
     $('.quarter-btn').click(function () {
         const type = $(this).data('type');
         
         if (!currentSectionId) {
-            toastr.warning('Please select a section first');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section first',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
             return;
         }
 
@@ -61,7 +73,6 @@ $(document).ready(function () {
         if (type === 'final') {
             currentViewType = 'final';
             loadFinalGrade();
-            // Hide quarter tabs, show summary
             $('#custom-tabs li:not(:last)').hide();
             $('#summary-tab').click();
         } else {
@@ -70,17 +81,37 @@ $(document).ready(function () {
             
             currentViewType = 'quarter';
             currentQuarterId = quarterId;
-            
-            // Show all tabs
             $('#custom-tabs li').show();
-            
             loadGradebook(currentQuarterId);
         }
     });
 
+    function showEmptyState() {
+        const emptyHtml = `
+            <tr class="empty-state-row">
+                <td colspan="100">
+                    <div style="padding: 60px 20px; text-align: center;">
+                        <i class="fas fa-table" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></i>
+                        <h5 style="color: #6c757d; margin-bottom: 10px;">No Section Selected</h5>
+                        <p style="color: #adb5bd;">Please select a section from the dropdown above to view grades.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        $('#wwBody, #ptBody, #qaBody, #summaryTableBody, #finalGradeTableBody').html(emptyHtml);
+    }
+
     function loadGradebook(quarterId) {
         if (!currentSectionId) {
-            toastr.warning('Please select a section');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
             return;
         }
 
@@ -106,20 +137,36 @@ $(document).ready(function () {
                     $('#exportQuarterName').text(quarterName);
                     
                     if (!allStudentsData || allStudentsData.length === 0) {
-                        toastr.info('No students enrolled in this section');
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'No Students',
+                            text: 'No students enrolled in this section',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
                         clearAllTables();
                     } else {
                         renderAllTables(gradebookData);
                         renderSummaryTable(gradebookData);
                     }
                 } else {
-                    toastr.error(response.message || 'Failed to load gradebook');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to load gradebook'
+                    });
                     clearAllTables();
                 }
             },
             error: function (xhr) {
                 const errorMsg = xhr.responseJSON?.message || 'Failed to load gradebook data';
-                toastr.error(errorMsg);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
                 clearAllTables();
             }
         });
@@ -127,7 +174,15 @@ $(document).ready(function () {
 
     function loadFinalGrade() {
         if (!currentSectionId) {
-            toastr.warning('Please select a section');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
             return;
         }
 
@@ -145,13 +200,21 @@ $(document).ready(function () {
                 if (response.success) {
                     renderFinalGradeTable(response.data);
                 } else {
-                    toastr.error(response.message || 'Failed to load final grades');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to load final grades'
+                    });
                     $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
                 }
             },
             error: function (xhr) {
                 const errorMsg = xhr.responseJSON?.message || 'Failed to load final grades';
-                toastr.error(errorMsg);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
                 $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
             }
         });
@@ -244,7 +307,7 @@ $(document).ready(function () {
                 <div class="column-header">
                     <span class="column-title">${escapeHtml(col.column_name)}</span>
                     ${badge}
-<span class="column-points">${col.max_points}pts</span>
+                    <span class="column-points">${col.max_points}pts</span>
                 </div>
             </th>`;
         });
@@ -431,15 +494,27 @@ $(document).ready(function () {
 
     $('#exportBtn').click(function () {
         if (!currentQuarterId) {
-            toastr.warning('Please select a quarter first');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Quarter Required',
+                text: 'Please select a quarter first'
+            });
             return;
         }
         if (!currentSectionId) {
-            toastr.warning('Please select a section first');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section first'
+            });
             return;
         }
         if (currentViewType === 'final') {
-            toastr.warning('Export is only available for quarter view');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Export Not Available',
+                text: 'Export is only available for quarter view'
+            });
             return;
         }
         $('#exportModal').modal('show');
@@ -474,7 +549,15 @@ $(document).ready(function () {
         setTimeout(function () {
             btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
             $('#exportModal').modal('hide');
-            toastr.success('Export started! Your download should begin shortly.');
+            Swal.fire({
+                icon: 'success',
+                title: 'Export Started',
+                text: 'Your download should begin shortly',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
         }, 1000);
     });
 });

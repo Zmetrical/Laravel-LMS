@@ -116,8 +116,14 @@ public function getGradebookData($classId, Request $request)
         }
 
         $quarterId = $request->input('quarter_id');
+        $sectionId = $request->input('section_id');
+        
         if (!$quarterId) {
             return response()->json(['success' => false, 'message' => 'Quarter ID required'], 400);
+        }
+        
+        if (!$sectionId) {
+            return response()->json(['success' => false, 'message' => 'Section ID required'], 400);
         }
 
         $class = DB::table('classes')->where('id', $classId)->first();
@@ -134,7 +140,8 @@ public function getGradebookData($classId, Request $request)
             ->get()
             ->groupBy('component_type');
 
-        $students = $this->getEnrolledStudents($classId);
+        // FILTER STUDENTS BY SECTION - Use the section-specific method
+        $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
 
         $scores = DB::table('gradebook_scores as gs')
             ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
@@ -1328,6 +1335,7 @@ private function getEnrolledStudentsBySection($classId, $sectionId)
         ->select(
             's.student_number',
             's.gender',
+            's.section_id',  // ← ADD THIS LINE
             DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
         );
 
@@ -1341,6 +1349,7 @@ private function getEnrolledStudentsBySection($classId, $sectionId)
         ->select(
             's.student_number',
             's.gender',
+            's.section_id',  // ← ADD THIS LINE
             DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
         );
 
