@@ -625,71 +625,105 @@ public function updateColumn(Request $request, $classId, $columnId)
     }
         
 
-    /**
-     * Export gradebook to Excel using template
-     */
-    public function exportGradebook(Request $request, $classId)
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
-            
-            $hasAccess = DB::table('teacher_class_matrix')
-                ->where('teacher_id', $teacher->id)
-                ->where('class_id', $classId)
-                ->exists();
+/**
+ * Export gradebook to Excel using template
+ */
+public function exportGradebook(Request $request, $classId)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
 
-            if (!$hasAccess) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $quarterId = $request->input('quarter_id');
-            
-            $class = DB::table('classes')->where('id', $classId)->first();
-            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
-            $section = $this->getClassSection($classId);
-            $semester = DB::table('semesters')->where('id', $quarter->semester_id)->first();
-            
-            $templatePath = storage_path('app/templates/SHS-E-Class-Record.xlsx');
-            
-            if (!file_exists($templatePath)) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Template file not found. Please contact administrator.'
-                ], 404);
-            }
-
-            $spreadsheet = IOFactory::load($templatePath);
-            
-            $this->populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter);
-            
-            $sheetName = $quarter->code === 'Q1' ? '1ST' : '2ND';
-            $this->populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId);
-            
-            $filename = $this->generateFilename($class, $section, $quarter);
-            $exportPath = storage_path('app/exports/' . $filename);
-            
-            if (!file_exists(storage_path('app/exports'))) {
-                mkdir(storage_path('app/exports'), 0755, true);
-            }
-            
-            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-            $writer->save($exportPath);
-            
-            return response()->download($exportPath, $filename)->deleteFileAfterSend(true);
-
-        } catch (Exception $e) {
-            \Log::error('Failed to export gradebook', [
-                'class_id' => $classId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to export gradebook: ' . $e->getMessage()
-            ], 500);
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        $section = $this->getClassSection($classId);
+        
+        // Get the active semester
+        $activeSemester = DB::table('semesters')->where('status', 'active')->first();
+        if (!$activeSemester) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'No active semester found'
+            ], 404);
+        }
+        
+        // Get both quarters for the active semester
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $activeSemester->id)
+            ->orderBy('order_number')
+            ->get();
+            
+        if ($quarters->count() < 2) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Both quarters must be configured for the active semester'
+            ], 404);
+        }
+        
+        // Use order_number to get Q1 and Q2
+        $q1 = $quarters->where('order_number', 1)->first();
+        $q2 = $quarters->where('order_number', 2)->first();
+        
+        if (!$q1 || !$q2) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Q1 and Q2 quarters not found. Found quarters: ' . $quarters->pluck('code')->implode(', ')
+            ], 404);
+        }
+        
+        $templatePath = storage_path('app/templates/SHS-E-Class-Record.xlsx');
+        
+        if (!file_exists($templatePath)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Template file not found. Please contact administrator.'
+            ], 404);
+        }
+
+        $spreadsheet = IOFactory::load($templatePath);
+        
+        // Populate INPUT DATA sheet once
+        $this->populateInputDataSheet($spreadsheet, $class, $section, $activeSemester, $teacher, $q1);
+        
+        // Populate 1ST quarter sheet (Q1)
+        $this->populateGradeSheet($spreadsheet, '1ST', $classId, $class, $q1->id);
+        
+        // Populate 2ND quarter sheet (Q2)
+        $this->populateGradeSheet($spreadsheet, '2ND', $classId, $class, $q2->id);
+        
+        $filename = $this->generateFilename($class, $section, $activeSemester);
+        $exportPath = storage_path('app/exports/' . $filename);
+        
+        if (!file_exists(storage_path('app/exports'))) {
+            mkdir(storage_path('app/exports'), 0755, true);
+        }
+        
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save($exportPath);
+        
+        return response()->download($exportPath, $filename)->deleteFileAfterSend(true);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to export gradebook', [
+            'class_id' => $classId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to export gradebook: ' . $e->getMessage()
+        ], 500);
     }
+}
+
 
 private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter)
 {
@@ -748,12 +782,22 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
     $quarter = DB::table('quarters')->where('id', $quarterId)->first();
     $section = $this->getClassSection($classId);
     $teacher = Auth::guard('teacher')->user();
+    
+    // Get school year from semester
+    $semester = DB::table('semesters')->where('id', $quarter->semester_id)->first();
+    $schoolYear = DB::table('school_years')->where('id', $semester->school_year_id)->first();
 
     // Set basic info
     $sheet->setCellValue('K7', $section->name ?? '');
     $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name);
-    $sheet->setCellValue('S8', $quarter->code === 'Q1' ? '1ST' : '2ND');
+    $sheet->setCellValue('S8', $quarter->order_number == 1 ? '1ST' : '2ND');
     $sheet->setCellValue('AE7', $class->class_name);
+    $sheet->setCellValue('AG5', $schoolYear ? $schoolYear->code : '');
+    
+    // Set component percentage LABELS in row 9
+    $sheet->setCellValue('F9', "Written Work ({$class->ww_perc}%)");
+    $sheet->setCellValue('S9', "Performance Task ({$class->pt_perc}%)");
+    $sheet->setCellValue('AF9', "Quarterly Assessment ({$class->qa_perce}%)");
 
     // Get columns
     $columns = DB::table('gradebook_columns')
@@ -774,22 +818,22 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
     $ptTotalHPS = $ptColumns->sum('max_points');
     $qaTotalHPS = $qaColumns->sum('max_points');
 
-    // Set HPS values (row 11)
+    // Set HPS values (row 11) - individual column max points
     $this->populateComponentColumns($sheet, $wwColumns, 'F', 11, 10);
     $this->populateComponentColumns($sheet, $ptColumns, 'S', 11, 10);
     if ($qaColumns->isNotEmpty()) {
         $sheet->setCellValue('AF11', $qaTotalHPS);
     }
 
-    // Set total HPS in row 9
-    $sheet->setCellValue('Q9', $wwTotalHPS); // WW Total HPS
-    $sheet->setCellValue('AD9', $ptTotalHPS); // PT Total HPS
-    $sheet->setCellValue('AH9', $qaTotalHPS); // QA Total HPS
-
-    // Set component percentages (row 9)
-    $sheet->setCellValue('R9', $class->ww_perc); // WW%
-    $sheet->setCellValue('AE9', $class->pt_perc); // PT%
-    $sheet->setCellValue('AI9', $class->qa_perce); // QA%
+    // Set total HPS and weighted percentages in row 11
+    $sheet->setCellValue('P11', $wwTotalHPS);
+    $sheet->setCellValueExplicit('R11', $class->ww_perc / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC); // Divide by 100 for decimal
+    
+    $sheet->setCellValue('AC11', $ptTotalHPS);
+    $sheet->setCellValueExplicit('AE11', $class->pt_perc / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC); // Divide by 100 for decimal
+    
+    $sheet->setCellValue('AF11', $qaTotalHPS);
+    $sheet->setCellValueExplicit('AH11', $class->qa_perce / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC); // Divide by 100 for decimal
 
     // Get students and scores
     $students = $this->getEnrolledStudentsWithGender($classId);
@@ -825,29 +869,23 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
         $qaTotal = 0;
         $this->populateQAScoreWithTotal($sheet, $row, $qaColumns, $studentScores, $quizScores, $student->student_number, $qaTotal);
 
-        // Calculate PS (Percentage Score) and WS (Weighted Score) for each component
-        // WW: Total in Q9, PS in R9, WS in S9
+        // Calculate PS and WS for each component
         if ($wwTotalHPS > 0) {
             $wwPS = ($wwTotal / $wwTotalHPS) * 100;
-            $wwWS = ($wwPS / 100) * $class->ww_perc;
-            $sheet->setCellValue('Q' . $row, $wwTotal); // WW Total Score
-            $sheet->setCellValue('R' . $row, number_format($wwPS, 2)); // WW PS
+            $sheet->setCellValue('P' . $row, $wwTotal);
+            $sheet->setCellValue('Q' . $row, number_format($wwPS, 2));
         }
 
-        // PT: Total in AD, PS in AE, WS in AF
         if ($ptTotalHPS > 0) {
             $ptPS = ($ptTotal / $ptTotalHPS) * 100;
-            $ptWS = ($ptPS / 100) * $class->pt_perc;
-            $sheet->setCellValue('AD' . $row, $ptTotal); // PT Total Score
-            $sheet->setCellValue('AE' . $row, number_format($ptPS, 2)); // PT PS
+            $sheet->setCellValue('AC' . $row, $ptTotal);
+            $sheet->setCellValue('AD' . $row, number_format($ptPS, 2));
         }
 
-        // QA: Total in AH, PS in AI, WS in AJ
         if ($qaTotalHPS > 0) {
             $qaPS = ($qaTotal / $qaTotalHPS) * 100;
-            $qaWS = ($qaPS / 100) * $class->qa_perce;
-            $sheet->setCellValue('AH' . $row, $qaTotal); // QA Total Score
-            $sheet->setCellValue('AI' . $row, number_format($qaPS, 2)); // QA PS
+            $sheet->setCellValue('AF' . $row, $qaTotal);
+            $sheet->setCellValue('AG' . $row, number_format($qaPS, 2));
         }
 
         if ($student->gender === 'Male') {
@@ -857,6 +895,8 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
         }
     }
 }
+
+
 private function populateComponentColumns($sheet, $columns, $startCol, $row, $maxCols)
 {
     $colIndex = 0;
@@ -1040,14 +1080,286 @@ private function populateQAScoreWithTotal($sheet, $row, $qaColumns, $studentScor
             ->select('sec.*')
             ->first();
     }
+/**
+ * Get final semester grades for both quarters
+ */
+public function getFinalGradeData($classId, Request $request)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
 
-private function generateFilename($class, $section, $quarter)
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $sectionId = $request->input('section_id');
+        if (!$sectionId) {
+            return response()->json(['success' => false, 'message' => 'Section ID required'], 400);
+        }
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        // Get active semester
+        $semester = DB::table('semesters')->where('status', 'active')->first();
+        if (!$semester) {
+            return response()->json(['success' => false, 'message' => 'No active semester'], 400);
+        }
+
+        // Get both quarters
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $semester->id)
+            ->orderBy('order_number')
+            ->get();
+
+        if ($quarters->count() < 2) {
+            return response()->json(['success' => false, 'message' => 'Semester must have 2 quarters'], 400);
+        }
+
+        $q1 = $quarters[0];
+        $q2 = $quarters[1];
+
+        // Get students for this section
+        $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
+
+        $finalGrades = [];
+
+        foreach ($students as $student) {
+            // Get Q1 grade
+            $q1Data = $this->calculateQuarterGrade($student->student_number, $class, $q1->id);
+            
+            // Get Q2 grade
+            $q2Data = $this->calculateQuarterGrade($student->student_number, $class, $q2->id);
+
+            $q1Grade = $q1Data['quarterly_grade'];
+            $q2Grade = $q2Data['quarterly_grade'];
+
+            // Calculate semester final grade (average of Q1 and Q2)
+            $semesterGrade = ($q1Grade + $q2Grade) / 2;
+            $finalGrade = round($semesterGrade);
+
+            // Determine remarks
+            $remarks = $finalGrade >= 75 ? 'PASSED' : 'FAILED';
+
+            $finalGrades[] = [
+                'student_number' => $student->student_number,
+                'full_name' => $student->full_name,
+                'gender' => $student->gender,
+                'q1_grade' => $q1Grade,
+                'q2_grade' => $q2Grade,
+                'semester_grade' => number_format($semesterGrade, 2),
+                'final_grade' => $finalGrade,
+                'remarks' => $remarks
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'class' => $class,
+                'semester' => $semester,
+                'quarters' => $quarters,
+                'students' => $finalGrades
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to load final grades', [
+            'class_id' => $classId,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load final grades: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Calculate quarter grade for a student
+ */
+private function calculateQuarterGrade($studentNumber, $class, $quarterId)
+{
+    $columns = DB::table('gradebook_columns')
+        ->where('class_code', $class->class_code)
+        ->where('quarter_id', $quarterId)
+        ->where('is_active', 1)
+        ->get()
+        ->groupBy('component_type');
+
+    $scores = DB::table('gradebook_scores as gs')
+        ->join('gradebook_columns as gc', 'gs.column_id', '=', 'gc.id')
+        ->where('gc.class_code', $class->class_code)
+        ->where('gc.quarter_id', $quarterId)
+        ->where('gs.student_number', $studentNumber)
+        ->select('gs.*', 'gc.component_type', 'gc.column_name', 'gc.max_points')
+        ->get()
+        ->groupBy('component_type');
+
+    // Get quiz scores
+    $quizScores = $this->getQuizScoresForStudent($columns, $studentNumber, $quarterId);
+
+    // Calculate WW
+    $wwTotal = 0;
+    $wwMax = 0;
+    foreach ($columns->get('WW', []) as $col) {
+        $wwMax += $col->max_points;
+        $score = null;
+        
+        if ($col->quiz_id && isset($quizScores[$col->quiz_id])) {
+            $score = $quizScores[$col->quiz_id];
+        } else {
+            $scoreRecord = $scores->get('WW', collect())->firstWhere('column_name', $col->column_name);
+            $score = $scoreRecord ? $scoreRecord->score : null;
+        }
+        
+        if ($score !== null) {
+            $wwTotal += floatval($score);
+        }
+    }
+    $wwPerc = $wwMax > 0 ? ($wwTotal / $wwMax * 100) : 0;
+    $wwWeighted = $wwPerc * ($class->ww_perc / 100);
+
+    // Calculate PT
+    $ptTotal = 0;
+    $ptMax = 0;
+    foreach ($columns->get('PT', []) as $col) {
+        $ptMax += $col->max_points;
+        $score = null;
+        
+        if ($col->quiz_id && isset($quizScores[$col->quiz_id])) {
+            $score = $quizScores[$col->quiz_id];
+        } else {
+            $scoreRecord = $scores->get('PT', collect())->firstWhere('column_name', $col->column_name);
+            $score = $scoreRecord ? $scoreRecord->score : null;
+        }
+        
+        if ($score !== null) {
+            $ptTotal += floatval($score);
+        }
+    }
+    $ptPerc = $ptMax > 0 ? ($ptTotal / $ptMax * 100) : 0;
+    $ptWeighted = $ptPerc * ($class->pt_perc / 100);
+
+    // Calculate QA
+    $qaTotal = 0;
+    $qaMax = 0;
+    foreach ($columns->get('QA', []) as $col) {
+        $qaMax += $col->max_points;
+        $score = null;
+        
+        if ($col->quiz_id && isset($quizScores[$col->quiz_id])) {
+            $score = $quizScores[$col->quiz_id];
+        } else {
+            $scoreRecord = $scores->get('QA', collect())->firstWhere('column_name', $col->column_name);
+            $score = $scoreRecord ? $scoreRecord->score : null;
+        }
+        
+        if ($score !== null) {
+            $qaTotal += floatval($score);
+        }
+    }
+    $qaPerc = $qaMax > 0 ? ($qaTotal / $qaMax * 100) : 0;
+    $qaWeighted = $qaPerc * ($class->qa_perce / 100);
+
+    $initialGrade = $wwWeighted + $ptWeighted + $qaWeighted;
+    $quarterlyGrade = round($initialGrade);
+
+    return [
+        'ww_weighted' => $wwWeighted,
+        'pt_weighted' => $ptWeighted,
+        'qa_weighted' => $qaWeighted,
+        'initial_grade' => $initialGrade,
+        'quarterly_grade' => $quarterlyGrade
+    ];
+}
+
+/**
+ * Get quiz scores for a specific student
+ */
+private function getQuizScoresForStudent($columns, $studentNumber, $quarterId)
+{
+    $quizScores = [];
+    
+    foreach (['WW', 'PT', 'QA'] as $type) {
+        $typeColumns = $columns->get($type, collect());
+        
+        foreach ($typeColumns as $col) {
+            if (!$col->quiz_id) continue;
+            
+            $attempt = DB::table('student_quiz_attempts')
+                ->where('quiz_id', $col->quiz_id)
+                ->where('student_number', $studentNumber)
+                ->where('quarter_id', $quarterId)
+                ->where('status', 'graded')
+                ->select(DB::raw('MAX(score) as best_score'), DB::raw('MAX(total_points) as total_points'))
+                ->first();
+            
+            if ($attempt && $attempt->total_points > 0) {
+                $percentage = ($attempt->best_score / $attempt->total_points) * 100;
+                $adjustedScore = round(($percentage / 100) * $col->max_points, 2);
+                
+                $quizScores[$col->quiz_id] = $adjustedScore;
+            }
+        }
+    }
+    
+    return $quizScores;
+}
+
+/**
+ * Get enrolled students for specific section
+ */
+private function getEnrolledStudentsBySection($classId, $sectionId)
+{
+    $class = DB::table('classes')->where('id', $classId)->first();
+
+    // Regular students
+    $regular = DB::table('students as s')
+        ->join('section_class_matrix as scm', 's.section_id', '=', 'scm.section_id')
+        ->where('scm.class_id', $classId)
+        ->where('s.section_id', $sectionId)
+        ->where('s.student_type', 'regular')
+        ->select(
+            's.student_number',
+            's.gender',
+            DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
+        );
+
+    // Irregular students
+    $irregular = DB::table('students as s')
+        ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
+        ->where('scm.class_code', $class->class_code)
+        ->where('s.section_id', $sectionId)
+        ->where('scm.enrollment_status', 'enrolled')
+        ->where('s.student_type', 'irregular')
+        ->select(
+            's.student_number',
+            's.gender',
+            DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
+        );
+
+    return $regular->union($irregular)
+        ->orderBy('gender')
+        ->orderBy('full_name')
+        ->get();
+}
+
+/**
+ * Update the generateFilename method to use semester instead of quarter
+ */
+private function generateFilename($class, $section, $semester)
 {
     $classCode = str_replace(' ', '_', $class->class_code);
     $sectionName = $section ? str_replace(' ', '_', $section->name) : 'NoSection';
-    $quarterCode = $quarter->code; // Use Q1 or Q2
+    $semesterCode = str_replace(' ', '_', $semester->code);
     $timestamp = now()->format('Ymd_His');
     
-    return "{$classCode}_{$sectionName}_{$quarterCode}_{$timestamp}.xlsx";
+    return "{$classCode}_{$sectionName}_{$semesterCode}_{$timestamp}.xlsx";
 }
 }

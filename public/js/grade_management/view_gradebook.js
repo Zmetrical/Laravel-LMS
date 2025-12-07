@@ -16,45 +16,86 @@ $(document).ready(function () {
 
     let currentQuarterId = null;
     let currentSectionId = null;
+    let currentViewType = 'quarter'; // 'quarter' or 'final'
     let gradebookData = null;
     let classInfo = null;
     let allStudentsData = null;
 
+    // Section filter is required
+    $('#sectionFilter').change(function () {
+        currentSectionId = $(this).val();
+        
+        if (!currentSectionId) {
+            toastr.warning('Please select a section');
+            clearAllTables();
+            return;
+        }
+
+        if (currentViewType === 'quarter') {
+            if (currentQuarterId) {
+                loadGradebook(currentQuarterId);
+            }
+        } else {
+            loadFinalGrade();
+        }
+    });
+
     // Initialize first quarter as active
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
-        $('.quarter-btn').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
-        loadGradebook(currentQuarterId);
+        $('.quarter-btn[data-type="quarter"]').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
     }
 
-    // Quarter button group click
+    // Quarter/Final Grade button group click
     $('.quarter-btn').click(function () {
-        const quarterId = $(this).data('quarter');
-        if (quarterId === currentQuarterId) return;
+        const type = $(this).data('type');
+        
+        if (!currentSectionId) {
+            toastr.warning('Please select a section first');
+            return;
+        }
 
         $('.quarter-btn').removeClass('btn-secondary active').addClass('btn-outline-secondary');
         $(this).addClass('btn-secondary active').removeClass('btn-outline-secondary');
         
-        currentQuarterId = quarterId;
-        loadGradebook(currentQuarterId);
-    });
-
-    // Section filter
-    $('#sectionFilter').change(function () {
-        currentSectionId = $(this).val();
-        filterAndRenderData();
+        if (type === 'final') {
+            currentViewType = 'final';
+            loadFinalGrade();
+            // Hide quarter tabs, show summary
+            $('#custom-tabs li:not(:last)').hide();
+            $('#summary-tab').click();
+        } else {
+            const quarterId = $(this).data('quarter');
+            if (quarterId === currentQuarterId && currentViewType === 'quarter') return;
+            
+            currentViewType = 'quarter';
+            currentQuarterId = quarterId;
+            
+            // Show all tabs
+            $('#custom-tabs li').show();
+            
+            loadGradebook(currentQuarterId);
+        }
     });
 
     function loadGradebook(quarterId) {
+        if (!currentSectionId) {
+            toastr.warning('Please select a section');
+            return;
+        }
+
         showTabLoading();
+        $('#finalGradeTable').hide();
+        $('.summary-table-wrapper').first().show();
         
         $.ajax({
             url: API_ROUTES.getGradebook,
             type: 'GET',
-            data: { quarter_id: quarterId },
+            data: { 
+                quarter_id: quarterId,
+                section_id: currentSectionId
+            },
             success: function (response) {
-                console.log('Gradebook response:', response);
-                
                 if (response.success) {
                     gradebookData = response.data;
                     classInfo = response.data.class;
@@ -65,10 +106,11 @@ $(document).ready(function () {
                     $('#exportQuarterName').text(quarterName);
                     
                     if (!allStudentsData || allStudentsData.length === 0) {
-                        toastr.info('No students enrolled in this class yet');
+                        toastr.info('No students enrolled in this section');
                         clearAllTables();
                     } else {
-                        filterAndRenderData();
+                        renderAllTables(gradebookData);
+                        renderSummaryTable(gradebookData);
                     }
                 } else {
                     toastr.error(response.message || 'Failed to load gradebook');
@@ -76,7 +118,6 @@ $(document).ready(function () {
                 }
             },
             error: function (xhr) {
-                console.error('Load gradebook error:', xhr);
                 const errorMsg = xhr.responseJSON?.message || 'Failed to load gradebook data';
                 toastr.error(errorMsg);
                 clearAllTables();
@@ -84,29 +125,90 @@ $(document).ready(function () {
         });
     }
 
-    function filterAndRenderData() {
-        if (!allStudentsData) return;
-
-        let filteredStudents = allStudentsData;
-
-        // Filter by section if selected
-        if (currentSectionId) {
-            filteredStudents = allStudentsData.filter(s => s.section_id == currentSectionId);
-        }
-
-        if (filteredStudents.length === 0) {
-            toastr.info('No students found for selected filters');
-            clearAllTables();
+    function loadFinalGrade() {
+        if (!currentSectionId) {
+            toastr.warning('Please select a section');
             return;
         }
 
-        const filteredData = {
-            ...gradebookData,
-            students: filteredStudents
-        };
+        const loadingHtml = '<tr class="loading-row"><td colspan="7"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        $('#finalGradeTableBody').html(loadingHtml);
+        
+        $('.summary-table-wrapper').first().hide();
+        $('#finalGradeTable').show();
+        
+        $.ajax({
+            url: API_ROUTES.getFinalGrade,
+            type: 'GET',
+            data: { section_id: currentSectionId },
+            success: function (response) {
+                if (response.success) {
+                    renderFinalGradeTable(response.data);
+                } else {
+                    toastr.error(response.message || 'Failed to load final grades');
+                    $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
+                }
+            },
+            error: function (xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Failed to load final grades';
+                toastr.error(errorMsg);
+                $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
+            }
+        });
+    }
 
-        renderAllTables(filteredData);
-        renderSummaryTable(filteredData);
+    function renderFinalGradeTable(data) {
+        const students = data.students;
+        
+        if (!students || students.length === 0) {
+            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No students found</td></tr>');
+            return;
+        }
+
+        const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
+        const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
+        const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
+
+        let html = '';
+        
+        if (maleStudents.length > 0) {
+            html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-mars"></i> MALE</td></tr>`;
+            maleStudents.forEach(student => {
+                html += renderFinalGradeRow(student);
+            });
+        }
+
+        if (femaleStudents.length > 0) {
+            html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-venus"></i> FEMALE</td></tr>`;
+            femaleStudents.forEach(student => {
+                html += renderFinalGradeRow(student);
+            });
+        }
+
+        if (otherStudents.length > 0) {
+            html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-user"></i> OTHER</td></tr>`;
+            otherStudents.forEach(student => {
+                html += renderFinalGradeRow(student);
+            });
+        }
+
+        $('#finalGradeTableBody').html(html);
+    }
+
+    function renderFinalGradeRow(student) {
+        const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
+        
+        return `
+            <tr>
+                <td>${escapeHtml(student.student_number)}</td>
+                <td>${escapeHtml(student.full_name)}</td>
+                <td class="text-center">${student.q1_grade}</td>
+                <td class="text-center">${student.q2_grade}</td>
+                <td class="text-center">${student.semester_grade}</td>
+                <td class="text-center grade-cell"><strong>${student.final_grade}</strong></td>
+                <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
+            </tr>
+        `;
     }
 
     function showTabLoading() {
@@ -117,6 +219,9 @@ $(document).ready(function () {
     function clearAllTables() {
         $('#wwBody, #ptBody, #qaBody, #summaryTableBody').html(
             '<tr class="loading-row"><td colspan="100">No data available</td></tr>'
+        );
+        $('#finalGradeTableBody').html(
+            '<tr class="loading-row"><td colspan="7">No data available</td></tr>'
         );
     }
 
@@ -139,7 +244,7 @@ $(document).ready(function () {
                 <div class="column-header">
                     <span class="column-title">${escapeHtml(col.column_name)}</span>
                     ${badge}
-                    <span class="column-points">${col.max_points}pts</span>
+<span class="column-points">${col.max_points}pts</span>
                 </div>
             </th>`;
         });
@@ -160,14 +265,12 @@ $(document).ready(function () {
             </div>
         </th>`;
         
-        // Group students by gender
         const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
         const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
         const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
 
         let bodyHtml = '';
         
-        // Render Male students
         if (maleStudents.length > 0) {
             bodyHtml += `<tr class="gender-separator"><td colspan="${cols.length + 4}"><i class="fas fa-mars"></i> MALE</td></tr>`;
             maleStudents.forEach(student => {
@@ -175,7 +278,6 @@ $(document).ready(function () {
             });
         }
 
-        // Render Female students
         if (femaleStudents.length > 0) {
             bodyHtml += `<tr class="gender-separator"><td colspan="${cols.length + 4}"><i class="fas fa-venus"></i> FEMALE</td></tr>`;
             femaleStudents.forEach(student => {
@@ -183,7 +285,6 @@ $(document).ready(function () {
             });
         }
 
-        // Render Other students (if any)
         if (otherStudents.length > 0) {
             bodyHtml += `<tr class="gender-separator"><td colspan="${cols.length + 4}"><i class="fas fa-user"></i> OTHER</td></tr>`;
             otherStudents.forEach(student => {
@@ -229,14 +330,12 @@ $(document).ready(function () {
     function renderSummaryTable(data) {
         const { class: classInfo, students } = data;
         
-        // Group students by gender
         const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
         const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
         const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
 
         let summaryHtml = '';
         
-        // Render Male students
         if (maleStudents.length > 0) {
             summaryHtml += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-mars"></i> MALE</td></tr>`;
             maleStudents.forEach(student => {
@@ -244,7 +343,6 @@ $(document).ready(function () {
             });
         }
 
-        // Render Female students
         if (femaleStudents.length > 0) {
             summaryHtml += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-venus"></i> FEMALE</td></tr>`;
             femaleStudents.forEach(student => {
@@ -252,7 +350,6 @@ $(document).ready(function () {
             });
         }
 
-        // Render Other students
         if (otherStudents.length > 0) {
             summaryHtml += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-user"></i> OTHER</td></tr>`;
             otherStudents.forEach(student => {
@@ -335,6 +432,14 @@ $(document).ready(function () {
     $('#exportBtn').click(function () {
         if (!currentQuarterId) {
             toastr.warning('Please select a quarter first');
+            return;
+        }
+        if (!currentSectionId) {
+            toastr.warning('Please select a section first');
+            return;
+        }
+        if (currentViewType === 'final') {
+            toastr.warning('Export is only available for quarter view');
             return;
         }
         $('#exportModal').modal('show');

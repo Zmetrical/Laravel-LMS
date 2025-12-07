@@ -122,7 +122,6 @@
         .summary-header th:nth-child(2) {
             left: 120px;
         }
-
         .disabled-column {
             background-color: #f5f5f5 !important;
             opacity: 0.6;
@@ -215,28 +214,35 @@
     <div class="card card-dark card-outline">
         <div class="card-body">
             <div class="filter-controls">
-                <div class="filter-group">
-                    <label>Quarter:</label>
-                    <div class="btn-group btn-group-sm btn-group-quarter" role="group" id="quarterBtnGroup">
-                        @foreach($quarters as $quarter)
-                            <button type="button" 
-                                    class="btn btn-outline-secondary quarter-btn" 
-                                    data-quarter="{{ $quarter->id }}">
-                                {{ $quarter->name }}
-                            </button>
-                        @endforeach
-                    </div>
-                </div>
 
-                <div class="filter-group">
-                    <label>Section:</label>
-                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;">
-                        <option value="">All Sections</option>
-                        @foreach($sections as $section)
-                            <option value="{{ $section->id }}">{{ $section->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+<div class="filter-group">
+    <label>View:</label>
+    <div class="btn-group btn-group-sm btn-group-quarter" role="group" id="quarterBtnGroup">
+        @foreach($quarters as $quarter)
+            <button type="button" 
+                    class="btn btn-outline-secondary quarter-btn" 
+                    data-quarter="{{ $quarter->id }}"
+                    data-type="quarter">
+                {{ $quarter->name }}
+            </button>
+        @endforeach
+        <button type="button" 
+                class="btn btn-outline-secondary quarter-btn" 
+                data-type="final">
+            Final Grade
+        </button>
+    </div>
+</div>
+
+<div class="filter-group">
+    <label>Section:</label>
+    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
+        <option value="">Select Section</option>
+        @foreach($sections as $section)
+            <option value="{{ $section->id }}">{{ $section->name }}</option>
+        @endforeach
+    </select>
+</div>
             </div>
         </div>
     </div>
@@ -342,7 +348,10 @@
                             </tbody>
                         </table>
                     </div>
+
+                    
                 </div>
+                
             </div>
         </div>
     </div>
@@ -387,7 +396,8 @@
         const API_ROUTES = {
             editGradebook: "{{ route('teacher.gradebook.edit', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
-            exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}"
+            exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}",
+            getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}"
         };
     </script>
     

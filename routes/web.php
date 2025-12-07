@@ -322,8 +322,9 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
             Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
                 ->name('data');
-                
-            
+            Route::get('/{classId}/final-grade', [GradeBook_Management::class, 'getFinalGradeData'])
+                ->name('final-grade');
+                    
             Route::post('/{classId}/column/{columnId}/toggle', [GradeBook_Management::class, 'toggleColumn'])
                 ->name('column.toggle');
             Route::put('/{classId}/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
