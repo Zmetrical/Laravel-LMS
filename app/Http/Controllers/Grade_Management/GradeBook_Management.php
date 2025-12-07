@@ -765,22 +765,36 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
         ->get()
         ->groupBy('component_type');
 
-    // Written Work (F11-O11)
-    $this->populateComponentColumns($sheet, $columns->get('WW', collect()), 'F', 11, 10);
-    
-    // Performance Task (S11-AB11)
-    $this->populateComponentColumns($sheet, $columns->get('PT', collect()), 'S', 11, 10);
-    
-    // Quarterly Assessment (AF11)
+    // Get component totals for HPS
+    $wwColumns = $columns->get('WW', collect());
+    $ptColumns = $columns->get('PT', collect());
     $qaColumns = $columns->get('QA', collect());
+
+    $wwTotalHPS = $wwColumns->sum('max_points');
+    $ptTotalHPS = $ptColumns->sum('max_points');
+    $qaTotalHPS = $qaColumns->sum('max_points');
+
+    // Set HPS values (row 11)
+    $this->populateComponentColumns($sheet, $wwColumns, 'F', 11, 10);
+    $this->populateComponentColumns($sheet, $ptColumns, 'S', 11, 10);
     if ($qaColumns->isNotEmpty()) {
-        $qaMaxScore = $qaColumns->sum('max_points');
-        $sheet->setCellValue('AF11', $qaMaxScore);
+        $sheet->setCellValue('AF11', $qaTotalHPS);
     }
+
+    // Set total HPS in row 9
+    $sheet->setCellValue('Q9', $wwTotalHPS); // WW Total HPS
+    $sheet->setCellValue('AD9', $ptTotalHPS); // PT Total HPS
+    $sheet->setCellValue('AH9', $qaTotalHPS); // QA Total HPS
+
+    // Set component percentages (row 9)
+    $sheet->setCellValue('R9', $class->ww_perc); // WW%
+    $sheet->setCellValue('AE9', $class->pt_perc); // PT%
+    $sheet->setCellValue('AI9', $class->qa_perce); // QA%
 
     // Get students and scores
     $students = $this->getEnrolledStudentsWithGender($classId);
     $scores = $this->getStudentScores($class->class_code, $columns, $quarterId);
+    $quizScores = $this->getQuizScores($columns, $students, $quarterId);
 
     $maleRow = 13;
     $femaleRow = 64;
@@ -799,14 +813,42 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
 
         $studentScores = $scores->get($student->student_number, []);
         
-        // Written Work scores (F-O)
-        $this->populateStudentScores($sheet, $row, $columns->get('WW', collect()), $studentScores, 'F');
+        // Calculate WW scores and totals
+        $wwTotal = 0;
+        $this->populateStudentScoresWithTotal($sheet, $row, $wwColumns, $studentScores, $quizScores, $student->student_number, 'F', $wwTotal);
         
-        // Performance Task scores (S-AB)
-        $this->populateStudentScores($sheet, $row, $columns->get('PT', collect()), $studentScores, 'S');
+        // Calculate PT scores and totals
+        $ptTotal = 0;
+        $this->populateStudentScoresWithTotal($sheet, $row, $ptColumns, $studentScores, $quizScores, $student->student_number, 'S', $ptTotal);
         
-        // Quarterly Assessment score (AF)
-        $this->populateQAScore($sheet, $row, $columns->get('QA', collect()), $studentScores);
+        // Calculate QA scores
+        $qaTotal = 0;
+        $this->populateQAScoreWithTotal($sheet, $row, $qaColumns, $studentScores, $quizScores, $student->student_number, $qaTotal);
+
+        // Calculate PS (Percentage Score) and WS (Weighted Score) for each component
+        // WW: Total in Q9, PS in R9, WS in S9
+        if ($wwTotalHPS > 0) {
+            $wwPS = ($wwTotal / $wwTotalHPS) * 100;
+            $wwWS = ($wwPS / 100) * $class->ww_perc;
+            $sheet->setCellValue('Q' . $row, $wwTotal); // WW Total Score
+            $sheet->setCellValue('R' . $row, number_format($wwPS, 2)); // WW PS
+        }
+
+        // PT: Total in AD, PS in AE, WS in AF
+        if ($ptTotalHPS > 0) {
+            $ptPS = ($ptTotal / $ptTotalHPS) * 100;
+            $ptWS = ($ptPS / 100) * $class->pt_perc;
+            $sheet->setCellValue('AD' . $row, $ptTotal); // PT Total Score
+            $sheet->setCellValue('AE' . $row, number_format($ptPS, 2)); // PT PS
+        }
+
+        // QA: Total in AH, PS in AI, WS in AJ
+        if ($qaTotalHPS > 0) {
+            $qaPS = ($qaTotal / $qaTotalHPS) * 100;
+            $qaWS = ($qaPS / 100) * $class->qa_perce;
+            $sheet->setCellValue('AH' . $row, $qaTotal); // QA Total Score
+            $sheet->setCellValue('AI' . $row, number_format($qaPS, 2)); // QA PS
+        }
 
         if ($student->gender === 'Male') {
             $maleRow++;
@@ -827,6 +869,34 @@ private function populateComponentColumns($sheet, $columns, $startCol, $row, $ma
         );
         
         $sheet->setCellValue($currentCol . $row, $column->max_points);
+        $colIndex++;
+    }
+}
+
+private function populateStudentScoresWithTotal($sheet, $row, $columns, $studentScores, $quizScores, $studentNumber, $startCol, &$total)
+{
+    $colIndex = 0;
+    foreach ($columns as $column) {
+        if ($colIndex >= 10) break;
+        
+        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(
+            \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + $colIndex
+        );
+        
+        $score = null;
+        
+        // Check if this is an online quiz column
+        if ($column->quiz_id && isset($quizScores[$column->quiz_id][$studentNumber])) {
+            $score = $quizScores[$column->quiz_id][$studentNumber];
+        } else {
+            $score = $studentScores[$column->column_name] ?? null;
+        }
+        
+        if ($score !== null) {
+            $sheet->setCellValue($currentCol . $row, $score);
+            $total += floatval($score);
+        }
+        
         $colIndex++;
     }
 }
@@ -852,20 +922,31 @@ private function populateStudentScores($sheet, $row, $columns, $studentScores, $
     }
 }
 
-    private function populateQAScore($sheet, $row, $qaColumns, $studentScores)
-    {
-        if ($qaColumns->isEmpty()) return;
+private function populateQAScoreWithTotal($sheet, $row, $qaColumns, $studentScores, $quizScores, $studentNumber, &$total)
+{
+    if ($qaColumns->isEmpty()) return;
+    
+    $totalScore = 0;
+    foreach ($qaColumns as $column) {
+        $score = null;
         
-        $totalScore = 0;
-        foreach ($qaColumns as $column) {
-            $score = $studentScores[$column->column_name] ?? 0;
-            $totalScore += $score;
+        // Check if this is an online quiz column
+        if ($column->quiz_id && isset($quizScores[$column->quiz_id][$studentNumber])) {
+            $score = $quizScores[$column->quiz_id][$studentNumber];
+        } else {
+            $score = $studentScores[$column->column_name] ?? null;
         }
         
-        if ($totalScore > 0) {
-            $sheet->setCellValue('AF' . $row, $totalScore);
+        if ($score !== null) {
+            $totalScore += floatval($score);
         }
     }
+    
+    if ($totalScore > 0) {
+        $sheet->setCellValue('AF' . $row, $totalScore);
+        $total = $totalScore;
+    }
+}
 
     private function getStudentScores($classCode, $columns, $quarterId)
     {
