@@ -68,7 +68,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Section Assignment
     Route::get('/section-assignment', [Section_Management::class, 'assign_section'])
         ->name('assign_section');
-    
+
     Route::get('/section-assignment/get-sections', [Section_Management::class, 'get_sections'])
         ->name('section_assignment.get_sections');
     

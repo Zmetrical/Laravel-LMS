@@ -691,122 +691,166 @@ public function updateColumn(Request $request, $classId, $columnId)
         }
     }
 
-    private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter)
-    {
-        $sheet = $spreadsheet->getSheetByName('INPUT DATA');
-        
-        if (!$sheet) {
-            throw new Exception('INPUT DATA sheet not found in template');
-        }
-
-        $sheet->setCellValue('K7', $section->name ?? '');
-        $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name);
-        $sheet->setCellValue('S8', $semester->name ?? '1ST');
-        $sheet->setCellValue('AE7', $class->class_name);
-        $sheet->setCellValue('AE8', $class->class_code);
-
-        $maleStudents = $this->getEnrolledStudentsByGender($class->id, 'Male');
-        $femaleStudents = $this->getEnrolledStudentsByGender($class->id, 'Female');
-        
-        $row = 13;
-        foreach ($maleStudents as $student) {
-            $sheet->setCellValue('A' . $row, $student->student_number);
-            $sheet->setCellValue('B' . $row, $student->full_name);
-            $row++;
-            if ($row > 62) break;
-        }
-        
-        $row = 64;
-        foreach ($femaleStudents as $student) {
-            $sheet->setCellValue('A' . $row, $student->student_number);
-            $sheet->setCellValue('B' . $row, $student->full_name);
-            $row++;
-            if ($row > 113) break;
-        }
+private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter)
+{
+    $sheet = $spreadsheet->getSheetByName('INPUT DATA');
+    
+    if (!$sheet) {
+        throw new Exception('INPUT DATA sheet not found in template');
     }
 
-    private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId)
-    {
-        $sheet = $spreadsheet->getSheetByName($sheetName);
-        
-        if (!$sheet) {
-            throw new Exception($sheetName . ' sheet not found in template');
-        }
+    // Get school year from semester
+    $schoolYear = DB::table('school_years')
+        ->where('id', $semester->school_year_id)
+        ->first();
 
-        $columns = DB::table('gradebook_columns')
-            ->where('class_code', $class->class_code)
-            ->where('quarter_id', $quarterId)
-            ->where('is_active', true)
-            ->orderBy('component_type')
-            ->orderBy('order_number')
-            ->get()
-            ->groupBy('component_type');
+    // Basic Info
+    $sheet->setCellValue('K7', $section->name ?? '');
+    $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name);
+    $sheet->setCellValue('S8', $quarter->code === 'Q1' ? '1ST' : '2ND'); // Changed from semester name
+    $sheet->setCellValue('AE7', $class->class_name);
+    $sheet->setCellValue('AE8', $class->class_code);
+    $sheet->setCellValue('AG5', $schoolYear ? $schoolYear->code : ''); // Added school year
 
-        $this->populateComponentColumns($sheet, $columns->get('WW', collect()), 'F', 11, 10);
-        $this->populateComponentColumns($sheet, $columns->get('PT', collect()), 'S', 11, 10);
-        
-        $qaColumns = $columns->get('QA', collect());
-        if ($qaColumns->isNotEmpty()) {
-            $qaMaxScore = $qaColumns->sum('max_points');
-            $sheet->setCellValue('AF11', $qaMaxScore);
-        }
+    // Get students by gender
+    $maleStudents = $this->getEnrolledStudentsByGender($class->id, 'Male');
+    $femaleStudents = $this->getEnrolledStudentsByGender($class->id, 'Female');
+    
+    // Male students (A13-A62, B13-B62)
+    $row = 13;
+    foreach ($maleStudents as $student) {
+        $sheet->setCellValue('A' . $row, $student->student_number);
+        $sheet->setCellValue('B' . $row, $student->full_name);
+        $row++;
+        if ($row > 62) break;
+    }
+    
+    // Female students (A64-A113, B64-B113)
+    $row = 64;
+    foreach ($femaleStudents as $student) {
+        $sheet->setCellValue('A' . $row, $student->student_number);
+        $sheet->setCellValue('B' . $row, $student->full_name);
+        $row++;
+        if ($row > 113) break;
+    }
+}
 
-        $students = $this->getEnrolledStudentsWithGender($classId);
-        $scores = $this->getStudentScores($class->class_code, $columns, $quarterId);
 
-        $maleRow = 13;
-        $femaleRow = 64;
-        
-        foreach ($students as $student) {
-            $row = $student->gender === 'Male' ? $maleRow : $femaleRow;
-            
-            if (($student->gender === 'Male' && $row > 62) || 
-                ($student->gender === 'Female' && $row > 113)) {
-                continue;
-            }
-
-            $studentScores = $scores->get($student->student_number, []);
-            
-            $this->populateStudentScores($sheet, $row, $columns->get('WW', collect()), $studentScores, 'F');
-            $this->populateStudentScores($sheet, $row, $columns->get('PT', collect()), $studentScores, 'S');
-            $this->populateQAScore($sheet, $row, $columns->get('QA', collect()), $studentScores);
-
-            if ($student->gender === 'Male') {
-                $maleRow++;
-            } else {
-                $femaleRow++;
-            }
-        }
+private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId)
+{
+    $sheet = $spreadsheet->getSheetByName($sheetName);
+    
+    if (!$sheet) {
+        throw new Exception($sheetName . ' sheet not found in template');
     }
 
-    private function populateComponentColumns($sheet, $columns, $startCol, $row, $maxCols)
-    {
-        $colIndex = 0;
-        foreach ($columns as $column) {
-            if ($colIndex >= $maxCols) break;
-            
-            $currentCol = chr(ord($startCol) + $colIndex);
-            $sheet->setCellValue($currentCol . $row, $column->max_points);
-            $colIndex++;
-        }
+    // Get quarter info
+    $quarter = DB::table('quarters')->where('id', $quarterId)->first();
+    $section = $this->getClassSection($classId);
+    $teacher = Auth::guard('teacher')->user();
+
+    // Set basic info
+    $sheet->setCellValue('K7', $section->name ?? '');
+    $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name);
+    $sheet->setCellValue('S8', $quarter->code === 'Q1' ? '1ST' : '2ND');
+    $sheet->setCellValue('AE7', $class->class_name);
+
+    // Get columns
+    $columns = DB::table('gradebook_columns')
+        ->where('class_code', $class->class_code)
+        ->where('quarter_id', $quarterId)
+        ->where('is_active', true)
+        ->orderBy('component_type')
+        ->orderBy('order_number')
+        ->get()
+        ->groupBy('component_type');
+
+    // Written Work (F11-O11)
+    $this->populateComponentColumns($sheet, $columns->get('WW', collect()), 'F', 11, 10);
+    
+    // Performance Task (S11-AB11)
+    $this->populateComponentColumns($sheet, $columns->get('PT', collect()), 'S', 11, 10);
+    
+    // Quarterly Assessment (AF11)
+    $qaColumns = $columns->get('QA', collect());
+    if ($qaColumns->isNotEmpty()) {
+        $qaMaxScore = $qaColumns->sum('max_points');
+        $sheet->setCellValue('AF11', $qaMaxScore);
     }
 
-    private function populateStudentScores($sheet, $row, $columns, $studentScores, $startCol)
-    {
-        $colIndex = 0;
-        foreach ($columns as $column) {
-            if ($colIndex >= 10) break;
-            
-            $currentCol = chr(ord($startCol) + $colIndex);
-            $score = $studentScores[$column->column_name] ?? null;
-            
-            if ($score !== null) {
-                $sheet->setCellValue($currentCol . $row, $score);
-            }
-            
-            $colIndex++;
+    // Get students and scores
+    $students = $this->getEnrolledStudentsWithGender($classId);
+    $scores = $this->getStudentScores($class->class_code, $columns, $quarterId);
+
+    $maleRow = 13;
+    $femaleRow = 64;
+    
+    foreach ($students as $student) {
+        $row = $student->gender === 'Male' ? $maleRow : $femaleRow;
+        
+        if (($student->gender === 'Male' && $row > 62) || 
+            ($student->gender === 'Female' && $row > 113)) {
+            continue;
+        }
+
+        // Set student info
+        $sheet->setCellValue('A' . $row, $student->student_number);
+        $sheet->setCellValue('B' . $row, $student->full_name);
+
+        $studentScores = $scores->get($student->student_number, []);
+        
+        // Written Work scores (F-O)
+        $this->populateStudentScores($sheet, $row, $columns->get('WW', collect()), $studentScores, 'F');
+        
+        // Performance Task scores (S-AB)
+        $this->populateStudentScores($sheet, $row, $columns->get('PT', collect()), $studentScores, 'S');
+        
+        // Quarterly Assessment score (AF)
+        $this->populateQAScore($sheet, $row, $columns->get('QA', collect()), $studentScores);
+
+        if ($student->gender === 'Male') {
+            $maleRow++;
+        } else {
+            $femaleRow++;
         }
     }
+}
+private function populateComponentColumns($sheet, $columns, $startCol, $row, $maxCols)
+{
+    $colIndex = 0;
+    foreach ($columns as $column) {
+        if ($colIndex >= $maxCols) break;
+        
+        // Use PhpSpreadsheet's built-in column index conversion
+        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(
+            \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + $colIndex
+        );
+        
+        $sheet->setCellValue($currentCol . $row, $column->max_points);
+        $colIndex++;
+    }
+}
+
+private function populateStudentScores($sheet, $row, $columns, $studentScores, $startCol)
+{
+    $colIndex = 0;
+    foreach ($columns as $column) {
+        if ($colIndex >= 10) break;
+        
+        // Use PhpSpreadsheet's built-in column index conversion
+        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(
+            \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + $colIndex
+        );
+        
+        $score = $studentScores[$column->column_name] ?? null;
+        
+        if ($score !== null) {
+            $sheet->setCellValue($currentCol . $row, $score);
+        }
+        
+        $colIndex++;
+    }
+}
 
     private function populateQAScore($sheet, $row, $qaColumns, $studentScores)
     {
@@ -916,13 +960,13 @@ public function updateColumn(Request $request, $classId, $columnId)
             ->first();
     }
 
-    private function generateFilename($class, $section, $quarter)
-    {
-        $classCode = str_replace(' ', '_', $class->class_code);
-        $sectionName = $section ? str_replace(' ', '_', $section->name) : 'NoSection';
-        $quarterName = str_replace(' ', '_', $quarter->name);
-        $timestamp = now()->format('Ymd_His');
-        
-        return "{$classCode}_{$sectionName}_{$quarterName}_{$timestamp}.xlsx";
-    }
+private function generateFilename($class, $section, $quarter)
+{
+    $classCode = str_replace(' ', '_', $class->class_code);
+    $sectionName = $section ? str_replace(' ', '_', $section->name) : 'NoSection';
+    $quarterCode = $quarter->code; // Use Q1 or Q2
+    $timestamp = now()->format('Ymd_His');
+    
+    return "{$classCode}_{$sectionName}_{$quarterCode}_{$timestamp}.xlsx";
+}
 }
