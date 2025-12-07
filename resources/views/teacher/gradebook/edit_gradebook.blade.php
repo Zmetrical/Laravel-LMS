@@ -1,9 +1,9 @@
 @extends('layouts.main-teacher')
 {{-- edit gradebook --}}
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css">
+<link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/jsgrid/jsgrid.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/jsgrid/jsgrid-theme.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         .jsgrid-header-row > .jsgrid-header-cell {
@@ -253,9 +253,9 @@
                 </div>
 
                 <div class="filter-group">
-                    <label>Section:</label>
-                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;">
-                        <option value="">All Sections</option>
+                    <label><i class="fas fa-users"></i> Section:</label>
+                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
+                        <option value="">Select Section</option>
                         @foreach($sections as $section)
                             <option value="{{ $section->id }}">{{ $section->name }}</option>
                         @endforeach
@@ -397,8 +397,8 @@
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('plugins/jsgrid/jsgrid.min.js') }}"></script>
     <script>
         const CLASS_ID = {{ $classId }};
         const MAX_WW_COLUMNS = 10;

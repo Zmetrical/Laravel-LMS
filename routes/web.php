@@ -15,6 +15,8 @@ use App\Http\Controllers\Class_Management\Quiz_Attempt;
 use App\Http\Controllers\Class_Management\Quiz_Submit;
 use App\Http\Controllers\Grade_Management\Grade_Management;
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
+use App\Http\Controllers\Grade_Management\SectionGrade_Management;
+
 use App\Http\Controllers\Grade_Management\Grade_list;
 
 use App\Http\Controllers\DeveloperController;
@@ -78,6 +80,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/section_assignment/load_students', [Section_Management::class, 'load_students_from_section'])->name('section_assignment.load_students');
         Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
 
+                        // Section Grades View
+    Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])
+        ->name('grades.section-view');
+    
+    // API endpoints for Section Grades View
+    Route::get('/sections/grades-list', [SectionGrade_Management::class, 'getSectionsWithGrades'])
+        ->name('sections.grades-list');
+    
+    Route::get('/sections/{id}/grades-details', [SectionGrade_Management::class, 'getSectionGradeDetails'])
+        ->name('sections.grades-details');
+    
+    Route::get('/sections/{sectionId}/classes/{classId}/grades', [SectionGrade_Management::class, 'getClassGrades'])
+        ->name('sections.class-grades');
+
+        
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {
             Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
@@ -210,18 +227,21 @@ Route::prefix('student')->name('student.')->group(function () {
     });
 
         // Class Pages
-        Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
-        Route::get('/my_grades', [Grade_list::class, 'student_grade_list'])->name('list_grade');
-        
-        // Get Student Grades (AJAX)
-        Route::get('/my_grades/list', [Grade_list::class, 'getStudentGrades'])
-            ->name('grades.list');
-        
-        // Get Class Grade Details (AJAX)
-        Route::get('/my_grades/details/{classId}', [Grade_list::class, 'student_grade_details'])
-            ->name('grades.details');
-        Route::get('/my_grades/details/{classId}/data', [Grade_list::class, 'getClassGradeDetails'])
-            ->name('grades.details.data');
+    Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
+    Route::get('/my_grades', [Grade_list::class, 'student_grade_list'])->name('list_grade');
+    
+    // Get Student Grades (AJAX)
+    Route::get('/my_grades/list', [Grade_list::class, 'getStudentGrades'])
+        ->name('grades.list');
+    
+    // Get Class Grade Details (AJAX)
+    Route::get('/my_grades/details/{classId}', [Grade_list::class, 'student_grade_details'])
+        ->name('grades.details');
+    Route::get('/my_grades/details/{classId}/data', [Grade_list::class, 'getClassGradeDetails'])
+        ->name('grades.details.data');
+
+
+
         // Class Content Pagesz
         Route::prefix('class/{classId}')->name('class.')->group(function () {
             // Lessons Page
@@ -337,6 +357,19 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
                 ->name('quizzes');
             Route::post('/class/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
                 ->name('export');
+
+                        // Final grades submission
+            Route::post('/{classId}/submit-final-grades', [
+                GradeBook_Management::class, 
+                'submitFinalGrades'
+            ])->name('submit-final-grades');
+            
+            // Check final grades status
+            Route::get('/{classId}/check-final-status', [
+                GradeBook_Management::class, 
+                'checkFinalGradesStatus'
+            ])->name('check-final-status');
+
         });
     });
 });

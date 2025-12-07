@@ -1,7 +1,7 @@
 @extends('layouts.main-teacher')
 
 @section('styles')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         .table-gradebook {
@@ -26,7 +26,6 @@
             text-align: center;
         }
         
-
         .table-gradebook .student-info::after {
             content: '';
             position: absolute;
@@ -192,6 +191,31 @@
         #finalGradeTable {
             display: none;
         }
+
+        /* Highlight missing grades */
+        .row-missing-grade {
+            background-color: rgba(255, 193, 7, 0.15) !important;
+        }
+
+        .row-missing-grade:hover {
+            background-color: rgba(255, 193, 7, 0.25) !important;
+        }
+
+        .missing-score {
+            background-color: rgba(255, 193, 7, 0.3) !important;
+            font-weight: 600;
+        }
+
+        .final-grade-actions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #dee2e6;
+            text-align: right;
+        }
+
+        #submitFinalGradeBtn {
+            display: none;
+        }
     </style>
 @endsection
 
@@ -224,7 +248,7 @@
         </div>
     </div>
 
-    <div class="card ">
+    <div class="card">
         <div class="card-body">
             <div class="filter-controls">
                 <div class="filter-group">
@@ -339,21 +363,29 @@
                     </div>
 
                     <!-- Final Grade Table (Hidden by default) -->
-                    <div class="table-responsive" id="finalGradeTable">
-                        <table class="table table-bordered table-hover table-sm">
-                            <thead class="summary-header">
-                                <tr>
-                                    <th class="pb-4">USN</th>
-                                    <th class="pb-4">Student Name</th>
-                                    <th class="text-center pb-4">Q1 Grade</th>
-                                    <th class="text-center pb-4">Q2 Grade</th>
-                                    <th class="text-center pb-4">Semester Average</th>
-                                    <th class="text-center pb-4">Final Grade</th>
-                                    <th class="text-center pb-4">Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody id="finalGradeTableBody"></tbody>
-                        </table>
+                    <div id="finalGradeTable">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover table-sm">
+                                <thead class="summary-header">
+                                    <tr>
+                                        <th class="pb-4">USN</th>
+                                        <th class="pb-4">Student Name</th>
+                                        <th class="text-center pb-4">Q1 Grade</th>
+                                        <th class="text-center pb-4">Q2 Grade</th>
+                                        <th class="text-center pb-4">Semester Average</th>
+                                        <th class="text-center pb-4">Final Grade</th>
+                                        <th class="text-center pb-4">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finalGradeTableBody"></tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="final-grade-actions">
+                            <button type="button" class="btn btn-primary" id="submitFinalGradeBtn">
+                                <i class="fas fa-save"></i> Submit Final Grades
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -392,16 +424,22 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         const CLASS_ID = {{ $classId }};
         const QUARTERS = @json($quarters);
         const CLASS_INFO = @json($class);
+        
+        // Get active semester ID
+        const ACTIVE_SEMESTER_ID = {{ DB::table('semesters')->where('status', 'active')->value('id') ?? 'null' }};
+        
         const API_ROUTES = {
             editGradebook: "{{ route('teacher.gradebook.edit', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
             exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}",
-            getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}"
+            getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}",
+            submitFinalGrades: "{{ route('teacher.gradebook.submit-final-grades', ['classId' => $classId]) }}",
+            checkFinalGradesStatus: "{{ route('teacher.gradebook.check-final-status', ['classId' => $classId]) }}"
         };
     </script>
     

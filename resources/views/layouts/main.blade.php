@@ -210,6 +210,14 @@
                                             </a>
                                         </li>
                                     </ul>
+                                    <ul class="nav nav-treeview">
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.grades.section-view') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                                <p>Section's Grade</p>
+                                            </a>
+                                        </li>
+                                    </ul>
                             </li>
 
                             <div class="nav-divider"></div>

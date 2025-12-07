@@ -13,17 +13,15 @@ $(document).ready(function () {
     let gradebookData = null;
     let classInfo = null;
     let allStudentsData = null;
+    let finalGradesSubmitted = false;
 
-    // Initialize first quarter as active
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
         $('.quarter-btn[data-type="quarter"]').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
     }
 
-    // Show initial empty state
     showEmptyState();
 
-    // Section filter change handler
     $('#sectionFilter').change(function () {
         currentSectionId = $(this).val();
         
@@ -50,7 +48,6 @@ $(document).ready(function () {
         }
     });
 
-    // Quarter/Final Grade button group click
     $('.quarter-btn').click(function () {
         const type = $(this).data('type');
         
@@ -191,31 +188,54 @@ $(document).ready(function () {
         
         $('.summary-table-wrapper').first().hide();
         $('#finalGradeTable').show();
+        $('#submitFinalGradeBtn').show();
         
+        // Check if grades already submitted
         $.ajax({
-            url: API_ROUTES.getFinalGrade,
+            url: API_ROUTES.checkFinalGradesStatus,
             type: 'GET',
-            data: { section_id: currentSectionId },
-            success: function (response) {
-                if (response.success) {
-                    renderFinalGradeTable(response.data);
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message || 'Failed to load final grades'
-                    });
-                    $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
-                }
+            data: { 
+                semester_id: ACTIVE_SEMESTER_ID,
+                section_id: currentSectionId 
             },
-            error: function (xhr) {
-                const errorMsg = xhr.responseJSON?.message || 'Failed to load final grades';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMsg
+            success: function (statusResponse) {
+                if (statusResponse.success) {
+                    finalGradesSubmitted = statusResponse.data.is_submitted;
+                    
+                    if (finalGradesSubmitted) {
+                        $('#submitFinalGradeBtn').html('<i class="fas fa-check-circle"></i> Grades Already Submitted').prop('disabled', true);
+                    } else {
+                        $('#submitFinalGradeBtn').html('<i class="fas fa-save"></i> Submit Final Grades').prop('disabled', false);
+                    }
+                }
+                
+                // Load the grades
+                $.ajax({
+                    url: API_ROUTES.getFinalGrade,
+                    type: 'GET',
+                    data: { section_id: currentSectionId },
+                    success: function (response) {
+                        if (response.success) {
+                            renderFinalGradeTable(response.data);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message || 'Failed to load final grades'
+                            });
+                            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
+                        }
+                    },
+                    error: function (xhr) {
+                        const errorMsg = xhr.responseJSON?.message || 'Failed to load final grades';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMsg
+                        });
+                        $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
+                    }
                 });
-                $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
             }
         });
     }
@@ -262,7 +282,7 @@ $(document).ready(function () {
         const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
         
         return `
-            <tr>
+            <tr data-student="${escapeHtml(student.student_number)}">
                 <td>${escapeHtml(student.student_number)}</td>
                 <td>${escapeHtml(student.full_name)}</td>
                 <td class="text-center">${student.q1_grade}</td>
@@ -360,17 +380,38 @@ $(document).ready(function () {
     }
 
     function renderStudentRow(student, cols, componentType, activeColumns, totalMaxPoints) {
-        let rowHtml = '<tr>';
-        rowHtml += `<td class="student-info">${escapeHtml(student.student_number)}</td>`;
-        rowHtml += `<td class="student-info">${escapeHtml(student.full_name)}</td>`;
+        let hasMissing = false;
+        let rowHtml = '<tr';
         
         let total = 0;
+        
+        // Check for missing grades
+        activeColumns.forEach(col => {
+            const scoreData = student[componentType.toLowerCase()][col.column_name] || {};
+            const score = scoreData.score;
+            if (score === null || score === undefined) {
+                hasMissing = true;
+            }
+        });
+        
+        if (hasMissing) {
+            rowHtml += ' class="row-missing-grade"';
+        }
+        
+        rowHtml += '>';
+        rowHtml += `<td class="student-info">${escapeHtml(student.student_number)}</td>`;
+        rowHtml += `<td class="student-info">${escapeHtml(student.full_name)}</td>`;
         
         cols.forEach(col => {
             const scoreData = student[componentType.toLowerCase()][col.column_name] || {};
             const score = scoreData.score;
             
-            rowHtml += `<td class="score-cell">`;
+            rowHtml += `<td class="score-cell`;
+            if (col.is_active && (score === null || score === undefined)) {
+                rowHtml += ' missing-score';
+            }
+            rowHtml += `">`;
+            
             if (score !== null && score !== undefined) {
                 rowHtml += parseFloat(score).toFixed(2);
                 if (col.is_active) {
@@ -424,11 +465,15 @@ $(document).ready(function () {
     }
 
     function renderSummaryRow(student, classInfo) {
+        let hasMissing = false;
+        
         let wwTotal = 0, wwMax = 0;
         Object.entries(student.ww || {}).forEach(([key, item]) => {
             if (item.is_active) {
                 if (item.score !== null && item.score !== undefined) {
                     wwTotal += parseFloat(item.score);
+                } else {
+                    hasMissing = true;
                 }
                 wwMax += parseFloat(item.max_points);
             }
@@ -441,6 +486,8 @@ $(document).ready(function () {
             if (item.is_active) {
                 if (item.score !== null && item.score !== undefined) {
                     ptTotal += parseFloat(item.score);
+                } else {
+                    hasMissing = true;
                 }
                 ptMax += parseFloat(item.max_points);
             }
@@ -453,6 +500,8 @@ $(document).ready(function () {
             if (item.is_active) {
                 if (item.score !== null && item.score !== undefined) {
                     qaTotal += parseFloat(item.score);
+                } else {
+                    hasMissing = true;
                 }
                 qaMax += parseFloat(item.max_points);
             }
@@ -463,8 +512,10 @@ $(document).ready(function () {
         const initialGrade = wwWeighted + ptWeighted + qaWeighted;
         const quarterlyGrade = Math.round(initialGrade);
 
+        let rowClass = hasMissing ? ' class="row-missing-grade"' : '';
+
         return `
-            <tr>
+            <tr${rowClass}>
                 <td>${escapeHtml(student.student_number)}</td>
                 <td>${escapeHtml(student.full_name)}</td>
                 <td class="text-center">${wwWeighted.toFixed(2)}</td>
@@ -491,6 +542,102 @@ $(document).ready(function () {
     $('#editBtn').on('click', function() {
         window.location.href = API_ROUTES.editGradebook;
     });
+
+    $('#submitFinalGradeBtn').click(function() {
+        if (finalGradesSubmitted) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Already Submitted',
+                text: 'Final grades have already been submitted for this semester'
+            });
+            return;
+        }
+
+        // Collect all student grades
+        const grades = [];
+        $('#finalGradeTableBody tr:not(.gender-separator)').each(function() {
+            const $row = $(this);
+            const studentNumber = $row.data('student');
+            
+            if (studentNumber) {
+                grades.push({
+                    student_number: studentNumber,
+                    q1_grade: parseFloat($row.find('td:eq(2)').text()),
+                    q2_grade: parseFloat($row.find('td:eq(3)').text()),
+                    final_grade: parseInt($row.find('td:eq(5)').text()),
+                    remarks: $row.find('td:eq(6) span').text()
+                });
+            }
+        });
+
+        if (grades.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Grades',
+                text: 'No grades to submit'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Submit Final Grades?',
+            html: `You are about to submit final grades for <strong>${grades.length}</strong> student(s).<br><br>This action cannot be undone.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check"></i> Yes, Submit',
+            cancelButtonText: '<i class="fas fa-times"></i> Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitFinalGrades(grades);
+            }
+        });
+    });
+
+    function submitFinalGrades(grades) {
+        const btn = $('#submitFinalGradeBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Submitting...');
+
+        $.ajax({
+            url: API_ROUTES.submitFinalGrades,
+            type: 'POST',
+            data: {
+                grades: grades,
+                semester_id: ACTIVE_SEMESTER_ID,
+                section_id: currentSectionId
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message || 'Final grades submitted successfully',
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        finalGradesSubmitted = true;
+                        btn.html('<i class="fas fa-check-circle"></i> Grades Already Submitted');
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to submit grades'
+                    });
+                    btn.prop('disabled', false).html('<i class="fas fa-save"></i> Submit Final Grades');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Failed to submit final grades';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
+                btn.prop('disabled', false).html('<i class="fas fa-save"></i> Submit Final Grades');
+            }
+        });
+    }
 
     $('#exportBtn').click(function () {
         if (!currentQuarterId) {

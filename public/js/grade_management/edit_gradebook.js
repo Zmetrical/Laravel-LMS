@@ -7,32 +7,40 @@ $(document).ready(function () {
         }
     });
 
-    toastr.options = {
-        closeButton: true,
-        progressBar: true,
-        positionClass: 'toast-top-right',
-        timeOut: 3000
-    };
-
     let gradebookData = null;
     let classInfo = null;
     let quarterInfo = null;
     let currentQuarterId = null;
     let currentSectionId = null;
-    let allStudentsData = null;
     let pendingChanges = {};
     let wwGrid, ptGrid, qaGrid;
 
-    // Initialize with first quarter
+    // Initialize with first quarter but don't load data yet
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
         $('.quarter-btn').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
-        loadGradebook(currentQuarterId);
     }
+
+    // Show initial empty state
+    showEmptyState();
 
     // Quarter button group click
     $('.quarter-btn').click(function () {
         const quarterId = $(this).data('quarter');
+        
+        if (!currentSectionId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section first',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+        
         if (quarterId === currentQuarterId) return;
 
         $('.quarter-btn').removeClass('btn-secondary active').addClass('btn-outline-secondary');
@@ -49,10 +57,51 @@ $(document).ready(function () {
     // Section filter
     $('#sectionFilter').change(function () {
         currentSectionId = $(this).val();
-        filterAndRenderData();
+        
+        if (!currentSectionId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            showEmptyState();
+            return;
+        }
+        
+        if (currentQuarterId) {
+            loadGradebook(currentQuarterId);
+        }
     });
 
+    function showEmptyState() {
+        const emptyHtml = `
+            <div style="padding: 60px 20px; text-align: center;">
+                <i class="fas fa-table" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></i>
+                <h5 style="color: #6c757d; margin-bottom: 10px;">No Section Selected</h5>
+                <p style="color: #adb5bd;">Please select a section from the dropdown above to edit grades.</p>
+            </div>
+        `;
+        $('#wwGrid, #ptGrid, #qaGrid').html(emptyHtml);
+    }
+
     function loadGradebook(quarterId) {
+        if (!currentSectionId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section first',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+
         showTabLoading();
         
         // Destroy existing grids first
@@ -61,63 +110,55 @@ $(document).ready(function () {
         $.ajax({
             url: API_ROUTES.getGradebook,
             type: 'GET',
-            data: { quarter_id: quarterId },
+            data: { 
+                quarter_id: quarterId,
+                section_id: currentSectionId
+            },
             success: function (response) {
                 if (response.success) {
                     gradebookData = response.data;
                     classInfo = response.data.class;
                     quarterInfo = response.data.quarter;
-                    allStudentsData = response.data.students;
                     currentQuarterId = quarterId;
                     pendingChanges = {};
 
-                    if (!allStudentsData || allStudentsData.length === 0) {
-                        toastr.info('No students enrolled in this class yet');
+                    if (!response.data.students || response.data.students.length === 0) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'No Students',
+                            text: 'No students enrolled in this section',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
                         clearAllGrids();
                     } else {
-                        filterAndRenderData();
+                        initializeGrids(gradebookData);
                     }
                     
                     updateSaveButton();
                     updateColumnCounts();
                 } else {
-                    toastr.error('Failed to load gradebook');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to load gradebook'
+                    });
                     clearAllGrids();
                 }
             },
             error: function (xhr) {
-                toastr.error('Failed to load gradebook data');
+                const errorMsg = xhr.responseJSON?.message || 'Failed to load gradebook data';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
                 console.error(xhr);
                 clearAllGrids();
             }
         });
-    }
-
-    function filterAndRenderData() {
-        if (!allStudentsData) return;
-
-        // Destroy existing grids before re-rendering
-        destroyAllGrids();
-
-        let filteredStudents = allStudentsData;
-
-        // Filter by section if selected
-        if (currentSectionId) {
-            filteredStudents = allStudentsData.filter(s => s.section_id == currentSectionId);
-        }
-
-        if (filteredStudents.length === 0) {
-            toastr.info('No students found for selected filters');
-            clearAllGrids();
-            return;
-        }
-
-        const filteredData = {
-            ...gradebookData,
-            students: filteredStudents
-        };
-
-        initializeGrids(filteredData);
     }
 
     function showTabLoading() {
@@ -427,16 +468,30 @@ $(document).ready(function () {
         const column = findColumnById(columnId);
 
         if (!column) {
-            toastr.error('Column not found');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Column not found'
+            });
             return false;
         }
 
         if (!column.is_active) {
             openEnableColumnModal(column);
         } else {
-            if (confirm('Are you sure you want to disable this column? Scores will be hidden from calculations.')) {
-                toggleColumnStatus(columnId, false);
-            }
+            Swal.fire({
+                title: 'Disable Column?',
+                text: 'Scores will be hidden from calculations.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#6c757d',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, disable it'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    toggleColumnStatus(columnId, false);
+                }
+            });
         }
 
         return false;
@@ -453,7 +508,11 @@ $(document).ready(function () {
 
     function loadQuizzesForEnable(currentQuizId) {
         if (!currentQuarterId) {
-            toastr.error('Please select a quarter first');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Please select a quarter first'
+            });
             $('#enableQuizId').html('<option value="">Manual Entry</option>');
             return;
         }
@@ -476,19 +535,43 @@ $(document).ready(function () {
                                 ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
                             </option>`;
                         });
-                        toastr.info(`Found ${response.data.length} available quiz(zes)`);
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Quizzes Found',
+                            text: `Found ${response.data.length} available quiz(zes)`,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
                     } else {
-                        toastr.warning(response.message || 'No quizzes available for this quarter');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'No Quizzes',
+                            text: response.message || 'No quizzes available for this quarter',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
                     }
                 } else {
-                    toastr.error(response.message || 'Failed to load quizzes');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to load quizzes'
+                    });
                 }
 
                 $('#enableQuizId').html(options);
             },
             error: function (xhr) {
                 const errorMsg = xhr.responseJSON?.message || 'Failed to load available quizzes';
-                toastr.error(errorMsg);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
                 $('#enableQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
             }
         });
@@ -502,7 +585,15 @@ $(document).ready(function () {
             const points = selected.data('points');
             if (points && points > 0) {
                 $('#enableMaxPoints').val(points);
-                toastr.info(`Max points set to ${points} from quiz`);
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Max Points Updated',
+                    text: `Max points set to ${points} from quiz`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
             }
         }
     });
@@ -536,7 +627,15 @@ $(document).ready(function () {
             data: data,
             success: function (response) {
                 if (response.success) {
-                    toastr.success(response.message);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
                     $('#enableColumnModal').modal('hide');
                     
                     // Destroy existing grids before reload
@@ -545,13 +644,21 @@ $(document).ready(function () {
                     // Reload gradebook data
                     loadGradebook(currentQuarterId);
                 } else {
-                    toastr.error(response.message || 'Failed to update column');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to update column'
+                    });
                     btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
                 }
             },
             error: function (xhr) {
                 const errorMsg = xhr.responseJSON?.message || 'Failed to update column';
-                toastr.error(errorMsg);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
                 btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
             }
         });
@@ -604,7 +711,11 @@ $(document).ready(function () {
 
     function loadQuizzesForEdit(currentQuizId) {
         if (!currentQuarterId) {
-            toastr.error('Please select a quarter first');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Please select a quarter first'
+            });
             $('#editQuizId').html('<option value="">Manual Entry</option>');
             return;
         }
@@ -633,7 +744,11 @@ $(document).ready(function () {
                 $('#editQuizId').html(options);
             },
             error: function (xhr) {
-                toastr.error('Failed to load available quizzes');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load available quizzes'
+                });
                 $('#editQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
             }
         });
@@ -647,7 +762,15 @@ $(document).ready(function () {
             const points = selected.data('points');
             if (points && points > 0) {
                 $('#editMaxPoints').val(points);
-                toastr.info(`Max points updated to ${points} from quiz`);
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Max Points Updated',
+                    text: `Max points updated to ${points} from quiz`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
             }
         }
     });
@@ -671,19 +794,35 @@ $(document).ready(function () {
             },
             success: function (response) {
                 if (response.success) {
-                    toastr.success('Column updated successfully');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'Column updated successfully',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
                     $('#editColumnModal').modal('hide');
                     
                     // Destroy grids before reload
                     destroyAllGrids();
                     loadGradebook(currentQuarterId);
                 } else {
-                    toastr.error(response.message || 'Failed to update column');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to update column'
+                    });
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
                 }
             },
             error: function () {
-                toastr.error('Failed to update column');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to update column'
+                });
                 btn.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
             }
         });
@@ -702,18 +841,34 @@ $(document).ready(function () {
             data: { scores: scores },
             success: function (response) {
                 if (response.success) {
-                    toastr.success('All changes saved successfully');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'All changes saved successfully',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
                     
                     // Destroy grids before reload
                     destroyAllGrids();
                     loadGradebook(currentQuarterId);
                 } else {
-                    toastr.error('Failed to save changes');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to save changes'
+                    });
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
                 }
             },
             error: function () {
-                toastr.error('Failed to save changes');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to save changes'
+                });
                 btn.prop('disabled', false).html('<i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>');
             }
         });
