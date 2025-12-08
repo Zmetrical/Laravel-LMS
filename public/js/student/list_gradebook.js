@@ -78,14 +78,14 @@ $(document).ready(function() {
         
         if (hasFinal) {
             if (finalGrade >= 90) {
-                cardClass = 'card-outline card-success';
+                cardClass = 'card-outline card-primary';
             } else if (finalGrade >= 75) {
                 cardClass = 'card-outline card-primary';
             } else {
-                cardClass = 'card-outline card-danger';
+                cardClass = 'card-outline card-primary';
             }
             
-            const remarksColor = remarks === 'PASSED' ? 'success' : (remarks === 'FAILED' ? 'danger' : 'warning');
+            const remarksColor = remarks === 'PASSED' ? 'primary' : (remarks === 'FAILED' ? 'primary' : 'primary');
             statusBadge = `<span class="badge badge-${remarksColor}">${remarks}</span>`;
         } else {
             statusBadge = `<span class="badge badge-secondary">ONGOING</span>`;

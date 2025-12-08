@@ -6,6 +6,7 @@
             <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
         @endforeach
     @endif
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
     <style>
         
         .grade-excellent { color: #28a745; font-weight: bold; }
@@ -158,6 +159,7 @@
 
 @section('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         const API_ROUTES = {
             getQuarterlyGrades: "{{ route('student.dashboard.quarterly-grades') }}",

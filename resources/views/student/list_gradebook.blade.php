@@ -26,14 +26,7 @@
     border: 2px solid #e9ecef;
     transition: all 0.2s ease;
 }
-.grade-box.has-grade {
-    border-color: #007bff;
-    background: #e7f3ff;
-}
-.grade-box.final-box.has-grade {
-    border-color: #28a745;
-    background: #e8f5e9;
-}
+
 .grade-box.no-grade {
     border-style: dashed;
 }

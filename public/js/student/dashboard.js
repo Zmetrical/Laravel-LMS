@@ -43,7 +43,16 @@ $(document).ready(function() {
             error: function(xhr) {
                 $('#refreshSummary i').removeClass('fa-spin');
                 showSummaryError();
-                toastr.error('Failed to load semester summary');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load semester summary',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
             }
         });
     }
@@ -121,7 +130,16 @@ $(document).ready(function() {
             error: function(xhr) {
                 $('#refreshBreakdown i').removeClass('fa-spin');
                 showBreakdownError();
-                toastr.error('Failed to load grade breakdown');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load grade breakdown',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
             }
         });
     }
@@ -325,7 +343,16 @@ $(document).ready(function() {
             error: function(xhr) {
                 $('#refreshGrades i').removeClass('fa-spin');
                 showGradesError();
-                toastr.error('Failed to load grades');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load grades',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
             }
         });
     }

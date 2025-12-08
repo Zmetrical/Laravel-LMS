@@ -52,316 +52,307 @@ class StudentController extends Controller
         return view('student.login', $data);
     }
     
+
     /**
-     * Get quarterly grades for current semester (real-time calculation)
-     */
-    public function getQuarterlyGrades()
-    {
-        try {
-            $student = Auth::guard('student')->user();
-            
-            if (!$student) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 401);
-            }
-            
-            // Get active semester
-            $activeSemester = DB::table('semesters')
-                ->where('status', 'active')
-                ->first();
-            
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => true,
-                    'data' => []
-                ]);
-            }
-            
-            // Get quarters for this semester
-            $quarters = DB::table('quarters')
-                ->where('semester_id', $activeSemester->id)
-                ->orderBy('order_number')
-                ->get();
-            
-            // Get enrolled classes
-            $enrolledClasses = $this->getEnrolledClasses($student, $activeSemester->id);
-            
-            $gradesData = [];
-            
-            foreach ($enrolledClasses as $class) {
-                $classGrades = [
-                    'class_code' => $class->class_code,
-                    'class_name' => $class->class_name,
-                    'quarters' => []
-                ];
-                
-                // Get class weightings
-                $classInfo = DB::table('classes')
-                    ->where('class_code', $class->class_code)
-                    ->first();
-                
-                foreach ($quarters as $quarter) {
-                    // First check if finalized grade exists
-                    $finalizedGrade = DB::table('quarter_grades')
-                        ->where('student_number', $student->student_number)
-                        ->where('class_code', $class->class_code)
-                        ->where('quarter_id', $quarter->id)
-                        ->first();
-                    
-                    if ($finalizedGrade && $finalizedGrade->is_locked) {
-                        // Use finalized grade if locked
-                        $classGrades['quarters'][] = [
-                            'quarter_name' => $quarter->name,
-                            'quarter_code' => $quarter->code,
-                            'initial_grade' => $finalizedGrade->initial_grade,
-                            'transmuted_grade' => $finalizedGrade->transmuted_grade,
-                            'ww_ws' => $finalizedGrade->ww_ws,
-                            'pt_ws' => $finalizedGrade->pt_ws,
-                            'qa_ws' => $finalizedGrade->qa_ws,
-                            'is_locked' => true
-                        ];
-                    } else {
-                        // Calculate real-time grade from gradebook
-                        $calculatedGrade = $this->calculateQuarterGrade(
-                            $student->student_number, 
-                            $class->class_code, 
-                            $quarter->id,
-                            $classInfo
-                        );
-                        
-                        $classGrades['quarters'][] = [
-                            'quarter_name' => $quarter->name,
-                            'quarter_code' => $quarter->code,
-                            'initial_grade' => $calculatedGrade['initial_grade'],
-                            'transmuted_grade' => $calculatedGrade['transmuted_grade'],
-                            'ww_ws' => $calculatedGrade['ww_ws'],
-                            'pt_ws' => $calculatedGrade['pt_ws'],
-                            'qa_ws' => $calculatedGrade['qa_ws'],
-                            'is_locked' => false
-                        ];
-                    }
-                }
-                
-                // Get semester final grade
-                $finalGrade = DB::table('grades_final')
-                    ->where('student_number', $student->student_number)
-                    ->where('class_code', $class->class_code)
-                    ->where('semester_id', $activeSemester->id)
-                    ->first();
-                
-                if ($finalGrade && $finalGrade->is_locked) {
-                    $classGrades['semester_final'] = [
-                        'q1_grade' => $finalGrade->q1_grade,
-                        'q2_grade' => $finalGrade->q2_grade,
-                        'final_grade' => $finalGrade->final_grade,
-                        'remarks' => $finalGrade->remarks,
-                        'is_locked' => true
-                    ];
-                } else {
-                    // Calculate semester average from quarter grades
-                    $q1Grade = $classGrades['quarters'][0]['transmuted_grade'] ?? null;
-                    $q2Grade = $classGrades['quarters'][1]['transmuted_grade'] ?? null;
-                    
-                    $semesterFinal = null;
-                    $remarks = null;
-                    
-                    if ($q1Grade !== null && $q2Grade !== null) {
-                        $semesterFinal = round(($q1Grade + $q2Grade) / 2, 2);
-                        $remarks = $semesterFinal >= 75 ? 'PASSED' : 'FAILED';
-                    }
-                    
-                    $classGrades['semester_final'] = [
-                        'q1_grade' => $q1Grade,
-                        'q2_grade' => $q2Grade,
-                        'final_grade' => $semesterFinal,
-                        'remarks' => $remarks,
-                        'is_locked' => false
-                    ];
-                }
-                
-                $gradesData[] = $classGrades;
-            }
-            
+ * Get quarterly grades for current semester (real-time calculation)
+ */
+public function getQuarterlyGrades()
+{
+    try {
+        $student = Auth::guard('student')->user();
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        
+        // Get active semester
+        $activeSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
+        
+        if (!$activeSemester) {
             return response()->json([
                 'success' => true,
-                'data' => $gradesData,
+                'data' => [],
+                'quarters' => []
+            ]);
+        }
+        
+        // Get quarters for this semester
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $activeSemester->id)
+            ->orderBy('order_number')
+            ->get();
+        
+        if ($quarters->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'quarters' => []
+            ]);
+        }
+        
+        // Get enrolled classes
+        $enrolledClasses = $this->getEnrolledClasses($student, $activeSemester->id);
+        
+        if ($enrolledClasses->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
                 'quarters' => $quarters->map(function($q) {
                     return ['name' => $q->name, 'code' => $q->code];
                 })
             ]);
-            
-        } catch (\Exception $e) {
-            \Log::error('Failed to get quarterly grades', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load grades'
-            ], 500);
         }
-    }
-    
-    /**
-     * Calculate quarter grade from gradebook scores
-     * Shows partial grades even if not all components are complete
-     */
-    private function calculateQuarterGrade($studentNumber, $classCode, $quarterId, $classInfo)
-    {
-        // Get all columns for this quarter and class
-        $columns = DB::table('gradebook_columns')
-            ->where('class_code', $classCode)
-            ->where('quarter_id', $quarterId)
-            ->where('is_active', 1)
-            ->get();
         
-        if ($columns->isEmpty()) {
-            return [
-                'initial_grade' => null,
-                'transmuted_grade' => null,
-                'ww_ws' => null,
-                'pt_ws' => null,
-                'qa_ws' => null
+        $gradesData = [];
+        
+        foreach ($enrolledClasses as $class) {
+            $classGrades = [
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'quarters' => []
             ];
-        }
-        
-        // Group by component type
-        $wwColumns = $columns->where('component_type', 'WW');
-        $ptColumns = $columns->where('component_type', 'PT');
-        $qaColumns = $columns->where('component_type', 'QA');
-        
-        // Calculate WW score (only from completed items)
-        $wwScore = $this->calculateComponentScore($studentNumber, $wwColumns);
-        $wwPS = $wwScore['percentage'];
-        $wwWS = $wwPS !== null ? round($wwPS * ($classInfo->ww_perc / 100), 2) : null;
-        
-        // Calculate PT score (only from completed items)
-        $ptScore = $this->calculateComponentScore($studentNumber, $ptColumns);
-        $ptPS = $ptScore['percentage'];
-        $ptWS = $ptPS !== null ? round($ptPS * ($classInfo->pt_perc / 100), 2) : null;
-        
-        // Calculate QA score (only from completed items)
-        $qaScore = $this->calculateComponentScore($studentNumber, $qaColumns);
-        $qaPS = $qaScore['percentage'];
-        $qaWS = $qaPS !== null ? round($qaPS * ($classInfo->qa_perce / 100), 2) : null;
-        
-        // Calculate initial grade (even if partial)
-        // If any component has a score, calculate partial grade
-        $initialGrade = null;
-        $componentsWithScores = 0;
-        $totalWeightedScore = 0;
-        
-        if ($wwWS !== null) {
-            $totalWeightedScore += $wwWS;
-            $componentsWithScores++;
-        }
-        if ($ptWS !== null) {
-            $totalWeightedScore += $ptWS;
-            $componentsWithScores++;
-        }
-        if ($qaWS !== null) {
-            $totalWeightedScore += $qaWS;
-            $componentsWithScores++;
-        }
-        
-        // Show partial grade if at least one component has scores
-        if ($componentsWithScores > 0) {
-            $initialGrade = round($totalWeightedScore, 2);
-        }
-        
-        // Transmute grade (using simple transmutation table)
-        $transmutedGrade = null;
-        if ($initialGrade !== null) {
-            $transmutedGrade = $this->transmuteGrade($initialGrade);
-        }
-        
-        return [
-            'initial_grade' => $initialGrade,
-            'transmuted_grade' => $transmutedGrade,
-            'ww_ws' => $wwWS,
-            'pt_ws' => $ptWS,
-            'qa_ws' => $qaWS,
-            'is_partial' => $componentsWithScores > 0 && $componentsWithScores < 3
-        ];
-    }
-    
-    /**
-     * Calculate component score (WW, PT, or QA)
-     * Only counts columns where student has a score
-     */
-    private function calculateComponentScore($studentNumber, $columns)
-    {
-        if ($columns->isEmpty()) {
-            return ['total' => 0, 'max' => 0, 'percentage' => null];
-        }
-        
-        $totalScore = 0;
-        $totalMaxPoints = 0;
-        
-        foreach ($columns as $column) {
-            $score = DB::table('gradebook_scores')
-                ->where('column_id', $column->id)
-                ->where('student_number', $studentNumber)
-                ->value('score');
             
-            // Only count columns where student has a score (including 0)
-            if ($score !== null) {
-                $totalScore += $score;
-                $totalMaxPoints += $column->max_points;
+            // Get class weightings
+            $classInfo = DB::table('classes')
+                ->where('class_code', $class->class_code)
+                ->first();
+            
+            if (!$classInfo) {
+                \Log::warning('Class info not found', ['class_code' => $class->class_code]);
+                continue;
             }
+            
+            foreach ($quarters as $quarter) {
+                // First check if finalized grade exists
+                $finalizedGrade = DB::table('quarter_grades')
+                    ->where('student_number', $student->student_number)
+                    ->where('class_code', $class->class_code)
+                    ->where('quarter_id', $quarter->id)
+                    ->first();
+                
+                if ($finalizedGrade && $finalizedGrade->is_locked) {
+                    // Use finalized grade if locked
+                    $classGrades['quarters'][] = [
+                        'quarter_name' => $quarter->name,
+                        'quarter_code' => $quarter->code,
+                        'initial_grade' => $finalizedGrade->initial_grade,
+                        'transmuted_grade' => $finalizedGrade->transmuted_grade,
+                        'ww_ws' => $finalizedGrade->ww_ws,
+                        'pt_ws' => $finalizedGrade->pt_ws,
+                        'qa_ws' => $finalizedGrade->qa_ws,
+                        'is_locked' => true
+                    ];
+                } else {
+                    // Calculate real-time grade from gradebook
+                    $calculatedGrade = $this->calculateQuarterGrade(
+                        $student->student_number, 
+                        $class->class_code, 
+                        $quarter->id,
+                        $classInfo
+                    );
+                    
+                    $classGrades['quarters'][] = [
+                        'quarter_name' => $quarter->name,
+                        'quarter_code' => $quarter->code,
+                        'initial_grade' => $calculatedGrade['initial_grade'],
+                        'transmuted_grade' => $calculatedGrade['transmuted_grade'],
+                        'ww_ws' => $calculatedGrade['ww_ws'],
+                        'pt_ws' => $calculatedGrade['pt_ws'],
+                        'qa_ws' => $calculatedGrade['qa_ws'],
+                        'is_locked' => false
+                    ];
+                }
+            }
+            
+            // Get semester final grade
+            $finalGrade = DB::table('grades_final')
+                ->where('student_number', $student->student_number)
+                ->where('class_code', $class->class_code)
+                ->where('semester_id', $activeSemester->id)
+                ->first();
+            
+            if ($finalGrade) {
+                $classGrades['semester_final'] = [
+                    'q1_grade' => $finalGrade->q1_grade,
+                    'q2_grade' => $finalGrade->q2_grade,
+                    'final_grade' => $finalGrade->final_grade,
+                    'remarks' => $finalGrade->remarks,
+                    'is_locked' => true
+                ];
+            } else {
+                // Calculate semester average from quarter grades
+                $q1Grade = isset($classGrades['quarters'][0]) ? $classGrades['quarters'][0]['transmuted_grade'] : null;
+                $q2Grade = isset($classGrades['quarters'][1]) ? $classGrades['quarters'][1]['transmuted_grade'] : null;
+                
+                $semesterFinal = null;
+                $remarks = null;
+                
+                if ($q1Grade !== null && $q2Grade !== null) {
+                    $semesterFinal = round(($q1Grade + $q2Grade) / 2, 2);
+                    $remarks = $semesterFinal >= 75 ? 'PASSED' : 'FAILED';
+                }
+                
+                $classGrades['semester_final'] = [
+                    'q1_grade' => $q1Grade,
+                    'q2_grade' => $q2Grade,
+                    'final_grade' => $semesterFinal,
+                    'remarks' => $remarks,
+                    'is_locked' => false
+                ];
+            }
+            
+            $gradesData[] = $classGrades;
         }
         
-        $percentage = null;
-        if ($totalMaxPoints > 0) {
-            $percentage = round(($totalScore / $totalMaxPoints) * 100, 2);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $gradesData,
+            'quarters' => $quarters->map(function($q) {
+                return ['name' => $q->name, 'code' => $q->code];
+            })
+        ]);
         
+    } catch (\Exception $e) {
+        \Log::error('Failed to get quarterly grades', [
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load grades: ' . $e->getMessage()
+        ], 500);
+    }
+}
+    
+/**
+ * Calculate quarter grade from gradebook scores
+ * Shows partial grades even if not all components are complete
+ */
+private function calculateQuarterGrade($studentNumber, $classCode, $quarterId, $classInfo)
+{
+    // Get all columns for this quarter and class
+    $columns = DB::table('gradebook_columns')
+        ->where('class_code', $classCode)
+        ->where('quarter_id', $quarterId)
+        ->where('is_active', 1)
+        ->get();
+    
+    if ($columns->isEmpty()) {
         return [
-            'total' => $totalScore,
-            'max' => $totalMaxPoints,
-            'percentage' => $percentage
+            'initial_grade' => null,
+            'transmuted_grade' => null,
+            'ww_ws' => null,
+            'pt_ws' => null,
+            'qa_ws' => null
         ];
     }
     
-    /**
-     * Transmute grade (simple transmutation)
-     */
-    private function transmuteGrade($initialGrade)
-    {
-        // Simple transmutation table (adjust as needed)
-        if ($initialGrade >= 96.5) return 100;
-        if ($initialGrade >= 95.5) return 99;
-        if ($initialGrade >= 94.5) return 98;
-        if ($initialGrade >= 93.5) return 97;
-        if ($initialGrade >= 92.5) return 96;
-        if ($initialGrade >= 91.5) return 95;
-        if ($initialGrade >= 90.5) return 94;
-        if ($initialGrade >= 89.5) return 93;
-        if ($initialGrade >= 88.5) return 92;
-        if ($initialGrade >= 87.5) return 91;
-        if ($initialGrade >= 86.5) return 90;
-        if ($initialGrade >= 85.5) return 89;
-        if ($initialGrade >= 84.5) return 88;
-        if ($initialGrade >= 83.5) return 87;
-        if ($initialGrade >= 82.5) return 86;
-        if ($initialGrade >= 81.5) return 85;
-        if ($initialGrade >= 80.5) return 84;
-        if ($initialGrade >= 79.5) return 83;
-        if ($initialGrade >= 78.5) return 82;
-        if ($initialGrade >= 77.5) return 81;
-        if ($initialGrade >= 76.5) return 80;
-        if ($initialGrade >= 75.5) return 79;
-        if ($initialGrade >= 74.5) return 78;
-        if ($initialGrade >= 73.5) return 77;
-        if ($initialGrade >= 72.5) return 76;
-        if ($initialGrade >= 71.5) return 75;
-        
-        // Below 75 fails
-        return round($initialGrade);
+    // Group by component type
+    $wwColumns = $columns->where('component_type', 'WW');
+    $ptColumns = $columns->where('component_type', 'PT');
+    $qaColumns = $columns->where('component_type', 'QA');
+    
+    // Calculate WW score (only from completed items)
+    $wwScore = $this->calculateComponentScore($studentNumber, $wwColumns);
+    $wwPS = $wwScore['percentage'];
+    $wwWS = $wwPS !== null ? round($wwPS * ($classInfo->ww_perc / 100), 2) : null;
+    
+    // Calculate PT score (only from completed items)
+    $ptScore = $this->calculateComponentScore($studentNumber, $ptColumns);
+    $ptPS = $ptScore['percentage'];
+    $ptWS = $ptPS !== null ? round($ptPS * ($classInfo->pt_perc / 100), 2) : null;
+    
+    // Calculate QA score (only from completed items)
+    $qaScore = $this->calculateComponentScore($studentNumber, $qaColumns);
+    $qaPS = $qaScore['percentage'];
+    $qaWS = $qaPS !== null ? round($qaPS * ($classInfo->qa_perce / 100), 2) : null;
+    
+    // Calculate initial grade (even if partial)
+    // If any component has a score, calculate partial grade
+    $initialGrade = null;
+    $componentsWithScores = 0;
+    $totalWeightedScore = 0;
+    
+    if ($wwWS !== null) {
+        $totalWeightedScore += $wwWS;
+        $componentsWithScores++;
     }
+    if ($ptWS !== null) {
+        $totalWeightedScore += $ptWS;
+        $componentsWithScores++;
+    }
+    if ($qaWS !== null) {
+        $totalWeightedScore += $qaWS;
+        $componentsWithScores++;
+    }
+    
+    // Show partial grade if at least one component has scores
+    if ($componentsWithScores > 0) {
+        $initialGrade = round($totalWeightedScore, 2);
+    }
+    
+    // For detailed grade report: just round the grade, no transmutation
+    $transmutedGrade = null;
+    if ($initialGrade !== null) {
+        $transmutedGrade = round($initialGrade);
+    }
+    
+    return [
+        'initial_grade' => $initialGrade,
+        'transmuted_grade' => $transmutedGrade,
+        'ww_ws' => $wwWS,
+        'pt_ws' => $ptWS,
+        'qa_ws' => $qaWS,
+        'is_partial' => $componentsWithScores > 0 && $componentsWithScores < 3
+    ];
+}
+
+/**
+ * Calculate component score (WW, PT, or QA)
+ * Only counts columns where student has a score
+ */
+private function calculateComponentScore($studentNumber, $columns)
+{
+    if ($columns->isEmpty()) {
+        return ['total' => 0, 'max' => 0, 'percentage' => null];
+    }
+    
+    $totalScore = 0;
+    $totalMaxPoints = 0;
+    
+    foreach ($columns as $column) {
+        $score = DB::table('gradebook_scores')
+            ->where('column_id', $column->id)
+            ->where('student_number', $studentNumber)
+            ->value('score');
+        
+        // Only count columns where student has a score (including 0)
+        if ($score !== null) {
+            $totalScore += floatval($score);
+            $totalMaxPoints += floatval($column->max_points);
+        }
+    }
+    
+    $percentage = null;
+    if ($totalMaxPoints > 0) {
+        $percentage = round(($totalScore / $totalMaxPoints) * 100, 2);
+    }
+    
+    return [
+        'total' => $totalScore,
+        'max' => $totalMaxPoints,
+        'percentage' => $percentage
+    ];
+}
+
     
     /**
      * Get grade component breakdown for charts
