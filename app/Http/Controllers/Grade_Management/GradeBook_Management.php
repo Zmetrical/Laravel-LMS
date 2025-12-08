@@ -631,9 +631,8 @@ public function updateColumn(Request $request, $classId, $columnId)
         }
     }
         
-
 /**
- * Export gradebook to Excel using template
+ * Export gradebook to Excel using template - SECTION SPECIFIC
  */
 public function exportGradebook(Request $request, $classId)
 {
@@ -649,8 +648,22 @@ public function exportGradebook(Request $request, $classId)
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        // Validate section_id is required
+        $validated = $request->validate([
+            'section_id' => 'required|exists:sections,id'
+        ]);
+
+        $sectionId = $validated['section_id'];
+        
         $class = DB::table('classes')->where('id', $classId)->first();
-        $section = $this->getClassSection($classId);
+        $section = DB::table('sections')->where('id', $sectionId)->first();
+        
+        if (!$section) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Section not found'
+            ], 404);
+        }
         
         // Get the active semester
         $activeSemester = DB::table('semesters')->where('status', 'active')->first();
@@ -681,7 +694,7 @@ public function exportGradebook(Request $request, $classId)
         if (!$q1 || !$q2) {
             return response()->json([
                 'success' => false, 
-                'message' => 'Q1 and Q2 quarters not found. Found quarters: ' . $quarters->pluck('code')->implode(', ')
+                'message' => 'Q1 and Q2 quarters not found'
             ], 404);
         }
         
@@ -696,14 +709,14 @@ public function exportGradebook(Request $request, $classId)
 
         $spreadsheet = IOFactory::load($templatePath);
         
-        // Populate INPUT DATA sheet once
-        $this->populateInputDataSheet($spreadsheet, $class, $section, $activeSemester, $teacher, $q1);
+        // Populate INPUT DATA sheet once - with section parameter
+        $this->populateInputDataSheet($spreadsheet, $class, $section, $activeSemester, $teacher, $q1, $sectionId);
         
-        // Populate 1ST quarter sheet (Q1)
-        $this->populateGradeSheet($spreadsheet, '1ST', $classId, $class, $q1->id);
+        // Populate 1ST quarter sheet (Q1) - with section parameter
+        $this->populateGradeSheet($spreadsheet, '1ST', $classId, $class, $q1->id, $sectionId);
         
-        // Populate 2ND quarter sheet (Q2)
-        $this->populateGradeSheet($spreadsheet, '2ND', $classId, $class, $q2->id);
+        // Populate 2ND quarter sheet (Q2) - with section parameter
+        $this->populateGradeSheet($spreadsheet, '2ND', $classId, $class, $q2->id, $sectionId);
         
         $filename = $this->generateFilename($class, $section, $activeSemester);
         $exportPath = storage_path('app/exports/' . $filename);
@@ -731,8 +744,7 @@ public function exportGradebook(Request $request, $classId)
     }
 }
 
-
-private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter)
+private function populateInputDataSheet($spreadsheet, $class, $section, $semester, $teacher, $quarter, $sectionId)
 {
     $sheet = $spreadsheet->getSheetByName('INPUT DATA');
     
@@ -748,14 +760,14 @@ private function populateInputDataSheet($spreadsheet, $class, $section, $semeste
     // Basic Info
     $sheet->setCellValue('K7', $section->name ?? '');
     $sheet->setCellValue('S7', $teacher->first_name . ' ' . $teacher->last_name);
-    $sheet->setCellValue('S8', $quarter->code === 'Q1' ? '1ST' : '2ND'); // Changed from semester name
+    $sheet->setCellValue('S8', $quarter->code === 'Q1' ? '1ST' : '2ND');
     $sheet->setCellValue('AE7', $class->class_name);
     $sheet->setCellValue('AE8', $class->class_code);
-    $sheet->setCellValue('AG5', $schoolYear ? $schoolYear->code : ''); // Added school year
+    $sheet->setCellValue('AG5', $schoolYear ? $schoolYear->code : '');
 
-    // Get students by gender
-    $maleStudents = $this->getEnrolledStudentsByGender($class->id, 'Male');
-    $femaleStudents = $this->getEnrolledStudentsByGender($class->id, 'Female');
+    // Get students by gender FOR THIS SECTION ONLY
+    $maleStudents = $this->getEnrolledStudentsByGenderAndSection($class->id, 'Male', $sectionId);
+    $femaleStudents = $this->getEnrolledStudentsByGenderAndSection($class->id, 'Female', $sectionId);
     
     // Male students (A13-A62, B13-B62)
     $row = 13;
@@ -775,9 +787,40 @@ private function populateInputDataSheet($spreadsheet, $class, $section, $semeste
         if ($row > 113) break;
     }
 }
+/**
+ * Get enrolled students by gender and section
+ */
+private function getEnrolledStudentsByGenderAndSection($classId, $gender, $sectionId)
+{
+    $class = DB::table('classes')->where('id', $classId)->first();
 
+    $regular = DB::table('students as s')
+        ->join('section_class_matrix as scm', 's.section_id', '=', 'scm.section_id')
+        ->where('scm.class_id', $classId)
+        ->where('s.section_id', $sectionId)
+        ->where('s.student_type', 'regular')
+        ->where('s.gender', $gender)
+        ->select(
+            's.student_number',
+            DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
+        );
 
-private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId)
+    $irregular = DB::table('students as s')
+        ->join('student_class_matrix as scm', 's.student_number', '=', 'scm.student_number')
+        ->where('scm.class_code', $class->class_code)
+        ->where('s.section_id', $sectionId)
+        ->where('s.student_type', 'irregular')
+        ->where('s.gender', $gender)
+        ->select(
+            's.student_number',
+            DB::raw("CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(SUBSTRING(s.middle_name, 1, 1), ''), '.') as full_name")
+        );
+
+    return $regular->union($irregular)
+        ->orderBy('full_name')
+        ->get();
+}
+private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, $quarterId, $sectionId)
 {
     $sheet = $spreadsheet->getSheetByName($sheetName);
     
@@ -787,7 +830,7 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
 
     // Get quarter info
     $quarter = DB::table('quarters')->where('id', $quarterId)->first();
-    $section = $this->getClassSection($classId);
+    $section = DB::table('sections')->where('id', $sectionId)->first();
     $teacher = Auth::guard('teacher')->user();
     
     // Get school year from semester
@@ -834,16 +877,16 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
 
     // Set total HPS and weighted percentages in row 11
     $sheet->setCellValue('P11', $wwTotalHPS);
-    $sheet->setCellValueExplicit('R11', $class->ww_perc / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC); // Divide by 100 for decimal
+    $sheet->setCellValueExplicit('R11', $class->ww_perc / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
     
     $sheet->setCellValue('AC11', $ptTotalHPS);
-    $sheet->setCellValueExplicit('AE11', $class->pt_perc / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC); // Divide by 100 for decimal
+    $sheet->setCellValueExplicit('AE11', $class->pt_perc / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
     
     $sheet->setCellValue('AF11', $qaTotalHPS);
-    $sheet->setCellValueExplicit('AH11', $class->qa_perce / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC); // Divide by 100 for decimal
+    $sheet->setCellValueExplicit('AH11', $class->qa_perce / 100, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
 
-    // Get students and scores
-    $students = $this->getEnrolledStudentsWithGender($classId);
+    // Get students FOR THIS SECTION ONLY and scores
+    $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
     $scores = $this->getStudentScores($class->class_code, $columns, $quarterId);
     $quizScores = $this->getQuizScores($columns, $students, $quarterId);
 
@@ -904,31 +947,37 @@ private function populateGradeSheet($spreadsheet, $sheetName, $classId, $class, 
 }
 
 
+
 private function populateComponentColumns($sheet, $columns, $startCol, $row, $maxCols)
 {
-    $colIndex = 0;
     foreach ($columns as $column) {
-        if ($colIndex >= $maxCols) break;
+        // Extract the column NUMBER from the column name
+        preg_match('/(\d+)$/', $column->column_name, $matches);
+        $columnNumber = isset($matches[1]) ? (int)$matches[1] : 1;
         
-        // Use PhpSpreadsheet's built-in column index conversion
-        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(
-            \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + $colIndex
-        );
+        // Skip if column number exceeds max
+        if ($columnNumber > $maxCols) continue;
+        
+        // Calculate the ACTUAL Excel column based on the column number
+        $excelColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + ($columnNumber - 1);
+        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($excelColumnIndex);
         
         $sheet->setCellValue($currentCol . $row, $column->max_points);
-        $colIndex++;
     }
 }
 
 private function populateStudentScoresWithTotal($sheet, $row, $columns, $studentScores, $quizScores, $studentNumber, $startCol, &$total)
 {
-    $colIndex = 0;
     foreach ($columns as $column) {
-        if ($colIndex >= 10) break;
+        // Extract the column NUMBER from the column name (e.g., "WW5" -> 5, "PT3" -> 3)
+        preg_match('/(\d+)$/', $column->column_name, $matches);
+        $columnNumber = isset($matches[1]) ? (int)$matches[1] : 1;
         
-        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(
-            \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + $colIndex
-        );
+        // Calculate the ACTUAL Excel column based on the column number
+        // For WW: WW1=F(6), WW2=G(7), WW3=H(8), etc.
+        // For PT: PT1=S(19), PT2=T(20), PT3=U(21), etc.
+        $excelColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol) + ($columnNumber - 1);
+        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($excelColumnIndex);
         
         $score = null;
         
@@ -943,10 +992,9 @@ private function populateStudentScoresWithTotal($sheet, $row, $columns, $student
             $sheet->setCellValue($currentCol . $row, $score);
             $total += floatval($score);
         }
-        
-        $colIndex++;
     }
 }
+
 
 private function populateStudentScores($sheet, $row, $columns, $studentScores, $startCol)
 {
@@ -990,6 +1038,7 @@ private function populateQAScoreWithTotal($sheet, $row, $qaColumns, $studentScor
     }
     
     if ($totalScore > 0) {
+        // QA is always in column AF
         $sheet->setCellValue('AF' . $row, $totalScore);
         $total = $totalScore;
     }

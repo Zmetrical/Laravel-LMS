@@ -639,72 +639,86 @@ $(document).ready(function () {
         });
     }
 
-    $('#exportBtn').click(function () {
-        if (!currentQuarterId) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Quarter Required',
-                text: 'Please select a quarter first'
-            });
-            return;
-        }
-        if (!currentSectionId) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Section Required',
-                text: 'Please select a section first'
-            });
-            return;
-        }
-        if (currentViewType === 'final') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Export Not Available',
-                text: 'Export is only available for quarter view'
-            });
-            return;
-        }
-        $('#exportModal').modal('show');
-    });
+$('#exportBtn').click(function () {
+    if (!currentQuarterId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Quarter Required',
+            text: 'Please select a quarter first'
+        });
+        return;
+    }
+    if (!currentSectionId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Section Required',
+            text: 'Please select a section first'
+        });
+        return;
+    }
+    if (currentViewType === 'final') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Export Not Available',
+            text: 'Export is only available for quarter view'
+        });
+        return;
+    }
+    
+    // Update modal to show section info
+    const sectionName = $('#sectionFilter option:selected').text();
+    $('#exportQuarterName').html(`${$('#exportQuarterName').text()}<br><strong>Section:</strong> ${sectionName}`);
+    
+    $('#exportModal').modal('show');
+});
 
-    $('#exportForm').submit(function (e) {
-        e.preventDefault();
+$('#exportForm').submit(function (e) {
+    e.preventDefault();
 
-        const btn = $('#exportForm button[type="submit"]');
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
+    const btn = $('#exportForm button[type="submit"]');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
 
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = API_ROUTES.exportGradebook;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = API_ROUTES.exportGradebook;
 
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = $('meta[name="csrf-token"]').attr('content');
-        form.appendChild(csrfInput);
+    // CSRF Token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = $('meta[name="csrf-token"]').attr('content');
+    form.appendChild(csrfInput);
 
-        const quarterInput = document.createElement('input');
-        quarterInput.type = 'hidden';
-        quarterInput.name = 'quarter_id';
-        quarterInput.value = currentQuarterId;
-        form.appendChild(quarterInput);
+    // Quarter ID
+    const quarterInput = document.createElement('input');
+    quarterInput.type = 'hidden';
+    quarterInput.name = 'quarter_id';
+    quarterInput.value = currentQuarterId;
+    form.appendChild(quarterInput);
 
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
+    // Section ID - ADDED
+    const sectionInput = document.createElement('input');
+    sectionInput.type = 'hidden';
+    sectionInput.name = 'section_id';
+    sectionInput.value = currentSectionId;
+    form.appendChild(sectionInput);
 
-        setTimeout(function () {
-            btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
-            $('#exportModal').modal('hide');
-            Swal.fire({
-                icon: 'success',
-                title: 'Export Started',
-                text: 'Your download should begin shortly',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
-        }, 1000);
-    });
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    setTimeout(function () {
+        btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
+        $('#exportModal').modal('hide');
+        Swal.fire({
+            icon: 'success',
+            title: 'Export Started',
+            text: 'Your download should begin shortly',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+    }, 1000);
+});
 });
