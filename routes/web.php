@@ -357,7 +357,13 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
                 ->name('quizzes');
             Route::post('/class/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
                 ->name('export');
+            // In teacher gradebook routes group
+            Route::post('/{classId}/import', [GradeBook_Management::class, 'importGrades'])
+                ->name('import');
 
+            // In teacher gradebook routes group
+        Route::post('/{classId}/column/{columnId}/import', [GradeBook_Management::class, 'importColumnGrades'])
+            ->name('column.import');
                         // Final grades submission
             Route::post('/{classId}/submit-final-grades', [
                 GradeBook_Management::class, 

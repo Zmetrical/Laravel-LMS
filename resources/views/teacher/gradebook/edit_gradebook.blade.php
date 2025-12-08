@@ -228,8 +228,11 @@
                 </div>
 
                 <div class="col-md-6 text-right">
+                    <button class="btn btn-success btn-sm" id="importBtn">
+                        <i class="fas fa-file-import"></i> Import Scores
+                    </button>
                     <button class="btn btn-outline-secondary btn-sm" id="viewBtn">
-                         Back to View
+                        Back to View
                     </button>
                 </div>
             </div>
@@ -320,41 +323,88 @@
             </div>
         </div>
     </div>
+<!-- Enable Column Modal -->
+<div class="modal fade" id="enableColumnModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-toggle-on"></i> Enable Column: <span id="enableColumnName"></span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="enableColumnForm">
+                <input type="hidden" id="enableColumnId">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Maximum Points <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="enableMaxPoints" required min="1" step="1">
+                    </div>
 
-    <!-- Enable Column Modal -->
-    <div class="modal fade" id="enableColumnModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary">
-                    <h5 class="modal-title text-white"><i class="fas fa-toggle-on"></i> Enable Column: <span id="enableColumnName"></span></h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
-                        <span>&times;</span>
+                    <div class="form-group">
+                        <label>Grade Source <span class="text-danger">*</span></label>
+                        <select class="form-control" id="enableGradeSource" required>
+                            <option value="">Select Grade Source</option>
+                            <option value="manual">Manual Entry (No automatic grades)</option>
+                            <option value="online">Online Quiz Grades</option>
+                            <option value="import">Import from File</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Choose how grades will be populated for this column
+                        </small>
+                    </div>
+
+                    <!-- Online Quiz Option -->
+                    <div class="form-group" id="enableOnlineQuizGroup" style="display: none;">
+                        <label>Select Online Quiz <span class="text-danger">*</span></label>
+                        <select class="form-control" id="enableQuizId">
+                            <option value="">Select Quiz</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Quiz scores will be automatically imported and adjusted to match the max points
+                        </small>
+                    </div>
+
+                    <!-- Import File Option -->
+                    <div id="enableImportGroup" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Import Instructions:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Upload an Excel file with the same format as exported gradebooks</li>
+                                <li>The system will read from the correct quarter sheet (1ST or 2ND)</li>
+                                <li>Student numbers must match enrolled students</li>
+                                <li>Scores will be imported only for the selected section</li>
+                            </ul>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Excel File <span class="text-danger">*</span></label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="enableImportFile" 
+                                       accept=".xlsx,.xls">
+                                <label class="custom-file-label" for="enableImportFile">Choose file...</label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Maximum file size: 5MB. Accepted formats: .xlsx, .xls
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Enable Column
                     </button>
                 </div>
-                <form id="enableColumnForm">
-                    <input type="hidden" id="enableColumnId">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Maximum Points <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="enableMaxPoints" required min="1" step="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Link to Online Quiz </label>
-                            <select class="form-control" id="enableQuizId">
-                                <option value="">Manual Entry</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-check"></i> Enable Column
-                        </button>
-                    </div>
-                </form>
-            </div>
+            </form>
         </div>
     </div>
+</div>
 
     <!-- Edit Column Modal -->
     <div class="modal fade" id="editColumnModal" tabindex="-1">
@@ -394,6 +444,63 @@
             </div>
         </div>
     </div>
+
+    <!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-file-import"></i> Import Scores
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="importForm" enctype="multipart/form-data">
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label>Excel File <span class="text-danger">*</span></label>
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="importFile" 
+                                   accept=".xlsx,.xls" required>
+                            <label class="custom-file-label" for="importFile">Choose file...</label>
+                        </div>
+                        <small class="form-text text-muted">
+                            Maximum file size: 5MB. Accepted formats: .xlsx, .xls
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Component Type <span class="text-danger">*</span></label>
+                        <select class="form-control" id="importComponentType" required>
+                            <option value="">Select Component</option>
+                            <option value="WW">Written Work (WW)</option>
+                            <option value="PT">Performance Task (PT)</option>
+                            <option value="QA">Quarterly Assessment (QA)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="importColumnGroup" style="display: none;">
+                        <label>Column Number <span class="text-danger">*</span></label>
+                        <select class="form-control" id="importColumnNumber" required>
+                            <option value="">Select Column</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -411,7 +518,11 @@
             toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
             updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
-            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}"
+            getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
+            import: "{{ route('teacher.gradebook.import', ['classId' => $classId]) }}", // Add this line
+                importColumn: "{{ route('teacher.gradebook.column.import', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}" // Add this
+
+
         };
     </script>
     

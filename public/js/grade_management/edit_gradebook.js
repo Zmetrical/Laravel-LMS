@@ -497,117 +497,302 @@ $(document).ready(function () {
         return false;
     });
 
-    function openEnableColumnModal(column) {
-        $('#enableColumnId').val(column.id);
-        $('#enableColumnName').text(column.column_name);
-        $('#enableMaxPoints').val(column.max_points);
+function openEnableColumnModal(column) {
+    $('#enableColumnId').val(column.id);
+    $('#enableColumnName').text(column.column_name);
+    $('#enableMaxPoints').val(column.max_points);
+    
+    // Reset form
+    $('#enableGradeSource').val('');
+    $('#enableOnlineQuizGroup').hide();
+    $('#enableImportGroup').hide();
+    $('#enableQuizId').html('<option value="">Select Quiz</option>');
+    $('.custom-file-label[for="enableImportFile"]').text('Choose file...');
+    $('#enableImportFile').val('');
+    
+    $('#enableColumnModal').modal('show');
+}
 
-        loadQuizzesForEnable(column.quiz_id);
-        $('#enableColumnModal').modal('show');
+// File input change handler for enable modal - REPLACE existing handler
+$('#enableImportFile').on('change', function() {
+    const fileName = $(this).val().split('\\').pop();
+    const label = $(this).siblings('.custom-file-label');
+    if (fileName) {
+        label.text(fileName);
+    } else {
+        label.text('Choose file...');
+    }
+});
+// Grade source change handler
+$('#enableGradeSource').change(function() {
+    const source = $(this).val();
+    
+    $('#enableOnlineQuizGroup').hide();
+    $('#enableImportGroup').hide();
+    
+    if (source === 'online') {
+        loadQuizzesForEnable(null);
+        $('#enableOnlineQuizGroup').show();
+    } else if (source === 'import') {
+        $('#enableImportGroup').show();
+    }
+});
+
+
+function loadQuizzesForEnable(currentQuizId) {
+    if (!currentQuarterId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select a quarter first'
+        });
+        $('#enableQuizId').html('<option value="">Select Quiz</option>');
+        return;
     }
 
-    function loadQuizzesForEnable(currentQuizId) {
-        if (!currentQuarterId) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Please select a quarter first'
-            });
-            $('#enableQuizId').html('<option value="">Manual Entry</option>');
-            return;
-        }
+    $('#enableQuizId').html('<option value="">Loading quizzes...</option>');
 
-        $('#enableQuizId').html('<option value="">Loading quizzes...</option>');
+    $.ajax({
+        url: API_ROUTES.getQuizzes,
+        type: 'GET',
+        data: { quarter_id: currentQuarterId },
+        success: function (response) {
+            let options = '<option value="">Select Quiz</option>';
 
-        $.ajax({
-            url: API_ROUTES.getQuizzes,
-            type: 'GET',
-            data: { quarter_id: currentQuarterId },
-            success: function (response) {
-                let options = '<option value="">Manual Entry (No Quiz Link)</option>';
-
-                if (response.success) {
-                    if (response.data && response.data.length > 0) {
-                        response.data.forEach(quiz => {
-                            const selected = quiz.id == currentQuizId ? 'selected' : '';
-                            const points = quiz.total_points || 0;
-                            options += `<option value="${quiz.id}" ${selected} data-points="${points}">
-                                ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
-                            </option>`;
-                        });
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Quizzes Found',
-                            text: `Found ${response.data.length} available quiz(zes)`,
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'No Quizzes',
-                            text: response.message || 'No quizzes available for this quarter',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    }
+            if (response.success) {
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(quiz => {
+                        const selected = quiz.id == currentQuizId ? 'selected' : '';
+                        const points = quiz.total_points || 0;
+                        options += `<option value="${quiz.id}" ${selected} data-points="${points}">
+                            ${escapeHtml(quiz.lesson_title)} - ${escapeHtml(quiz.title)} (${points} pts)
+                        </option>`;
+                    });
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Quizzes Available',
+                        text: `Found ${response.data.length} available quiz(zes)`,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
                 } else {
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message || 'Failed to load quizzes'
+                        icon: 'warning',
+                        title: 'No Quizzes',
+                        text: response.message || 'No quizzes available for this quarter',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
                     });
                 }
-
-                $('#enableQuizId').html(options);
-            },
-            error: function (xhr) {
-                const errorMsg = xhr.responseJSON?.message || 'Failed to load available quizzes';
+            } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: errorMsg
-                });
-                $('#enableQuizId').html('<option value="">Manual Entry (No Quiz Link)</option>');
-            }
-        });
-    }
-
-    $('#enableQuizId').change(function () {
-        const selected = $(this).find('option:selected');
-        const quizId = selected.val();
-
-        if (quizId) {
-            const points = selected.data('points');
-            if (points && points > 0) {
-                $('#enableMaxPoints').val(points);
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Max Points Updated',
-                    text: `Max points set to ${points} from quiz`,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
+                    text: response.message || 'Failed to load quizzes'
                 });
             }
+
+            $('#enableQuizId').html(options);
+        },
+        error: function (xhr) {
+            const errorMsg = xhr.responseJSON?.message || 'Failed to load available quizzes';
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMsg
+            });
+            $('#enableQuizId').html('<option value="">Select Quiz</option>');
         }
     });
+}
 
-    $('#enableColumnForm').submit(function (e) {
-        e.preventDefault();
 
-        const columnId = $('#enableColumnId').val();
-        const maxPoints = parseInt($('#enableMaxPoints').val());
-        const quizId = $('#enableQuizId').val();
+// Quiz selection change handler
+$('#enableQuizId').change(function () {
+    const selected = $(this).find('option:selected');
+    const quizId = selected.val();
 
-        toggleColumnStatus(columnId, true, maxPoints, quizId);
+    if (quizId) {
+        const points = selected.data('points');
+        if (points && points > 0) {
+            $('#enableMaxPoints').val(points);
+            Swal.fire({
+                icon: 'info',
+                title: 'Max Points Updated',
+                text: `Max points set to ${points} from quiz`,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+    }
+});
+
+    // Enable column form submit - REPLACE existing handler
+$('#enableColumnForm').submit(function (e) {
+    e.preventDefault();
+
+    const columnId = $('#enableColumnId').val();
+    const maxPoints = parseInt($('#enableMaxPoints').val());
+    const gradeSource = $('#enableGradeSource').val();
+    const quizId = $('#enableQuizId').val();
+    const importFile = $('#enableImportFile')[0].files[0];
+
+    // Validation
+    if (!gradeSource) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Grade Source Required',
+            text: 'Please select a grade source'
+        });
+        return;
+    }
+
+    if (gradeSource === 'online' && !quizId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Quiz Required',
+            text: 'Please select an online quiz'
+        });
+        return;
+    }
+
+    if (gradeSource === 'import' && !importFile) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'File Required',
+            text: 'Please select a file to import'
+        });
+        return;
+    }
+
+    if (!currentSectionId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Section Required',
+            text: 'Please select a section first'
+        });
+        return;
+    }
+
+    const btn = $(this).find('button[type="submit"]');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+    // Step 1: Enable the column
+    const enableData = {
+        is_active: 1,
+        max_points: maxPoints,
+        quiz_id: gradeSource === 'online' ? quizId : null
+    };
+
+    $.ajax({
+        url: API_ROUTES.toggleColumn.replace('__COLUMN_ID__', columnId),
+        type: 'POST',
+        data: enableData,
+        success: function (response) {
+            if (response.success) {
+                // Step 2: If import selected, import the file
+                if (gradeSource === 'import') {
+                    importColumnFile(columnId, importFile, btn);
+                } else {
+                    // No import needed, just show success and reload
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'Column enabled successfully',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    $('#enableColumnModal').modal('hide');
+                    destroyAllGrids();
+                    loadGradebook(currentQuarterId);
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to enable column'
+                });
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
+            }
+        },
+        error: function (xhr) {
+            const errorMsg = xhr.responseJSON?.message || 'Failed to enable column';
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMsg
+            });
+            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
+        }
     });
+});
+// Import file for enabled column
+function importColumnFile(columnId, file, btn) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('section_id', currentSectionId);
 
+    $.ajax({
+        url: API_ROUTES.importColumn.replace('__COLUMN_ID__', columnId),
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                let message = `Column enabled and ${response.data.imported} scores imported`;
+                
+                if (response.data.skipped > 0) {
+                    message += `, ${response.data.skipped} skipped`;
+                }
+
+                let icon = 'success';
+                if (response.data.errors && response.data.errors.length > 0) {
+                    icon = 'warning';
+                    message += '\n\nWarnings:\n' + response.data.errors.slice(0, 3).join('\n');
+                    if (response.data.errors.length > 3) {
+                        message += `\n... and ${response.data.errors.length - 3} more`;
+                    }
+                }
+
+                Swal.fire({
+                    icon: icon,
+                    title: 'Import Completed',
+                    text: message,
+                    confirmButtonText: 'OK'
+                });
+
+                $('#enableColumnModal').modal('hide');
+                destroyAllGrids();
+                loadGradebook(currentQuarterId);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Import Failed',
+                    text: response.message || 'Failed to import scores'
+                });
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
+            }
+        },
+        error: function(xhr) {
+            const errorMsg = xhr.responseJSON?.message || 'Failed to import scores';
+            Swal.fire({
+                icon: 'error',
+                title: 'Import Failed',
+                text: errorMsg
+            });
+            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Enable Column');
+        }
+    });
+}
     function toggleColumnStatus(columnId, isActive, maxPoints = null, quizId = null) {
         const data = {
             is_active: isActive ? 1 : 0
@@ -873,7 +1058,137 @@ $(document).ready(function () {
             }
         });
     });
+// Import button click
+$('#importBtn').click(function() {
+    if (!currentQuarterId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Quarter Required',
+            text: 'Please select a quarter first',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+        return;
+    }
 
+    if (!currentSectionId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Section Required',
+            text: 'Please select a section first',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+        return;
+    }
+
+    $('#importForm')[0].reset();
+    $('#importColumnGroup').hide();
+    $('.custom-file-label').text('Choose file...');
+    $('#importModal').modal('show');
+});
+
+// Component type change
+$('#importComponentType').change(function() {
+    const componentType = $(this).val();
+    const columnSelect = $('#importColumnNumber');
+    
+    if (!componentType) {
+        $('#importColumnGroup').hide();
+        return;
+    }
+
+    columnSelect.empty().append('<option value="">Select Column</option>');
+    
+    if (componentType === 'WW') {
+        for (let i = 1; i <= MAX_WW_COLUMNS; i++) {
+            columnSelect.append(`<option value="${i}">WW${i}</option>`);
+        }
+        $('#importColumnGroup').show();
+    } else if (componentType === 'PT') {
+        for (let i = 1; i <= MAX_PT_COLUMNS; i++) {
+            columnSelect.append(`<option value="${i}">PT${i}</option>`);
+        }
+        $('#importColumnGroup').show();
+    } else if (componentType === 'QA') {
+        columnSelect.append('<option value="1">QA</option>');
+        $('#importColumnGroup').show();
+        columnSelect.val('1');
+    }
+});
+
+// File input change
+$('#importFile').change(function() {
+    const fileName = $(this).val().split('\\').pop();
+    $(this).next('.custom-file-label').text(fileName);
+});
+
+// Import form submit
+$('#importForm').submit(function(e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append('file', $('#importFile')[0].files[0]);
+    formData.append('quarter_id', currentQuarterId);
+    formData.append('component_type', $('#importComponentType').val());
+    formData.append('column_number', $('#importColumnNumber').val());
+    formData.append('section_id', currentSectionId);
+
+    const btn = $(this).find('button[type="submit"]');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
+
+    $.ajax({
+        url: API_ROUTES.import,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                let message = response.message;
+                if (response.data.errors && response.data.errors.length > 0) {
+                    message += '\n\nWarnings:\n' + response.data.errors.slice(0, 5).join('\n');
+                    if (response.data.errors.length > 5) {
+                        message += `\n... and ${response.data.errors.length - 5} more`;
+                    }
+                }
+
+                Swal.fire({
+                    icon: response.data.errors.length > 0 ? 'warning' : 'success',
+                    title: 'Import Completed',
+                    text: message,
+                    confirmButtonText: 'OK'
+                });
+
+                $('#importModal').modal('hide');
+                
+                // Destroy grids and reload
+                destroyAllGrids();
+                loadGradebook(currentQuarterId);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Import Failed',
+                    text: response.message
+                });
+                btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import');
+            }
+        },
+        error: function(xhr) {
+            const errorMsg = xhr.responseJSON?.message || 'Failed to import scores';
+            Swal.fire({
+                icon: 'error',
+                title: 'Import Failed',
+                text: errorMsg
+            });
+            btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import');
+        }
+    });
+});
     function escapeHtml(text) {
         if (!text) return '';
         const map = {
