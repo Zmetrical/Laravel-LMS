@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Helpers\GradeTransmutation;
 
 class StudentController extends Controller
 {
@@ -302,7 +303,7 @@ private function calculateQuarterGrade($studentNumber, $classCode, $quarterId, $
     // For detailed grade report: just round the grade, no transmutation
     $transmutedGrade = null;
     if ($initialGrade !== null) {
-        $transmutedGrade = round($initialGrade);
+        $transmutedGrade = GradeTransmutation::transmute($initialGrade);
     }
     
     return [
@@ -317,7 +318,7 @@ private function calculateQuarterGrade($studentNumber, $classCode, $quarterId, $
 
 /**
  * Calculate component score (WW, PT, or QA)
- * Only counts columns where student has a score
+ * FIXED: Now matches Grade List logic - always counts all columns
  */
 private function calculateComponentScore($studentNumber, $columns)
 {
@@ -334,10 +335,12 @@ private function calculateComponentScore($studentNumber, $columns)
             ->where('student_number', $studentNumber)
             ->value('score');
         
-        // Only count columns where student has a score (including 0)
+        // CHANGED: Always add max_points (even if no score)
+        $totalMaxPoints += floatval($column->max_points);
+        
+        // Only add to score if student has a score (including 0)
         if ($score !== null) {
             $totalScore += floatval($score);
-            $totalMaxPoints += floatval($column->max_points);
         }
     }
     
