@@ -536,69 +536,31 @@ class Year_Management extends MainController
         }
     }
 
-    public function getEnrollmentHistory($semesterId, $classCode)
-    {
-        try {
-            $class = DB::table('classes')
-                ->where('class_code', $classCode)
-                ->first();
+public function getEnrollmentHistory($semesterId, $classCode)
+{
+    try {
+        $class = DB::table('classes')
+            ->where('class_code', $classCode)
+            ->first();
 
-            if (!$class) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Class not found'
-                ], 404);
-            }
+        if (!$class) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Class not found'
+            ], 404);
+        }
 
-            $sectionsWithClass = DB::table('section_class_matrix as secm')
-                ->where('secm.class_id', $class->id)
-                ->where('secm.semester_id', $semesterId)
-                ->pluck('secm.section_id')
-                ->toArray();
+        // Get sections that have this class
+        $sectionsWithClass = DB::table('section_class_matrix as secm')
+            ->where('secm.class_id', $class->id)
+            ->where('secm.semester_id', $semesterId)
+            ->pluck('secm.section_id')
+            ->toArray();
 
-            $sectionStudents = collect();
-            if (!empty($sectionsWithClass)) {
-                $sectionStudents = DB::table('students as s')
-                    ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
-                    ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
-                    ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
-                    ->leftJoin('grades_final as gf', function ($join) use ($classCode, $semesterId) {
-                        $join->on(
-                            DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
-                            '=',
-                            DB::raw('gf.student_number COLLATE utf8mb4_general_ci')
-                        )
-                        ->where('gf.class_code', $classCode)
-                        ->where('gf.semester_id', $semesterId);
-                    })
-                    ->whereIn('s.section_id', $sectionsWithClass)
-                    ->select(
-                        's.student_number',
-                        's.first_name',
-                        's.middle_name',
-                        's.last_name',
-                        's.student_type',
-                        'sec.code as section_code',
-                        'sec.name as section_name',
-                        'str.code as strand_code',
-                        'lvl.name as level_name',
-                        DB::raw("'enrolled' as enrollment_status"),
-                        'gf.final_grade',
-                        'gf.remarks',
-                        'gf.is_locked',
-                        DB::raw("'Section' as enrollment_source")
-                    )
-                    ->get();
-            }
-
-            $individualStudents = DB::table('student_class_matrix as scm')
-                ->join('students as s', function ($join) {
-                    $join->on(
-                        DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
-                        '=',
-                        DB::raw('s.student_number COLLATE utf8mb4_general_ci')
-                    );
-                })
+        // Get students from sections (regular students)
+        $sectionStudents = collect();
+        if (!empty($sectionsWithClass)) {
+            $sectionStudents = DB::table('students as s')
                 ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
                 ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
                 ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
@@ -611,8 +573,7 @@ class Year_Management extends MainController
                     ->where('gf.class_code', $classCode)
                     ->where('gf.semester_id', $semesterId);
                 })
-                ->where('scm.semester_id', $semesterId)
-                ->where('scm.class_code', $classCode)
+                ->whereIn('s.section_id', $sectionsWithClass)
                 ->select(
                     's.student_number',
                     's.first_name',
@@ -623,56 +584,140 @@ class Year_Management extends MainController
                     'sec.name as section_name',
                     'str.code as strand_code',
                     'lvl.name as level_name',
-                    'scm.enrollment_status',
+                    DB::raw("'enrolled' as enrollment_status"),
                     'gf.final_grade',
                     'gf.remarks',
-                    'gf.is_locked',
-                    DB::raw("'Individual' as enrollment_source")
+                    DB::raw("'Section' as enrollment_source")
                 )
                 ->get();
+        }
 
-            $allStudents = $individualStudents->concat($sectionStudents)
-                ->unique('student_number')
-                ->values();
+        // Get individually enrolled students (irregular students)
+        $individualStudents = DB::table('student_class_matrix as scm')
+            ->join('students as s', function ($join) {
+                $join->on(
+                    DB::raw('scm.student_number COLLATE utf8mb4_general_ci'),
+                    '=',
+                    DB::raw('s.student_number COLLATE utf8mb4_general_ci')
+                );
+            })
+            ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+            ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+            ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+            ->leftJoin('grades_final as gf', function ($join) use ($classCode, $semesterId) {
+                $join->on(
+                    DB::raw('s.student_number COLLATE utf8mb4_general_ci'),
+                    '=',
+                    DB::raw('gf.student_number COLLATE utf8mb4_general_ci')
+                )
+                ->where('gf.class_code', $classCode)
+                ->where('gf.semester_id', $semesterId);
+            })
+            ->where('scm.semester_id', $semesterId)
+            ->where('scm.class_code', $classCode)
+            ->select(
+                's.student_number',
+                's.first_name',
+                's.middle_name',
+                's.last_name',
+                's.student_type',
+                'sec.code as section_code',
+                'sec.name as section_name',
+                'str.code as strand_code',
+                'lvl.name as level_name',
+                'scm.enrollment_status',
+                'gf.final_grade',
+                'gf.remarks',
+                DB::raw("'Individual' as enrollment_source")
+            )
+            ->get();
 
-            $allStudents = $allStudents->map(function ($student) {
-                $student->full_name = trim($student->first_name . ' ' . 
-                                          ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
-                                          $student->last_name);
-                return $student;
-            });
+        // Combine and remove duplicates
+        $allStudents = $individualStudents->concat($sectionStudents)
+            ->unique('student_number')
+            ->values();
 
-            $allStudents = $allStudents->sortBy([
-                ['last_name', 'asc'],
-                ['first_name', 'asc']
-            ])->values();
+        // Format student names
+        $allStudents = $allStudents->map(function ($student) {
+            $student->full_name = trim($student->first_name . ' ' . 
+                                      ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
+                                      $student->last_name);
+            return $student;
+        });
 
-            return response()->json([
-                'success' => true,
-                'data' => $allStudents,
-                'summary' => [
-                    'total_enrolled' => $allStudents->count(),
-                    'section_enrolled' => $allStudents->where('enrollment_source', 'Section')->count(),
-                    'individual_enrolled' => $allStudents->where('enrollment_source', 'Individual')->count(),
-                    'with_grades' => $allStudents->whereNotNull('final_grade')->count(),
-                    'locked_grades' => $allStudents->where('is_locked', 1)->count()
-                ]
-            ]);
-        } catch (Exception $e) {
-            \Log::error('Failed to load enrollment history', [
-                'semester_id' => $semesterId,
-                'class_code' => $classCode,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+        // Sort by last name, then first name
+        $allStudents = $allStudents->sortBy([
+            ['last_name', 'asc'],
+            ['first_name', 'asc']
+        ])->values();
 
+        return response()->json([
+            'success' => true,
+            'data' => $allStudents,
+            'summary' => [
+                'total_enrolled' => $allStudents->count(),
+                'section_enrolled' => $allStudents->where('enrollment_source', 'Section')->count(),
+                'individual_enrolled' => $allStudents->where('enrollment_source', 'Individual')->count(),
+                'with_grades' => $allStudents->whereNotNull('final_grade')->count(),
+                'passed' => $allStudents->where('remarks', 'PASSED')->count(),
+                'failed' => $allStudents->where('remarks', 'FAILED')->count()
+            ]
+        ]);
+    } catch (Exception $e) {
+        \Log::error('Failed to load enrollment history', [
+            'semester_id' => $semesterId,
+            'class_code' => $classCode,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load enrollment history: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getQuarters($semesterId)
+{
+    try {
+        $semester = DB::table('semesters')->where('id', $semesterId)->first();
+
+        if (!$semester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load enrollment history: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Semester not found.'
+            ], 404);
         }
-    }
 
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $semesterId)
+            ->orderBy('order_number', 'asc')
+            ->select('id', 'semester_id', 'name', 'code', 'order_number', 'created_at', 'updated_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $quarters,
+            'semester' => [
+                'id' => $semester->id,
+                'name' => $semester->name,
+                'code' => $semester->code
+            ]
+        ]);
+    } catch (Exception $e) {
+        \Log::error('Failed to get quarters', [
+            'semester_id' => $semesterId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load quarters: ' . $e->getMessage()
+        ], 500);
+    }
+}
     public function setActiveSemester($id)
     {
         try {
