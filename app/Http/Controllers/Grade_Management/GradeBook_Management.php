@@ -1185,34 +1185,33 @@ public function getFinalGradeData($classId, Request $request)
 
         $finalGrades = [];
 
-        foreach ($students as $student) {
-            // Get Q1 grade
-            $q1Data = $this->calculateQuarterGrade($student->student_number, $class, $q1->id);
-            
-            // Get Q2 grade
-            $q2Data = $this->calculateQuarterGrade($student->student_number, $class, $q2->id);
+    foreach ($students as $student) {
+        $q1Data = $this->calculateQuarterGrade($student->student_number, $class, $q1->id);
+        $q2Data = $this->calculateQuarterGrade($student->student_number, $class, $q2->id);
 
-            $q1Grade = $q1Data['quarterly_grade'];
-            $q2Grade = $q2Data['quarterly_grade'];
+        $q1Grade = $q1Data['quarterly_grade']; // Already transmuted
+        $q2Grade = $q2Data['quarterly_grade']; // Already transmuted
 
-            // Calculate semester final grade (average of Q1 and Q2)
-            $semesterGrade = ($q1Grade + $q2Grade) / 2;
-            $finalGrade = round($semesterGrade);
+        // Calculate semester average from transmuted grades
+        $semesterAverage = ($q1Grade + $q2Grade) / 2;
+        
+        // Transmute the semester average
+        $finalGrade = GradeTransmutation::transmute($semesterAverage);
+        
+        // Get remarks based on transmuted final grade
+        $remarks = GradeTransmutation::getRemarks($finalGrade);
 
-            // Determine remarks
-            $remarks = $finalGrade >= 75 ? 'PASSED' : 'FAILED';
-
-            $finalGrades[] = [
-                'student_number' => $student->student_number,
-                'full_name' => $student->full_name,
-                'gender' => $student->gender,
-                'q1_grade' => $q1Grade,
-                'q2_grade' => $q2Grade,
-                'semester_grade' => number_format($semesterGrade, 2),
-                'final_grade' => $finalGrade,
-                'remarks' => $remarks
-            ];
-        }
+        $finalGrades[] = [
+            'student_number' => $student->student_number,
+            'full_name' => $student->full_name,
+            'gender' => $student->gender,
+            'q1_grade' => $q1Grade,
+            'q2_grade' => $q2Grade,
+            'semester_average' => number_format($semesterAverage, 2),
+            'final_grade' => $finalGrade,
+            'remarks' => $remarks
+        ];
+    }
 
         return response()->json([
             'success' => true,
@@ -1325,8 +1324,11 @@ private function calculateQuarterGrade($studentNumber, $class, $quarterId)
     $qaWeighted = $qaPerc * ($class->qa_perce / 100);
 
     $initialGrade = $wwWeighted + $ptWeighted + $qaWeighted;
-    $quarterlyGrade = round($initialGrade);
+    $quarterlyGrade = $initialGrade;
 
+    $initialGrade = $wwWeighted + $ptWeighted + $qaWeighted;
+    $transmutedGrade = GradeTransmutation::transmute($initialGrade);
+    $quarterlyGrade = $transmutedGrade; 
     return [
         'ww_weighted' => $wwWeighted,
         'pt_weighted' => $ptWeighted,
@@ -1485,7 +1487,7 @@ private function generateFilename($class, $section, $semester)
                     continue;
                 }
 
-                // Insert or update final grade
+                // Store both semester average and transmuted final grade
                 DB::table('grades_final')->updateOrInsert(
                     [
                         'student_number' => $gradeData['student_number'],
@@ -1495,7 +1497,8 @@ private function generateFilename($class, $section, $semester)
                     [
                         'q1_grade' => $gradeData['q1_grade'],
                         'q2_grade' => $gradeData['q2_grade'],
-                        'final_grade' => $gradeData['final_grade'],
+                        'semester_average' => $gradeData['semester_average'], // Add this
+                        'final_grade' => $gradeData['final_grade'], // This is transmuted
                         'remarks' => $gradeData['remarks'],
                         'computed_by' => $teacher->id,
                         'computed_at' => now(),

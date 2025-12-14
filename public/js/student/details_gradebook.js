@@ -64,7 +64,7 @@ $(document).ready(function() {
         }
 
         if (currentQuarterFilter === 'final') {
-            displayComputedFinalGrade(quarters, final_grade);
+            displayFinalGrade(quarters, final_grade);
         } else {
             const quarterIndex = parseInt(currentQuarterFilter) - 1;
             if (quarters[quarterIndex]) {
@@ -85,7 +85,7 @@ $(document).ready(function() {
     }
 
     function createQuarterCard(quarterData, quarterNumber) {
-        const { quarter, grades, scores } = quarterData;
+        const { quarter, grades, calculated_grade, scores } = quarterData;
         const isLocked = grades && grades.is_locked;
 
         const wwScores = scores.filter(s => s.component_type === 'WW');
@@ -96,7 +96,18 @@ $(document).ready(function() {
         const ptCalc = calculateComponentStats(ptScores, CLASS_INFO.pt_perc);
         const qaCalc = calculateComponentStats(qaScores, CLASS_INFO.qa_perc);
 
-        const quarterGrade = (parseFloat(wwCalc.weightedScore) + parseFloat(ptCalc.weightedScore) + parseFloat(qaCalc.weightedScore)).toFixed(2);
+        // Use locked grade if available, otherwise use calculated grade
+        let displayGrade = '-';
+        let transmutedGrade = null;
+        
+        if (isLocked && grades) {
+            displayGrade = grades.initial_grade ? parseFloat(grades.initial_grade).toFixed(2) : '-';
+            transmutedGrade = grades.transmuted_grade ? parseFloat(grades.transmuted_grade).toFixed(2) : null;
+        } else if (calculated_grade) {
+            displayGrade = calculated_grade.initial_grade ? parseFloat(calculated_grade.initial_grade).toFixed(2) : '-';
+            transmutedGrade = calculated_grade.transmuted_grade ? parseFloat(calculated_grade.transmuted_grade).toFixed(2) : null;
+        }
+
         const quarterId = `q${quarterNumber}`;
 
         const card = `
@@ -110,8 +121,8 @@ $(document).ready(function() {
                             </small>
                         </div>
                         <div class="text-right">
-                            <div class="display-4 font-weight-bold mb-0">${quarterGrade > 0 ? quarterGrade : '-'}</div>
-                            <small class="text-muted">Initial Grade</small>
+                            <div class="display-4 font-weight-bold mb-0">${transmutedGrade || displayGrade}</div>
+                            <small class="text-muted">${transmutedGrade ? 'Transmuted Grade' : 'Initial Grade'}</small>
                         </div>
                     </div>
 
@@ -274,94 +285,74 @@ $(document).ready(function() {
         return rows;
     }
 
-    function displayComputedFinalGrade(quarters, storedFinalGrade) {
+    function displayFinalGrade(quarters, storedFinalGrade) {
         const container = $('#gradesContent');
         
-        let q1Grade = null;
-        let q2Grade = null;
-
-        if (quarters[0]) {
-            const q1Scores = quarters[0].scores;
-            const wwCalc = calculateComponentStats(q1Scores.filter(s => s.component_type === 'WW'), CLASS_INFO.ww_perc);
-            const ptCalc = calculateComponentStats(q1Scores.filter(s => s.component_type === 'PT'), CLASS_INFO.pt_perc);
-            const qaCalc = calculateComponentStats(q1Scores.filter(s => s.component_type === 'QA'), CLASS_INFO.qa_perc);
-            
-            q1Grade = (parseFloat(wwCalc.weightedScore) + parseFloat(ptCalc.weightedScore) + parseFloat(qaCalc.weightedScore)).toFixed(2);
+        // ONLY show final grade if it exists in grades_final table
+        if (!storedFinalGrade) {
+            container.html(`
+                <div class="card shadow-sm">
+                    <div class="card-body p-5 text-center">
+                        <i class="fas fa-hourglass-half fa-4x text-muted mb-4"></i>
+                        <h3 class="mb-3">Final Grade Not Yet Available</h3>
+                        <p class="text-muted">Please check back later or contact your teacher.</p>
+                    </div>
+                </div>
+            `);
+            return;
         }
 
-        if (quarters[1]) {
-            const q2Scores = quarters[1].scores;
-            const wwCalc = calculateComponentStats(q2Scores.filter(s => s.component_type === 'WW'), CLASS_INFO.ww_perc);
-            const ptCalc = calculateComponentStats(q2Scores.filter(s => s.component_type === 'PT'), CLASS_INFO.pt_perc);
-            const qaCalc = calculateComponentStats(q2Scores.filter(s => s.component_type === 'QA'), CLASS_INFO.qa_perc);
-            
-            q2Grade = (parseFloat(wwCalc.weightedScore) + parseFloat(ptCalc.weightedScore) + parseFloat(qaCalc.weightedScore)).toFixed(2);
+        // Display stored final grade from database
+        const finalGrade = parseFloat(storedFinalGrade.final_grade).toFixed(2);
+        const q1Grade = storedFinalGrade.q1_grade ? parseFloat(storedFinalGrade.q1_grade).toFixed(2) : null;
+        const q2Grade = storedFinalGrade.q2_grade ? parseFloat(storedFinalGrade.q2_grade).toFixed(2) : null;
+        const remarks = storedFinalGrade.remarks;
+        
+        let remarksClass = 'text-muted';
+        let remarksIcon = 'fa-minus-circle';
+        
+        if (remarks === 'PASSED') {
+            remarksClass = 'text-success';
+            remarksIcon = 'fa-check-circle';
+        } else if (remarks === 'FAILED') {
+            remarksClass = 'text-danger';
+            remarksIcon = 'fa-times-circle';
+        } else if (remarks === 'INC') {
+            remarksClass = 'text-warning';
+            remarksIcon = 'fa-exclamation-circle';
+        } else if (remarks === 'DRP' || remarks === 'W') {
+            remarksClass = 'text-secondary';
+            remarksIcon = 'fa-ban';
         }
-
-        let computedFinalGrade = null;
-        let computedRemarks = 'Incomplete';
-
-        if (q1Grade && q2Grade) {
-            computedFinalGrade = Math.round((parseFloat(q1Grade) + parseFloat(q2Grade)) / 2);
-            computedRemarks = computedFinalGrade >= 75 ? 'Passed' : 'Failed';
-        }
-
-        const isLocked = storedFinalGrade && storedFinalGrade.is_locked;
 
         const finalView = `
             <div class="card shadow-sm">
                 <div class="card-body p-5 text-center">
                     <h3 class="mb-4 text-muted">Final Grade</h3>
                     
-                    ${computedFinalGrade ? `
-                        <div class="display-1 font-weight-bold mb-3" style="font-size: 5rem;">${computedFinalGrade}</div>
-                        <h4 class="mb-4 ${computedRemarks === 'Passed' ? 'text-success' : 'text-danger'}">${computedRemarks}</h4>
-                        
-                        <div class="row justify-content-center mt-5 mb-4">
-                            <div class="col-md-3 col-6">
-                                <div class="p-3">
-                                    <small class="text-muted d-block mb-2">1st Quarter</small>
-                                    <div class="h3 mb-0">${q1Grade}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 col-6">
-                                <div class="p-3">
-                                    <small class="text-muted d-block mb-2">2nd Quarter</small>
-                                    <div class="h3 mb-0">${q2Grade}</div>
-                                </div>
+                    <div class="display-1 font-weight-bold mb-3" style="font-size: 5rem;">${finalGrade}</div>
+                    <h4 class="mb-4 ${remarksClass}">
+                        <i class="fas ${remarksIcon}"></i> ${remarks}
+                    </h4>
+                    
+                    <div class="row justify-content-center mt-5 mb-4">
+                        <div class="col-md-3 col-6">
+                            <div class="p-3">
+                                <small class="text-muted d-block mb-2">1st Quarter</small>
+                                <div class="h3 mb-0">${q1Grade || '-'}</div>
                             </div>
                         </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3">
+                                <small class="text-muted d-block mb-2">2nd Quarter</small>
+                                <div class="h3 mb-0">${q2Grade || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <small class="text-muted">
-                            ${isLocked ? '<i class="fas fa-lock"></i> Grade Locked' : '<i class="fas fa-unlock"></i> In Progress'}
-                        </small>
-                    ` : `
-                        <div class="py-5">
-                            <i class="fas fa-hourglass-half fa-3x text-muted mb-4"></i>
-                            <h5 class="text-muted mb-4">Final grade will be available when both quarters are complete</h5>
-                            
-                            <div class="row justify-content-center">
-                                <div class="col-md-4 col-6 mb-3">
-                                    <div class="p-3 border">
-                                        <small class="text-muted d-block mb-2">1st Quarter</small>
-                                        ${q1Grade ? 
-                                            `<div class="h4 mb-0 text-success"><i class="fas fa-check"></i> ${q1Grade}</div>` : 
-                                            `<div class="text-muted"><i class="fas fa-minus"></i> N/A</div>`
-                                        }
-                                    </div>
-                                </div>
-                                <div class="col-md-4 col-6 mb-3">
-                                    <div class="p-3 border">
-                                        <small class="text-muted d-block mb-2">2nd Quarter</small>
-                                        ${q2Grade ? 
-                                            `<div class="h4 mb-0 text-success"><i class="fas fa-check"></i> ${q2Grade}</div>` : 
-                                            `<div class="text-muted"><i class="fas fa-minus"></i> N/A</div>`
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `}
+                    <small class="text-muted">
+                        <i class="fas fa-lock"></i> Final grade is locked
+                    </small>
                 </div>
             </div>
         `;
