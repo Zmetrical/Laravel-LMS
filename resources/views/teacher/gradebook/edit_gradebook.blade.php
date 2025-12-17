@@ -369,16 +369,6 @@
 
                     <!-- Import File Option -->
                     <div id="enableImportGroup" style="display: none;">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Import Instructions:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>Upload an Excel file with the same format as exported gradebooks</li>
-                                <li>The system will read from the correct quarter sheet (1ST or 2ND)</li>
-                                <li>Student numbers must match enrolled students</li>
-                                <li>Scores will be imported only for the selected section</li>
-                            </ul>
-                        </div>
 
                         <div class="form-group">
                             <label>Excel File <span class="text-danger">*</span></label>

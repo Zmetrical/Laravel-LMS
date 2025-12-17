@@ -6,7 +6,7 @@ class GradeTransmutation
 {
     /**
      * Standard DepEd transmutation table
-     * Maps initial grade (percentage) to transmuted grade
+     * Maps initial grade to transmuted grade
      */
 private static $transmutationTable = [
     ['min' => 100.00, 'max' => 100.00, 'grade' => 100],
