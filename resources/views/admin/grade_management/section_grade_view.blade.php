@@ -14,22 +14,11 @@
             height: 100%;
             transition: width 0.3s;
         }
-        .status-complete { background: #28a745; }
-        .status-partial { background: #ffc107; }
-        .status-none { background: #dc3545; }
-        
-        .badge-passed { background-color: #28a745; color: white; }
-        .badge-failed { background-color: #dc3545; color: white; }
-        .badge-inc { background-color: #ffc107; color: #212529; }
-        .badge-drp, .badge-w { background-color: #6c757d; color: white; }
         
         .class-card {
             border-left: 4px solid #6c757d;
             transition: all 0.2s;
         }
-        .class-card.complete { border-left-color: #28a745; }
-        .class-card.partial { border-left-color: #ffc107; }
-        .class-card.none { border-left-color: #dc3545; }
         .class-card:hover {
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transform: translateY(-2px);
@@ -176,7 +165,6 @@
                             <table class="table table-striped table-hover mb-0">
                                 <thead style="position: sticky; top: 0; z-index: 1; background: white;">
                                     <tr>
-                                        <th width="5%">#</th>
                                         <th width="20%">Student Number</th>
                                         <th width="50%">Name</th>
                                         <th width="10%" class="text-center">Gender</th>
@@ -199,53 +187,6 @@
     </div>
 </div>
 
-<!-- Class Grades Modal -->
-<div class="modal fade" id="classGradesModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title">
-                    <i class="fas fa-chart-line"></i> <span id="modalClassName"></span> - Student Grades
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover mb-0" id="gradesTable">
-                        <thead>
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="12%">Student Number</th>
-                                <th width="25%">Student Name</th>
-                                <th width="8%" class="text-center">Gender</th>
-                                <th width="8%" class="text-center">Type</th>
-                                <th width="8%" class="text-center">Q1</th>
-                                <th width="8%" class="text-center">Q2</th>
-                                <th width="10%" class="text-center">Final Grade</th>
-                                <th width="10%" class="text-center">Remarks</th>
-                                <th width="16%">Computed By</th>
-                            </tr>
-                        </thead>
-                        <tbody id="gradesTableBody">
-                            <tr>
-                                <td colspan="10" class="text-center py-4">
-                                    <i class="fas fa-spinner fa-spin"></i> Loading grades...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -254,7 +195,6 @@
         const API_ROUTES = {
             getSections: "{{ route('admin.sections.grades-list') }}",
             getSectionDetails: "{{ route('admin.sections.grades-details', ['id' => ':id']) }}",
-            getClassGrades: "{{ route('admin.sections.class-grades', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}"
         };
     </script>
     
@@ -264,3 +204,10 @@
         @endforeach
     @endif
 @endsection
+
+
+
+
+
+
+

@@ -125,6 +125,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
             Route::get('/get_sections/filter', [User_Management::class, 'getSectionsForFilter'])->name('sections.filter');
             Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
+            
             Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
         });
 

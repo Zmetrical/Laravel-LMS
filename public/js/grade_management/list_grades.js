@@ -9,7 +9,37 @@ $(document).ready(function () {
         }
     });
 
+    // Initialize Select2     // Handle URL parameters for pre-filtering
+    const urlParams = new URLSearchParams(window.location.search);
+    const classParam = urlParams.get('class');
+    const sectionParam = urlParams.get('section');
+    const semesterParam = urlParams.get('semester');
+
     // Initialize Select2 for class and section filters
+    $('#classFilter').select2({
+        theme: 'bootstrap4',
+        placeholder: 'All Classes',
+        allowClear: true,
+        width: '100%'
+    });
+
+    $('#sectionFilter').select2({
+        theme: 'bootstrap4',
+        placeholder: 'All Sections',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Apply URL parameters after Select2 initialization
+    if (classParam) {
+        $('#classFilter').val(classParam).trigger('change');
+    }
+    if (sectionParam) {
+        $('#sectionFilter').val(sectionParam).trigger('change');
+    }
+    if (semesterParam) {
+        $('#semester').val(semesterParam).trigger('change');
+    }
     $('#classFilter').select2({
         theme: 'bootstrap4',
         placeholder: 'All Classes',

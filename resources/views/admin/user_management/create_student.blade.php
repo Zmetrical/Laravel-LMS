@@ -23,54 +23,60 @@
         @csrf
         <div class="row">
             <!-- Left Sidebar - Academic Filters -->
-            <div class="col-lg-3">
-                <div class="card card-primary card-outline sticky-top">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Academic Information</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label>Strand <span class="text-danger">*</span></label>
-                            <select class="form-control" id="strand" name="strand" required>
-                                <option value="" selected disabled>Select Strand</option>
-                                @foreach($strands as $strand)
-                                    <option value="{{ $strand->id }}">{{ $strand->code }} - {{ $strand->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+<div class="col-lg-3">
+    <div class="card card-primary card-outline sticky-top">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Academic Information</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label>Strand <span class="text-danger">*</span></label>
+                <select class="form-control" id="strand" name="strand_id" required>
+                    <option value="" selected disabled>Select Strand</option>
+                    @foreach($strands as $strand)
+                        <option value="{{ $strand->id }}">{{ $strand->code }} - {{ $strand->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-                        <div class="form-group">
-                            <label>Year Level <span class="text-danger">*</span></label>
-                            <select class="form-control" id="level" name="level" required>
-                                <option value="" selected disabled>Select Year Level</option>
-                                @foreach($levels as $level)
-                                    <option value="{{ $level->id }}">{{ $level->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+            <div class="form-group">
+                <label>Year Level <span class="text-danger">*</span></label>
+                <select class="form-control" id="level" name="level_id" required>
+                    <option value="" selected disabled>Select Year Level</option>
+                    @foreach($levels as $level)
+                        <option value="{{ $level->id }}">{{ $level->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-                        <div class="form-group">
-                            <label>Section <span class="text-danger">*</span></label>
-                            <select class="form-control" id="section" name="section" required>
-                                <option value="" selected disabled>Select Section</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <div class="d-flex flex-wrap">
-                                <button type="button" class="btn btn-primary mr-1 mb-2 flex-grow-1" id="importExcel">
-                                    <i class="fas fa-upload mr-1"></i> Import
-                                </button>
-
-                                <button type="button" class="btn btn-primary mr-1 mb-2 flex-grow-1" id="generateTemplate">
-                                    <i class="fas fa-download mr-1"></i> Download
-                                </button>
-                            </div>
-                            <input type="file" class="d-none" id="excelFile" accept=".xlsx,.xls">
-                        </div>
-
+            <!-- Section Capacity Cards -->
+            <div class="form-group">
+                <label>Sections <span class="text-danger">*</span></label>
+                <div id="sectionCapacityContainer">
+                    <div class="alert alert-primary">
+                         Select Strand and Level to view sections
                     </div>
                 </div>
+                <input type="hidden" id="selectedStrand" name="strand_id">
+                <input type="hidden" id="selectedLevel" name="level_id">
             </div>
+
+            <div class="form-group">
+                <div class="d-flex flex-wrap">
+                    <button type="button" class="btn btn-primary mr-1 mb-2 flex-grow-1" id="importExcel">
+                        <i class="fas fa-upload mr-1"></i> Import
+                    </button>
+
+                    <button type="button" class="btn btn-primary mr-1 mb-2 flex-grow-1" id="generateTemplate">
+                        <i class="fas fa-download mr-1"></i> Download
+                    </button>
+                </div>
+                <input type="file" class="d-none" id="excelFile" accept=".xlsx,.xls">
+            </div>
+
+        </div>
+    </div>
+</div>
 
             <!-- Main Content - Student Entry -->
             <div class="col-lg-9">

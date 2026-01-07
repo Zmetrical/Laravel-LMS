@@ -28,16 +28,15 @@ $(document).ready(function () {
             url: API_ROUTES.getSections,
             method: 'GET',
             success: function (response) {
-                console.log('Sections response:', response); // Debug log
+                console.log('Sections response:', response);
                 
                 if (response.success) {
-                    // Ensure sections is an array
                     sections = Array.isArray(response.sections) ? response.sections : [];
                     levels = Array.isArray(response.levels) ? response.levels : [];
                     strands = Array.isArray(response.strands) ? response.strands : [];
 
-                    console.log('Loaded sections:', sections.length); // Debug log
-                    console.log('Sections data:', sections); // Debug log
+                    console.log('Loaded sections:', sections.length);
+                    console.log('Sections data:', sections);
 
                     if (sections.length === 0) {
                         showError('#sectionsListContainer', 'No sections with enrolled classes found for current semester');
@@ -52,7 +51,7 @@ $(document).ready(function () {
                 }
             },
             error: function (xhr) {
-                console.error('AJAX Error:', xhr); // Debug log
+                console.error('AJAX Error:', xhr);
                 const errorMsg = xhr.responseJSON?.message || 'Failed to load sections';
                 showError('#sectionsListContainer', errorMsg);
                 Toast.fire({
@@ -67,13 +66,11 @@ $(document).ready(function () {
     // POPULATE FILTERS
     // ========================================================================
     function populateFilters() {
-        // Levels
         $('#levelFilter').html('<option value="">All Levels</option>');
         levels.forEach(level => {
             $('#levelFilter').append(`<option value="${level.id}">${level.name}</option>`);
         });
 
-        // Strands
         $('#strandFilter').html('<option value="">All Strands</option>');
         strands.forEach(strand => {
             $('#strandFilter').append(`<option value="${strand.id}">${strand.code}</option>`);
@@ -113,8 +110,7 @@ $(document).ready(function () {
         filtered.forEach(section => {
             const sectionDisplay = `${section.level_name} - ${section.strand_code || section.strand_name}`;
             const percentage = section.submission_percentage || 0;
-            const progressClass = percentage === 100 ? 'status-complete' : 
-                                  percentage > 0 ? 'status-partial' : 'status-none';
+            const progressClass = 'bg-primary';
             
             const item = `
                 <a href="#" class="list-group-item list-group-item-action section-item" 
@@ -178,7 +174,7 @@ $(document).ready(function () {
                 <i class="fas fa-spinner fa-spin"></i> Loading classes...
             </div>
         `);
-        showLoader('#studentsBody', 'Loading students...', 6);
+        showLoader('#studentsBody', 'Loading students...', 5);
         
         const url = API_ROUTES.getSectionDetails.replace(':id', sectionId);
 
@@ -192,12 +188,12 @@ $(document).ready(function () {
                     renderStudents(allStudents);
                 } else {
                     showError('#classesContainer', 'Failed to load classes');
-                    showError('#studentsBody', 'Failed to load students', 6);
+                    showError('#studentsBody', 'Failed to load students', 5);
                 }
             },
             error: function (xhr) {
                 showError('#classesContainer', 'Failed to load data');
-                showError('#studentsBody', 'Failed to load data', 6);
+                showError('#studentsBody', 'Failed to load data', 5);
                 Toast.fire({
                     icon: "error",
                     title: "Could not load section details"
@@ -226,30 +222,18 @@ $(document).ready(function () {
         }
 
         classes.forEach(cls => {
-            const percentage = cls.submission_percentage || 0;
-            const statusClass = cls.is_complete ? 'complete' : 
-                               percentage > 0 ? 'partial' : 'none';
-            const statusIcon = cls.is_complete ? 
-                '<i class="fas fa-check-circle text-success fa-2x"></i>' : 
-                percentage > 0 ? 
-                '<i class="fas fa-exclamation-circle text-warning fa-2x"></i>' : 
-                '<i class="fas fa-times-circle text-danger fa-2x"></i>';
             
             const statusText = cls.is_complete ? 
                 '<span class="badge badge-success">Complete</span>' :
-                percentage > 0 ?
-                '<span class="badge badge-warning">Partial</span>' :
-                '<span class="badge badge-danger">Not Submitted</span>';
+                '<span class="badge badge-danger">Not Complete</span>';
 
+            const borderClass = cls.is_complete ? 'border-success' : 'border-danger';
             const teachers = cls.teachers || '<span class="text-muted">No teacher assigned</span>';
             
             const card = `
-                <div class="card class-card ${statusClass} mb-2">
+                <div class="card class-card ${borderClass} mb-2">
                     <div class="card-body p-3">
                         <div class="row align-items-center">
-                            <div class="col-md-1 text-center">
-                                ${statusIcon}
-                            </div>
                             <div class="col-md-7">
                                 <h6 class="mb-0"><strong>${cls.class_name}</strong></h6>
                                 <small class="text-muted">
@@ -302,15 +286,13 @@ $(document).ready(function () {
             const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
             const typeColor = student.student_type === 'regular' ? 'primary' : 'secondary';
             const genderIcon = student.gender === 'Male' ? 'mars' : 'venus';
-            const genderColor = student.gender === 'Male' ? 'primary' : 'danger';
             
             const row = `
                 <tr>
-                    <td>${index + 1}</td>
                     <td>${student.student_number}</td>
                     <td>${fullName}</td>
                     <td class="text-center">
-                        <i class="fas fa-${genderIcon} text-${genderColor}"></i>
+                        <i class="fas fa-${genderIcon} text-secondary"></i>
                         ${student.gender || '-'}
                     </td>
                     <td class="text-center">

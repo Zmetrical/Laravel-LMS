@@ -16,7 +16,10 @@
             --trinity-blue: #2a347e;
             --trinity-yellow: #ebae00;
         }
+        .alert-primary{
+            background-color: var(--trinity-blue) !important;
 
+        }
         /* Use the variable */
         .bg-primary,
         .btn-primary{

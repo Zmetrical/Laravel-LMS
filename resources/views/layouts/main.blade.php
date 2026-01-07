@@ -3,6 +3,8 @@
 @section('head')
     @yield('styles')
     <style>
+
+
         .sidebar-bottom {
             position: absolute;
             bottom: 0;
@@ -168,7 +170,7 @@
                                 <a href="#" class="nav-link {{ Request::is('enrollment_management/*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-user-graduate"></i>
                                     <p>
-                                        Enrollment
+                                        Classes
                                     </p>
                                      <i class="right fas fa-angle-left"></i>
                                 </a>
@@ -182,13 +184,13 @@
                                         <li class="nav-item">
                                             <a href="{{ route('admin.enrollment.sections') }}" class="nav-link {{ Request::routeIs('admin.enrollment.sections') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Enroll Regular</p>
+                                                <p>Assign Regular</p>
                                             </a>
                                         </li>
                                         <li class="nav-item">
                                             <a href="{{ route('admin.student_irreg_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Enroll Irregular</p>
+                                                <p>Assign Irregular</p>
                                             </a>
                                         </li>
                                     </ul>
@@ -204,7 +206,7 @@
                                 </a>
                                     <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.grades.list') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                            <a href="{{ route('admin.grades.list') }}" class="nav-link {{ Request::routeIs('admin.grades.list') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                                 <p>Grades</p>
                                             </a>
@@ -212,7 +214,7 @@
                                     </ul>
                                     <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.grades.section-view') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                            <a href="{{ route('admin.grades.section-view') }}" class="nav-link {{ Request::routeIs('admin.grades.section-view') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                                 <p>Section's Grade</p>
                                             </a>

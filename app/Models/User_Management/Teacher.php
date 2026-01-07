@@ -5,7 +5,6 @@ namespace App\Models\User_Management;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-
 class Teacher extends Authenticatable
 {
     use Notifiable;
@@ -22,12 +21,14 @@ class Teacher extends Authenticatable
         'phone',
         'user',
         'password',
+        'passcode',  // Add this line
         'profile_image',
         'status',
     ];
 
     protected $hidden = [
         'password',
+        'passcode',  // Add this to hide passcode from JSON responses
         'remember_token',
     ];
 

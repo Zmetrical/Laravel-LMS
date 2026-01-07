@@ -566,4 +566,6 @@ class Grade_list extends MainController
         $percentage = ($attempt->score / $attempt->total_points) * 100;
         return round(($percentage / 100) * $maxPoints, 2);
     }
+
+    
 }

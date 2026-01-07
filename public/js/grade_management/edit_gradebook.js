@@ -523,6 +523,7 @@ $('#enableImportFile').on('change', function() {
         label.text('Choose file...');
     }
 });
+
 // Grade source change handler
 $('#enableGradeSource').change(function() {
     const source = $(this).val();

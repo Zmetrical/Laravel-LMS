@@ -275,78 +275,34 @@ class SectionGrade_Management extends MainController
         }
     }
 
-    /**
-     * Get student grades for a specific class in a section
-     */
-    public function getClassGrades($sectionId, $classId)
-    {
-        try {
-            // Get active semester
-            $activeSemester = DB::table('semesters')
-                ->where('status', 'active')
-                ->first();
-
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active semester found'
-                ], 404);
-            }
-
-            // Get class details
-            $class = DB::table('classes')->where('id', $classId)->first();
-            
-            if (!$class) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Class not found'
-                ], 404);
-            }
-
-            // Get all students in section with their grades
-            $grades = DB::table('students as s')
-                ->leftJoin('grades_final as gf', function($join) use ($class, $activeSemester) {
-                    $join->on('s.student_number', '=', 'gf.student_number')
-                         ->where('gf.class_code', '=', $class->class_code)
-                         ->where('gf.semester_id', '=', $activeSemester->id);
-                })
-                ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
-                ->where('s.section_id', $sectionId)
-                ->select(
-                    's.student_number',
-                    's.first_name',
-                    's.middle_name',
-                    's.last_name',
-                    's.gender',
-                    's.student_type',
-                    'gf.q1_grade',
-                    'gf.q2_grade',
-                    'gf.final_grade',
-                    'gf.remarks',
-                    'gf.computed_at',
-                    DB::raw('CONCAT(t.first_name, " ", t.last_name) as computed_by_name')
-                )
-                ->orderBy('s.last_name')
-                ->orderBy('s.first_name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'class' => $class,
-                'grades' => $grades
-            ]);
-
-        } catch (Exception $e) {
-            \Log::error('Failed to get class grades', [
-                'section_id' => $sectionId,
-                'class_id' => $classId,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load grades'
-            ], 500);
-        }
-    }
 }
+
+
+// -- For REGULAR students in a specific section and class
+// SELECT DISTINCT
+//     s.student_number,
+//     s.first_name,
+//     s.middle_name,
+//     s.last_name,
+//     c.class_code,
+//     c.class_name,
+//     sec.code AS section_code,
+//     sec.name AS section_name,
+//     sem.id AS semester_id,
+//     sem.name AS semester_name,
+//     'regular' AS student_type
+// FROM students s
+// INNER JOIN sections sec ON s.section_id = sec.id
+// INNER JOIN section_class_matrix scm ON sec.id = scm.section_id
+// INNER JOIN classes c ON scm.class_id = c.id
+// INNER JOIN semesters sem ON scm.semester_id = sem.id
+// LEFT JOIN grades_final gf ON s.student_number = gf.student_number 
+//     AND c.class_code = gf.class_code 
+//     AND sem.id = gf.semester_id
+// WHERE s.student_type = 'regular'
+//     AND gf.id IS NULL
+//     AND c.id = 3
+//     AND sec.id = 1
+//     AND sem.id = 1
+
+// UNION

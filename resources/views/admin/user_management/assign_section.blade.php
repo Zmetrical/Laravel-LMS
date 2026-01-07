@@ -101,7 +101,7 @@
                                     <option value="{{ $semester->id }}" 
                                         @if($semester->status === 'active') selected @endif>
                                         {{ $semester->year_code }} - {{ $semester->semester_name }}
-                                        @if($semester->status === 'active') ⭐ @endif
+
                                     </option>
                                 @endforeach
                             </select>
