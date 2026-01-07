@@ -205,56 +205,72 @@ $(document).ready(function () {
     // ========================================================================
     // RENDER CLASSES WITH GRADE STATUS
     // ========================================================================
-    function renderClasses(classes) {
-        const container = $('#classesContainer');
-        container.empty();
+function renderClasses(classes) {
+    const container = $('#classesContainer');
+    container.empty();
+    
+    $('#classesCount').text(`${classes.length} ${classes.length === 1 ? 'Class' : 'Classes'}`);
+
+    if (classes.length === 0) {
+        container.html(`
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-inbox fa-2x mb-2"></i>
+                <p class="mb-0">No classes enrolled</p>
+            </div>
+        `);
+        return;
+    }
+
+    classes.forEach(cls => {
+        const statusText = cls.is_complete ? 
+            '<span class="text-success">Complete</span>' :
+            '<span class="text-danger">Not Complete</span>';
+
+        const borderClass = cls.is_complete ? 'border-success' : 'border-danger';
+        const teachers = cls.teachers || '<span class="text-muted">No teacher assigned</span>';
         
-        $('#classesCount').text(`${classes.length} ${classes.length === 1 ? 'Class' : 'Classes'}`);
+        // Get current section info from the active section item
+        const activeSectionItem = $('.section-item.active');
+        const sectionCode = activeSectionItem.data('section-code') || '';
+        
+        // Build URL with filters
+        const gradeListUrl = `/admin/grades/list?class=${encodeURIComponent(cls.class_code)}&section=${encodeURIComponent(sectionCode)}&semester=${cls.semester_id || ''}`;
+        
+        // Only show eye icon if grades are complete
+        const viewButton = cls.is_complete ? 
+            `<a href="${gradeListUrl}" class="btn btn-sm btn-secondary" title="View Grades in Grade List">
+                <i class="fas fa-eye"></i>
+            </a>` : '';
+        
+        const card = `
+            <div class="card class-card ${borderClass} mb-2">
+                <div class="card-body p-3">
+                    <div class="row align-items-center">
 
-        if (classes.length === 0) {
-            container.html(`
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-inbox fa-2x mb-2"></i>
-                    <p class="mb-0">No classes enrolled</p>
-                </div>
-            `);
-            return;
-        }
+                        <div class="col-md-2 text-center">
+                            ${statusText}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-0"><strong>${cls.class_name}</strong></h6>
+                            <small class="text-muted">
+                                <i class="fas fa-chalkboard-teacher"></i> ${teachers}
+                            </small>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <small class="text-muted d-block">Submitted</small>
+                            <strong>${cls.submitted_count} / ${cls.total_students}</strong>
+                        </div>
 
-        classes.forEach(cls => {
-            
-            const statusText = cls.is_complete ? 
-                '<span class="badge badge-success">Complete</span>' :
-                '<span class="badge badge-danger">Not Complete</span>';
-
-            const borderClass = cls.is_complete ? 'border-success' : 'border-danger';
-            const teachers = cls.teachers || '<span class="text-muted">No teacher assigned</span>';
-            
-            const card = `
-                <div class="card class-card ${borderClass} mb-2">
-                    <div class="card-body p-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-7">
-                                <h6 class="mb-0"><strong>${cls.class_name}</strong></h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-chalkboard-teacher"></i> ${teachers}
-                                </small>
-                            </div>
-                            <div class="col-md-2 text-center">
-                                <small class="text-muted d-block">Submitted</small>
-                                <strong>${cls.submitted_count} / ${cls.total_students}</strong>
-                            </div>
-                            <div class="col-md-2 text-right">
-                                ${statusText}
-                            </div>
+                        <div class="col-md-2 text-right">
+                            ${viewButton}
                         </div>
                     </div>
                 </div>
-            `;
-            container.append(card);
-        });
-    }
-
+            </div>
+        `;
+        container.append(card);
+    });
+}
     // ========================================================================
     // RENDER STUDENTS
     // ========================================================================
@@ -284,21 +300,16 @@ $(document).ready(function () {
 
         students.forEach((student, index) => {
             const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
-            const typeColor = student.student_type === 'regular' ? 'primary' : 'secondary';
-            const genderIcon = student.gender === 'Male' ? 'mars' : 'venus';
             
             const row = `
                 <tr>
                     <td>${student.student_number}</td>
                     <td>${fullName}</td>
                     <td class="text-center">
-                        <i class="fas fa-${genderIcon} text-secondary"></i>
                         ${student.gender || '-'}
                     </td>
                     <td class="text-center">
-                        <span class="badge badge-${typeColor}">
                             ${student.student_type ? student.student_type.toUpperCase() : 'N/A'}
-                        </span>
                     </td>
                 </tr>
             `;

@@ -258,16 +258,12 @@ $(document).ready(function () {
         students.forEach((student, index) => {
             const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
             const typeColor = student.student_type === 'regular' ? 'primary' : 'secondary';
-            const genderIcon = student.gender === 'Male' ? 'mars' : 'venus';
-            const genderColor = student.gender === 'Male' ? 'primary' : 'danger';
             
             const row = `
                 <tr>
-                    <td>${index + 1}</td>
                     <td>${student.student_number}</td>
                     <td>${fullName}</td>
                     <td class="text-center">
-                        <i class="fas fa-${genderIcon} text-${genderColor}"></i>
                         ${student.gender || '-'}
                     </td>
                     <td>${student.email || '-'}</td>

@@ -40,20 +40,9 @@ $(document).ready(function () {
     if (semesterParam) {
         $('#semester').val(semesterParam).trigger('change');
     }
-    $('#classFilter').select2({
-        theme: 'bootstrap4',
-        placeholder: 'All Classes',
-        allowClear: true,
-        width: '100%'
-    });
 
-    $('#sectionFilter').select2({
-        theme: 'bootstrap4',
-        placeholder: 'All Sections',
-        allowClear: true,
-        width: '100%'
-    });
 
+    
     function updateGradesCount() {
         if (dataTable && dataTable.rows) {
             const count = dataTable.rows({ filter: 'applied' }).count();
@@ -94,6 +83,20 @@ $(document).ready(function () {
         }
     });
 
+    if (classParam || sectionParam || semesterParam) {
+    // Small delay to ensure DataTable is fully initialized
+    setTimeout(function() {
+        if (semesterParam) {
+            $('#semester').trigger('change');
+        }
+        if (classParam) {
+            $('#classFilter').trigger('change');
+        }
+        if (sectionParam) {
+            $('#sectionFilter').trigger('change');
+        }
+    }, 100);
+}
     const COL = {
         STUDENT_NO: 0,
         STUDENT_NAME: 1,

@@ -165,7 +165,6 @@
                                 <table class="table table-striped table-hover mb-0">
                                     <thead style="position: sticky; top: 0; z-index: 1; background: white;">
                                         <tr>
-                                            <th width="5%">#</th>
                                             <th width="15%">Student Number</th>
                                             <th width="30%">Name</th>
                                             <th width="10%" class="text-center">Gender</th>
