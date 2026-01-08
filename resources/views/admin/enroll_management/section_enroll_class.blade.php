@@ -7,6 +7,9 @@
         @endforeach
     @endif
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
@@ -202,22 +205,18 @@
             </div>
             <div class="modal-body">
                 <!-- Class Selection -->
-                <div class="form-group">
-                    <label><i class="fas fa-book"></i> Select Class to Add</label>
-                    <div class="input-group">
-                        <select class="form-control" id="availableClassesSelect">
-                            <option value="">Loading...</option>
-                        </select>
-                        <div class="input-group-append">
-                            <button class="btn btn-primary" type="button" id="addClassToListBtn" disabled>
-                                <i class="fas fa-plus"></i> Add to List
-                            </button>
-                        </div>
-                    </div>
-                    <small class="form-text text-muted">
-                        <i class="fas fa-info-circle"></i> You can add up to 10 classes at once
-                    </small>
-                </div>
+<div class="form-group">
+    <label><i class="fas fa-book"></i> Select Class to Add</label>
+    <select class="form-control" id="availableClassesSelect" style="width: 100%;">
+        <option value="">Search for class...</option>
+    </select>
+</div>
+
+<div class="form-group">
+    <button class="btn btn-primary btn-block" type="button" id="addClassToListBtn" disabled>
+        <i class="fas fa-plus"></i> Add to List
+    </button>
+</div>
 
                 <!-- Selected Classes List -->
                 <div class="card card-outline card-primary">
@@ -253,7 +252,7 @@
 
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
+<script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
     <script>
         const API_ROUTES = {
             getSections: "{{ route('admin.sections.list') }}",

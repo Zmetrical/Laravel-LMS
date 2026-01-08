@@ -72,48 +72,52 @@ $(document).ready(function() {
         });
     }
 
-    // Render available classes
-    function renderAvailableClasses() {
-        const container = $('#availableClassesContainer');
-        container.empty();
+// Render available classes
+function renderAvailableClasses() {
+    const container = $('#availableClassesContainer');
+    container.empty();
 
-        if (availableClasses.length === 0) {
-            container.html(`
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-info-circle fa-2x mb-2"></i>
-                    <p>All classes are enrolled</p>
-                </div>
-            `);
-            return;
-        }
+    if (availableClasses.length === 0) {
+        container.html(`
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                <p>All classes are enrolled</p>
+            </div>
+        `);
+        return;
+    }
 
-        availableClasses.forEach(cls => {
-            const card = `
-                <div class="card card-outline mb-2 available-class-item" 
-                     data-class-id="${cls.id}"
-                     data-class-name="${cls.class_name}">
-                    <div class="card-body p-2">
+    const listHtml = '<div class="list-group">';
+    let items = '';
+
+    availableClasses.forEach(cls => {
+        items += `
+            <div class="list-group-item available-class-item" 
+                 data-class-id="${cls.id}"
+                 data-class-name="${cls.class_name}">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" 
+                           class="custom-control-input select-class-checkbox" 
+                           id="class_${cls.id}"
+                           data-class-id="${cls.id}"
+                           data-class-name="${cls.class_name}">
+                    <label class="custom-control-label w-100" for="class_${cls.id}">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div class="custom-control custom-checkbox flex-grow-1">
-                                <input type="checkbox" 
-                                       class="custom-control-input select-class-checkbox" 
-                                       id="class_${cls.id}"
-                                       data-class-id="${cls.id}"
-                                       data-class-name="${cls.class_name}">
-                                <label class="custom-control-label" for="class_${cls.id}">
-                                    <strong>${cls.class_name}</strong><br>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user"></i> ${cls.teacher_name || 'No teacher'}
-                                    </small>
-                                </label>
+                            <div>
+                                <strong>${cls.class_name}</strong><br>
+                                <small class="text-muted">
+                                    <i class="fas fa-user"></i> ${cls.teacher_name || 'No teacher'}
+                                </small>
                             </div>
                         </div>
-                    </div>
+                    </label>
                 </div>
-            `;
-            container.append(card);
-        });
-    }
+            </div>
+        `;
+    });
+
+    container.html(listHtml + items + '</div>');
+}
 
     // Render enrolled classes
     function renderEnrolledClasses() {

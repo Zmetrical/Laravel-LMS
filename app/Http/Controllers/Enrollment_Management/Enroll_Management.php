@@ -170,42 +170,43 @@ class Enroll_Management extends MainController
         }
     }
 
-    /**
-     * Get available classes not yet enrolled in section
-     */
-    public function getAvailableClasses($sectionId)
-    {
-        try {
-            $section = Section::findOrFail($sectionId);
-            $enrolledClassIds = $section->classes()->pluck('classes.id');
+/**
+ * Get available classes not yet enrolled in section
+ */
+public function getAvailableClasses($sectionId)
+{
+    try {
+        $section = Section::findOrFail($sectionId);
+        $enrolledClassIds = $section->classes()->pluck('classes.id');
 
-            $availableClasses = Classes::with('teachers')
-                ->whereNotIn('id', $enrolledClassIds)
-                ->get()
-                ->map(function ($class) {
-                    $teachers = $class->teachers->map(function ($teacher) {
-                        return trim("{$teacher->first_name} {$teacher->last_name}");
-                    })->filter()->implode(', ');
+        $availableClasses = Classes::with('teachers')
+            ->whereNotIn('id', $enrolledClassIds)
+            ->orderBy('class_name')
+            ->get()
+            ->map(function ($class) {
+                $teachers = $class->teachers->map(function ($teacher) {
+                    return trim("{$teacher->first_name} {$teacher->last_name}");
+                })->filter()->implode(', ');
 
-                    return [
-                        'id' => $class->id,
-                        'class_code' => $class->class_code,
-                        'class_name' => $class->class_name,
-                        'teachers' => $teachers ?: 'No teacher assigned',
-                    ];
-                });
+                return [
+                    'id' => $class->id,
+                    'class_code' => $class->class_code,
+                    'class_name' => $class->class_name,
+                    'teachers' => $teachers ?: 'No teacher assigned',
+                ];
+            });
 
-            return response()->json([
-                'success' => true,
-                'classes' => $availableClasses
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching available classes: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'classes' => $availableClasses
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching available classes: ' . $e->getMessage()
+        ], 500);
     }
+}
 
 
         public function enrollClass(Request $request, $id)

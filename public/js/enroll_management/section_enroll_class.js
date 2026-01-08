@@ -48,6 +48,82 @@ $(document).ready(function () {
             }
         });
     }
+// =========================================================================
+// SELECT2 INITIALIZATION
+// =========================================================================
+function initializeClassSelect2() {
+    // Destroy existing instance if it exists
+    if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
+        $('#availableClassesSelect').select2('destroy');
+    }
+
+    // Load classes first, then initialize Select2 with local data
+    loadAvailableClasses();
+}
+
+// ========================================================================
+// LOAD AVAILABLE CLASSES
+// ========================================================================
+function loadAvailableClasses() {
+    $('#availableClassesSelect').html('<option value="">Loading...</option>').prop('disabled', true);
+    $('#addClassToListBtn').prop('disabled', true);
+
+    const url = API_ROUTES.getAvailableClasses.replace(':id', selectedSectionId);
+
+    $.ajax({
+        url: url,
+        method: 'GET',
+        success: function (response) {
+            if (response.success) {
+                const select = $('#availableClassesSelect');
+                select.empty().prop('disabled', false);
+                
+                if (response.classes.length === 0) {
+                    select.append('<option value="">No available classes</option>');
+                    return;
+                }
+                
+                select.append('<option value="">-- Select Class --</option>');
+                
+                response.classes.forEach(cls => {
+                    select.append(`
+                        <option value="${cls.id}" 
+                                data-teachers="${cls.teachers}"
+                                data-class-name="${cls.class_name}">
+                            ${cls.class_name}
+                        </option>
+                    `);
+                });
+
+                // Initialize Select2 AFTER options are loaded
+                $('#availableClassesSelect').select2({
+                    theme: 'bootstrap4',
+                    placeholder: 'Search for class...',
+                    allowClear: true,
+                    dropdownParent: $('#enrollClassModal')
+                });
+
+                // Handle selection change
+                $('#availableClassesSelect').on('select2:select', function(e) {
+                    $('#addClassToListBtn').prop('disabled', false);
+                });
+
+                $('#availableClassesSelect').on('select2:unselect select2:clear', function(e) {
+                    $('#addClassToListBtn').prop('disabled', true);
+                });
+            } else {
+                $('#availableClassesSelect').html('<option value="">No available classes</option>');
+            }
+        },
+        error: function (xhr) {
+            $('#availableClassesSelect').html('<option value="">Error loading classes</option>');
+            Toast.fire({
+                icon: "error",
+                title: "Failed to load available classes"
+            });
+        }
+    });
+}
 
     // ========================================================================
     // POPULATE FILTERS
@@ -320,75 +396,63 @@ $(document).ready(function () {
     // ========================================================================
     // ENROLL CLASS BUTTON - OPEN MODAL
     // ========================================================================
-    $('#enrollClassBtn').click(function () {
-        if (!selectedSectionId) return;
-        
-        selectedClassesList = [];
-        updateSelectedClassesDisplay();
-        
-        loadAvailableClasses();
-        $('#enrollClassModal').modal('show');
-    });
+$('#enrollClassBtn').click(function () {
+    if (!selectedSectionId) return;
+    
+    selectedClassesList = [];
+    updateSelectedClassesDisplay();
+    
+    // Initialize Select2 (which will load classes)
+    initializeClassSelect2();
+    
+    $('#enrollClassModal').modal('show');
+});
 
-    // ========================================================================
-    // LOAD AVAILABLE CLASSES
-    // ========================================================================
-    function loadAvailableClasses() {
-        $('#availableClassesSelect').html('<option value="">Loading...</option>').prop('disabled', true);
-        $('#addClassToListBtn').prop('disabled', true);
-
-        const url = API_ROUTES.getAvailableClasses.replace(':id', selectedSectionId);
-
-        $.ajax({
-            url: url,
-            method: 'GET',
-            success: function (response) {
-                if (response.success) {
-                    const select = $('#availableClassesSelect');
-                    select.empty().prop('disabled', false);
-                    
-                    if (response.classes.length === 0) {
-                        select.append('<option value="">No available classes</option>');
-                        return;
-                    }
-                    
-                    select.append('<option value="">-- Select Class --</option>');
-                    
-                    response.classes.forEach(cls => {
-                        select.append(`
-                            <option value="${cls.id}" 
-                                    data-teachers="${cls.teachers}"
-                                    data-class-name="${cls.class_name}">
-                                ${cls.class_name}
-                            </option>
-                        `);
-                    });
-                } else {
-                    $('#availableClassesSelect').html('<option value="">No available classes</option>');
-                }
-            },
-            error: function (xhr) {
-                $('#availableClassesSelect').html('<option value="">Error loading classes</option>');
-                Toast.fire({
-                    icon: "error",
-                    title: "Failed to load available classes"
-                });
-            }
-        });
-    }
 
     // ========================================================================
     // AVAILABLE CLASSES SELECT CHANGE
     // ========================================================================
-    $('#availableClassesSelect').change(function () {
-        const selected = $(this).find(':selected');
-        if (selected.val()) {
-            $('#addClassToListBtn').prop('disabled', false);
-        } else {
-            $('#addClassToListBtn').prop('disabled', true);
-        }
-    });
+$('#addClassToListBtn').click(function () {
+    if (selectedClassesList.length >= MAX_CLASSES) {
+        Toast.fire({
+            icon: "warning",
+            title: `You can only add up to ${MAX_CLASSES} classes at once`
+        });
+        return;
+    }
 
+    const select = $('#availableClassesSelect');
+    const selectedOption = select.find(':selected');
+    const classId = selectedOption.val();
+    
+    if (!classId) return;
+
+    if (selectedClassesList.some(c => c.id === classId)) {
+        Toast.fire({
+            icon: "info",
+            title: "This class is already in the list"
+        });
+        return;
+    }
+
+    const classData = {
+        id: classId,
+        name: selectedOption.data('class-name'),
+        teachers: selectedOption.data('teachers')
+    };
+
+    selectedClassesList.push(classData);
+    selectedOption.remove();
+    select.val('').trigger('change');
+    $('#addClassToListBtn').prop('disabled', true);
+    
+    updateSelectedClassesDisplay();
+    
+    Toast.fire({
+        icon: "success",
+        title: "Class added to list"
+    });
+});
     // ========================================================================
     // ADD CLASS TO LIST
     // ========================================================================
@@ -486,34 +550,35 @@ $(document).ready(function () {
     // ========================================================================
     // REMOVE FROM LIST
     // ========================================================================
-    $(document).on('click', '.remove-from-list-btn', function () {
-        const index = $(this).data('index');
-        const removedClass = selectedClassesList[index];
-        
-        selectedClassesList.splice(index, 1);
-        
-        const select = $('#availableClassesSelect');
-        select.append(`
-            <option value="${removedClass.id}" 
-                    data-teachers="${removedClass.teachers}"
-                    data-class-name="${removedClass.name}">
-                ${removedClass.name}
-            </option>
-        `);
-        
-        const options = select.find('option:not(:first)').sort((a, b) => {
-            return $(a).text().localeCompare($(b).text());
-        });
-        select.find('option:not(:first)').remove();
-        select.append(options);
-        
-        updateSelectedClassesDisplay();
-        
-        Toast.fire({
-            icon: "info",
-            title: "Class removed from list"
-        });
+$(document).on('click', '.remove-from-list-btn', function () {
+    const index = $(this).data('index');
+    const removedClass = selectedClassesList[index];
+    
+    selectedClassesList.splice(index, 1);
+    
+    const select = $('#availableClassesSelect');
+    select.append(`
+        <option value="${removedClass.id}" 
+                data-teachers="${removedClass.teachers}"
+                data-class-name="${removedClass.name}">
+            ${removedClass.name}
+        </option>
+    `);
+    
+    // Sort options alphabetically
+    const options = select.find('option:not(:first)').sort((a, b) => {
+        return $(a).text().localeCompare($(b).text());
     });
+    select.find('option:not(:first)').remove();
+    select.append(options);
+    
+    updateSelectedClassesDisplay();
+    
+    Toast.fire({
+        icon: "info",
+        title: "Class removed from list"
+    });
+});
 
     // ========================================================================
     // CONFIRM ENROLL ALL CLASSES
@@ -567,12 +632,18 @@ $(document).ready(function () {
     // ========================================================================
     // RESET MODAL ON CLOSE
     // ========================================================================
-    $('#enrollClassModal').on('hidden.bs.modal', function () {
-        selectedClassesList = [];
-        $('#availableClassesSelect').val('');
-        $('#addClassToListBtn').prop('disabled', true);
-        updateSelectedClassesDisplay();
-    });
+$('#enrollClassModal').on('hidden.bs.modal', function () {
+    selectedClassesList = [];
+    
+    // Destroy Select2 instance
+    if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
+        $('#availableClassesSelect').select2('destroy');
+    }
+    
+    $('#availableClassesSelect').empty().html('<option value="">Search for class...</option>');
+    $('#addClassToListBtn').prop('disabled', true);
+    updateSelectedClassesDisplay();
+});
 
     // ========================================================================
     // REMOVE CLASS FROM SECTION

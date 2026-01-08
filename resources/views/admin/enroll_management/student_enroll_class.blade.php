@@ -51,19 +51,17 @@
                     <div class="card-body">
                         <!-- Search -->
                         <div class="form-group">
-                            <input type="text" class="form-control" id="availableClassSearch" 
-                                    placeholder="Search classes...">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="availableClassSearch" 
+                                        placeholder="Search classes...">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-secondary" id="clearSelectionBtn">
+                                        <i class="fas fa-times"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Selection Controls -->
-                        <div class="mb-3">
-                            <button type="button" class="btn btn-sm btn-primary" id="selectAllClassesBtn">
-                                <i class="fas fa-check-square"></i> Select All
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelectionBtn">
-                                <i class="fas fa-times"></i> Clear
-                            </button>
-                        </div>
 
                         <!-- Available Classes List -->
                         <div id="availableClassesContainer" style="max-height: 400px; overflow-y: auto;">
