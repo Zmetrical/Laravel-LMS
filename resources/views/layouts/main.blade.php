@@ -3,8 +3,6 @@
 @section('head')
     @yield('styles')
     <style>
-
-
         .sidebar-bottom {
             position: absolute;
             bottom: 0;

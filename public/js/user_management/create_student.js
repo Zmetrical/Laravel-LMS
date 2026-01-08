@@ -62,14 +62,15 @@ $(document).ready(function() {
                         <div class="card mb-2">
                             <div class="card-body p-2">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
+                                    ${section.name}
                                     <span class="badge badge-${statusClass}">
-                                        ${section.available_slots} / ${section.capacity}
+                                        ${section.available_slots} 
                                     </span>
                                 </div>
                                 <div class="progress" style="height: 20px;">
                                     <div class="progress-bar bg-${statusClass}" 
                                          style="width: ${percentage}%">
-                                        ${section.enrolled_count} enrolled
+                                        ${section.enrolled_count} / ${section.capacity} enrolled
                                     </div>
                                 </div>
                             </div>
