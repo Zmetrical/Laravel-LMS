@@ -567,79 +567,107 @@ public function getAvailableClasses($sectionId)
 
         return view('admin.enroll_management.teacher_enroll_class', $data);
     }
-    /**
-     * Get all classes with section count and teacher info
-     */
-    public function getClassesList()
-    {
-        try {
-            $classes = DB::table('classes as c')
-                ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
-                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-                ->leftJoin('section_class_matrix as scm', 'c.id', '=', 'scm.class_id')
-                ->select(
-                    'c.id',
-                    'c.class_code',
-                    'c.class_name',
-                    DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
-                    DB::raw('COUNT(DISTINCT scm.section_id) as section_count')
-                )
-                ->groupBy('c.id', 'c.class_code', 'c.class_name', 't.first_name', 't.last_name')
-                ->orderBy('c.class_code')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $classes
-            ]);
-        } catch (Exception $e) {
+/**
+ * Get all classes with section count and teacher info
+ */
+public function getClassesList()
+{
+    try {
+        // Get active semester
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load classes: ' . $e->getMessage()
+                'message' => 'No active semester found'
             ], 500);
         }
+
+        $classes = DB::table('classes as c')
+            ->leftJoin('teacher_class_matrix as tcm', function($join) use ($activeSemester) {
+                $join->on('c.id', '=', 'tcm.class_id')
+                     ->where('tcm.semester_id', '=', $activeSemester->semester_id);
+            })
+            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->leftJoin('section_class_matrix as scm', function($join) use ($activeSemester) {
+                $join->on('c.id', '=', 'scm.class_id')
+                     ->where('scm.semester_id', '=', $activeSemester->semester_id);
+            })
+            ->select(
+                'c.id',
+                'c.class_code',
+                'c.class_name',
+                DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
+                DB::raw('COUNT(DISTINCT scm.section_id) as section_count')
+            )
+            ->groupBy('c.id', 'c.class_code', 'c.class_name', 't.first_name', 't.last_name')
+            ->orderBy('c.class_code')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $classes
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load classes: ' . $e->getMessage()
+        ], 500);
     }
+}
 
-    /**
-     * Get class details (teacher and enrolled sections)
-     */
-    public function getClassDetails($classId)
-    {
-        try {
-            // Get assigned teacher
-            $teacher = DB::table('teacher_class_matrix as tcm')
-                ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
-                ->where('tcm.class_id', $classId)
-                ->select('t.*')
-                ->first();
-
-            // Get enrolled sections with student count
-            $sections = DB::table('section_class_matrix as scm')
-                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
-                ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
-                ->where('scm.class_id', $classId)
-                ->select(
-                    'sec.id',
-                    'sec.name',
-                    'sec.code',
-                    DB::raw('COUNT(s.id) as student_count')
-                )
-                ->groupBy('sec.id', 'sec.name', 'sec.code')
-                ->orderBy('sec.name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'teacher' => $teacher,
-                'sections' => $sections
-            ]);
-        } catch (Exception $e) {
+/**
+ * Get class details (teacher and enrolled sections)
+ */
+public function getClassDetails($classId)
+{
+    try {
+        // Get active semester
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load class details: ' . $e->getMessage()
+                'message' => 'No active semester found'
             ], 500);
         }
+
+        // Get assigned teacher for current semester
+        $teacher = DB::table('teacher_class_matrix as tcm')
+            ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->where('tcm.class_id', $classId)
+            ->where('tcm.semester_id', $activeSemester->semester_id)
+            ->select('t.*', 'tcm.created_at as assigned_at')
+            ->first();
+
+        // Get enrolled sections with student count
+        $sections = DB::table('section_class_matrix as scm')
+            ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+            ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
+            ->where('scm.class_id', $classId)
+            ->where('scm.semester_id', $activeSemester->semester_id)
+            ->select(
+                'sec.id',
+                'sec.name',
+                'sec.code',
+                DB::raw('COUNT(s.id) as student_count')
+            )
+            ->groupBy('sec.id', 'sec.name', 'sec.code')
+            ->orderBy('sec.name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'teacher' => $teacher,
+            'sections' => $sections
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load class details: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function getClassStudents($classId)
     {
@@ -761,68 +789,130 @@ public function getAvailableClasses($sectionId)
         }
     }
 
-    /**
-     * Assign teacher to class
-     */
-    public function assignTeacher(Request $request)
-    {
-        $request->validate([
-            'class_id' => 'required|exists:classes,id',
-            'teacher_id' => 'required|exists:teachers,id'
-        ]);
+/**
+ * Assign teacher to class
+ */
+public function assignTeacher(Request $request)
+{
+    $request->validate([
+        'class_id' => 'required|exists:classes,id',
+        'teacher_id' => 'required|exists:teachers,id'
+    ]);
 
-        try {
-            DB::beginTransaction();
+    try {
+        DB::beginTransaction();
 
-            // Remove existing teacher assignment
-            DB::table('teacher_class_matrix')
-                ->where('class_id', $request->class_id)
-                ->delete();
-
-            // Assign new teacher
-            DB::table('teacher_class_matrix')->insert([
-                'teacher_id' => $request->teacher_id,
-                'class_id' => $request->class_id
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Teacher assigned successfully'
-            ]);
-        } catch (Exception $e) {
-            DB::rollBack();
+        // Get active semester info
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign teacher: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No active semester found'
+            ], 400);
         }
-    }
 
-    /**
-     * Remove teacher from class
-     */
-    public function removeTeacher(Request $request)
-    {
-        $request->validate([
-            'class_id' => 'required|exists:classes,id'
+        // Remove existing teacher assignment for this class and semester
+        DB::table('teacher_class_matrix')
+            ->where('class_id', $request->class_id)
+            ->where('semester_id', $activeSemester->semester_id)
+            ->delete();
+
+        // Assign new teacher
+        DB::table('teacher_class_matrix')->insert([
+            'teacher_id' => $request->teacher_id,
+            'class_id' => $request->class_id,
+            'semester_id' => $activeSemester->semester_id,
+            'school_year_id' => $activeSemester->school_year->id,
+            'created_at' => now(),
+            'updated_at' => now()
         ]);
 
-        try {
-            DB::table('teacher_class_matrix')
-                ->where('class_id', $request->class_id)
-                ->delete();
+        DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Teacher removed successfully'
-            ]);
-        } catch (Exception $e) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Teacher assigned successfully'
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to assign teacher: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Remove teacher from class
+ */
+public function removeTeacher(Request $request)
+{
+    $request->validate([
+        'class_id' => 'required|exists:classes,id'
+    ]);
+
+    try {
+        // Get active semester info
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to remove teacher: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No active semester found'
+            ], 400);
         }
+
+        DB::table('teacher_class_matrix')
+            ->where('class_id', $request->class_id)
+            ->where('semester_id', $activeSemester->semester_id)
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Teacher removed successfully'
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to remove teacher: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+/**
+ * Get active semester with school year info
+ */
+private function getActiveSemester()
+{
+    $activeSemester = DB::table('semesters as s')
+        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+        ->where('s.status', 'active')
+        ->select(
+            's.id as semester_id',
+            's.name as semester_name',
+            's.code as semester_code',
+            'sy.id as school_year_id',
+            'sy.year_start',
+            'sy.year_end',
+            'sy.code as school_year_code'
+        )
+        ->first();
+
+    if (!$activeSemester) {
+        return null;
+    }
+
+    return (object)[
+        'semester_id' => $activeSemester->semester_id,
+        'semester_name' => $activeSemester->semester_name,
+        'semester_code' => $activeSemester->semester_code,
+        'school_year' => (object)[
+            'id' => $activeSemester->school_year_id,
+            'code' => $activeSemester->school_year_code,
+            'year_start' => $activeSemester->year_start,
+            'year_end' => $activeSemester->year_end
+        ]
+    ];
+}
 }
