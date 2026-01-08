@@ -1,15 +1,15 @@
 @extends('layouts.main')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
         <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('admin.student_irreg_class_enrollment') }}">Irregular Student List</a> </li>
-        <li class="breadcrumb-item active">Class Enroll</li>
+        <li class="breadcrumb-item"><a href="{{ route('admin.student_irreg_class_enrollment') }}">Irregular Student List</a></li>
+        <li class="breadcrumb-item active">Class Enrollment</li>
     </ol>
 @endsection
 
@@ -27,23 +27,26 @@
             <!-- Student Info & Available Classes -->
             <div class="col-md-5">
                 <!-- Student Info Card -->
-                <div class="card card-primary card-outline">
+                <div class="card card-outline card-primary">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-user"></i> Student Information</h3>
-
                     </div>
                     <div class="card-body" id="studentInfoContainer">
                         <div class="text-center py-4">
-                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                            <i class="fas fa-spinner fa-spin fa-2x text-secondary"></i>
                             <p class="mt-2">Loading student info...</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Available Classes Card -->
-                <div class="card card-primary card-outline">
+                <div class="card card-outline card-primary">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-list"></i> Available Classes</h3>
+                        <div class="card-tools">
+                            <span class="badge badge-primary" id="selectedCountBadge">0</span>
+                            <span class="text-muted ml-1">selected</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         <!-- Search -->
@@ -52,12 +55,29 @@
                                     placeholder="Search classes...">
                         </div>
 
+                        <!-- Selection Controls -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-primary" id="selectAllClassesBtn">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelectionBtn">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+
                         <!-- Available Classes List -->
-                        <div id="availableClassesContainer" style="max-height: 450px; overflow-y: auto;">
+                        <div id="availableClassesContainer" style="max-height: 400px; overflow-y: auto;">
                             <div class="text-center py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
+                                <i class="fas fa-spinner fa-spin fa-2x text-secondary"></i>
                                 <p class="mt-2">Loading classes...</p>
                             </div>
+                        </div>
+
+                        <!-- Enroll Button -->
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-primary btn-block" id="enrollSelectedBtn" disabled>
+                                <i class="fas fa-plus-circle"></i> Enroll Selected Classes
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -65,7 +85,7 @@
 
             <!-- Enrolled Classes -->
             <div class="col-md-7">
-                <div class="card card-primary card-outline">
+                <div class="card card-outline card-primary">
                     <div class="card-header">
                         <h3 class="card-title">
                             <i class="fas fa-check-circle"></i> Enrolled Classes
@@ -76,18 +96,17 @@
                     </div>
                     <div class="card-body">
                         <div id="enrolledClassesLoadingIndicator" class="text-center py-4">
-                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                            <i class="fas fa-spinner fa-spin fa-2x text-secondary"></i>
                             <p class="mt-2">Loading enrolled classes...</p>
                         </div>
 
                         <div id="enrolledClassesTableContainer" style="display: none;">
                             <table class="table table-bordered table-hover" id="enrolledClassesTable">
-                                <thead class="bg-primary">
+                                <thead class="thead-primary">
                                     <tr>
-                                        <th>Class Code</th>
                                         <th>Class Name</th>
                                         <th>Teacher</th>
-                                        <th width="100">Actions</th>
+                                        <th width="100" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="enrolledClassesBody">
@@ -98,7 +117,7 @@
                         <div id="noEnrolledClassesMessage" class="text-center py-5" style="display: none;">
                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No classes enrolled yet</p>
-                            <p class="text-muted small">Select classes from the left panel to enroll</p>
+                            <p class="text-muted small">Select classes from the left panel and click "Enroll Selected Classes"</p>
                         </div>
                     </div>
                 </div>
@@ -108,7 +127,7 @@
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.all.min.js') }}"></script>
     
     <script>
         const STUDENT_ID = {{ $studentId }};

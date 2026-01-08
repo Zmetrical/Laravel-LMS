@@ -1,6 +1,7 @@
 $(document).ready(function() {
     let availableClasses = [];
     let enrolledClasses = [];
+    let selectedClasses = []; // Track selected classes for batch enrollment
 
     // Load initial data
     loadStudentInfo();
@@ -58,13 +59,15 @@ $(document).ready(function() {
             success: function(response) {
                 availableClasses = response.available;
                 enrolledClasses = response.enrolled;
+                selectedClasses = []; // Reset selection
                 
                 renderAvailableClasses();
                 renderEnrolledClasses();
                 updateEnrolledCount();
+                updateSelectedCount();
             },
             error: function() {
-                showToast('error', 'Failed to load classes');
+                showAlert('error', 'Failed to load classes');
             }
         });
     }
@@ -88,21 +91,22 @@ $(document).ready(function() {
             const card = `
                 <div class="card card-outline mb-2 available-class-item" 
                      data-class-id="${cls.id}"
-                     data-class-name="${cls.class_name}"
-                     data-class-code="${cls.class_code}">
+                     data-class-name="${cls.class_name}">
                     <div class="card-body p-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>${cls.class_code}</strong><br>
-                                <small>${cls.class_name}</small><br>
-                                <small class="text-muted">
-                                    <i class="fas fa-user"></i> ${cls.teacher_name || 'No teacher'}
-                                </small>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="custom-control custom-checkbox flex-grow-1">
+                                <input type="checkbox" 
+                                       class="custom-control-input select-class-checkbox" 
+                                       id="class_${cls.id}"
+                                       data-class-id="${cls.id}"
+                                       data-class-name="${cls.class_name}">
+                                <label class="custom-control-label" for="class_${cls.id}">
+                                    <strong>${cls.class_name}</strong><br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> ${cls.teacher_name || 'No teacher'}
+                                    </small>
+                                </label>
                             </div>
-                            <button class="btn btn-sm btn-primary enroll-class-btn" 
-                                    data-class-id="${cls.id}">
-                                <i class="fas fa-plus"></i> Enroll
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -133,7 +137,6 @@ $(document).ready(function() {
         enrolledClasses.forEach(cls => {
             const row = `
                 <tr>
-                    <td><strong>${cls.class_code}</strong></td>
                     <td>${cls.class_name}</td>
                     <td>
                         <small>
@@ -159,44 +162,149 @@ $(document).ready(function() {
         $('#enrolledCountBadge').text(`${count} ${count === 1 ? 'Class' : 'Classes'}`);
     }
 
-    // Enroll class
-    $(document).on('click', '.enroll-class-btn', function() {
-        const classId = $(this).data('class-id');
-        const btn = $(this);
+    // Update selected count badge
+    function updateSelectedCount() {
+        const count = selectedClasses.length;
+        $('#selectedCountBadge').text(count);
+        $('#enrollSelectedBtn').prop('disabled', count === 0);
         
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        if (count > 0) {
+            $('#enrollSelectedBtn').removeClass('btn-secondary').addClass('btn-success');
+        } else {
+            $('#enrollSelectedBtn').removeClass('btn-success').addClass('btn-secondary');
+        }
+    }
+
+    // Handle checkbox selection
+    $(document).on('change', '.select-class-checkbox', function() {
+        const classId = parseInt($(this).data('class-id'));
+        const className = $(this).data('class-name');
+        
+        if ($(this).is(':checked')) {
+            // Add to selected
+            if (!selectedClasses.find(c => c.id === classId)) {
+                selectedClasses.push({ id: classId, name: className });
+            }
+        } else {
+            // Remove from selected
+            selectedClasses = selectedClasses.filter(c => c.id !== classId);
+        }
+        
+        updateSelectedCount();
+    });
+
+    // Select all classes
+    $('#selectAllClassesBtn').on('click', function() {
+        $('.select-class-checkbox').prop('checked', true).trigger('change');
+    });
+
+    // Clear selection
+    $('#clearSelectionBtn').on('click', function() {
+        $('.select-class-checkbox').prop('checked', false);
+        selectedClasses = [];
+        updateSelectedCount();
+    });
+
+    // Enroll selected classes
+    $('#enrollSelectedBtn').on('click', function() {
+        if (selectedClasses.length === 0) {
+            return;
+        }
+
+        const classNames = selectedClasses.map(c => c.name).join('<br>');
+        
+        Swal.fire({
+            title: 'Confirm Enrollment',
+            html: `Enroll the following ${selectedClasses.length} class(es)?<br><br><strong>${classNames}</strong>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Enroll',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performEnrollment();
+            }
+        });
+    });
+
+    // Perform enrollment
+    function performEnrollment() {
+        const classIds = selectedClasses.map(c => c.id);
+        
+        // Show loading
+        Swal.fire({
+            title: 'Enrolling...',
+            html: 'Please wait while we enroll the selected classes',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         $.ajax({
             url: API_ROUTES.enrollClass,
             method: 'POST',
             data: {
                 student_id: STUDENT_ID,
-                class_ids: [classId],
+                class_ids: classIds,
                 semester_id: ACTIVE_SEMESTER_ID,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
-                showToast('success', response.message);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message,
+                    confirmButtonColor: '#007bff'
+                });
                 loadStudentClasses();
             },
             error: function(xhr) {
-                showToast('error', xhr.responseJSON?.message || 'Enrollment failed');
-                btn.prop('disabled', false).html('<i class="fas fa-plus"></i> Enroll');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Enrollment Failed',
+                    text: xhr.responseJSON?.message || 'An error occurred',
+                    confirmButtonColor: '#007bff'
+                });
             }
         });
-    });
+    }
 
     // Unenroll class
     $(document).on('click', '.unenroll-class-btn', function() {
         const classId = $(this).data('class-id');
         const className = $(this).data('class-name');
         
-        if (!confirm(`Remove "${className}" from enrolled classes?`)) {
-            return;
-        }
+        Swal.fire({
+            title: 'Remove Class?',
+            html: `Are you sure you want to remove<br><strong>${className}</strong><br>from enrolled classes?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Remove',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performUnenrollment(classId);
+            }
+        });
+    });
 
-        const btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+    // Perform unenrollment
+    function performUnenrollment(classId) {
+        Swal.fire({
+            title: 'Removing...',
+            html: 'Please wait',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         $.ajax({
             url: API_ROUTES.unenrollClass,
@@ -207,40 +315,55 @@ $(document).ready(function() {
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
-                showToast('success', response.message);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message,
+                    confirmButtonColor: '#007bff',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
                 loadStudentClasses();
             },
             error: function(xhr) {
-                showToast('error', xhr.responseJSON?.message || 'Unenrollment failed');
-                btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed',
+                    text: xhr.responseJSON?.message || 'An error occurred',
+                    confirmButtonColor: '#007bff'
+                });
             }
         });
-    });
+    }
 
     // Search available classes
     $('#availableClassSearch').on('keyup', function() {
         const searchTerm = $(this).val().toLowerCase();
         $('.available-class-item').each(function() {
             const className = $(this).data('class-name').toLowerCase();
-            const classCode = $(this).data('class-code').toLowerCase();
-            const matches = className.includes(searchTerm) || classCode.includes(searchTerm);
+            const matches = className.includes(searchTerm);
             $(this).toggle(matches);
         });
     });
 
-    // Toast notification
-    function showToast(type, message) {
-        toastr.options = {
-            closeButton: true,
-            progressBar: true,
-            positionClass: 'toast-top-right',
-            timeOut: 3000
-        };
-
+    // Alert helper (fallback, but we use SweetAlert2)
+    function showAlert(type, message) {
         if (type === 'success') {
-            toastr.success(message);
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: message,
+                confirmButtonColor: '#007bff',
+                timer: 2000,
+                showConfirmButton: false
+            });
         } else {
-            toastr.error(message);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message,
+                confirmButtonColor: '#007bff'
+            });
         }
     }
-});
+}); 
