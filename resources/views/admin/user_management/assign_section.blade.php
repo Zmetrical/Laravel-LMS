@@ -26,66 +26,62 @@
         <div class="row">
             <!-- Left Sidebar -->
             <div class="col-lg-3">
-                <!-- Source Selection Card -->
-                <div class="card card-secondary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label>Previous Semester </label>
-                            <select class="form-control" id="source_semester">
-                                <option value="">All Students in Section</option>
-                                @foreach($semesters as $semester)
-                                    <option value="{{ $semester->id }}">
-                                        {{ $semester->year_code }} - {{ $semester->semester_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+<!-- Source Selection Card -->
+<div class="card card-secondary card-outline">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
+    </div>
+    <div class="card-body">
+        <div class="form-group">
+            <label>Previous Semester </label>
+            <select class="form-control" id="source_semester">
+                <option value="">All Students in Section</option>
+                @foreach($semesters as $semester)
+                    <option value="{{ $semester->id }}">
+                        {{ $semester->year_code }} - {{ $semester->semester_name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
 
-                        <!-- Source Type Toggle -->
-                        <div class="form-group">
-                            <label>Source Type</label>
-                            <div class="btn-group btn-block">
-                                <button type="button" class="btn btn-secondary active" id="sourceSectionBtn">
-                                    <i class="fas fa-users"></i> Section
-                                </button>
-                                <button type="button" class="btn btn-default" id="sourceStudentBtn">
-                                    <i class="fas fa-user"></i> Student
-                                </button>
-                            </div>
-                        </div>
+        <!-- Source Type Toggle -->
+        <div class="form-group">
+            <label>Source Type</label>
+            <div class="btn-group btn-block">
+                <button type="button" class="btn btn-secondary active" id="sourceSectionBtn">
+                    <i class="fas fa-users"></i> Section
+                </button>
+                <button type="button" class="btn btn-default" id="sourceStudentBtn">
+                    <i class="fas fa-user"></i> Student
+                </button>
+            </div>
+        </div>
 
-                        <!-- Source Section -->
-                        <div id="sourceSectionGroup">
-                            <div class="form-group">
-                                <label>Source Section <span class="text-danger">*</span></label>
-                                <select class="form-control select2" id="source_section" style="width: 100%;">
-                                    <option value="">Search for section...</option>
-                                </select>
-                            </div>
+        <!-- Source Section -->
+        <div id="sourceSectionGroup">
+            <div class="form-group mb-0">
+                <label>Source Section <span class="text-danger">*</span></label>
+                <select class="form-control select2" id="source_section" style="width: 100%;">
+                    <option value="">Search for section...</option>
+                </select>
+            </div>
+        </div>
 
-                            <button type="button" class="btn btn-secondary btn-block" id="loadStudentsBtn">
-                                <i class="fas fa-download mr-2"></i> Load Students
-                            </button>
-                        </div>
+        <!-- Source Student -->
+        <div id="sourceStudentGroup" style="display: none;">
+            <div class="form-group">
+                <label>Search Student <span class="text-danger">*</span></label>
+                <select class="form-control select2" id="source_student" style="width: 100%;">
+                    <option value="">Type student number or name...</option>
+                </select>
+            </div>
 
-                        <!-- Source Student -->
-                        <div id="sourceStudentGroup" style="display: none;">
-                            <div class="form-group">
-                                <label>Search Student <span class="text-danger">*</span></label>
-                                <select class="form-control select2" id="source_student" style="width: 100%;">
-                                    <option value="">Type student number or name...</option>
-                                </select>
-                            </div>
-
-                            <button type="button" class="btn btn-secondary btn-block" id="addStudentBtn">
-                                <i class="fas fa-user-plus mr-2"></i> Add Student
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <button type="button" class="btn btn-secondary btn-block" id="addStudentBtn">
+                <i class="fas fa-user-plus mr-2"></i> Add Student
+            </button>
+        </div>
+    </div>
+</div>
 
                 <!-- Target Section Card -->
                 <div class="card card-primary card-outline mt-3">
@@ -179,11 +175,6 @@
                             </table>
                         </div>
 
-                        <!-- Info Alert -->
-                        <div class="alert alert-secondary mt-3">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            <strong>Instructions:</strong> Select source section or search for students, choose target section where they will be assigned, and select students to assign.
-                        </div>
                     </div>
 
                     <div class="card-footer">

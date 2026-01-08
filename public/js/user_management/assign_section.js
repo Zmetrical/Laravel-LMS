@@ -5,98 +5,181 @@ $(document).ready(function() {
     // SELECT2 INITIALIZATION
     // =========================================================================
     
-    // Source Section Select2
-    $('#source_section').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Search for section...',
-        allowClear: true,
-        ajax: {
-            url: API_ROUTES.searchSections,
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    search: params.term
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.map(function(section) {
-                        return {
-                            id: section.id,
-                            text: section.name + ' (' + section.code + ')'
-                        };
-                    })
-                };
-            },
-            cache: true
+// Source Section Select2
+$('#source_section').select2({
+    theme: 'bootstrap4',
+    placeholder: 'Search for section...',
+    allowClear: true,
+    ajax: {
+        url: API_ROUTES.searchSections,
+        dataType: 'json',
+        delay: 250,
+        data: function(params) {
+            return {
+                search: params.term
+            };
         },
-        minimumInputLength: 0
-    });
-
-    // Target Section Select2
-    $('#target_section').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Search for section...',
-        allowClear: true,
-        ajax: {
-            url: API_ROUTES.searchSections,
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    search: params.term
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.map(function(section) {
-                        return {
-                            id: section.id,
-                            text: section.name + ' (' + section.code + ')'
-                        };
-                    })
-                };
-            },
-            cache: true
+        processResults: function(data) {
+            return {
+                results: data.map(function(section) {
+                    return {
+                        id: section.id,
+                        text: section.name + ' (' + section.code + ')'
+                    };
+                })
+            };
         },
-        minimumInputLength: 0
-    });
+        cache: true
+    },
+    minimumInputLength: 0
+}).on('select2:select', function(e) {
+    // Auto-load students when section is selected
+    const sourceSectionId = e.params.data.id;
+    const sourceSemesterId = $('#source_semester').val();
+    
+    loadStudentsFromSection(sourceSectionId, sourceSemesterId);
+}).on('select2:clear', function() {
+    // Clear table when section is cleared
+    $('#assignmentTableBody').html(`
+        <tr>
+            <td colspan="6" class="text-center text-muted py-5">
+                <i class="fas fa-arrow-left fa-2x mb-3"></i>
+                <p>Select a source section or search for a student to begin</p>
+            </td>
+        </tr>
+    `);
+    updateStudentCount();
+    $('#submitBtn').prop('disabled', true);
+});
 
-    // Source Student Select2
-    $('#source_student').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Type student number or name...',
-        allowClear: true,
-        ajax: {
-            url: API_ROUTES.searchStudents,
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    search: params.term
-                };
-            },
-            processResults: function(data) {
-                if (!data.success) {
-                    return { results: [] };
+// Target Section Select2
+$('#target_section').select2({
+    theme: 'bootstrap4',
+    placeholder: 'Search for section...',
+    allowClear: true,
+    ajax: {
+        url: API_ROUTES.searchSections,
+        dataType: 'json',
+        delay: 250,
+        data: function(params) {
+            return {
+                search: params.term
+            };
+        },
+        processResults: function(data) {
+            return {
+                results: data.map(function(section) {
+                    return {
+                        id: section.id,
+                        text: section.name + ' (' + section.code + ')'
+                    };
+                })
+            };
+        },
+        cache: true
+    },
+    minimumInputLength: 0
+});
+
+
+$('#source_student').select2({
+    theme: 'bootstrap4',
+    placeholder: 'Type student number or name...',
+    allowClear: true,
+    ajax: {
+        url: API_ROUTES.searchStudents,
+        dataType: 'json',
+        delay: 250,
+        data: function(params) {
+            return {
+                search: params.term
+            };
+        },
+        processResults: function(data) {
+            if (!data.success) {
+                return { results: [] };
+            }
+            return {
+                results: data.students.map(function(student) {
+                    const fullName = student.last_name + ', ' + student.first_name + ' ' + (student.middle_name || '');
+                    return {
+                        id: student.student_number,
+                        text: student.student_number + ' - ' + fullName,
+                        student: student
+                    };
+                })
+            };
+        },
+        cache: true
+    },
+    minimumInputLength: 2
+});
+
+// =========================================================================
+// LOAD STUDENTS FROM SECTION FUNCTION
+// =========================================================================
+function loadStudentsFromSection(sourceSectionId, sourceSemesterId) {
+    // Show loading state
+    $('#assignmentTableBody').html(`
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                <p>Loading students...</p>
+            </td>
+        </tr>
+    `);
+
+    $.ajax({
+        url: API_ROUTES.loadStudents,
+        type: 'POST',
+        data: {
+            _token: $('input[name="_token"]').val(),
+            source_section_id: sourceSectionId,
+            source_semester_id: sourceSemesterId
+        },
+        success: function(response) {
+            if (response.success) {
+                loadedStudents = response.students;
+                populateStudentTable(response.students);
+                
+                if (response.count > 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Students Loaded',
+                        text: `${response.count} student(s) loaded successfully`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
                 }
-                return {
-                    results: data.students.map(function(student) {
-                        const fullName = student.last_name + ', ' + student.first_name + ' ' + (student.middle_name || '');
-                        return {
-                            id: student.student_number,
-                            text: student.student_number + ' - ' + fullName,
-                            student: student
-                        };
-                    })
-                };
-            },
-            cache: true
+            } else {
+                Swal.fire('Error', response.message || 'Failed to load students', 'error');
+                $('#assignmentTableBody').html(`
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>Failed to load students</p>
+                        </td>
+                    </tr>
+                `);
+            }
         },
-        minimumInputLength: 2
+        error: function(xhr) {
+            let errorMsg = 'Failed to load students';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMsg = xhr.responseJSON.message;
+            }
+            Swal.fire('Error', errorMsg, 'error');
+            $('#assignmentTableBody').html(`
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Failed to load students</p>
+                    </td>
+                </tr>
+            `);
+        }
     });
-
+}
     // =========================================================================
     // SOURCE TYPE TOGGLE
     // =========================================================================
