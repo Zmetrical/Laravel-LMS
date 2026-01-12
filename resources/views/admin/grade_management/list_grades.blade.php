@@ -106,7 +106,6 @@
                         <option value="FAILED">Failed</option>
                         <option value="INC">INC</option>
                         <option value="DRP">DRP</option>
-                        <option value="W">W</option>
                     </select>
                 </div>
             </div>

@@ -596,9 +596,75 @@ const table = [
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    $('#editBtn').on('click', function() {
-        window.location.href = API_ROUTES.editGradebook;
+$('#editBtn').on('click', function() {
+    $('#passcodeModal').modal('show');
+    $('#passcode').val('').focus();
+});
+
+// Handle passcode form submission
+$('#passcodeForm').submit(function(e) {
+    e.preventDefault();
+    
+    const passcode = $('#passcode').val().trim();
+    
+    if (!passcode) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Passcode Required',
+            text: 'Please enter your passcode',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+        return;
+    }
+
+    const btn = $('#verifyPasscodeBtn');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+
+    $.ajax({
+        url: API_ROUTES.verifyPasscode, 
+        type: 'POST',
+        data: { passcode: passcode },
+        success: function(response) {
+            if (response.success) {
+                $('#passcodeModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Verified!',
+                    text: response.message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+                
+                // Redirect after brief delay
+                setTimeout(function() {
+                    window.location.href = response.redirect;
+                }, 500);
+            }
+        },
+        error: function(xhr) {
+            const errorMsg = xhr.responseJSON?.message || 'Verification failed';
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Passcode',
+                text: errorMsg,
+                confirmButtonColor: '#dc3545'
+            });
+            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
+            $('#passcode').val('').focus();
+        }
     });
+});
+
+// Clear passcode when modal is hidden
+$('#passcodeModal').on('hidden.bs.modal', function() {
+    $('#passcode').val('');
+    $('#verifyPasscodeBtn').prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
+});
 
     $('#submitFinalGradeBtn').click(function() {
         if (finalGradesSubmitted) {

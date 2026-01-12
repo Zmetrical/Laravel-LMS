@@ -351,6 +351,7 @@ CREATE TABLE `teachers` (
   `phone` varchar(255) NOT NULL,
   `user` varchar(100) NOT NULL,
   `password` varchar(100) NOT NULL,
+  `passcode` varchar(100) NOT NULL,
   `profile_image` varchar(255) NOT NULL,
   `status` int(11) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -360,13 +361,18 @@ CREATE TABLE `teachers` (
 CREATE TABLE `teacher_class_matrix` (
   `id` int(11) NOT NULL,
   `teacher_id` int(11) NOT NULL,
-  `class_id` int(11) NOT NULL
+  `class_id` int(11) NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
+  `school_year_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `teacher_password_matrix` (
   `id` int(11) NOT NULL,
   `teacher_id` int(11) NOT NULL,
-  `plain_password` varchar(100) NOT NULL
+  `plain_password` varchar(100) NOT NULL,
+  `plain_passcode` varchar(100) NOT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `users` (

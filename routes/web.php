@@ -17,7 +17,8 @@ use App\Http\Controllers\Grade_Management\Grade_Management;
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
 use App\Http\Controllers\Grade_Management\SectionGrade_Management;
 
-use App\Http\Controllers\Grade_Management\Grade_list;
+use App\Http\Controllers\Grade_Management\Grade_List;
+use App\Http\Controllers\Grade_Management\Grade_Card;
 
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
@@ -115,6 +116,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/api/semesters', [Grade_Management::class, 'getSemestersForFilter'])->name('semesters');
             Route::get('/api/search', [Grade_Management::class, 'searchGrades'])->name('search');
             Route::get('/api/details/{id}', [Grade_Management::class, 'getGradeDetails'])->name('details');
+
+            Route::get('/card', [Grade_Card::class, 'card_grades'])->name('card');
+
+
         });
 
         // ---------------------------------------------------------------------------
@@ -231,19 +236,17 @@ Route::prefix('student')->name('student.')->group(function () {
 
         // Class Pages
     Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
-    Route::get('/my_grades', [Grade_list::class, 'student_grade_list'])->name('list_grade');
+    Route::get('/my_grades', [Grade_List::class, 'student_grade_list'])->name('list_grade');
     
     // Get Student Grades (AJAX)
-    Route::get('/my_grades/list', [Grade_list::class, 'getStudentGrades'])
+    Route::get('/my_grades/list', [Grade_List::class, 'getStudentGrades'])
         ->name('grades.list');
     
     // Get Class Grade Details (AJAX)
-    Route::get('/my_grades/details/{classId}', [Grade_list::class, 'student_grade_details'])
+    Route::get('/my_grades/details/{classId}', [Grade_List::class, 'student_grade_details'])
         ->name('grades.details');
-    Route::get('/my_grades/details/{classId}/data', [Grade_list::class, 'getClassGradeDetails'])
+    Route::get('/my_grades/details/{classId}/data', [Grade_List::class, 'getClassGradeDetails'])
         ->name('grades.details.data');
-
-
 
         // Class Content Pagesz
         Route::prefix('class/{classId}')->name('class.')->group(function () {
@@ -342,6 +345,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
                 ->name('edit');
             Route::get('/{classId}/view', [GradeBook_Management::class, 'view_gradebook'])
                 ->name('view');
+            Route::post('/{classId}/verify-passcode', [GradeBook_Management::class, 'verify_passcode'])
+            ->name('verify-passcode');
 
             Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
                 ->name('data');

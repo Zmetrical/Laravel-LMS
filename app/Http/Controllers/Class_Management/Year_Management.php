@@ -449,92 +449,116 @@ class Year_Management extends MainController
         }
     }
 
-    public function getSemesterClasses($id)
-    {
-        try {
-            $semester = DB::table('semesters')->find($id);
+public function getSemesterClasses($id)
+{
+    try {
+        $semester = DB::table('semesters')->find($id);
 
-            if (!$semester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Semester not found'
-                ], 404);
-            }
+        if (!$semester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Semester not found'
+            ], 404);
+        }
 
-            $sectionClasses = DB::table('section_class_matrix as secm')
-                ->join('classes as c', 'secm.class_id', '=', 'c.id')
-                ->join('students as s', 's.section_id', '=', 'secm.section_id')
-                ->where('secm.semester_id', $id)
-                ->select(
-                    'c.id',
-                    'c.class_code',
-                    'c.class_name',
-                    DB::raw('COUNT(DISTINCT s.student_number) as student_count')
-                )
-                ->groupBy('c.id', 'c.class_code', 'c.class_name')
-                ->get();
+        // Get classes from section_class_matrix with teacher info
+        $sectionClasses = DB::table('section_class_matrix as secm')
+            ->join('classes as c', 'secm.class_id', '=', 'c.id')
+            ->join('students as s', 's.section_id', '=', 'secm.section_id')
+            ->leftJoin('teacher_class_matrix as tcm', function($join) use ($id) {
+                $join->on('tcm.class_id', '=', 'c.id')
+                     ->where('tcm.semester_id', '=', $id);
+            })
+            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->where('secm.semester_id', $id)
+            ->select(
+                'c.id',
+                'c.class_code',
+                'c.class_name',
+                DB::raw('COUNT(DISTINCT s.student_number) as student_count'),
+                DB::raw('GROUP_CONCAT(DISTINCT CONCAT(t.first_name, " ", t.last_name) SEPARATOR ", ") as teachers')
+            )
+            ->groupBy('c.id', 'c.class_code', 'c.class_name')
+            ->get();
 
-            $individualClasses = DB::table('student_class_matrix as scm')
-                ->join('classes as c', function ($join) {
-                    $join->on(
-                        DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
-                        '=',
-                        DB::raw('c.class_code COLLATE utf8mb4_general_ci')
-                    );
-                })
-                ->where('scm.semester_id', $id)
-                ->select(
-                    'c.id',
-                    'c.class_code',
-                    'c.class_name',
-                    DB::raw('COUNT(DISTINCT scm.student_number) as student_count')
-                )
-                ->groupBy('c.id', 'c.class_code', 'c.class_name')
-                ->get();
+        // Get classes from student_class_matrix with teacher info
+        $individualClasses = DB::table('student_class_matrix as scm')
+            ->join('classes as c', function ($join) {
+                $join->on(
+                    DB::raw('scm.class_code COLLATE utf8mb4_general_ci'),
+                    '=',
+                    DB::raw('c.class_code COLLATE utf8mb4_general_ci')
+                );
+            })
+            ->leftJoin('teacher_class_matrix as tcm', function($join) use ($id) {
+                $join->on('tcm.class_id', '=', 'c.id')
+                     ->where('tcm.semester_id', '=', $id);
+            })
+            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->where('scm.semester_id', $id)
+            ->select(
+                'c.id',
+                'c.class_code',
+                'c.class_name',
+                DB::raw('COUNT(DISTINCT scm.student_number) as student_count'),
+                DB::raw('GROUP_CONCAT(DISTINCT CONCAT(t.first_name, " ", t.last_name) SEPARATOR ", ") as teachers')
+            )
+            ->groupBy('c.id', 'c.class_code', 'c.class_name')
+            ->get();
 
-            $classesMap = [];
-            
-            foreach ($sectionClasses as $class) {
+        // Merge classes
+        $classesMap = [];
+        
+        foreach ($sectionClasses as $class) {
+            $classesMap[$class->id] = [
+                'id' => $class->id,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'student_count' => $class->student_count,
+                'teachers' => $class->teachers
+            ];
+        }
+        
+        foreach ($individualClasses as $class) {
+            if (isset($classesMap[$class->id])) {
+                $classesMap[$class->id]['student_count'] += $class->student_count;
+                // Merge teachers if different
+                if ($class->teachers && $classesMap[$class->id]['teachers'] !== $class->teachers) {
+                    $existingTeachers = explode(', ', $classesMap[$class->id]['teachers'] ?? '');
+                    $newTeachers = explode(', ', $class->teachers);
+                    $allTeachers = array_unique(array_merge($existingTeachers, $newTeachers));
+                    $classesMap[$class->id]['teachers'] = implode(', ', array_filter($allTeachers));
+                }
+            } else {
                 $classesMap[$class->id] = [
                     'id' => $class->id,
                     'class_code' => $class->class_code,
                     'class_name' => $class->class_name,
-                    'student_count' => $class->student_count
+                    'student_count' => $class->student_count,
+                    'teachers' => $class->teachers
                 ];
             }
-            
-            foreach ($individualClasses as $class) {
-                if (isset($classesMap[$class->id])) {
-                    $classesMap[$class->id]['student_count'] += $class->student_count;
-                } else {
-                    $classesMap[$class->id] = [
-                        'id' => $class->id,
-                        'class_code' => $class->class_code,
-                        'class_name' => $class->class_name,
-                        'student_count' => $class->student_count
-                    ];
-                }
-            }
-
-            $classes = collect(array_values($classesMap))->sortBy('class_code')->values();
-
-            return response()->json([
-                'success' => true,
-                'data' => $classes
-            ]);
-        } catch (Exception $e) {
-            \Log::error('Failed to load semester classes', [
-                'semester_id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load semester classes: ' . $e->getMessage()
-            ], 500);
         }
+
+        $classes = collect(array_values($classesMap))->sortBy('class_code')->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $classes
+        ]);
+    } catch (Exception $e) {
+        \Log::error('Failed to load semester classes', [
+            'semester_id' => $id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load semester classes: ' . $e->getMessage()
+        ], 500);
     }
+}
 
 public function getEnrollmentHistory($semesterId, $classCode)
 {
@@ -549,6 +573,12 @@ public function getEnrollmentHistory($semesterId, $classCode)
                 'message' => 'Class not found'
             ], 404);
         }
+
+        // Get quarters for this semester
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $semesterId)
+            ->orderBy('order_number')
+            ->get();
 
         // Get sections that have this class
         $sectionsWithClass = DB::table('section_class_matrix as secm')
@@ -585,6 +615,8 @@ public function getEnrollmentHistory($semesterId, $classCode)
                     'str.code as strand_code',
                     'lvl.name as level_name',
                     DB::raw("'enrolled' as enrollment_status"),
+                    'gf.q1_grade',
+                    'gf.q2_grade',
                     'gf.final_grade',
                     'gf.remarks',
                     DB::raw("'Section' as enrollment_source")
@@ -626,6 +658,8 @@ public function getEnrollmentHistory($semesterId, $classCode)
                 'str.code as strand_code',
                 'lvl.name as level_name',
                 'scm.enrollment_status',
+                'gf.q1_grade',
+                'gf.q2_grade',
                 'gf.final_grade',
                 'gf.remarks',
                 DB::raw("'Individual' as enrollment_source")
@@ -637,11 +671,33 @@ public function getEnrollmentHistory($semesterId, $classCode)
             ->unique('student_number')
             ->values();
 
-        // Format student names
-        $allStudents = $allStudents->map(function ($student) {
+        // Get quarter grades for all students
+        $studentNumbers = $allStudents->pluck('student_number')->toArray();
+        
+        $quarterGrades = DB::table('quarter_grades as qg')
+            ->join('quarters as q', 'qg.quarter_id', '=', 'q.id')
+            ->whereIn('qg.student_number', $studentNumbers)
+            ->where('qg.class_code', $classCode)
+            ->where('q.semester_id', $semesterId)
+            ->select(
+                'qg.student_number',
+                'q.code as quarter_code',
+                'qg.transmuted_grade'
+            )
+            ->get()
+            ->groupBy('student_number');
+
+        // Format student names and add quarter grades
+        $allStudents = $allStudents->map(function ($student) use ($quarterGrades) {
             $student->full_name = trim($student->first_name . ' ' . 
                                       ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
                                       $student->last_name);
+            
+            // Add quarter grades
+            $studentQuarterGrades = $quarterGrades->get($student->student_number, collect());
+            $student->q1_transmuted = $studentQuarterGrades->where('quarter_code', '1ST')->first()->transmuted_grade ?? null;
+            $student->q2_transmuted = $studentQuarterGrades->where('quarter_code', '2ND')->first()->transmuted_grade ?? null;
+            
             return $student;
         });
 
@@ -654,6 +710,7 @@ public function getEnrollmentHistory($semesterId, $classCode)
         return response()->json([
             'success' => true,
             'data' => $allStudents,
+            'quarters' => $quarters,
             'summary' => [
                 'total_enrolled' => $allStudents->count(),
                 'section_enrolled' => $allStudents->where('enrollment_source', 'Section')->count(),

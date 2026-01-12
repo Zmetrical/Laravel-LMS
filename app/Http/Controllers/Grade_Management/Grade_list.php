@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\GradeTransmutation;
 
-class Grade_list extends MainController
+class Grade_List extends MainController
 {
     /**
      * Show student grade list page

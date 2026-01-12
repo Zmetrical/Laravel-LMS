@@ -59,44 +59,97 @@ class GradeBook_Management extends MainController
 
         return view('teacher.gradebook.view_gradebook', $data);
     }
-    public function edit_gradebook($classId) 
-    {
-        $teacher = Auth::guard('teacher')->user();
-        
-        $hasAccess = DB::table('teacher_class_matrix')
-            ->where('teacher_id', $teacher->id)
-            ->where('class_id', $classId)
-            ->exists();
 
-        if (!$hasAccess) {
-            abort(403, 'Unauthorized access to this class');
-        }
 
-        $class = DB::table('classes')->where('id', $classId)->first();
-        
-        // Get active quarters for current semester
-        $quarters = DB::table('quarters as q')
-            ->join('semesters as s', 'q.semester_id', '=', 's.id')
-            ->where('s.status', 'active')
-            ->orderBy('q.order_number')
-            ->select('q.*')
-            ->get();
-        // Get sections for this class
-        $sections = DB::table('sections as sec')
-            ->join('section_class_matrix as scm', 'sec.id', '=', 'scm.section_id')
-            ->where('scm.class_id', $classId)
-            ->select('sec.id', 'sec.name', 'sec.code')
-            ->get();
-        $data = [
-            'scripts' => ['grade_management/edit_gradebook.js'],
-            'classId' => $classId,
-            'class' => $class,
-            'quarters' => $quarters,
-            'sections' => $sections
-        ];
+    // Add this new method to verify passcode
+public function verify_passcode(Request $request, $classId)
+{
+    $request->validate([
+        'passcode' => 'required'
+    ]);
 
-        return view('teacher.gradebook.edit_gradebook', $data);
+    $teacher = Auth::guard('teacher')->user();
+    
+    // Get plain passcode from teacher_password_matrix
+    $plainPasscode = DB::table('teacher_password_matrix')
+        ->where('teacher_id', $teacher->id)
+        ->value('plain_passcode');
+
+    if ($request->passcode === $plainPasscode) {
+        // Store verified status in session with timestamp
+        session([
+            'gradebook_passcode_verified_' . $classId => true,
+            'gradebook_passcode_time_' . $classId => now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Passcode verified successfully',
+            'redirect' => route('teacher.gradebook.edit', ['classId' => $classId])
+        ]);
     }
+
+    return response()->json([
+        'success' => false,
+        'message' => 'Invalid passcode. Please try again.'
+    ], 401);
+}
+
+// Update the edit_gradebook method
+public function edit_gradebook($classId) 
+{
+    $teacher = Auth::guard('teacher')->user();
+    
+    $hasAccess = DB::table('teacher_class_matrix')
+        ->where('teacher_id', $teacher->id)
+        ->where('class_id', $classId)
+        ->exists();
+
+    if (!$hasAccess) {
+        abort(403, 'Unauthorized access to this class');
+    }
+
+    // Check if passcode was verified recently (within last 5 minutes)
+    $sessionKey = 'gradebook_passcode_verified_' . $classId;
+    $timeKey = 'gradebook_passcode_time_' . $classId;
+    
+    if (!session($sessionKey) || 
+        !session($timeKey) || 
+        now()->diffInMinutes(session($timeKey)) > 5) {
+        // Clear expired session
+        session()->forget([$sessionKey, $timeKey]);
+        return redirect()->route('teacher.gradebook.view', ['classId' => $classId])
+            ->with('error', 'Please verify your passcode to access edit mode');
+    }
+
+    // Clear the session after successful access
+    session()->forget([$sessionKey, $timeKey]);
+
+    $class = DB::table('classes')->where('id', $classId)->first();
+    
+    $quarters = DB::table('quarters as q')
+        ->join('semesters as s', 'q.semester_id', '=', 's.id')
+        ->where('s.status', 'active')
+        ->orderBy('q.order_number')
+        ->select('q.*')
+        ->get();
+
+    $sections = DB::table('sections as sec')
+        ->join('section_class_matrix as scm', 'sec.id', '=', 'scm.section_id')
+        ->where('scm.class_id', $classId)
+        ->select('sec.id', 'sec.name', 'sec.code')
+        ->get();
+
+    $data = [
+        'scripts' => ['grade_management/edit_gradebook.js'],
+        'classId' => $classId,
+        'class' => $class,
+        'quarters' => $quarters,
+        'sections' => $sections
+    ];
+
+    return view('teacher.gradebook.edit_gradebook', $data);
+}
 
     
 /**

@@ -102,21 +102,21 @@
                         <i class="fas fa-spinner fa-spin"></i> Loading classes...
                     </div>
 
-                    <div id="classesTable" style="display: none;">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-sm mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Class Code</th>
-                                        <th>Class Name</th>
-                                        <th width="60" class="text-center">Students</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="classesTableBody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+<div id="classesTable" style="display: none;">
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Class</th>
+                    <th>Teacher</th>
+                    <th width="80" class="text-center">Students</th>
+                </tr>
+            </thead>
+            <tbody id="classesTableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
 
                     <div id="noClasses" class="text-center py-4" style="display: none;">
                         <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
@@ -143,7 +143,7 @@
                     <ul class="nav nav-tabs quarter-tabs card-header-tabs mb-0">
                         <li class="nav-item">
                             <a class="nav-link active" href="#" data-quarter="all">
-                                <i class="fas fa-layer-group"></i> All Quarters
+                                <i class="fas fa-layer-group"></i> Final
                             </a>
                         </li>
                         <li class="nav-item">
@@ -210,20 +210,20 @@
                     <!-- Students Table -->
                     <div id="studentsContent" class="p-0" style="display: none;">
                         <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th width="200">Student Number</th>
-                                        <th>Name</th>
-                                        <th width="150">Section</th>
-                                        <th width="100">Type</th>
-                                        <th width="150" class="text-center">Final Grade</th>
-                                        <th width="100">Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="studentsTableBody">
-                                </tbody>
-                            </table>
+<table class="table table-hover">
+    <thead class="bg-light">
+        <tr>
+            <th width="200">Student Number</th>
+            <th>Name</th>
+            <th width="150">Section</th>
+            <th width="100">Type</th>
+            <th width="150" class="text-center" id="gradeColumnHeader">Final Grade</th>
+            <th width="100">Remarks</th>
+        </tr>
+    </thead>
+    <tbody id="studentsTableBody">
+    </tbody>
+</table>
                         </div>
                     </div>
 

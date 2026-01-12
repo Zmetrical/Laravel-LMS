@@ -5,7 +5,7 @@ $(document).ready(function () {
     let selectedSemesterId = null;
     let selectedClassCode = null;
     let selectedClassName = null;
-    let selectedQuarter = 'all';
+    let selectedQuarter = 'final';
     let allStudents = [];
     let allSections = [];
 
@@ -167,9 +167,10 @@ $(document).ready(function () {
         // Reset selected class and quarter
         selectedClassCode = null;
         selectedClassName = null;
-        selectedQuarter = 'all';
+        selectedQuarter = 'final';
         allStudents = [];
         allSections = [];
+        quarters = [];
 
         // Hide filters and quarter tabs
         $('#filtersSection').hide();
@@ -184,27 +185,8 @@ $(document).ready(function () {
         $('#noStudents').hide();
         $('#studentsLoading').hide();
 
-        // Load quarters and classes for this semester
-        loadQuarters(semesterId);
+        // Load classes for this semester
         loadSemesterClasses(semesterId);
-    }
-
-    // Load Quarters
-    function loadQuarters(semesterId) {
-        const url = API_ROUTES.getQuarters.replace(':semesterId', semesterId);
-
-        $.ajax({
-            url: url,
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    quarters = response.data;
-                }
-            },
-            error: function(xhr) {
-                console.error('Failed to load quarters:', xhr);
-            }
-        });
     }
 
     // Load Semester Classes
@@ -242,13 +224,21 @@ $(document).ready(function () {
 
         classes.forEach(cls => {
             const isSelected = cls.class_code === selectedClassCode ? 'table-primary' : '';
+            const teacherDisplay = cls.teachers || '<em class="text-muted">No teacher assigned</em>';
             
             const row = `
                 <tr class="class-row ${isSelected}" style="cursor: pointer;" 
                     data-class-code="${cls.class_code}" 
                     data-class-name="${cls.class_name}">
-                    <td><strong>${cls.class_code}</strong></td>
-                    <td>${cls.class_name}</td>
+                    <td>
+                        <strong>${cls.class_name}</strong>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            <i class="fas fa-chalkboard-teacher"></i> ${teacherDisplay}
+                        </small>
+                    </td>
+
                     <td class="text-center">
                         <span class="badge badge-primary">${cls.student_count || 0}</span>
                     </td>
@@ -269,7 +259,7 @@ $(document).ready(function () {
     function selectClass(classCode, className) {
         selectedClassCode = classCode;
         selectedClassName = className;
-        selectedQuarter = 'all';
+        selectedQuarter = 'final';
 
         // Update class selection highlight
         $('.class-row').removeClass('table-primary');
@@ -301,16 +291,20 @@ $(document).ready(function () {
                 
                 if (response.success && response.data.length > 0) {
                     allStudents = response.data;
+                    quarters = response.quarters || [];
                     
                     // Extract unique sections
                     allSections = [...new Set(allStudents.map(s => s.section_name).filter(Boolean))];
                     populateSectionFilter(allSections);
                     
-                    displayEnrollmentHistory(allStudents);
+                    // Build quarter tabs dynamically
+                    buildQuarterTabs(quarters);
+                    
+                    displayEnrollmentHistory(allStudents, selectedQuarter);
                     $('#studentsContent').show();
                     $('#filtersSection').show();
                     $('#quarterTabsSection').show();
-                    $('#studentCount').text(`${allStudents.length} Student${allStudents.length > 1 ? 's' : ''}`);
+                    updateStudentCount(allStudents);
                 } else {
                     $('#noStudents').show();
                     $('#studentCount').text('0 Students');
@@ -321,6 +315,35 @@ $(document).ready(function () {
                 $('#noStudents').show();
                 $('#studentCount').text('0 Students');
             }
+        });
+    }
+
+    // Build Quarter Tabs
+    function buildQuarterTabs(quartersData) {
+        const tabsContainer = $('#quarterTabsSection .quarter-tabs');
+        tabsContainer.empty();
+
+        // Final Grade Tab (Always first)
+        tabsContainer.append(`
+            <li class="nav-item">
+                <a class="nav-link active" href="#" data-quarter="final">
+                    <i class="fas fa-trophy"></i> Final Grade
+                </a>
+            </li>
+        `);
+
+        // Dynamic Quarter Tabs
+        quartersData.forEach(quarter => {
+            const icon = quarter.code === '1ST' ? 'fa-calendar-day' : 
+                        quarter.code === '2ND' ? 'fa-calendar-week' : 'fa-calendar';
+            
+            tabsContainer.append(`
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-quarter="${quarter.code}">
+                        <i class="fas ${icon}"></i> ${quarter.name}
+                    </a>
+                </li>
+            `);
         });
     }
 
@@ -335,7 +358,7 @@ $(document).ready(function () {
     }
 
     // Display Enrollment History
-    function displayEnrollmentHistory(students) {
+    function displayEnrollmentHistory(students, quarter) {
         const tbody = $('#studentsTableBody');
         tbody.empty();
 
@@ -355,8 +378,26 @@ $(document).ready(function () {
             const statusBadge = student.student_type === 'regular' ? 'badge-primary' :
                               student.student_type === 'irregular' ? 'badge-secondary' : 'badge-secondary';
             
-            const remarksBadge = student.remarks === 'PASSED' ? 'badge-success' :
-                               student.remarks === 'FAILED' ? 'badge-danger' : 'badge-warning';
+            let displayGrade = '-';
+            let displayRemarks = '-';
+            
+            // Determine which grade to display based on selected quarter
+            if (quarter === 'final') {
+                displayGrade = student.final_grade || '-';
+                displayRemarks = student.remarks || '-';
+            } else if (quarter === '1ST') {
+                displayGrade = student.q1_transmuted || student.q1_grade || '-';
+                displayRemarks = displayGrade !== '-' && displayGrade >= 75 ? 'PASSED' : 
+                                displayGrade !== '-' ? 'FAILED' : '-';
+            } else if (quarter === '2ND') {
+                displayGrade = student.q2_transmuted || student.q2_grade || '-';
+                displayRemarks = displayGrade !== '-' && displayGrade >= 75 ? 'PASSED' : 
+                                displayGrade !== '-' ? 'FAILED' : '-';
+            }
+            
+            const remarksBadge = displayRemarks === 'PASSED' ? 'badge-success' :
+                               displayRemarks === 'FAILED' ? 'badge-danger' : 
+                               displayRemarks === 'INC' ? 'badge-warning' : 'badge-secondary';
 
             const row = `
                 <tr>
@@ -367,15 +408,21 @@ $(document).ready(function () {
                         <span class="badge ${statusBadge}">${student.student_type}</span>
                     </td>
                     <td class="text-center">
-                        ${student.final_grade ? `<strong>${student.final_grade}</strong>` : '-'}
+                        ${displayGrade !== '-' ? `<strong>${displayGrade}</strong>` : '-'}
                     </td>
                     <td>
-                        ${student.remarks ? `<span class="badge ${remarksBadge}">${student.remarks}</span>` : '-'}
+                        ${displayRemarks !== '-' ? `<span class="badge ${remarksBadge}">${displayRemarks}</span>` : '-'}
                     </td>
                 </tr>
             `;
             tbody.append(row);
         });
+    }
+
+    // Update Student Count
+    function updateStudentCount(students) {
+        const count = students.length;
+        $('#studentCount').text(`${count} Student${count !== 1 ? 's' : ''}`);
     }
 
     // Apply Filters
@@ -391,13 +438,26 @@ $(document).ready(function () {
                 student.last_name.toLowerCase().includes(searchTerm);
             
             const matchSection = !sectionFilter || student.section_name === sectionFilter;
-            const matchRemarks = !remarksFilter || student.remarks === remarksFilter;
+            
+            // Adjust remarks filter based on selected quarter
+            let studentRemarks = '-';
+            if (selectedQuarter === 'final') {
+                studentRemarks = student.remarks || '-';
+            } else if (selectedQuarter === '1ST') {
+                const grade = student.q1_transmuted || student.q1_grade;
+                studentRemarks = grade && grade >= 75 ? 'PASSED' : grade ? 'FAILED' : '-';
+            } else if (selectedQuarter === '2ND') {
+                const grade = student.q2_transmuted || student.q2_grade;
+                studentRemarks = grade && grade >= 75 ? 'PASSED' : grade ? 'FAILED' : '-';
+            }
+            
+            const matchRemarks = !remarksFilter || studentRemarks === remarksFilter;
 
             return matchSearch && matchSection && matchRemarks;
         });
 
-        displayEnrollmentHistory(filtered);
-        $('#studentCount').text(`${filtered.length} Student${filtered.length !== 1 ? 's' : ''}`);
+        displayEnrollmentHistory(filtered, selectedQuarter);
+        updateStudentCount(filtered);
     }
 
     // Reset Filters
@@ -407,15 +467,16 @@ $(document).ready(function () {
         $('#remarksFilter').val('');
         
         if (allStudents.length > 0) {
-            displayEnrollmentHistory(allStudents);
-            $('#studentCount').text(`${allStudents.length} Student${allStudents.length > 1 ? 's' : ''}`);
+            displayEnrollmentHistory(allStudents, selectedQuarter);
+            updateStudentCount(allStudents);
         }
     }
 
     // Reset Quarter Tabs
     function resetQuarterTabs() {
         $('#quarterTabsSection .nav-link').removeClass('active');
-        $('#quarterTabsSection .nav-link[data-quarter="all"]').addClass('active');
+        $('#quarterTabsSection .nav-link[data-quarter="final"]').addClass('active');
+        selectedQuarter = 'final';
     }
 
     // Quarter Tab Click Handler
@@ -427,15 +488,15 @@ $(document).ready(function () {
         
         selectedQuarter = $(this).data('quarter');
         
-        // For now, just display all students
-        // In the future, this will filter by quarter grades
-        displayEnrollmentHistory(allStudents);
+        // Re-display students with selected quarter
+        applyFilters();
         
-        // Show info about selected quarter
-        const quarterInfo = quarters.find(q => q.code === selectedQuarter);
-        if (quarterInfo) {
-            console.log('Selected quarter:', quarterInfo.name);
-        }
+        // Update column header based on quarter
+        const gradeHeader = selectedQuarter === 'final' ? 'Final Grade' :
+                           selectedQuarter === '1ST' ? '1st Quarter' :
+                           selectedQuarter === '2ND' ? '2nd Quarter' : 'Grade';
+        
+        $('#studentsTableBody').closest('table').find('thead th:eq(4)').text(gradeHeader);
     });
 
     // Filter Event Handlers

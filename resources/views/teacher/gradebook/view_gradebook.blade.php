@@ -421,6 +421,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Passcode Verification Modal -->
+<div class="modal fade" id="passcodeModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-lock"></i> Verify Passcode
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="passcodeForm">
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle"></i> Please enter your passcode to access edit mode
+                    </p>
+                    <div class="form-group">
+                        <label for="passcode">Passcode <span class="text-danger">*</span></label>
+                        <input type="password" 
+                               class="form-control" 
+                               id="passcode" 
+                               name="passcode" 
+                               placeholder="Enter your passcode"
+                               autocomplete="off"
+                               required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="verifyPasscodeBtn">
+                        <i class="fas fa-check"></i> Verify
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -435,6 +476,7 @@
         
         const API_ROUTES = {
             editGradebook: "{{ route('teacher.gradebook.edit', ['classId' => $classId]) }}",
+            verifyPasscode: "{{ route('teacher.gradebook.verify-passcode', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
             exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}",
             getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}",

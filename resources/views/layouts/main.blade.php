@@ -176,7 +176,7 @@
                                         <li class="nav-item">
                                             <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Assign teacher</p>
+                                                <p>Assign Teacher</p>
                                             </a>
                                         </li>
                                         <li class="nav-item">
@@ -206,7 +206,7 @@
                                         <li class="nav-item">
                                             <a href="{{ route('admin.grades.list') }}" class="nav-link {{ Request::routeIs('admin.grades.list') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Grades</p>
+                                                <p>Grade Search</p>
                                             </a>
                                         </li>
                                     </ul>
@@ -214,7 +214,15 @@
                                         <li class="nav-item">
                                             <a href="{{ route('admin.grades.section-view') }}" class="nav-link {{ Request::routeIs('admin.grades.section-view') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                                <p>Section's Grade</p>
+                                                <p>Grade Submissions</p>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                    <ul class="nav nav-treeview">
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.grades.card') }}" class="nav-link {{ Request::routeIs('admin.grades.card') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                                <p>Grade Card</p>
                                             </a>
                                         </li>
                                     </ul>
