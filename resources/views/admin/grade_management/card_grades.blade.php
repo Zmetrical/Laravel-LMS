@@ -99,22 +99,6 @@
         .subjects-preview-table td {
             padding: 4px 8px;
         }
-        .general-avg-display {
-            background: #007bff;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 4px;
-            text-align: center;
-            margin-top: 10px;
-        }
-        .general-avg-display .avg-label {
-            font-size: 0.75rem;
-            opacity: 0.9;
-        }
-        .general-avg-display .avg-value {
-            font-size: 1.3rem;
-            font-weight: bold;
-        }
         .view-full-card-btn {
             width: 100%;
             margin-top: 10px;
@@ -236,12 +220,6 @@
                                         <div class="font-weight-bold">{{ $card->total_subjects }}</div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- General Average -->
-                            <div class="general-avg-display">
-                                <div class="avg-label">GENERAL AVERAGE</div>
-                                <div class="avg-value">{{ number_format($card->general_average, 2) }}</div>
                             </div>
 
                             <!-- View Button -->
