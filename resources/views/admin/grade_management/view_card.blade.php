@@ -3,192 +3,194 @@
 @section('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        .report-card-container {
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 0; }
+            .report-card-page { 
+                margin: 0;
+                padding: 0;
+                box-shadow: none !important;
+            }
+        }
+
+        .report-card-page {
             background: white;
-            border: 3px solid #007bff;
-            border-radius: 8px;
-            padding: 40px;
-            max-width: 900px;
-            margin: 0 auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 8.5in;
+            min-height: 11in;
+            margin: 20px auto;
+            padding: 0.5in;
+            box-shadow: 0 0 20px rgba(0,0,0,0.15);
+            position: relative;
         }
-        .report-card-header {
+
+        .watermark-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.05;
+            width: 500px;
+            height: 500px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
             text-align: center;
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 25px;
+            border-bottom: 3px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
-        .report-card-logo {
+
+        .logo {
             width: 80px;
             height: 80px;
-            object-fit: contain;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
+
         .school-name {
-            font-size: 1.5rem;
+            font-size: 20px;
             font-weight: bold;
-            color: #007bff;
             margin: 5px 0;
+            letter-spacing: 1px;
         }
-        .school-address {
-            font-size: 0.9rem;
-            color: #6c757d;
+
+        .school-info {
+            font-size: 11px;
+            margin: 2px 0;
+            line-height: 1.3;
         }
+
         .report-title {
-            font-size: 1.3rem;
+            font-size: 16px;
             font-weight: bold;
-            margin-top: 15px;
-            color: #212529;
+            margin-top: 10px;
+            letter-spacing: 2px;
         }
-        .report-subtitle {
-            font-size: 1rem;
-            color: #495057;
+
+        .school-year {
+            font-size: 13px;
             margin-top: 5px;
         }
-        .student-info-section {
-            margin-bottom: 25px;
+
+        .student-info {
+            margin: 15px 0;
+            border: 2px solid #000;
+            padding: 10px;
         }
+
         .info-row {
             display: flex;
-            padding: 8px 0;
-            border-bottom: 1px solid #dee2e6;
+            padding: 4px 0;
+            font-size: 13px;
         }
-        .info-row:last-child {
-            border-bottom: none;
-        }
+
         .info-label {
-            font-weight: 600;
-            color: #495057;
+            font-weight: bold;
             width: 180px;
             flex-shrink: 0;
         }
+
         .info-value {
-            color: #212529;
-            flex-grow: 1;
+            flex: 1;
+            border-bottom: 1px solid #000;
+            padding: 0 5px;
         }
+
         .grades-section {
-            margin: 25px 0;
+            margin: 20px 0;
         }
-        .section-title {
-            font-size: 1.1rem;
+
+        .section-header {
+            text-align: center;
             font-weight: bold;
-            color: #007bff;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #007bff;
+            font-size: 13px;
+            margin-bottom: 10px;
         }
+
         .grades-table {
             width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
             margin-bottom: 0;
         }
+
         .grades-table th {
-            background-color: #007bff;
-            color: white;
-            padding: 10px;
-            font-weight: 600;
+            border: 1px solid #000;
+            padding: 8px 5px;
             text-align: center;
-            font-size: 0.9rem;
+            font-weight: bold;
+            font-size: 11px;
+            line-height: 1.2;
         }
+
         .grades-table td {
-            padding: 8px 10px;
-            border: 1px solid #dee2e6;
-            font-size: 0.9rem;
+            border: 1px solid #000;
+            padding: 6px 8px;
+            vertical-align: middle;
         }
+
         .grades-table tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
+            background: #f8f9fa;
         }
-        .text-center-td {
+
+        .category-header {
+            background: #2a347e;
+            color: white;
+            font-weight: bold;
+            text-align: left;
+            padding: 5px 8px !important;
+        }
+
+        .text-center {
             text-align: center;
         }
-        .badge-passed { 
-            background-color: #28a745; 
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
+
+        .general-average-row {
+            background: #e9ecef !important;
+            font-weight: bold;
         }
-        .badge-failed { 
-            background-color: #dc3545; 
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
+
+        .general-average-row td {
+            padding: 8px !important;
         }
-        .badge-inc { 
-            background-color: #ffc107; 
-            color: #212529;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
+
+        .footer-section {
+            margin-top: 20px;
+            text-align: center;
         }
-        .badge-drp, .badge-w { 
-            background-color: #6c757d; 
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
+
+        .footer-box {
+            padding: 10px;
+            display: inline-block;
+            max-width: 500px;
         }
-        .summary-section {
-            margin-top: 25px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 2px solid #007bff;
+
+        .footer-title {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 8px;
         }
-        .summary-row {
+
+        .footer-row {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #dee2e6;
+            font-size: 11px;
+            padding: 2px 0;
         }
-        .summary-row:last-child {
-            border-bottom: none;
+
+        .footer-row .label {
+            flex: 1;
         }
-        .summary-label {
-            font-weight: 600;
-            color: #495057;
-        }
-        .summary-value {
+
+        .footer-row .value {
             font-weight: bold;
-            color: #007bff;
-            font-size: 1.1rem;
-        }
-        .grading-scale {
-            margin-top: 25px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            font-size: 0.85rem;
-        }
-        .grading-scale-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #495057;
-        }
-        .grading-scale-row {
-            display: flex;
-            padding: 3px 0;
-        }
-        .grading-scale-label {
-            width: 200px;
-            flex-shrink: 0;
-        }
-        .grading-scale-value {
-            flex-grow: 1;
             text-align: right;
-        }
-        .action-buttons {
-            margin-top: 30px;
-            text-align: center;
-        }
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            .report-card-container {
-                border: 2px solid #000;
-                box-shadow: none;
-            }
         }
     </style>
 @endsection
@@ -202,167 +204,231 @@
 @endsection
 
 @section('content')
-<br>
-<div class="container-fluid no-print">
-    <div class="mb-3">
-        <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Grade Cards
-        </a>
-        <button class="btn btn-primary" onclick="window.print()">
-            <i class="fas fa-print"></i> Print Report Card
-        </button>
-    </div>
+<div class="container-fluid no-print mb-3">
+    <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+    <button class="btn btn-danger" onclick="window.print()">
+        <i class="fas fa-print"></i> Print
+    </button>
 </div>
 
-<div class="container-fluid">
-    <div class="report-card-container">
+<div class="report-card-page">
+    <img src="{{ asset('img/logo/trinity_logo.png') }}" class="watermark-logo" alt="Watermark">
+    
+    <div class="content">
         <!-- Header -->
-        <div class="report-card-header">
-            <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="School Logo" class="report-card-logo">
+        <div class="header">
+            <img src="{{ asset('img/logo/trinity_logo.png') }}" class="logo" alt="School Logo">
             <div class="school-name">TRINITY POLYTECHNIC COLLEGE INC.</div>
-            <div class="school-address">Golden Building, 2491 R. Lagman st. Lugam, M. Alas Highway, Brgy. Sta. Rosa, Cabanatuan City</div>
-            <div class="school-address">Telephone Number: 0919 8011 60</div>
-            <div class="school-address">Email: trinitypci@gmail.com</div>
+            <div class="school-info">Golden Building, 2491 R. Lagman st. Lugam, M. Alas Highway, Brgy. Sta. Rosa, Cabanatuan City</div>
+            <div class="school-info">Telephone Number: 0919 8011 60</div>
+            <div class="school-info">Email: trinitypci@gmail.com</div>
             <div class="report-title">COPY OF GRADES</div>
-            <div class="report-subtitle">School Year {{ $semester->display_name }}</div>
+            <div class="school-year">School Year {{ $semester->school_year_code ?? 'N/A' }}</div>
+            <div class="school-year">{{ $semester->name }}</div>
         </div>
 
         <!-- Student Information -->
-        <div class="student-info-section">
+        <div class="student-info">
             <div class="info-row">
                 <div class="info-label">NAME:</div>
                 <div class="info-value">{{ strtoupper($student->last_name) }}, {{ strtoupper($student->first_name) }} {{ strtoupper($student->middle_name) }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">STUDENT NUMBER:</div>
-                <div class="info-value">{{ $student->student_number }}</div>
-            </div>
-            <div class="info-row">
                 <div class="info-label">TRACK AND STRAND:</div>
-                <div class="info-value">
-                    @if($student->strand_code && $student->level_name)
-                        {{ $student->strand_code }} - {{ $student->level_name }}
-                    @else
-                        N/A
-                    @endif
-                </div>
+                <div class="info-value">{{ $student->strand_code ?? 'N/A' }} - {{ $student->level_name ?? 'N/A' }}</div>
+                <div style="width: 20px;"></div>
+                <div class="info-label" style="width: 150px;">GRADE & SECTION:</div>
+                <div class="info-value" style="width: 200px;">{{ $student->section_code ?? 'IRREGULAR' }} {{ $student->student_type === 'regular' ? '- ' . $student->level_name : '' }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">GRADE & SECTION:</div>
-                <div class="info-value">{{ $student->section_name ?? 'N/A' }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">STUDENT TYPE:</div>
-                <div class="info-value">
-                    <span class="badge badge-{{ $student->student_type === 'regular' ? 'primary' : 'secondary' }}">
-                        {{ strtoupper($student->student_type) }}
-                    </span>
-                </div>
+                <div class="info-label">ADVISER:</div>
+                <div class="info-value">{{ $adviser_name ?? 'N/A' }}</div>
             </div>
         </div>
 
         <!-- Grades Section -->
         <div class="grades-section">
-            <div class="section-title">LEARNING PROGRESS AND ACHIEVEMENT</div>
+            <div class="section-header">LEARNING PROGRESS AND ACHIEVEMENT</div>
             
-            <table class="table table-bordered grades-table">
+            <table class="grades-table">
                 <thead>
                     <tr>
                         <th style="width: 50%;">SUBJECTS</th>
-                        <th style="width: 12%;">FIRST<br>QUARTER</th>
-                        <th style="width: 12%;">SECOND<br>QUARTER</th>
-                        <th style="width: 13%;">SEMESTER<br>AVERAGE</th>
-                        <th style="width: 13%;">REMARKS</th>
+                        <th style="width: 12.5%;">FIRST<br>QUARTER</th>
+                        <th style="width: 12.5%;">SECOND<br>QUARTER</th>
+                        <th style="width: 12.5%;">SEMESTER<br>AVERAGE</th>
+                        <th style="width: 12.5%;">REMARKS</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($grades as $grade)
-                        <tr>
-                            <td>
-                                <strong>{{ $grade->class_code }}</strong><br>
-                                <small>{{ $grade->class_name }}</small>
-                            </td>
-                            <td class="text-center-td">{{ $grade->q1_grade ?? '-' }}</td>
-                            <td class="text-center-td">{{ $grade->q2_grade ?? '-' }}</td>
-                            <td class="text-center-td"><strong>{{ $grade->final_grade }}</strong></td>
-                            <td class="text-center-td">
-                                <span class="badge-{{ strtolower($grade->remarks) }}">{{ $grade->remarks }}</span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No grades available</td>
-                        </tr>
-                    @endforelse
+                    @php
+                        $core_subjects = [];
+                        $applied_subjects = [];
+                        $specialized_subjects = [];
+                        
+                        foreach($enrolled_subjects as $subject) {
+                            $class_name = strtoupper($subject->class_name);
+                            
+                            if (
+                                strpos($class_name, 'ORAL COMMUNICATION') !== false ||
+                                strpos($class_name, 'KOMUNIKASYON') !== false ||
+                                strpos($class_name, 'EARTH') !== false ||
+                                strpos($class_name, 'GENERAL MATH') !== false ||
+                                strpos($class_name, 'INTRODUCTION TO') !== false ||
+                                strpos($class_name, 'PERSONAL DEVELOPMENT') !== false ||
+                                strpos($class_name, 'PHYSICAL EDUCATION') !== false ||
+                                strpos($class_name, 'P.E') !== false
+                            ) {
+                                $core_subjects[] = $subject;
+                            } elseif (
+                                strpos($class_name, 'APPLIED') !== false
+                            ) {
+                                $applied_subjects[] = $subject;
+                            } else {
+                                $specialized_subjects[] = $subject;
+                            }
+                        }
+                        
+                        $total_final = 0;
+                        $count_with_grades = 0;
+                    @endphp
                     
-                    @if(count($grades) > 0)
-                        <tr style="background: #e9ecef;">
-                            <td colspan="3" class="text-right"><strong>GENERAL AVERAGE</strong></td>
-                            <td class="text-center-td" colspan="2"><strong style="font-size: 1.1rem; color: #007bff;">{{ number_format($statistics['general_average'], 2) }}</strong></td>
+                    @if(count($core_subjects) > 0)
+                        <tr>
+                            <td colspan="5" class="category-header">CORE SUBJECTS</td>
+                        </tr>
+                        @foreach($core_subjects as $subject)
+                            @if($subject->final_grade)
+                                @php
+                                    $total_final += $subject->final_grade;
+                                    $count_with_grades++;
+                                @endphp
+                            @endif
+                            <tr>
+                                <td>{{ $subject->class_name }}</td>
+                                <td class="text-center">{{ $subject->q1_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->q2_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->final_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->remarks ?? '' }}</td>
+                            </tr>
+                        @endforeach
+                    @endif
+                    
+                    @if(count($applied_subjects) > 0)
+                        <tr>
+                            <td colspan="5" class="category-header">APPLIED SUBJECT</td>
+                        </tr>
+                        @foreach($applied_subjects as $subject)
+                            @if($subject->final_grade)
+                                @php
+                                    $total_final += $subject->final_grade;
+                                    $count_with_grades++;
+                                @endphp
+                            @endif
+                            <tr>
+                                <td>{{ $subject->class_name }}</td>
+                                <td class="text-center">{{ $subject->q1_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->q2_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->final_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->remarks ?? '' }}</td>
+                            </tr>
+                        @endforeach
+                    @endif
+                    
+                    @if(count($specialized_subjects) > 0)
+                        <tr>
+                            <td colspan="5" class="category-header">SPECIALIZED SUBJECT</td>
+                        </tr>
+                        @foreach($specialized_subjects as $subject)
+                            @if($subject->final_grade)
+                                @php
+                                    $total_final += $subject->final_grade;
+                                    $count_with_grades++;
+                                @endphp
+                            @endif
+                            <tr>
+                                <td>{{ $subject->class_name }}</td>
+                                <td class="text-center">{{ $subject->q1_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->q2_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->final_grade ?? '' }}</td>
+                                <td class="text-center">{{ $subject->remarks ?? '' }}</td>
+                            </tr>
+                        @endforeach
+                    @endif
+                    
+                    @if($count_with_grades > 0)
+                        <tr class="general-average-row">
+                            <td colspan="3" style="text-align: right; padding-right: 20px;">GENERAL AVERAGE</td>
+                            <td colspan="2" class="text-center">{{ number_format($total_final / $count_with_grades, 2) }}</td>
+                        </tr>
+                    @endif
+                    
+                    @if(count($enrolled_subjects) == 0)
+                        <tr>
+                            <td colspan="5" class="text-center">No subjects enrolled for this semester</td>
                         </tr>
                     @endif
                 </tbody>
             </table>
         </div>
 
-        <!-- Summary Section -->
-        @if(count($grades) > 0)
-        <div class="summary-section">
-            <div class="summary-row">
-                <span class="summary-label">Total Subjects Enrolled:</span>
-                <span class="summary-value">{{ $statistics['total_subjects'] }}</span>
+        <!-- Footer Section -->
+        <div class="footer-section">
+            <div class="footer-box">
+                <div class="footer-title">Description</div>
+                <div class="footer-row">
+                    <span class="label">Outstanding</span>
+                    <span class="value">90-100</span>
+                </div>
+                <div class="footer-row">
+                    <span class="label">Very Satisfactory</span>
+                    <span class="value">85-89</span>
+                </div>
+                <div class="footer-row">
+                    <span class="label">Satisfactory</span>
+                    <span class="value">80-84</span>
+                </div>
+                <div class="footer-row">
+                    <span class="label">Fairly Satisfactory</span>
+                    <span class="value">75-79</span>
+                </div>
+                <div class="footer-row">
+                    <span class="label">Did Not Meet Expectations</span>
+                    <span class="value">Below 75</span>
+                </div>
             </div>
-        </div>
-        @endif
-
-        <!-- Grading Scale -->
-        <div class="grading-scale">
-            <div class="grading-scale-title">Grading Scale</div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">Outstanding</span>
-                <span class="grading-scale-value">90-100</span>
-            </div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">Very Satisfactory</span>
-                <span class="grading-scale-value">85-89</span>
-            </div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">Satisfactory</span>
-                <span class="grading-scale-value">80-84</span>
-            </div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">Fairly Satisfactory</span>
-                <span class="grading-scale-value">75-79</span>
-            </div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">Did Not Meet Expectations</span>
-                <span class="grading-scale-value">Below 75</span>
-            </div>
-        </div>
-
-        <div class="grading-scale mt-3">
-            <div class="grading-scale-title">Remarks</div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">PASSED</span>
-                <span class="grading-scale-value">Student passed the subject</span>
-            </div>
-            <div class="grading-scale-row">
-                <span class="grading-scale-label">FAILED</span>
-                <span class="grading-scale-value">Student failed the subject</span>
+            
+            <div class="footer-box">
+                <div class="footer-title">Grading Scale</div>
+                <div class="footer-row">
+                    <span class="label">Passed</span>
+                </div>
+                <div class="footer-row">
+                    <span class="label">Failed</span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <div class="footer-title">Remarks</div>
+                    <div class="footer-row">
+                        <span class="label">Passed</span>
+                    </div>
+                    <div class="footer-row">
+                        <span class="label">Failed</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="container-fluid no-print">
-    <div class="action-buttons mb-4">
-        <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Grade Cards
-        </a>
-        <button class="btn btn-primary" onclick="window.print()">
-            <i class="fas fa-print"></i> Print Report Card
-        </button>
-    </div>
+<div class="container-fluid no-print text-center mb-4">
+    <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+    <button class="btn btn-danger" onclick="window.print()">
+        <i class="fas fa-print"></i> Print
+    </button>
 </div>
 @endsection
 

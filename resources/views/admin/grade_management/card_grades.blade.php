@@ -32,76 +32,89 @@
             height: calc(2.25rem + 2px) !important;
         }
 
-        /* Report Card Preview Styles */
-        .report-card-preview {
+        /* Compact Card List Styles */
+        .grade-card-list {
             background: white;
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        .report-card-preview:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-        .report-card-header {
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
-        .report-card-logo {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-        }
-        .report-card-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #007bff;
-            margin: 0;
-        }
-        .report-card-subtitle {
-            font-size: 0.85rem;
-            color: #6c757d;
-            margin: 0;
-        }
-        .student-info-row {
-            border-bottom: 1px solid #dee2e6;
-            padding: 8px 0;
-        }
-        .student-info-label {
-            font-weight: 600;
-            color: #495057;
-            font-size: 0.85rem;
-        }
-        .student-info-value {
-            color: #212529;
-            font-size: 0.85rem;
-        }
-        .subjects-preview {
-            background: #f8f9fa;
-            padding: 10px;
+            border: 1px solid #dee2e6;
             border-radius: 4px;
-            margin-top: 10px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
         }
-        .subjects-preview-table {
-            font-size: 0.8rem;
-            margin-bottom: 0;
+        .grade-card-list:hover {
+            border-color: #007bff;
+            box-shadow: 0 1px 4px rgba(0,123,255,0.1);
         }
-        .subjects-preview-table th {
-            background: #e9ecef;
-            padding: 5px 8px;
+        .grade-card-list .card-body {
+            padding: 0.75rem 1rem;
+        }
+        .student-id-badge {
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
             font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-right: 0.5rem;
         }
-        .subjects-preview-table td {
-            padding: 4px 8px;
+        .student-name-display {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #212529;
+            margin: 0;
+            display: inline-block;
         }
-        .view-full-card-btn {
-            width: 100%;
-            margin-top: 10px;
+        .info-inline {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .info-item-inline {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+        .info-item-inline i {
+            color: #6c757d;
+            margin-right: 0.4rem;
+            width: 14px;
+            text-align: center;
+        }
+        .info-label-inline {
+            color: #6c757d;
+            margin-right: 0.3rem;
+        }
+        .info-value-inline {
+            color: #212529;
+            font-weight: 500;
+        }
+        .subjects-count-compact {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 0.4rem 0.7rem;
+            border-radius: 4px;
+            text-align: center;
+            margin-right: 0.75rem;
+        }
+        .subjects-count-compact .count {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #007bff;
+            line-height: 1;
+            display: block;
+        }
+        .subjects-count-compact .label {
+            font-size: 0.65rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 600;
+            line-height: 1;
+        }
+        .view-card-btn {
+            white-space: nowrap;
+            padding: 0.4rem 0.9rem;
+            font-size: 0.875rem;
         }
     </style>
 @endsection
@@ -154,7 +167,7 @@
         </div>
     </div>
 
-    <!-- Grade Cards Grid -->
+    <!-- Grade Cards List -->
     <div class="card card-primary card-outline">
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-id-card mr-2"></i>Student Grade Cards</h3>
@@ -163,70 +176,59 @@
             </div>
         </div>
         <div class="card-body">
-            <div id="gradeCardsContainer" class="row">
+            <div id="gradeCardsContainer">
                 @foreach ($gradeCards as $card)
-                    <div class="col-md-6 col-lg-4 grade-card-item" 
+                    <div class="grade-card-list grade-card-item" 
                          data-student-number="{{ $card->student_number }}"
                          data-student-name="{{ strtolower($card->last_name . ' ' . $card->first_name) }}"
                          data-section-code="{{ $card->section_code }}"
                          data-semester-id="{{ $card->semester_id }}">
-                        <div class="report-card-preview">
-                            <!-- Header -->
-                            <div class="report-card-header">
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Logo" class="report-card-logo mr-3">
-                                    <div class="flex-grow-1">
-                                        <p class="report-card-title">COPY OF GRADES</p>
-                                        <p class="report-card-subtitle">{{ $card->semester_display }}</p>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-9">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="student-id-badge">{{ $card->student_number }}</span>
+                                        <h5 class="student-name-display">{{ strtoupper($card->last_name) }}, {{ strtoupper($card->first_name) }}</h5>
+                                    </div>
+                                    
+                                    <div class="info-inline">
+                                        <div class="info-item-inline">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            <span class="info-value-inline">{{ $card->semester_display }}</span>
+                                        </div>
+                                        
+                                        <div class="info-item-inline">
+                                            <i class="fas fa-users"></i>
+                                            <span class="info-value-inline">
+                                                {{ $card->section_name ?? 'N/A' }}
+                                                @if($card->section_name)
+                                                    <small class="text-muted">({{ $card->strand_code }} - {{ $card->level_name }})</small>
+                                                @endif
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="info-item-inline">
+                                            <i class="fas fa-user-tag"></i>
+                                            <span class="badge badge-{{ $card->student_type === 'regular' ? 'primary' : 'secondary' }}">
+                                                {{ strtoupper($card->student_type) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <div class="subjects-count-compact">
+                                            <span class="count">{{ $card->total_subjects }}</span>
+                                            <span class="label">Subjects</span>
+                                        </div>
+                                        <a href="{{ route('admin.grades.card.view.page', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
+                                           class="btn btn-primary view-card-btn">
+                                            <i class="fas fa-file-alt"></i> View Card
+                                        </a>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Student Info -->
-                            <div class="student-info">
-                                <div class="row student-info-row">
-                                    <div class="col-4 student-info-label">NAME:</div>
-                                    <div class="col-8 student-info-value">{{ strtoupper($card->last_name) }}, {{ strtoupper($card->first_name) }}</div>
-                                </div>
-                                <div class="row student-info-row">
-                                    <div class="col-4 student-info-label">STUDENT NO:</div>
-                                    <div class="col-8 student-info-value">{{ $card->student_number }}</div>
-                                </div>
-                                <div class="row student-info-row">
-                                    <div class="col-4 student-info-label">SECTION:</div>
-                                    <div class="col-8 student-info-value">
-                                        {{ $card->section_name ?? 'N/A' }}
-                                        @if($card->section_name)
-                                            <br><small class="text-muted">{{ $card->strand_code }} - {{ $card->level_name }}</small>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="row student-info-row">
-                                    <div class="col-4 student-info-label">TYPE:</div>
-                                    <div class="col-8 student-info-value">
-                                        <span class="badge badge-{{ $card->student_type === 'regular' ? 'primary' : 'secondary' }}">
-                                            {{ strtoupper($card->student_type) }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Subjects Preview -->
-                            <div class="subjects-preview">
-                                <small class="text-muted d-block mb-2"><strong>SUBJECTS ENROLLED:</strong></small>
-                                <div class="d-flex justify-content-around text-center">
-                                    <div>
-                                        <div class="text-muted" style="font-size: 0.7rem;">TOTAL</div>
-                                        <div class="font-weight-bold">{{ $card->total_subjects }}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- View Button -->
-                            <a href="{{ route('admin.grades.card.view.page', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
-                               class="btn btn-primary view-full-card-btn">
-                                <i class="fas fa-file-alt"></i> View Full Report Card
-                            </a>
                         </div>
                     </div>
                 @endforeach

@@ -120,6 +120,7 @@ class Grade_Card extends MainController
                     's.last_name',
                     's.email',
                     's.student_type',
+                    's.section_id',
                     'sec.code as section_code',
                     'sec.name as section_name',
                     'str.code as strand_code',
@@ -146,31 +147,18 @@ class Grade_Card extends MainController
                 )
                 ->first();
 
-            // Get all grades for this student in this semester
-            $grades = DB::table('grades_final as gf')
-                ->join('classes as c', 'gf.class_code', '=', 'c.class_code')
-                ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
-                ->where('gf.student_number', $studentNumber)
-                ->where('gf.semester_id', $semesterId)
-                ->select(
-                    'gf.id',
-                    'gf.class_code',
-                    'c.class_name',
-                    'gf.q1_grade',
-                    'gf.q2_grade',
-                    'gf.final_grade',
-                    'gf.remarks',
-                    'gf.computed_at',
-                    DB::raw("CONCAT(t.first_name, ' ', t.last_name) as teacher_name")
-                )
-                ->orderBy('c.class_code')
-                ->get();
+            // Get all enrolled subjects with grades
+            $grades = $this->getEnrolledSubjects($studentNumber, $semesterId, $student->student_type);
 
             // Calculate statistics
+            $gradesWithFinal = $grades->filter(function($grade) {
+                return !is_null($grade->final_grade);
+            });
+
             $totalSubjects = $grades->count();
-            $passedCount = $grades->where('remarks', 'PASSED')->count();
-            $failedCount = $grades->where('remarks', 'FAILED')->count();
-            $generalAverage = $grades->avg('final_grade');
+            $passedCount = $gradesWithFinal->where('remarks', 'PASSED')->count();
+            $failedCount = $gradesWithFinal->where('remarks', 'FAILED')->count();
+            $generalAverage = $gradesWithFinal->avg('final_grade');
 
             return response()->json([
                 'success' => true,
@@ -182,7 +170,7 @@ class Grade_Card extends MainController
                         'total_subjects' => $totalSubjects,
                         'passed_count' => $passedCount,
                         'failed_count' => $failedCount,
-                        'general_average' => round($generalAverage, 2)
+                        'general_average' => $generalAverage ? round($generalAverage, 2) : 0
                     ]
                 ]
             ]);
@@ -215,7 +203,9 @@ class Grade_Card extends MainController
                     's.middle_name',
                     's.last_name',
                     's.email',
+                    's.gender',
                     's.student_type',
+                    's.section_id',
                     'sec.code as section_code',
                     'sec.name as section_name',
                     'str.code as strand_code',
@@ -228,13 +218,18 @@ class Grade_Card extends MainController
                 abort(404, 'Student not found');
             }
 
-            // Get semester info
+            // Get semester info with school year
             $semester = DB::table('semesters as sem')
                 ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
                 ->where('sem.id', $semesterId)
                 ->select(
                     'sem.id',
                     'sem.name',
+                    'sem.code',
+                    'sy.id as school_year_id',
+                    'sy.code as school_year_code',
+                    'sy.year_start',
+                    'sy.year_end',
                     DB::raw("CONCAT(sy.code, ' - ', sem.name) as display_name")
                 )
                 ->first();
@@ -243,43 +238,37 @@ class Grade_Card extends MainController
                 abort(404, 'Semester not found');
             }
 
-            // Get all grades for this student in this semester
-            $grades = DB::table('grades_final as gf')
-                ->join('classes as c', 'gf.class_code', '=', 'c.class_code')
-                ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
-                ->where('gf.student_number', $studentNumber)
-                ->where('gf.semester_id', $semesterId)
-                ->select(
-                    'gf.id',
-                    'gf.class_code',
-                    'c.class_name',
-                    'gf.q1_grade',
-                    'gf.q2_grade',
-                    'gf.final_grade',
-                    'gf.remarks',
-                    'gf.computed_at',
-                    DB::raw("CONCAT(t.first_name, ' ', t.last_name) as teacher_name")
-                )
-                ->orderBy('c.class_code')
-                ->get();
+            // Get all enrolled subjects (with or without grades)
+            $enrolled_subjects = $this->getEnrolledSubjects($studentNumber, $semesterId, $student->student_type);
 
-            // Calculate statistics
-            $totalSubjects = $grades->count();
-            $passedCount = $grades->where('remarks', 'PASSED')->count();
-            $failedCount = $grades->where('remarks', 'FAILED')->count();
-            $generalAverage = $grades->avg('final_grade');
+            // Get adviser name for regular students
+            $adviser_name = null;
+            if ($student->student_type === 'regular' && $student->section_id) {
+                $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
+            }
+
+            // Calculate statistics from subjects that have final grades
+            $gradesWithFinal = $enrolled_subjects->filter(function($subject) {
+                return !is_null($subject->final_grade);
+            });
+
+            $totalSubjects = $enrolled_subjects->count();
+            $passedCount = $gradesWithFinal->where('remarks', 'PASSED')->count();
+            $failedCount = $gradesWithFinal->where('remarks', 'FAILED')->count();
+            $generalAverage = $gradesWithFinal->avg('final_grade');
 
             $statistics = [
                 'total_subjects' => $totalSubjects,
                 'passed_count' => $passedCount,
                 'failed_count' => $failedCount,
-                'general_average' => round($generalAverage, 2)
+                'general_average' => $generalAverage ? round($generalAverage, 2) : 0
             ];
 
             $data = [
                 'student' => $student,
                 'semester' => $semester,
-                'grades' => $grades,
+                'enrolled_subjects' => $enrolled_subjects,
+                'adviser_name' => $adviser_name,
                 'statistics' => $statistics
             ];
 
@@ -288,10 +277,98 @@ class Grade_Card extends MainController
             \Log::error('Failed to load grade card page', [
                 'student_number' => $studentNumber,
                 'semester_id' => $semesterId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             abort(500, 'Failed to load grade card');
         }
+    }
+
+    /**
+     * Get all enrolled subjects for a student in a semester
+     */
+    private function getEnrolledSubjects($studentNumber, $semesterId, $studentType)
+    {
+        if ($studentType === 'regular') {
+            // Get subjects from section_class_matrix for regular students
+            return DB::table('students as s')
+                ->join('section_class_matrix as scm', 's.section_id', '=', 'scm.section_id')
+                ->join('classes as c', 'scm.class_id', '=', 'c.id')
+                ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
+                    $join->on('gf.class_code', '=', 'c.class_code')
+                        ->where('gf.student_number', '=', $studentNumber)
+                        ->where('gf.semester_id', '=', $semesterId);
+                })
+                ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
+                ->where('s.student_number', $studentNumber)
+                ->where('scm.semester_id', $semesterId)
+                ->select(
+                    'c.id as class_id',
+                    'c.class_code',
+                    'c.class_name',
+                    'gf.q1_grade',
+                    'gf.q2_grade',
+                    'gf.final_grade',
+                    'gf.remarks',
+                    'gf.computed_at',
+                    DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
+                )
+                ->orderBy('c.class_code')
+                ->get();
+        } else {
+            // Get subjects from student_class_matrix for irregular students
+            return DB::table('student_class_matrix as stcm')
+                ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
+                ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
+                    $join->on('gf.class_code', '=', 'c.class_code')
+                        ->where('gf.student_number', '=', $studentNumber)
+                        ->where('gf.semester_id', '=', $semesterId);
+                })
+                ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
+                ->where('stcm.student_number', $studentNumber)
+                ->where('stcm.semester_id', $semesterId)
+                ->where('stcm.enrollment_status', 'enrolled')
+                ->select(
+                    'c.id as class_id',
+                    'c.class_code',
+                    'c.class_name',
+                    'gf.q1_grade',
+                    'gf.q2_grade',
+                    'gf.final_grade',
+                    'gf.remarks',
+                    'gf.computed_at',
+                    DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
+                )
+                ->orderBy('c.class_code')
+                ->get();
+        }
+    }
+
+    /**
+     * Get adviser name for a section
+     */
+    private function getAdviserName($sectionId, $semesterId)
+    {
+        // Get first teacher assigned to any class in this section
+        $teacher = DB::table('section_class_matrix as scm')
+            ->join('teacher_class_matrix as tcm', 'scm.class_id', '=', 'tcm.class_id')
+            ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->where('scm.section_id', $sectionId)
+            ->where('scm.semester_id', $semesterId)
+            ->where('t.status', 1)
+            ->select(
+                't.first_name',
+                't.middle_name',
+                't.last_name'
+            )
+            ->first();
+
+        if ($teacher) {
+            $middleInitial = $teacher->middle_name ? strtoupper(substr($teacher->middle_name, 0, 1)) . '.' : '';
+            return strtoupper(trim($teacher->first_name . ' ' . $middleInitial . ' ' . $teacher->last_name));
+        }
+
+        return 'N/A';
     }
 }
