@@ -50,7 +50,7 @@ class GradeBook_Management extends MainController
             ->select('sec.id', 'sec.name', 'sec.code')
             ->get();
         $data = [
-            'scripts' => ['grade_management/view_gradebook.js'],
+            'scripts' => ['gradebook/view_gradebook.js'],
             'classId' => $classId,
             'class' => $class,
             'quarters' => $quarters,
@@ -141,7 +141,7 @@ public function edit_gradebook($classId)
         ->get();
 
     $data = [
-        'scripts' => ['grade_management/edit_gradebook.js'],
+        'scripts' => ['gradebook/edit_gradebook.js'],
         'classId' => $classId,
         'class' => $class,
         'quarters' => $quarters,
