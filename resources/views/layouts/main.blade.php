@@ -220,7 +220,7 @@
                                     </ul>
                                     <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.grades.card') }}" class="nav-link {{ Request::routeIs('admin.grades.card') ? 'active' : '' }}">
+                                            <a href="{{ route('admin.grades.cards') }}" class="nav-link {{ Request::routeIs('admin.grades.card') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                                 <p>Grade Card</p>
                                             </a>

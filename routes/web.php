@@ -117,9 +117,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/api/search', [Grade_Management::class, 'searchGrades'])->name('search');
             Route::get('/api/details/{id}', [Grade_Management::class, 'getGradeDetails'])->name('details');
 
-            Route::get('/card', [Grade_Card::class, 'card_grades'])->name('card');
-
-
+            Route::get('/cards', [Grade_Card::class, 'card_grades'])->name('cards');
+            Route::get('/card/view', [Grade_Card::class, 'getGradeCard'])->name('card.view');
+            Route::get('/card/{student_number}/{semester_id}', [Grade_Card::class, 'viewGradeCardPage'])->name('card.view.page');
+            
         });
 
         // ---------------------------------------------------------------------------
