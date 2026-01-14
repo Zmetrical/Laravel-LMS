@@ -48,7 +48,7 @@
             padding: 0.75rem 1rem;
         }
         .student-id-badge {
-            background: #007bff;
+            background: #2a347e;
             color: white;
             padding: 0.25rem 0.6rem;
             border-radius: 3px;
@@ -96,20 +96,13 @@
             border-radius: 4px;
             text-align: center;
             margin-right: 0.75rem;
+            min-width: 120px;
         }
-        .subjects-count-compact .count {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #007bff;
-            line-height: 1;
-            display: block;
-        }
-        .subjects-count-compact .label {
-            font-size: 0.65rem;
+        .subjects-count-compact .semester-label {
+            font-size: 0.7rem;
             color: #6c757d;
-            text-transform: uppercase;
-            font-weight: 600;
-            line-height: 1;
+            line-height: 1.2;
+            display: block;
         }
         .view-card-btn {
             white-space: nowrap;
@@ -193,11 +186,6 @@
                                     
                                     <div class="info-inline">
                                         <div class="info-item-inline">
-                                            <i class="fas fa-calendar-alt"></i>
-                                            <span class="info-value-inline">{{ $card->semester_display }}</span>
-                                        </div>
-                                        
-                                        <div class="info-item-inline">
                                             <i class="fas fa-users"></i>
                                             <span class="info-value-inline">
                                                 {{ $card->section_name ?? 'N/A' }}
@@ -219,8 +207,7 @@
                                 <div class="col-md-3">
                                     <div class="d-flex align-items-center justify-content-end">
                                         <div class="subjects-count-compact">
-                                            <span class="count">{{ $card->total_subjects }}</span>
-                                            <span class="label">Subjects</span>
+                                            <span class="semester-label">{{ $card->semester_display }}</span>
                                         </div>
                                         <a href="{{ route('admin.grades.card.view.page', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
                                            class="btn btn-primary view-card-btn">
@@ -234,7 +221,7 @@
                 @endforeach
             </div>
 
-            <div id="noResultsMessage" class="alert alert-info text-center" style="display: none;">
+            <div id="noResultsMessage" class="alert alert-primary text-center" style="display: none;">
                 <i class="fas fa-info-circle"></i> No grade cards found matching your filters.
             </div>
         </div>

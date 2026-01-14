@@ -40,68 +40,88 @@
             z-index: 1;
         }
 
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #000;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
+.header {
+    border-bottom: 8px solid #2a347e;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
 
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 5px;
-        }
+.header-left {
+    flex-shrink: 0;
+}
 
-        .school-name {
-            font-size: 20px;
-            font-weight: bold;
-            margin: 5px 0;
-            letter-spacing: 1px;
-        }
+.logo {
+    width: 80px;
+    height: 80px;
+}
 
-        .school-info {
-            font-size: 11px;
-            margin: 2px 0;
-            line-height: 1.3;
-        }
+.header-right {
+    flex: 1;
+    text-align: left;
+    padding-top: 5px;
+}
 
-        .report-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 10px;
-            letter-spacing: 2px;
-        }
+.school-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0 0 3px 0;
+    letter-spacing: 1px;
+}
 
-        .school-year {
-            font-size: 13px;
-            margin-top: 5px;
-        }
+.school-info {
+    font-size: 12px;
+    margin: 1px 0;
+    line-height: 1.3;
+}
 
-        .student-info {
-            margin: 15px 0;
-            border: 2px solid #000;
-            padding: 10px;
-        }
+.report-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 3px;
+    letter-spacing: 3px;
+    text-align: center;
+}
 
-        .info-row {
-            display: flex;
-            padding: 4px 0;
-            font-size: 13px;
-        }
+.school-year {
+    font-size: 11px;
+    margin: 2px 0;
+    text-align: center;
+}
 
-        .info-label {
-            font-weight: bold;
-            width: 180px;
-            flex-shrink: 0;
-        }
+.student-info {
+    margin: 15px 0;
+    border-collapse: collapse;
+}
 
-        .info-value {
-            flex: 1;
-            border-bottom: 1px solid #000;
-            padding: 0 5px;
-        }
+.student-info-table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
+.student-info-table td {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+.info-label {
+    font-weight: bold;
+    width: 140px;
+    background: #f8f9fa;
+}
+
+.info-value {
+    padding: 6px 8px;
+}
+
+.info-divider {
+    width: 15px;
+    flex-shrink: 0;
+}
         .grades-section {
             margin: 20px 0;
         }
@@ -109,7 +129,7 @@
         .section-header {
             text-align: center;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 14px;
             margin-bottom: 10px;
         }
 
@@ -125,7 +145,7 @@
             padding: 8px 5px;
             text-align: center;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1.2;
         }
 
@@ -160,38 +180,33 @@
             padding: 8px !important;
         }
 
-        .footer-section {
-            margin-top: 20px;
-            text-align: center;
-        }
+.footer-section {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+}
 
-        .footer-box {
-            padding: 10px;
-            display: inline-block;
-            max-width: 500px;
-        }
+.footer-box {
+    padding: 10px;
+    display: inline-block;
+}
 
-        .footer-title {
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 8px;
-        }
+.footer-title {
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
 
-        .footer-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            padding: 2px 0;
-        }
+.footer-row {
+    font-size: 12px;
+    padding: 2px 0;
+    white-space: nowrap;
+}
 
-        .footer-row .label {
-            flex: 1;
-        }
-
-        .footer-row .value {
-            font-weight: bold;
-            text-align: right;
-        }
+.footer-row .label {
+    display: inline-block;
+}
+        
     </style>
 @endsection
 
@@ -204,50 +219,43 @@
 @endsection
 
 @section('content')
-<div class="container-fluid no-print mb-3">
-    <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Back
-    </a>
-    <button class="btn btn-danger" onclick="window.print()">
-        <i class="fas fa-print"></i> Print
-    </button>
-</div>
-
 <div class="report-card-page">
     <img src="{{ asset('img/logo/trinity_logo.png') }}" class="watermark-logo" alt="Watermark">
     
     <div class="content">
-        <!-- Header -->
-        <div class="header">
-            <img src="{{ asset('img/logo/trinity_logo.png') }}" class="logo" alt="School Logo">
-            <div class="school-name">TRINITY POLYTECHNIC COLLEGE INC.</div>
-            <div class="school-info">Golden Building, 2491 R. Lagman st. Lugam, M. Alas Highway, Brgy. Sta. Rosa, Cabanatuan City</div>
-            <div class="school-info">Telephone Number: 0919 8011 60</div>
-            <div class="school-info">Email: trinitypci@gmail.com</div>
-            <div class="report-title">COPY OF GRADES</div>
-            <div class="school-year">School Year {{ $semester->school_year_code ?? 'N/A' }}</div>
-            <div class="school-year">{{ $semester->name }}</div>
-        </div>
+<!-- Header -->
+<div class="header">
+    <div class="header-left">
+        <img src="{{ asset('img/logo/trinity_logo.png') }}" class="logo" alt="School Logo">
+    </div>
+    <div class="header-right">
+        <div class="school-name">TRINITY POLYTECHNIC COLLEGE INC.</div>
+        <div class="school-info">Goldstar Bldg., QX33+QJ2, Marilao, 3019 Bulacan</div>
+        <div class="school-info">Telephone Number: 0947 364 6906</div>
+        <div class="school-info">Email: trinitybulacan@gmail.com</div>
+    </div>
+</div>
+<div class="report-title">Report Card</div>
+<div class="school-year">School Year {{ $semester->school_year_code ?? 'N/A' }}</div>
+<div class="school-year">{{ $semester->name }}</div>
 
-        <!-- Student Information -->
-        <div class="student-info">
-            <div class="info-row">
-                <div class="info-label">NAME:</div>
-                <div class="info-value">{{ strtoupper($student->last_name) }}, {{ strtoupper($student->first_name) }} {{ strtoupper($student->middle_name) }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">TRACK AND STRAND:</div>
-                <div class="info-value">{{ $student->strand_code ?? 'N/A' }} - {{ $student->level_name ?? 'N/A' }}</div>
-                <div style="width: 20px;"></div>
-                <div class="info-label" style="width: 150px;">GRADE & SECTION:</div>
-                <div class="info-value" style="width: 200px;">{{ $student->section_code ?? 'IRREGULAR' }} {{ $student->student_type === 'regular' ? '- ' . $student->level_name : '' }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">ADVISER:</div>
-                <div class="info-value">{{ $adviser_name ?? 'N/A' }}</div>
-            </div>
-        </div>
-
+<!-- Student Information -->
+<div class="student-info">
+    <table class="student-info-table">
+        <tr>
+            <td class="info-label">NAME:</td>
+            <td class="info-value">{{ strtoupper($student->last_name) }}, {{ strtoupper($student->first_name) }} {{ strtoupper($student->middle_name) }}</td>
+            <td class="info-label">GRADE & SECTION:</td>
+            <td class="info-value">{{ $student->section_code ?? 'IRREGULAR' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">TRACK AND STRAND:</td>
+            <td class="info-value">{{ $student->strand_code ?? '' }} - {{ $student->level_name ?? '' }}</td>
+            <td class="info-label">ADVISER:</td>
+            <td class="info-value">{{ $adviser_name ?? '' }}</td>
+        </tr>
+    </table>
+</div>
         <!-- Grades Section -->
         <div class="grades-section">
             <div class="section-header">LEARNING PROGRESS AND ACHIEVEMENT</div>
@@ -374,51 +382,65 @@
             </table>
         </div>
 
-        <!-- Footer Section -->
-        <div class="footer-section">
-            <div class="footer-box">
-                <div class="footer-title">Description</div>
-                <div class="footer-row">
-                    <span class="label">Outstanding</span>
-                    <span class="value">90-100</span>
-                </div>
-                <div class="footer-row">
-                    <span class="label">Very Satisfactory</span>
-                    <span class="value">85-89</span>
-                </div>
-                <div class="footer-row">
-                    <span class="label">Satisfactory</span>
-                    <span class="value">80-84</span>
-                </div>
-                <div class="footer-row">
-                    <span class="label">Fairly Satisfactory</span>
-                    <span class="value">75-79</span>
-                </div>
-                <div class="footer-row">
-                    <span class="label">Did Not Meet Expectations</span>
-                    <span class="value">Below 75</span>
-                </div>
-            </div>
-            
-            <div class="footer-box">
-                <div class="footer-title">Grading Scale</div>
-                <div class="footer-row">
-                    <span class="label">Passed</span>
-                </div>
-                <div class="footer-row">
-                    <span class="label">Failed</span>
-                </div>
-                <div style="margin-top: 10px;">
-                    <div class="footer-title">Remarks</div>
-                    <div class="footer-row">
-                        <span class="label">Passed</span>
-                    </div>
-                    <div class="footer-row">
-                        <span class="label">Failed</span>
-                    </div>
-                </div>
-            </div>
+<div class="footer-section">
+    <div class="footer-box">
+        <div class="footer-title">Description</div>
+        <div class="footer-row">
+            <span class="label">Outstanding</span>
         </div>
+        <div class="footer-row">
+            <span class="label">Very Satisfactory</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Satisfactory</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Fairly Satisfactory</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Did Not Meet Expectations</span>
+        </div>
+    </div>
+
+    <div class="footer-box" style="margin-left: 40px;">
+        <div class="footer-title">Grading Scale</div>
+        <div class="footer-row">
+            <span class="label">90-100</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">85-89</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">80-84</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">75-79</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Below 75</span>
+        </div>
+    </div>
+
+    <div class="footer-box" style="margin-left: 40px;">
+        <div class="footer-title">Remarks</div>
+        <div class="footer-row">
+            <span class="label">Passed</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Passed</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Passed</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Passed</span>
+        </div>
+        <div class="footer-row">
+            <span class="label">Failed</span>
+        </div>
+    </div>
+</div>
+
     </div>
 </div>
 
@@ -426,8 +448,11 @@
     <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Back
     </a>
-    <button class="btn btn-danger" onclick="window.print()">
+    <button class="btn btn-primary" onclick="window.print()">
         <i class="fas fa-print"></i> Print
+    </button>
+    <button class="btn btn-primary">
+        <i class="fas fa-file-pdf"></i> Export
     </button>
 </div>
 @endsection
