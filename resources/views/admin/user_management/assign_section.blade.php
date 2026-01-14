@@ -187,6 +187,57 @@
         </div>
     </form>
 </div>
+
+
+<!-- Assign Adviser Modal -->
+<div class="modal fade" id="assignAdviserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title"><i class="fas fa-chalkboard-teacher mr-2"></i>Assign Adviser</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="assignAdviserForm">
+                @csrf
+                <div class="modal-body">
+                    <input type="hidden" id="adviser_section_id" name="section_id">
+                    
+                    <div class="form-group">
+                        <label>Section</label>
+                        <input type="text" class="form-control" id="adviser_section_name" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Semester <span class="text-danger">*</span></label>
+                        <select class="form-control" id="adviser_semester_id" name="semester_id" required>
+                            <option value="">Select Semester</option>
+                            @foreach($semesters as $semester)
+                                <option value="{{ $semester->id }}" 
+                                    @if($semester->status === 'active') selected @endif>
+                                    {{ $semester->year_code }} - {{ $semester->semester_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Adviser <span class="text-danger">*</span></label>
+                        <select class="form-control select2" id="adviser_teacher_id" name="teacher_id" style="width: 100%;" required>
+                            <option value="">Search for teacher...</option>
+                        </select>
+                        <small class="form-text text-muted">Current adviser will be shown if one exists</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-1"></i> Assign Adviser
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')

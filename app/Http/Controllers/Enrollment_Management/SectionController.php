@@ -384,4 +384,175 @@ class SectionController extends MainController
             ], 500);
         }
     }
+
+
+    /**
+ * Get section adviser
+ */
+public function getSectionAdviser($sectionId)
+{
+    try {
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active semester found'
+            ], 400);
+        }
+
+        $adviser = DB::table('section_adviser_matrix as sam')
+            ->join('teachers as t', 'sam.teacher_id', '=', 't.id')
+            ->where('sam.section_id', $sectionId)
+            ->where('sam.semester_id', $activeSemester->semester_id)
+            ->select(
+                't.id',
+                't.first_name',
+                't.middle_name',
+                't.last_name',
+                't.email',
+                'sam.assigned_date'
+            )
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'adviser' => $adviser
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load adviser: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get available teachers for adviser assignment
+ */
+public function getAvailableTeachers()
+{
+    try {
+        $teachers = DB::table('teachers')
+            ->where('status', 1)
+            ->select(
+                'id',
+                'first_name',
+                'middle_name',
+                'last_name',
+                'email'
+            )
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'teachers' => $teachers
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load teachers: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Assign adviser to section
+ */
+public function assignAdviser(Request $request, $sectionId)
+{
+    $request->validate([
+        'teacher_id' => 'required|exists:teachers,id',
+        'semester_id' => 'required|exists:semesters,id'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        // Check if teacher exists and is active
+        $teacher = DB::table('teachers')
+            ->where('id', $request->teacher_id)
+            ->where('status', 1)
+            ->first();
+
+        if (!$teacher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Teacher not found or inactive'
+            ], 404);
+        }
+
+        // Delete existing adviser for this section-semester
+        DB::table('section_adviser_matrix')
+            ->where('section_id', $sectionId)
+            ->where('semester_id', $request->semester_id)
+            ->delete();
+
+        // Insert new adviser
+        DB::table('section_adviser_matrix')->insert([
+            'section_id' => $sectionId,
+            'teacher_id' => $request->teacher_id,
+            'semester_id' => $request->semester_id,
+            'assigned_date' => now()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Adviser assigned successfully'
+        ]);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to assign adviser: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Remove adviser from section
+ */
+public function removeAdviser($sectionId)
+{
+    try {
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active semester found'
+            ], 400);
+        }
+
+        $deleted = DB::table('section_adviser_matrix')
+            ->where('section_id', $sectionId)
+            ->where('semester_id', $activeSemester->semester_id)
+            ->delete();
+
+        if (!$deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No adviser assigned to this section'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Adviser removed successfully'
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to remove adviser: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

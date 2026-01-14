@@ -86,6 +86,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/section_assignment/load_students', [Section_Management::class, 'load_students_from_section'])->name('section_assignment.load_students');
         Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
 
+        Route::post('/section-adviser/get', [Section_Management::class, 'get_section_adviser'])->name('admin.section_adviser.get');
+Route::post('/section-adviser/save', [Section_Management::class, 'save_section_adviser'])->name('admin.section_adviser.save');
+Route::post('/section-adviser/search-teachers', [Section_Management::class, 'search_teachers'])->name('admin.section_adviser.search_teachers');
+
         // Section Grades View
     Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])
         ->name('grades.section-view');
@@ -153,6 +157,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{sectionId}/available-classes', [SectionController::class, 'getAvailableClasses'])->name('classes.available');
                 Route::post('/{id}/enroll', [SectionController::class, 'enrollClass'])->name('sections.enroll');
                 Route::delete('/{sectionId}/classes/{classId}', [SectionController::class, 'removeClass'])->name('sections.remove-class');
+            
+            // Section Adviser routes
+            Route::get('/{id}/adviser', [SectionController::class, 'getSectionAdviser'])
+                ->name('sections.adviser');
+            Route::get('/teachers/available', [SectionController::class, 'getAvailableTeachers'])
+                ->name('teachers.available');
+            Route::post('/{id}/assign-adviser', [SectionController::class, 'assignAdviser'])
+                ->name('sections.assign-adviser');
+            Route::delete('/{id}/remove-adviser', [SectionController::class, 'removeAdviser'])
+                ->name('sections.remove-adviser');
             });
 
             Route::get('/student_irreg_enroll', [Enroll_Management::class, 'studentIrregEnrollment'])->name('student_irreg_class_enrollment');

@@ -73,14 +73,22 @@
                     <div class="card card-primary">
                         <div class="card-body">
                             <div class="row align-items-center">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <h4 class="mb-1" id="selectedSectionName"><i class="fas fa-users"></i> </h4>
-                                    <p class="text-muted mb-0">
+                                    <p class="text-muted mb-2">
                                         <i class="fas fa-layer-group"></i> <span id="levelDisplay"></span> | 
                                         <i class="fas fa-graduation-cap"></i> <span id="strandDisplay"></span>
                                     </p>
+                                    <div id="adviserDisplay">
+                                        <small class="text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading adviser...
+                                        </small>
+                                    </div>
                                 </div>
-                                <div class="col-md-4 text-right">
+                                <div class="col-md-6 text-right">
+                                    <button class="btn btn-primary mb-2" id="assignAdviserBtn">
+                                        <i class="fas fa-user-tie"></i> Assign Adviser
+                                    </button>
                                     <button class="btn btn-primary" id="enrollClassBtn">
                                         <i class="fas fa-plus"></i> Enroll Class
                                     </button>
@@ -248,6 +256,69 @@
         </div>
     </div>
 </div>
+
+
+<!-- Assign Adviser Modal -->
+<div class="modal fade" id="assignAdviserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-tie"></i> Manage Section Adviser
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Teacher Selection -->
+                <div class="form-group">
+                    <label><i class="fas fa-user-check"></i> Assign New Adviser</label>
+                    <select class="form-control select2" id="adviserTeacherSelect" style="width: 100%;">
+                        <option value="">-- Select Teacher --</option>
+                    </select>
+                </div>
+
+                <!-- Current Adviser Display -->
+                <div id="currentAdviserSection" style="display:none;">
+                    <div class="card card-outline card-primary">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-user-circle"></i> Current Adviser
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h5 class="mb-1" id="currentAdviserNameModal"></h5>
+                                    <p class="mb-0 small">
+                                        <i class="fas fa-envelope"></i> <span id="currentAdviserEmail"></span>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-right">
+                                    <button class="btn btn-danger btn-sm" id="removeAdviserBtn">
+                                        <i class="fas fa-times"></i> Remove Adviser
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-secondary" id="confirmAssignAdviserBtn">
+                    <i class="fas fa-check"></i> Assign Adviser
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -259,7 +330,11 @@
             getSectionDetails: "{{ route('admin.sections.details', ['id' => ':id']) }}",
             getAvailableClasses: "{{ route('admin.classes.available', ['sectionId' => ':id']) }}",
             enrollClass: "{{ route('admin.sections.enroll', ['id' => ':id']) }}",
-            removeClass: "{{ route('admin.sections.remove-class', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}"
+            removeClass: "{{ route('admin.sections.remove-class', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}",
+             getSectionAdviser: "{{ route('admin.sections.adviser', ['id' => ':id']) }}",
+            getAvailableTeachers: "{{ route('admin.teachers.available') }}",
+            assignAdviser: "{{ route('admin.sections.assign-adviser', ['id' => ':id']) }}",
+            removeAdviser: "{{ route('admin.sections.remove-adviser', ['id' => ':id']) }}"
         };
 
         const ACTIVE_SEMESTER_ID = {{ $activeSemester->semester_id ?? 'null' }};
