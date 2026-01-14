@@ -68,6 +68,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
         });
 
+
+    Route::get('/profile/teacher/{id}/credentials', [Profile_Management::class, 'getCredentials'])
+    ->middleware('auth:admin')
+    ->name('teacher.credentials');
+
     // Section Assignment
     Route::get('/section-assignment', [Section_Management::class, 'assign_section'])
         ->name('assign_section');
@@ -81,7 +86,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/section_assignment/load_students', [Section_Management::class, 'load_students_from_section'])->name('section_assignment.load_students');
         Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
 
-                        // Section Grades View
+        // Section Grades View
     Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])
         ->name('grades.section-view');
     

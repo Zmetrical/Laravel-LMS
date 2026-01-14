@@ -15,6 +15,7 @@ CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
   `admin_name` varchar(100) NOT NULL,
   `admin_password` varchar(100) NOT NULL,
+  `admin_type` int(11) NOT NULL,
   `email` varchar(100) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()

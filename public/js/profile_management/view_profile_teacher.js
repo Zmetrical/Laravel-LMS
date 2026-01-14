@@ -11,6 +11,84 @@ $(document).ready(function () {
         }
     });
 
+    // Toggle password visibility (Admin Type 1 only)
+    $('#togglePassword').on('click', function() {
+        const $btn = $(this);
+        const $icon = $btn.find('i');
+        const $display = $('#passwordDisplay');
+        const isVisible = $btn.data('visible');
+
+        if (!isVisible) {
+            // Show password - fetch from server
+            $.ajax({
+                url: API_ROUTES.getCredentials,
+                type: 'GET',
+                data: { type: 'password' },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $display.text(response.credential);
+                        $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                        $btn.data('visible', true);
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Failed to retrieve password'
+                    });
+                }
+            });
+        } else {
+            // Hide password
+            $display.text('••••••••');
+            $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            $btn.data('visible', false);
+        }
+    });
+
+    // Toggle passcode visibility (Admin Type 1 only)
+    $('#togglePasscode').on('click', function() {
+        const $btn = $(this);
+        const $icon = $btn.find('i');
+        const $display = $('#passcodeDisplay');
+        const isVisible = $btn.data('visible');
+
+        if (!isVisible) {
+            // Show passcode - fetch from server
+            $.ajax({
+                url: API_ROUTES.getCredentials,
+                type: 'GET',
+                data: { type: 'passcode' },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $display.text(response.credential);
+                        $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                        $btn.data('visible', true);
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Failed to retrieve passcode'
+                    });
+                }
+            });
+        } else {
+            // Hide passcode
+            $display.text('••••••');
+            $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            $btn.data('visible', false);
+        }
+    });
+
     // Update profile form submission
     $('#profileForm').on('submit', function (e) {
         e.preventDefault();
@@ -55,7 +133,7 @@ $(document).ready(function () {
                         timer: 1500
                     }).then(() => {
                         // Redirect to view mode
-                        window.location.href =  API_ROUTES.redirectBack;
+                        window.location.href = API_ROUTES.redirectBack;
                     });
                 } else {
                     Swal.fire({
@@ -102,103 +180,5 @@ $(document).ready(function () {
                 $submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Changes');
             }
         });
-    });
-
-    // Change password form submission
-    $('#changePasswordForm').on('submit', function (e) {
-        e.preventDefault();
-
-        // Validate password match
-        const newPassword = $('#newPassword').val();
-        const confirmPassword = $('#confirmPassword').val();
-
-        if (newPassword !== confirmPassword) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'New passwords do not match'
-            });
-            return;
-        }
-
-        const teacherId = $('#teacherId').val();
-        const formData = {
-            current_password: $('#currentPassword').val(),
-            new_password: newPassword,
-            new_password_confirmation: confirmPassword,
-            _token: $('input[name="_token"]').val()
-        };
-
-        // Disable submit button
-        const $submitBtn = $('#changePasswordBtn');
-        $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Changing...');
-
-        $.ajax({
-            url: `/profile/teacher/${teacherId}/change-password`,
-            type: 'POST',
-            data: formData,
-            success: function (response) {
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: response.message,
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => {
-                        // Close modal and reset form
-                        $('#changePasswordModal').modal('hide');
-                        $('#changePasswordForm')[0].reset();
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: response.message
-                    });
-                }
-            },
-            error: function (xhr) {
-                let errorMessage = 'Failed to change password';
-                
-                if (xhr.status === 422) {
-                    // Validation errors or incorrect password
-                    if (xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.responseJSON.errors) {
-                        const errors = xhr.responseJSON.errors;
-                        let errorList = '<ul class="text-left">';
-                        $.each(errors, function (key, value) {
-                            errorList += '<li>' + value[0] + '</li>';
-                        });
-                        errorList += '</ul>';
-                        
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Validation Error',
-                            html: errorList
-                        });
-                        return;
-                    }
-                } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: errorMessage
-                });
-            },
-            complete: function () {
-                // Re-enable submit button
-                $submitBtn.prop('disabled', false).html('<i class="fas fa-key"></i> Change Password');
-            }
-        });
-    });
-
-    // Reset password form when modal is closed
-    $('#changePasswordModal').on('hidden.bs.modal', function () {
-        $('#changePasswordForm')[0].reset();
     });
 });

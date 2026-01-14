@@ -382,6 +382,52 @@ public function edit_student($id)
         }
     }
 
+public function getCredentials(Request $request, $id)
+{
+    // Check if user is admin type 1
+    if (!auth()->guard('admin')->check() || auth()->guard('admin')->user()->admin_type != 1) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized access'
+        ], 403);
+    }
+
+    try {
+        $teacher = DB::table('teachers')->where('id', $id)->first();
+        
+        if (!$teacher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Teacher not found'
+            ], 404);
+        }
+
+        // Get credentials from teacher_password_matrix
+        $passwordMatrix = DB::table('teacher_password_matrix')
+            ->where('teacher_id', $id)
+            ->first();
+
+        $type = $request->input('type', 'password');
+        
+        if ($type === 'password') {
+            $credential = $passwordMatrix ? $passwordMatrix->plain_password : 'Not set';
+        } else {
+            $credential = $passwordMatrix ? $passwordMatrix->plain_passcode : 'Not set';
+        }
+
+        return response()->json([
+            'success' => true,
+            'credential' => $credential
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error retrieving credential'
+        ], 500);
+    }
+}
+
     public function change_password_teacher(Request $request, $id)
     {
         try {

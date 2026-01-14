@@ -31,6 +31,7 @@
             <div class="col-md-4">
                 <div class="card card-primary card-outline">
                     <div class="card-body box-profile">
+                        <!-- Profile image section -->
                         <div class="text-center">
                             <img id="profileImagePreview" 
                                  class="profile-user-img img-fluid img-circle mb-4" 
@@ -59,6 +60,29 @@
                             <li class="list-group-item">
                                 <b>Phone Number:</b> <span class="float-right">{{ $teacher->phone }}</span>
                             </li>
+                            
+                            <!-- PASSWORD SECTION (Admin Type 1 only) -->
+                            @if(auth()->guard('admin')->check() && auth()->guard('admin')->user()->admin_type == 1)
+                            <li class="list-group-item">
+                                <b>Password:</b> 
+                                <span class="float-right">
+                                    <span id="passwordDisplay">••••••••</span>
+                                    <button type="button" class="btn btn-sm btn-default ml-2" id="togglePassword" data-visible="false">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </span>
+                            </li>
+                            <li class="list-group-item">
+                                <b>Passcode:</b> 
+                                <span class="float-right">
+                                    <span id="passcodeDisplay">••••••</span>
+                                    <button type="button" class="btn btn-sm btn-default ml-2" id="togglePasscode" data-visible="false">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </span>
+                            </li>
+                            @endif
+                            
                             <li class="list-group-item">
                                 <b>Gender:</b> <span class="float-right">{{ $teacher->gender ?? 'N/A' }}</span>
                             </li>
@@ -69,10 +93,6 @@
                                 </span>
                             </li>
                         </ul>
-
-                        <button class="btn btn-warning btn-block" data-toggle="modal" data-target="#changePasswordModal">
-                            <i class="fas fa-key"></i> Change Password
-                        </button>
                     </div>
                 </div>
             </div>
@@ -94,7 +114,7 @@
                             @endif
                         </div>
                     </div>
-                    <form id="profileForm"  data-student-id="{{ $teacher->id }}">
+                    <form id="profileForm" data-student-id="{{ $teacher->id }}">
                         @csrf
                         <input type="hidden" id="teacherId" value="{{ $teacher->id }}">
                         
@@ -201,54 +221,16 @@
             </div>
         </div>
     </div>
-
-    <!-- Change Password Modal -->
-    <div class="modal fade" id="changePasswordModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Change Password</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <form id="changePasswordForm">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="currentPassword">Current Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="currentPassword" name="current_password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">New Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="8">
-                            <small class="form-text text-muted">Password must be at least 8 characters long</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmPassword">Confirm New Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="confirmPassword" name="new_password_confirmation" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="changePasswordBtn">
-                            <i class="fas fa-key"></i> Change Password
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 @endsection
-@section('scripts')
 
+@section('scripts')
     <!-- JS - use <script> tag -->
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         const API_ROUTES = {
             updateTeacherProfile: "{{ route('profile.teacher.update', ['id' => $teacher->id]) }}",
-            redirectBack: "{{ route('profile.teacher.show', ['id' => $teacher->id]) }}"
-
+            redirectBack: "{{ route('profile.teacher.show', ['id' => $teacher->id]) }}",
+            getCredentials: "{{ route('admin.teacher.credentials', ['id' => $teacher->id]) }}"
         };
     </script>
 
