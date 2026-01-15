@@ -339,12 +339,11 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
         // Class Pages
             Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
-            Route::get('/adviser/grade-cards', [Adviser_List::class, 'index'])
+        Route::get('/adviser/grade-cards', [Adviser_List::class, 'index'])
                 ->name('adviser.grade.cards');
                 
-            Route::get('/card/view', [Grade_Card::class, 'getGradeCard'])->name('card.view');
-            Route::get('/card/{student_number}/{semester_id}', [Grade_Card::class, 'viewGradeCardPage'])->name('card.view.page');
-            
+        Route::get('adviser/grades/cards', [Grade_Card::class, 'teacherCardGrades'])->name('grades.cards');
+        Route::get('adviser/grades/card/{student_number}/{semester_id}', [Grade_Card::class, 'teacherViewGradeCardPage'])->name('grades.card.view');
 
         // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {

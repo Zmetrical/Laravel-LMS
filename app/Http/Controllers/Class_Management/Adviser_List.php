@@ -129,12 +129,12 @@ class Adviser_List extends MainController
             ->get();
 
         $data = [
-            'scripts' => ['class_management/adviser_list.js'],
+            'scripts' => ['teacher/adviser_list.js'],
             'sections' => $sections,
             'gradeCards' => $gradeCards,
             'activeSemester' => $activeSemester
         ];
 
-        return view('teacher.class_management.adviser_list', $data);
+        return view('teacher.adviser_list', $data);
     }
 }

@@ -113,7 +113,6 @@
 @endsection
 
 @section('content')
-<br>
 <div class="container-fluid">
     <!-- Info Alert -->
     <div class="alert alert-primary">
@@ -199,7 +198,7 @@
                                         <div class="subjects-count-compact">
                                             <span class="semester-label">{{ $card->semester_display }}</span>
                                         </div>
-                                        <a href="{{ route('admin.grades.card.view.page', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
+                                        <a href="{{ route('teacher.grades.card.view', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
                                            class="btn btn-primary view-card-btn"
                                            target="_blank">
                                             <i class="fas fa-file-alt"></i> View Card
