@@ -332,7 +332,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::post('/profile/update', [TeacherController::class, 'update_profile'])->name('profile.update');
             
         // Class Pages
-        Route::get('/list_class', [Class_List::class, 'teacher_class_list'])->name('list_class');
+        Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
+        Route::get('/adviser_list', [Class_List::class, 'teacher_adviser_list'])->name('adviser_list');
 
         // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {
