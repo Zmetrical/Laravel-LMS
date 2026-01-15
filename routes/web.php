@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\Auth\Data_Controller;
 use App\Http\Controllers\Auth\Login_Controller;
 use App\Http\Controllers\Class_Management\Class_List;
+use App\Http\Controllers\Class_Management\Adviser_List;
+
 use App\Http\Controllers\Class_Management\Class_Management;
 use App\Http\Controllers\Class_Management\Page_Grade;
 use App\Http\Controllers\Class_Management\Page_Lecture;
@@ -331,9 +333,18 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::get('/profile/edit', [TeacherController::class, 'edit_profile'])->name('profile.edit');
             Route::post('/profile/update', [TeacherController::class, 'update_profile'])->name('profile.update');
             
+
+
+
+
         // Class Pages
-        Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
-        Route::get('/adviser_list', [Class_List::class, 'teacher_adviser_list'])->name('adviser_list');
+            Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
+            Route::get('/adviser/grade-cards', [Adviser_List::class, 'index'])
+                ->name('adviser.grade.cards');
+                
+            Route::get('/card/view', [Grade_Card::class, 'getGradeCard'])->name('card.view');
+            Route::get('/card/{student_number}/{semester_id}', [Grade_Card::class, 'viewGradeCardPage'])->name('card.view.page');
+            
 
         // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {

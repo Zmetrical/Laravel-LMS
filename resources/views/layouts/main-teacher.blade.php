@@ -170,10 +170,10 @@
                             </li>
 
                                 <li class="nav-item">
-                                <a href="{{ route('teacher.adviser_list') }}"
-                                    class="nav-link {{ Request::routeIs('teacher.adviser_list') ? 'active' : '' }}">
+                                <a href="{{ route('teacher.adviser.grade.cards') }}"
+                                    class="nav-link {{ Request::routeIs('teacher.adviser.grade.cards') ? 'active' : '' }}">
                                     <i class="far fa-circle nav-icon"></i>
-                                    <p>My Classes</p>
+                                    <p>My Students</p>
                                 </a>
                             </li>
                         </ul>
