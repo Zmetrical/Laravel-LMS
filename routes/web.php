@@ -236,47 +236,36 @@ Route::prefix('student')->name('student.')->group(function () {
 
         Route::get('/dashboard', [StudentController::class, 'index'])->name('home');
 
-            // Student Profile Routes
-    Route::get('/profile', [StudentController::class, 'showProfile'])->name('profile');
-    Route::get('/profile/enrollment-history', [StudentController::class, 'getEnrollmentHistory'])->name('profile.enrollment_history');
-    Route::get('/profile/enrolled-classes', [StudentController::class, 'getProfileEnrolledClasses'])->name('profile.enrolled_classes');
+        // Student Profile Routes
+        Route::get('/profile', [StudentController::class, 'showProfile'])->name('profile');
+        Route::get('/profile/enrollment-history', [StudentController::class, 'getEnrollmentHistory'])->name('profile.enrollment_history');
+        Route::get('/profile/enrolled-classes', [StudentController::class, 'getProfileEnrolledClasses'])->name('profile.enrolled_classes');
 
-
-    // Dashboard API endpoints
-    Route::prefix('student/dashboard')->name('dashboard.')->group(function () {
-       Route::get('/quarterly-grades', [StudentController::class, 'getQuarterlyGrades'])
-            ->name('quarterly-grades');
-        
-        Route::get('/grade-trends', [StudentController::class, 'getGradeTrends'])
-            ->name('grade-trends');
-        
-        Route::get('/semester-summary', [StudentController::class, 'getSemesterSummary'])
-            ->name('semester-summary');
-        Route::get('/grade-breakdown', [StudentController::class, 'getGradeBreakdown'])
-            ->name('grade-breakdown');
-    });
+        // Dashboard API endpoints
+        Route::prefix('student/dashboard')->name('dashboard.')->group(function () {
+            Route::get('/quarterly-grades', [StudentController::class, 'getQuarterlyGrades'])
+                ->name('quarterly-grades');
+        });
 
         // Class Pages
-    Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
-    Route::get('/my_grades', [Grade_List::class, 'student_grade_list'])->name('list_grade');
-    
-    // Get Student Grades (AJAX)
-    Route::get('/my_grades/list', [Grade_List::class, 'getStudentGrades'])
-        ->name('grades.list');
-    
-    // Get Class Grade Details (AJAX)
-    Route::get('/my_grades/details/{classId}', [Grade_List::class, 'student_grade_details'])
-        ->name('grades.details');
-    Route::get('/my_grades/details/{classId}/data', [Grade_List::class, 'getClassGradeDetails'])
-        ->name('grades.details.data');
+        Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
+        Route::get('/my_grades', [Grade_List::class, 'student_grade_list'])->name('list_grade');
+        
+        // Get Student Grades (AJAX)
+        Route::get('/my_grades/list', [Grade_List::class, 'getStudentGrades'])
+            ->name('grades.list');
+        
+        // Get Class Grade Details (AJAX)
+        Route::get('/my_grades/details/{classId}', [Grade_List::class, 'student_grade_details'])
+            ->name('grades.details');
+        Route::get('/my_grades/details/{classId}/data', [Grade_List::class, 'getClassGradeDetails'])
+            ->name('grades.details.data');
 
-        // Class Content Pagesz
+        // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {
             // Lessons Page
             Route::get('/lessons', [Page_Lesson::class, 'studentIndex'])->name('lessons');
-            
 
-            
             // Grades Page
             Route::get('/grades', [Page_Grade::class, 'studentIndex'])->name('grades');
 
