@@ -153,46 +153,38 @@ function buildQuizRow(quiz) {
     
     // Determine actual quiz state based on dates
     let quizState = 'unknown';
-    let rowClass = '';
     
     if (quiz.submitted_at) {
         // Already submitted
         quizState = 'submitted';
-        rowClass = 'quiz-submitted';
     } else if (availableFrom && now < availableFrom) {
         // Not yet open (upcoming)
         quizState = 'upcoming';
-        rowClass = 'quiz-upcoming';
     } else if (availableUntil && now > availableUntil) {
         // Already closed
         quizState = 'closed';
-        rowClass = 'quiz-closed';
     } else if (quiz.is_available) {
         // Currently available
         quizState = 'available';
-        rowClass = 'quiz-available';
     } else {
         // Not available (no dates or other reason)
         quizState = 'unavailable';
-        rowClass = 'quiz-closed';
     }
     
     // Status badge based on submission
     let statusBadge = '';
     if (quiz.status === 'passed') {
-        statusBadge = '<span class="badge badge-primary">Passed</span>';
+        statusBadge = '<span class="badge">Passed</span>';
     } else if (quiz.status === 'failed') {
         statusBadge = '<span class="badge badge-danger">Failed</span>';
     } else if (quizState === 'available') {
-        statusBadge = '<span class="badge badge-secondary">Not Taken</span>';
-    }
-    
-    // Availability badge
-    let availabilityBadge = '';
-    if (quizState === 'upcoming') {
-        availabilityBadge = '<span class="badge badge-secondary ml-1">Upcoming</span>';
+        statusBadge = '<span class="badge badge-primary">Available</span>';
+    } else if (quizState === 'upcoming') {
+        statusBadge = '<span class="badge badge-secondary">Upcoming</span>';
     } else if (quizState === 'closed') {
-        availabilityBadge = '<span class="badge badge-warning ml-1">Closed</span>';
+        statusBadge = '<span class="badge badge-secondary">Closed</span>';
+    } else if (quizState === 'unavailable') {
+        statusBadge = '<span class="badge badge-secondary">Unavailable</span>';
     }
     
     // Score display
@@ -201,8 +193,9 @@ function buildQuizRow(quiz) {
     
     if (quiz.score !== null) {
         // Has a score - show it
-        scoreHtml = `<strong class="text-primary">${quiz.score}/${quiz.total_points}</strong>`;
-        percentageHtml = `${quiz.percentage}%`;
+        const scoreColor = quiz.status === 'failed' ? 'text-danger' : '';
+        scoreHtml = `<strong class="${scoreColor}">${quiz.score}/${quiz.total_points}</strong>`;
+        percentageHtml = `<span class="${scoreColor}">${quiz.percentage}%</span>`;
     } else if (quizState === 'closed') {
         // Closed and not taken = 0
         scoreHtml = `<strong class="text-danger">0/${quiz.total_points || 0}</strong>`;
@@ -214,15 +207,15 @@ function buildQuizRow(quiz) {
     if (quizState === 'submitted') {
         dateHtml = `
             <div class="quiz-date">
-                <i class="fas fa-check-circle text-primary mr-1"></i>
+                <i class="fas fa-check-circle mr-1"></i>
                 <small class="text-muted">Submitted: ${formatDate(quiz.submitted_at)}</small>
             </div>
         `;
     } else if (quizState === 'upcoming') {
         dateHtml = `
             <div class="quiz-date">
-                <i class="fas fa-clock text-info mr-1"></i>
-                <small class="text-secondary">Opens: ${formatDate(availableFrom)}</small>
+                <i class="fas fa-clock mr-1"></i>
+                <small class="text-muted">Opens: ${formatDate(availableFrom)}</small>
             </div>
         `;
     } else if (quizState === 'available') {
@@ -236,14 +229,14 @@ function buildQuizRow(quiz) {
     } else if (quizState === 'closed') {
         dateHtml = `
             <div class="quiz-date">
-                <i class="fas fa-lock text-warning mr-1"></i>
+                <i class="fas fa-lock mr-1"></i>
                 <small class="text-muted">Closed: ${formatDate(availableUntil)}</small>
             </div>
         `;
     } else {
         dateHtml = `
             <div class="quiz-date">
-                <i class="fas fa-ban text-danger mr-1"></i>
+                <i class="fas fa-ban mr-1"></i>
                 <small class="text-muted">Unavailable</small>
             </div>
         `;
@@ -264,7 +257,7 @@ function buildQuizRow(quiz) {
     }
     
     return `
-        <tr class="${rowClass}">
+        <tr>
             <td class="align-middle">
                 <strong>${escapeHtml(quiz.quiz_title)}</strong>
                 ${quiz.lesson_title ? `<br><small class="text-muted">${escapeHtml(quiz.lesson_title)}</small>` : ''}
@@ -277,7 +270,6 @@ function buildQuizRow(quiz) {
             </td>
             <td class="align-middle text-center">
                 ${statusBadge}
-                ${availabilityBadge}
             </td>
             <td class="align-middle">
                 ${dateHtml}
