@@ -1,19 +1,40 @@
-// public/js/student/list_gradebook.js
 $(document).ready(function() {
-    let currentGrades = [];
+    let currentFilter = 'q1';
 
-    loadGrades();
+    loadGrades(currentFilter);
 
-    function loadGrades() {
+    $(document).on('click', '.quarter-filter-btn', function() {
+        $('.quarter-filter-btn').removeClass('active btn-primary').addClass('btn-outline-primary');
+        $(this).removeClass('btn-outline-primary').addClass('active btn-primary');
+        currentFilter = $(this).data('filter');
+        loadGrades(currentFilter);
+    });
+
+    $(document).on('click', '.view-details-btn', function() {
+        const classId = $(this).data('class-id');
+        const quarterId = $(this).data('quarter-id');
+        
+        if (currentFilter === 'final') {
+            toastr.info('Please select a specific quarter to view details');
+            return;
+        }
+        
+        const detailsUrl = API_ROUTES.gradeDetails
+            .replace(':classId', classId)
+            .replace(':quarterId', quarterId);
+        window.location.href = detailsUrl;
+    });
+
+    function loadGrades(filter) {
         showLoading();
 
         $.ajax({
             url: API_ROUTES.getGrades,
             method: 'GET',
+            data: { filter: filter },
             success: function(response) {
                 if (response.success) {
-                    currentGrades = response.data;
-                    displayGrades(response.data);
+                    displayGrades(response.data, filter);
                 } else {
                     showError(response.message || 'Failed to load grades');
                 }
@@ -26,7 +47,7 @@ $(document).ready(function() {
         });
     }
 
-    function displayGrades(grades) {
+    function displayGrades(grades, filter) {
         const container = $('#gradesContainer');
         container.empty();
 
@@ -45,61 +66,44 @@ $(document).ready(function() {
 
         const row = $('<div class="row"></div>');
 
-        grades.forEach(function(grade) {
-            const card = createGradeCard(grade);
-            row.append(card);
-        });
+        if (filter === 'final') {
+            grades.forEach(function(grade) {
+                const card = createFinalGradeCard(grade);
+                row.append(card);
+            });
+        } else {
+            grades.forEach(function(grade) {
+                const card = createQuarterGradeCard(grade);
+                row.append(card);
+            });
+        }
 
         container.append(row);
     }
 
-    function createGradeCard(grade) {
-        const hasFinal = grade.has_final;
-        const finalGrade = hasFinal ? grade.final_grade.final_grade : null;
-        const remarks = hasFinal ? grade.final_grade.remarks : null;
-        
-        const q1Grade = grade.quarter_grades?.q1 ?? null;
-        const q2Grade = grade.quarter_grades?.q2 ?? null;
-        
-        let statusBadge = '';
-        
-        if (hasFinal) {
-            const remarksColor = remarks === 'PASSED' ? 'success' : (remarks === 'FAILED' ? 'danger' : 'secondary');
-            statusBadge = `<span class="badge badge-${remarksColor}">${remarks}</span>`;
-        } else {
-            statusBadge = `<span class="badge badge-secondary">ONGOING</span>`;
-        }
+    function createQuarterGradeCard(grade) {
+        const hasGrade = grade.quarter_grade !== null && grade.quarter_grade !== undefined;
+        const gradeDisplay = hasGrade ? parseFloat(grade.quarter_grade).toFixed(2) : '—';
+        const gradeBoxClass = hasGrade ? 'has-grade' : 'no-grade';
 
         const col = `
             <div class="col-lg-4 col-md-6 col-12 mb-3">
-                <div class="card card-outline card-primary h-100">
+                <div class="card card-outline card-primary h-100 grade-card">
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
                             <h3 class="card-title mb-0">
                                 ${escapeHtml(grade.class_name)}
                             </h3>
-                            ${statusBadge}
+                            <span class="badge badge-primary">${escapeHtml(grade.quarter_name)}</span>
                         </div>
                     </div>
                     <div class="card-body">
-                        <table class="table table-sm table-borderless mb-3">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" width="50%">1st Quarter</td>
-                                    <td class="text-right">${q1Grade !== null ? q1Grade : '—'}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">2nd Quarter</td>
-                                    <td class="text-right">${q2Grade !== null ? q2Grade : '—'}</td>
-                                </tr>
-                                <tr class="border-top">
-                                    <td class="font-weight-bold">Final Grade</td>
-                                    <td class="text-right font-weight-bold">${hasFinal ? finalGrade : '—'}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="grade-box ${gradeBoxClass} mb-3">
+                            <div class="grade-label">Grade</div>
+                            <div class="grade-value">${gradeDisplay}</div>
+                        </div>
 
-                        <div class="border-top pt-2">
+                        <div class="border-top pt-2 mt-2">
                             <small class="text-muted d-block mb-2">Grade Components:</small>
                             <div class="d-flex flex-column" style="gap: 0.25rem;">
                                 <span class="badge badge-light text-left">Written Work ${grade.ww_percentage}%</span>
@@ -118,8 +122,9 @@ $(document).ready(function() {
                     </div>
                     <div class="card-footer">
                         <button class="btn btn-primary btn-sm btn-block view-details-btn" 
-                                data-class-id="${grade.class_id}">
-                            View Details
+                                data-class-id="${grade.class_id}"
+                                data-quarter-id="${grade.quarter_id}">
+                            <i class="fas fa-eye"></i> View Details
                         </button>
                     </div>
                 </div>
@@ -129,11 +134,77 @@ $(document).ready(function() {
         return col;
     }
 
-    $(document).on('click', '.view-details-btn', function() {
-        const classId = $(this).data('class-id');
-        const detailsUrl = API_ROUTES.gradeDetails.replace(':classId', classId);
-        window.location.href = detailsUrl;
-    });
+    function createFinalGradeCard(grade) {
+        const hasFinal = grade.has_final;
+        const finalGrade = hasFinal ? parseFloat(grade.final_grade).toFixed(2) : null;
+        const remarks = hasFinal ? grade.remarks : null;
+        const q1Grade = grade.q1_grade !== null ? parseFloat(grade.q1_grade).toFixed(2) : '—';
+        const q2Grade = grade.q2_grade !== null ? parseFloat(grade.q2_grade).toFixed(2) : '—';
+        
+        let statusBadge = '';
+        
+        if (hasFinal) {
+            const remarksColor = remarks === 'PASSED' ? 'success' : (remarks === 'FAILED' ? 'danger' : 'secondary');
+            statusBadge = `<span class="badge badge-${remarksColor}">${remarks}</span>`;
+        } else {
+            statusBadge = `<span class="badge badge-secondary">NOT FINAL</span>`;
+        }
+
+        const col = `
+            <div class="col-lg-4 col-md-6 col-12 mb-3">
+                <div class="card card-outline card-primary h-100 grade-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="card-title mb-0">
+                                ${escapeHtml(grade.class_name)}
+                            </h3>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="grade-box ${q1Grade !== '—' ? 'has-grade' : 'no-grade'}">
+                                    <div class="grade-label">1st Quarter</div>
+                                    <div class="grade-value">${q1Grade}</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="grade-box ${q2Grade !== '—' ? 'has-grade' : 'no-grade'}">
+                                    <div class="grade-label">2nd Quarter</div>
+                                    <div class="grade-value">${q2Grade}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grade-box ${hasFinal ? 'has-grade' : 'no-grade'} mb-3" style="border-color: ${hasFinal ? '#28a745' : '#e9ecef'};">
+                            <div class="grade-label" style="color: ${hasFinal ? '#28a745' : '#6c757d'};">Final Grade</div>
+                            <div class="grade-value" style="color: ${hasFinal ? '#28a745' : '#adb5bd'};">${hasFinal ? finalGrade : '—'}</div>
+                        </div>
+
+                        <div class="border-top pt-2">
+                            <small class="text-muted d-block mb-2">Grade Components:</small>
+                            <div class="d-flex flex-column" style="gap: 0.25rem;">
+                                <span class="badge badge-light text-left">Written Work ${grade.ww_percentage}%</span>
+                                <span class="badge badge-light text-left">Performance Task ${grade.pt_percentage}%</span>
+                                <span class="badge badge-light text-left">Quarterly Assessment ${grade.qa_percentage}%</span>
+                            </div>
+                        </div>
+                        
+                        ${grade.teacher_name ? `
+                            <div class="mt-2 pt-2 border-top">
+                                <small class="text-muted">
+                                    <strong>Teacher:</strong> ${escapeHtml(grade.teacher_name)}
+                                </small>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return col;
+    }
 
     function showLoading() {
         $('#gradesContainer').html(`

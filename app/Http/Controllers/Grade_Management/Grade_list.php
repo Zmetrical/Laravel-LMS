@@ -41,19 +41,26 @@ class Grade_List extends MainController
             $activeSemester->semester_name;
         }
         
+        // Get quarters for the active semester
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $activeSemester->semester_id)
+            ->orderBy('order_number')
+            ->get();
+        
         $data = [
             'scripts' => ['student/list_gradebook.js'],
             'activeSemester' => $activeSemester,
-            'activeSemesterDisplay' => $activeSemesterDisplay
+            'activeSemesterDisplay' => $activeSemesterDisplay,
+            'quarters' => $quarters
         ];
         
         return view('student.list_gradebook', $data);
     }
     
     /**
-     * Show student grade details page for a specific class
+     * Show student grade details page for a specific class and quarter
      */
-    public function student_grade_details($classId)
+    public function student_grade_details($classId, $quarterId)
     {
         $student = Auth::guard('student')->user();
         
@@ -63,6 +70,14 @@ class Grade_List extends MainController
         if (!$class) {
             return redirect()->route('student.grades.index')
                 ->with('error', 'Class not found');
+        }
+        
+        // Get quarter info
+        $quarter = DB::table('quarters')->where('id', $quarterId)->first();
+        
+        if (!$quarter) {
+            return redirect()->route('student.grades.index')
+                ->with('error', 'Quarter not found');
         }
         
         // Get active semester
@@ -78,27 +93,22 @@ class Grade_List extends MainController
             )
             ->first();
         
-        // Get quarters for this semester
-        $quarters = DB::table('quarters')
-            ->where('semester_id', $activeSemester->semester_id)
-            ->orderBy('order_number')
-            ->get();
-        
         $data = [
             'scripts' => ['student/details_gradebook.js'],
             'class' => $class,
+            'quarter' => $quarter,
             'activeSemester' => $activeSemester,
-            'quarters' => $quarters,
-            'classId' => $classId
+            'classId' => $classId,
+            'quarterId' => $quarterId
         ];
         
         return view('student.details_gradebook', $data);
     }
     
     /**
-     * Get student grades with transmutation
+     * Get student grades with transmutation - now supports quarter filter
      */
-    public function getStudentGrades()
+    public function getStudentGrades(Request $request)
     {
         try {
             $student = Auth::guard('student')->user();
@@ -122,6 +132,9 @@ class Grade_List extends MainController
                 ]);
             }
             
+            // Get filter parameter (q1, q2, or final)
+            $filter = $request->input('filter', 'q1');
+            
             $quarters = DB::table('quarters')
                 ->where('semester_id', $activeSemester->id)
                 ->orderBy('order_number')
@@ -130,75 +143,28 @@ class Grade_List extends MainController
             
             $classes = $this->getStudentEnrolledClasses($student, $activeSemester->id);
             
-            $allFinalGrades = DB::table('grades_final')
-                ->where('student_number', $student->student_number)
-                ->whereIn('class_code', $classes->pluck('class_code'))
-                ->where('semester_id', $activeSemester->id)
-                ->get()
-                ->keyBy('class_code');
-            
-            $gradesData = [];
-            
-            foreach ($classes as $class) {
-                $quarterGrades = ['q1' => null, 'q2' => null];
+            if ($filter === 'final') {
+                // Show final grades
+                $gradesData = $this->getFinalGradesData($student, $classes, $activeSemester->id, $quarters);
+            } else {
+                // Show specific quarter grades
+                $quarterNumber = $filter === 'q1' ? 1 : 2;
+                $quarter = $quarters->get($quarterNumber);
                 
-                foreach ($quarters as $orderNumber => $quarter) {
-                    // Check for locked grade first
-                    $lockedGrade = DB::table('quarter_grades')
-                        ->where('student_number', $student->student_number)
-                        ->where('class_code', $class->class_code)
-                        ->where('quarter_id', $quarter->id)
-                        ->where('is_locked', 1)
-                        ->first();
-                    
-                    if ($lockedGrade) {
-                        // Use locked transmuted grade
-                        $quarterGrades['q' . $orderNumber] = $lockedGrade->transmuted_grade;
-                    } else {
-                        // Calculate real-time grade with transmutation
-                        $scores = $this->getQuarterDetailedScores(
-                            $student->student_number,
-                            $class->class_code,
-                            $quarter->id
-                        );
-                        
-                        $calculatedGrade = $this->calculateGradeFromScores(
-                            $scores,
-                            $class->ww_perc,
-                            $class->pt_perc,
-                            $class->qa_perce
-                        );
-                        
-                        if ($calculatedGrade !== null) {
-                            // Apply transmutation to calculated grade
-                            $transmutedGrade = GradeTransmutation::transmute($calculatedGrade);
-                            $quarterGrades['q' . $orderNumber] = $transmutedGrade;
-                        }
-                    }
+                if (!$quarter) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Quarter not found'
+                    ], 404);
                 }
                 
-                $finalGrade = $allFinalGrades->get($class->class_code);
-                
-                $gradesData[] = [
-                    'class_id' => $class->id,
-                    'class_code' => $class->class_code,
-                    'class_name' => $class->class_name,
-                    'teacher_name' => $class->teacher_name,
-                    'ww_percentage' => $class->ww_perc,
-                    'pt_percentage' => $class->pt_perc,
-                    'qa_percentage' => $class->qa_perce,
-                    'quarter_grades' => $quarterGrades,
-                    'final_grade' => $finalGrade ? (object)[
-                        'final_grade' => round($finalGrade->final_grade, 2),
-                        'remarks' => $finalGrade->remarks
-                    ] : null,
-                    'has_final' => $finalGrade !== null
-                ];
+                $gradesData = $this->getQuarterGradesData($student, $classes, $quarter, $activeSemester->id);
             }
             
             return response()->json([
                 'success' => true,
                 'data' => $gradesData,
+                'filter' => $filter,
                 'semester' => [
                     'id' => $activeSemester->id,
                     'name' => $activeSemester->name,
@@ -220,8 +186,100 @@ class Grade_List extends MainController
     }
 
     /**
+     * Get quarter grades data for list view
+     */
+    private function getQuarterGradesData($student, $classes, $quarter, $semesterId)
+    {
+        $gradesData = [];
+        
+        foreach ($classes as $class) {
+            // Check for locked grade first
+            $lockedGrade = DB::table('quarter_grades')
+                ->where('student_number', $student->student_number)
+                ->where('class_code', $class->class_code)
+                ->where('quarter_id', $quarter->id)
+                ->where('is_locked', 1)
+                ->first();
+            
+            $quarterGrade = null;
+            
+            if ($lockedGrade) {
+                $quarterGrade = $lockedGrade->transmuted_grade;
+            } else {
+                // Calculate real-time grade
+                $scores = $this->getQuarterDetailedScores(
+                    $student->student_number,
+                    $class->class_code,
+                    $quarter->id
+                );
+                
+                $calculatedGrade = $this->calculateGradeFromScores(
+                    $scores,
+                    $class->ww_perc,
+                    $class->pt_perc,
+                    $class->qa_perce
+                );
+                
+                if ($calculatedGrade !== null) {
+                    $quarterGrade = GradeTransmutation::transmute($calculatedGrade);
+                }
+            }
+            
+            $gradesData[] = [
+                'class_id' => $class->id,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'teacher_name' => $class->teacher_name,
+                'ww_percentage' => $class->ww_perc,
+                'pt_percentage' => $class->pt_perc,
+                'qa_percentage' => $class->qa_perce,
+                'quarter_grade' => $quarterGrade,
+                'quarter_id' => $quarter->id,
+                'quarter_name' => $quarter->name
+            ];
+        }
+        
+        return $gradesData;
+    }
+
+    /**
+     * Get final grades data for list view
+     */
+    private function getFinalGradesData($student, $classes, $semesterId, $quarters)
+    {
+        $allFinalGrades = DB::table('grades_final')
+            ->where('student_number', $student->student_number)
+            ->whereIn('class_code', $classes->pluck('class_code'))
+            ->where('semester_id', $semesterId)
+            ->get()
+            ->keyBy('class_code');
+        
+        $gradesData = [];
+        
+        foreach ($classes as $class) {
+            $finalGrade = $allFinalGrades->get($class->class_code);
+            
+            $gradesData[] = [
+                'class_id' => $class->id,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'teacher_name' => $class->teacher_name,
+                'ww_percentage' => $class->ww_perc,
+                'pt_percentage' => $class->pt_perc,
+                'qa_percentage' => $class->qa_perce,
+                'q1_grade' => $finalGrade ? $finalGrade->q1_grade : null,
+                'q2_grade' => $finalGrade ? $finalGrade->q2_grade : null,
+                'final_grade' => $finalGrade ? $finalGrade->final_grade : null,
+                'remarks' => $finalGrade ? $finalGrade->remarks : null,
+                'has_final' => $finalGrade !== null
+            ];
+        }
+        
+        return $gradesData;
+    }
+
+    /**
      * Calculate grade from scores and return INITIAL grade (before transmutation)
-     * UPDATED: Returns initial grade for transmutation
      */
     private function calculateGradeFromScores($scores, $wwPerc, $ptPerc, $qaPerc)
     {
@@ -237,11 +295,8 @@ class Grade_List extends MainController
         
         foreach ($scores as $score) {
             $type = $score['component_type'];
-            
-            // ALWAYS add to max_points
             $components[$type]['max'] += $score['max_points'];
             
-            // Only add to total if score exists
             if ($score['score'] !== null) {
                 $components[$type]['total'] += $score['score'];
             }
@@ -268,16 +323,13 @@ class Grade_List extends MainController
             $hasAnyScore = true;
         }
         
-        // Return initial grade (weighted score) - NOT rounded yet
         return $hasAnyScore ? round($weightedScore, 2) : null;
     }
 
-
     /**
-     * Get detailed grade breakdown for a specific class (AJAX)
-     * UPDATED: Added transmutation for calculated grades
+     * Get detailed grade breakdown for a specific class and quarter (AJAX)
      */
-    public function getClassGradeDetails($classId)
+    public function getClassGradeDetails($classId, $quarterId)
     {
         try {
             $student = Auth::guard('student')->user();
@@ -287,18 +339,6 @@ class Grade_List extends MainController
                     'success' => false,
                     'message' => 'Unauthorized'
                 ], 401);
-            }
-            
-            // Get active semester
-            $activeSemester = DB::table('semesters')
-                ->where('status', 'active')
-                ->first();
-            
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active semester'
-                ], 400);
             }
             
             // Get class info
@@ -311,69 +351,57 @@ class Grade_List extends MainController
                 ], 404);
             }
             
-            // Get quarters
-            $quarters = DB::table('quarters')
-                ->where('semester_id', $activeSemester->id)
-                ->orderBy('order_number')
-                ->get();
+            // Get quarter info
+            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
             
-            $quarterData = [];
-            
-            foreach ($quarters as $quarter) {
-                // Get locked quarter grade first
-                $quarterGrade = DB::table('quarter_grades')
-                    ->where('student_number', $student->student_number)
-                    ->where('class_code', $class->class_code)
-                    ->where('quarter_id', $quarter->id)
-                    ->first();
-                
-                // Get detailed scores for this quarter
-                $scores = $this->getQuarterDetailedScores(
-                    $student->student_number, 
-                    $class->class_code, 
-                    $quarter->id
-                );
-                
-                // If no locked grade, calculate with transmutation
-                $calculatedGrade = null;
-                if (!$quarterGrade || !$quarterGrade->is_locked) {
-                    $initialGrade = $this->calculateGradeFromScores(
-                        $scores,
-                        $class->ww_perc,
-                        $class->pt_perc,
-                        $class->qa_perce
-                    );
-                    
-                    if ($initialGrade !== null) {
-                        $calculatedGrade = [
-                            'initial_grade' => $initialGrade,
-                            'transmuted_grade' => GradeTransmutation::transmute($initialGrade),
-                            'is_calculated' => true
-                        ];
-                    }
-                }
-                
-                $quarterData[] = [
-                    'quarter' => $quarter,
-                    'grades' => $quarterGrade,
-                    'calculated_grade' => $calculatedGrade,
-                    'scores' => $scores
-                ];
+            if (!$quarter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Quarter not found'
+                ], 404);
             }
             
-            // Get final grade
-            $finalGrade = DB::table('grades_final')
+            // Get locked quarter grade first
+            $quarterGrade = DB::table('quarter_grades')
                 ->where('student_number', $student->student_number)
                 ->where('class_code', $class->class_code)
-                ->where('semester_id', $activeSemester->id)
+                ->where('quarter_id', $quarterId)
                 ->first();
+            
+            // Get detailed scores for this quarter
+            $scores = $this->getQuarterDetailedScores(
+                $student->student_number, 
+                $class->class_code, 
+                $quarterId
+            );
+            
+            // If no locked grade, calculate with transmutation
+            $calculatedGrade = null;
+            if (!$quarterGrade || !$quarterGrade->is_locked) {
+                $initialGrade = $this->calculateGradeFromScores(
+                    $scores,
+                    $class->ww_perc,
+                    $class->pt_perc,
+                    $class->qa_perce
+                );
+                
+                if ($initialGrade !== null) {
+                    $calculatedGrade = [
+                        'initial_grade' => $initialGrade,
+                        'transmuted_grade' => GradeTransmutation::transmute($initialGrade),
+                        'is_calculated' => true
+                    ];
+                }
+            }
             
             return response()->json([
                 'success' => true,
                 'data' => [
                     'class' => $class,
-                    'quarters' => $quarterData,
-                    'final_grade' => $finalGrade
+                    'quarter' => $quarter,
+                    'grades' => $quarterGrade,
+                    'calculated_grade' => $calculatedGrade,
+                    'scores' => $scores
                 ]
             ]);
             
@@ -384,11 +412,9 @@ class Grade_List extends MainController
             ], 500);
         }
     }
-
     
     /**
      * Get detailed scores for a specific quarter
-     * NO CHANGES NEEDED - this method is fine as is
      */
     private function getQuarterDetailedScores($studentNumber, $classCode, $quarterId)
     {
@@ -482,72 +508,6 @@ class Grade_List extends MainController
     }
     
     /**
-     * Get grade information for a specific class
-     */
-    private function getClassGradeInfo($studentNumber, $classCode, $semesterId)
-    {
-        // Get columns
-        $columns = DB::table('gradebook_columns')
-            ->where('class_code', $classCode)
-            ->where('is_active', true)
-            ->orderBy('component_type')
-            ->orderBy('order_number')
-            ->get()
-            ->groupBy('component_type');
-        
-        $components = [
-            'WW' => ['scores' => [], 'average' => 0, 'count' => 0],
-            'PT' => ['scores' => [], 'average' => 0, 'count' => 0],
-            'QA' => ['scores' => [], 'average' => 0, 'count' => 0]
-        ];
-        
-        foreach (['WW', 'PT', 'QA'] as $type) {
-            $typeColumns = $columns->get($type, collect());
-            
-            foreach ($typeColumns as $column) {
-                $score = null;
-                
-                if ($column->source_type === 'online' && $column->quiz_id) {
-                    $score = $this->getQuizScore($studentNumber, $column->quiz_id, $column->max_points);
-                } else {
-                    $manualScore = DB::table('gradebook_scores')
-                        ->where('column_id', $column->id)
-                        ->where('student_number', $studentNumber)
-                        ->first();
-                    
-                    $score = $manualScore ? $manualScore->score : null;
-                }
-                
-                // Only count columns where student has a score (including 0)
-                if ($score !== null) {
-                    $totalScore += floatval($score);
-                    $totalMaxPoints += floatval($column->max_points); // <--- Max points only added if score exists
-                }
-            }
-            
-            if ($components[$type]['count'] > 0) {
-                $components[$type]['average'] = round(
-                    array_sum($components[$type]['scores']) / $components[$type]['count'],
-                    2
-                );
-            }
-        }
-        
-        // Check for final grade
-        $finalGrade = DB::table('grades_final')
-            ->where('student_number', $studentNumber)
-            ->where('class_code', $classCode)
-            ->where('semester_id', $semesterId)
-            ->first();
-        
-        return [
-            'components' => $components,
-            'final_grade' => $finalGrade,
-            'has_final' => $finalGrade !== null
-        ];
-    }
-    
-    /**
      * Get quiz score adjusted to max points
      */
     private function getQuizScore($studentNumber, $quizId, $maxPoints)
@@ -566,6 +526,4 @@ class Grade_List extends MainController
         $percentage = ($attempt->score / $attempt->total_points) * 100;
         return round(($percentage / 100) * $maxPoints, 2);
     }
-
-    
 }

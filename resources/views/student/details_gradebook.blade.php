@@ -7,27 +7,18 @@
         @endforeach
     @endif
     <style>
-        .filter-btn-group {
+        .component-tab-group {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
+            margin-bottom: 1rem;
         }
-        .filter-btn-group .btn {
+        .component-tab-group .btn {
             flex: 1;
-            min-width: 120px;
-        }
-        .quarter-card {
-            border-left: 4px solid #007bff;
-        }
-        .quarter-card.locked {
-            opacity: 0.95;
-            background-color: #f8f9fa;
-        }
-        .card.border-dark {
-            border-width: 1px !important;
+            min-width: 100px;
         }
         @media (max-width: 768px) {
-            .filter-btn-group .btn {
+            .component-tab-group .btn {
                 flex: 1 1 calc(50% - 0.5rem);
                 min-width: auto;
             }
@@ -39,7 +30,7 @@
     <ol class="breadcrumb breadcrumb-custom">
         <li class="breadcrumb-item"><a href="{{ route('student.home') }}">Home</a></li>
         <li class="breadcrumb-item"><a href="{{ route('student.list_grade') }}">My Grades</a></li>
-        <li class="breadcrumb-item active">{{ $class->class_name }}</li>
+        <li class="breadcrumb-item active">{{ $class->class_name }} - {{ $quarter->name }}</li>
     </ol>
 @endsection
 
@@ -55,6 +46,7 @@
                         <i class="fas fa-book"></i> 
                         <strong>{{ $class->class_name }}</strong>
                     </h4>
+                    <small class="text-muted">{{ $quarter->name }}</small>
                 </div>
                 <div class="col-md-4 text-right">
                     <a href="{{ route('student.list_grade') }}" class="btn btn-secondary">
@@ -65,24 +57,23 @@
         </div>
     </div>
 
-    <!-- Filters Card -->
+    <!-- Component Filter Card -->
     <div class="card card-outline card-secondary mb-3">
         <div class="card-body py-3">
-            <div class="row">
-                <!-- Quarter Filter -->
-                <div class="col-md-12 mb-2 mb-md-0">
-                    <label class="mb-2"><strong><i class="fas fa-calendar-alt"></i> Select Period:</strong></label>
-                    <div class="filter-btn-group">
-                        @foreach($quarters as $quarter)
-                        <button type="button" class="btn {{ $loop->first ? 'btn-primary' : 'btn-outline-primary' }} quarter-filter-btn {{ $loop->first ? 'active' : '' }}" data-filter="{{ $quarter->order_number }}">
-                            <i class="fas fa-calendar"></i> {{ $quarter->name }}
-                        </button>
-                        @endforeach
-                        <button type="button" class="btn btn-outline-primary quarter-filter-btn" data-filter="final">
-                            <i class="fas fa-trophy"></i> Final Grade
-                        </button>
-                    </div>
-                </div>
+            <label class="mb-2"><strong><i class="fas fa-filter"></i> View Components:</strong></label>
+            <div class="component-tab-group">
+                <button type="button" class="btn btn-primary component-filter-btn active" data-component="all">
+                    <i class="fas fa-th-list"></i> All Items
+                </button>
+                <button type="button" class="btn btn-outline-primary component-filter-btn" data-component="WW">
+                    <i class="fas fa-pen"></i> Written Works
+                </button>
+                <button type="button" class="btn btn-outline-primary component-filter-btn" data-component="PT">
+                    <i class="fas fa-tasks"></i> Performance Tasks
+                </button>
+                <button type="button" class="btn btn-outline-primary component-filter-btn" data-component="QA">
+                    <i class="fas fa-clipboard-check"></i> Assessment
+                </button>
             </div>
         </div>
     </div>
@@ -102,7 +93,7 @@
 @section('scripts')
     <script>
         const API_ROUTES = {
-            getDetails: "{{ route('student.grades.details.data', ['classId' => $classId]) }}"
+            getDetails: "{{ route('student.grades.details.data', ['classId' => $classId, 'quarterId' => $quarterId]) }}"
         };
         
         const CLASS_INFO = {
