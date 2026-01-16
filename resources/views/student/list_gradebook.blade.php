@@ -43,9 +43,7 @@
     color: #495057;
     line-height: 1;
 }
-.grade-box.has-grade .grade-value {
-    color: #007bff;
-}
+
 .grade-box.no-grade .grade-value {
     color: #adb5bd;
 }

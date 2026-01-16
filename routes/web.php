@@ -256,8 +256,8 @@ Route::prefix('student')->name('student.')->group(function () {
             ->name('grades.list');
         
         // Get Class Grade Details (AJAX)
-Route::get('/grades/{classId}/{quarterId}', [Grade_List::class, 'student_grade_details'])->name('grades.details');
-Route::get('/grades/{classId}/{quarterId}/data', [Grade_List::class, 'getClassGradeDetails'])->name('grades.details.data');
+    Route::get('/grades/{classId}/{quarterId}', [Grade_List::class, 'student_grade_details'])->name('grades.details');
+    Route::get('/grades/{classId}/{quarterId}/data', [Grade_List::class, 'getClassGradeDetails'])->name('grades.details.data');
 
 
         // Class Content Pages

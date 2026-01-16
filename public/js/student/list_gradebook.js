@@ -94,7 +94,6 @@ $(document).ready(function() {
                             <h3 class="card-title mb-0">
                                 ${escapeHtml(grade.class_name)}
                             </h3>
-                            <span class="badge badge-primary">${escapeHtml(grade.quarter_name)}</span>
                         </div>
                     </div>
                     <div class="card-body">
@@ -143,11 +142,8 @@ $(document).ready(function() {
         
         let statusBadge = '';
         
-        if (hasFinal) {
-            const remarksColor = remarks === 'PASSED' ? 'success' : (remarks === 'FAILED' ? 'danger' : 'secondary');
-            statusBadge = `<span class="badge badge-${remarksColor}">${remarks}</span>`;
-        } else {
-            statusBadge = `<span class="badge badge-secondary">NOT FINAL</span>`;
+        if (hasFinal && remarks === 'PASSED') {
+            statusBadge = `<span class="badge badge-success">PASSED</span>`;
         }
 
         const col = `
@@ -165,21 +161,21 @@ $(document).ready(function() {
                         <div class="row mb-3">
                             <div class="col-6">
                                 <div class="grade-box ${q1Grade !== '—' ? 'has-grade' : 'no-grade'}">
-                                    <div class="grade-label">1st Quarter</div>
+                                    <div class="grade-label">Q1</div>
                                     <div class="grade-value">${q1Grade}</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="grade-box ${q2Grade !== '—' ? 'has-grade' : 'no-grade'}">
-                                    <div class="grade-label">2nd Quarter</div>
+                                    <div class="grade-label">Q2</div>
                                     <div class="grade-value">${q2Grade}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grade-box ${hasFinal ? 'has-grade' : 'no-grade'} mb-3" style="border-color: ${hasFinal ? '#28a745' : '#e9ecef'};">
-                            <div class="grade-label" style="color: ${hasFinal ? '#28a745' : '#6c757d'};">Final Grade</div>
-                            <div class="grade-value" style="color: ${hasFinal ? '#28a745' : '#adb5bd'};">${hasFinal ? finalGrade : '—'}</div>
+                        <div class="grade-box ${hasFinal ? 'has-grade' : 'no-grade'} mb-3">
+                            <div class="grade-label">Final Grade</div>
+                            <div class="grade-value">${hasFinal ? finalGrade : '—'}</div>
                         </div>
 
                         <div class="border-top pt-2">

@@ -35,7 +35,6 @@
 @endsection
 
 @section('content')
-<br>
 <div class="container-fluid">
     <!-- Class Header -->
     <div class="card card-outline card-primary mb-3">
@@ -63,7 +62,7 @@
             <label class="mb-2"><strong><i class="fas fa-filter"></i> View Components:</strong></label>
             <div class="component-tab-group">
                 <button type="button" class="btn btn-primary component-filter-btn active" data-component="all">
-                    <i class="fas fa-th-list"></i> All Items
+                    <i class="fas fa-th-list"></i> Overall Grade
                 </button>
                 <button type="button" class="btn btn-outline-primary component-filter-btn" data-component="WW">
                     <i class="fas fa-pen"></i> Written Works
