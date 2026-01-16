@@ -53,7 +53,20 @@
                     </div>
                 </div>
             </div>
-
+<div class="col-lg-3 col-md-6 col-sm-12">
+    <div class="card card-warning card-outline">
+        <div class="card-body box-profile">
+            <div class="text-center">
+                <i class="fas fa-user-friends fa-5x text-warning mb-3"></i>
+            </div>
+            <h3 class="profile-username text-center">Guardian Portal</h3>
+            <p class="text-muted text-center">Monitor student progress</p>
+            <a href="{{ route('guardian.login') }}" class="btn btn-warning btn-block">
+                <i class="fas fa-eye mr-2"></i><b>Go to Guardian</b>
+            </a>
+        </div>
+    </div>
+</div>
                 @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>

@@ -248,7 +248,7 @@
             </div>
             
             <div class="login-header">
-                <h1>Student Login</h1>
+                <h1>Login</h1>
             </div>
             
             <form id="loginForm" action="{{ route('student.auth') }}" method="POST" autocomplete="on">
