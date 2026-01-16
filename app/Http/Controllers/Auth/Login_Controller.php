@@ -237,4 +237,89 @@ class Login_Controller extends MainController
         return redirect()->route('admin.login');
     }
     
+
+
+// ---------------------------------------------------------------------------
+//  Guardian Authentication
+// ---------------------------------------------------------------------------
+
+public function auth_guardian(Request $request)
+{
+    // Validate the incoming request
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
+
+    // TODO: Implement actual authentication when guardian table is created
+    // For now, return a mock response
+
+    // Mock successful login
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful! Redirecting...',
+        'redirect' => route('guardian.home')
+    ]);
+
+    /* Uncomment when guardian table is ready:
+    
+    $guardian = Guardian::where('email', $request->email)->first();
+    
+    if (!$guardian) {
+        Log::warning('Guardian not found', [
+            'email' => $request->email
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid email or password.'
+        ], 401);
+    }
+
+    $credentials = [
+        'email' => $request->email,
+        'password' => $request->password,
+    ];
+
+    $remember = $request->has('remember') && $request->remember == 1;
+
+    if (Auth::guard('guardian')->attempt($credentials, $remember)) {
+        $request->session()->regenerate();
+
+        Log::info('Guardian login successful', [
+            'guardian_id' => $guardian->id,
+            'email' => $guardian->email
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful! Redirecting...',
+            'redirect' => route('guardian.home')
+        ]);
+    }
+
+    $passwordMatch = Hash::check($request->password, $guardian->password);
+    
+    Log::warning('Guardian login failed', [
+        'email' => $request->email,
+        'password_match_manual' => $passwordMatch
+    ]);
+
+    return response()->json([
+        'success' => false,
+        'message' => 'Invalid email or password.'
+    ], 401);
+    */
+}
+
+public function logout_guardian(Request $request)
+{
+    // TODO: Uncomment when guardian authentication is implemented
+    // Auth::guard('guardian')->logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('guardian.login');
+}
 }

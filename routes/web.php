@@ -28,6 +28,8 @@ use App\Http\Controllers\Enrollment_Management\SectionController;
 
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\GuardianController;
+
 use App\Http\Controllers\User_Management\Profile_Management;
 use App\Http\Controllers\User_Management\User_Management;
 use App\Http\Controllers\User_Management\Section_Management;
@@ -405,4 +407,33 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
         });
     });
+
+
+
+
+
+
+// Guardian Routes
+Route::prefix('guardian')->group(function () {
+    // Guest routes (login)
+    Route::middleware('guest:guardian')->group(function () {
+        Route::get('/login', [GuardianController::class, 'login'])->name('guardian.login');
+        Route::post('/auth', [Login_Controller::class, 'auth_guardian'])->name('guardian.auth');
+    });
+
+    // Authenticated routes
+    Route::middleware('auth:guardian')->group(function () {
+        Route::get('/', [GuardianController::class, 'index'])->name('guardian.home');
+        Route::post('/logout', [Login_Controller::class, 'logout_guardian'])->name('guardian.logout');
+        
+        // Profile routes
+        Route::get('/profile', [GuardianController::class, 'show_profile'])->name('guardian.profile');
+        Route::get('/profile/edit', [GuardianController::class, 'edit_profile'])->name('guardian.profile.edit');
+        Route::post('/profile/update', [GuardianController::class, 'update_profile'])->name('guardian.profile.update');
+        
+        // Students routes
+        Route::get('/students', [GuardianController::class, 'view_students'])->name('guardian.students');
+        Route::get('/students/{student_number}/grades', [GuardianController::class, 'view_student_grades'])->name('guardian.student.grades');
+    });
+});
 });
