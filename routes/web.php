@@ -410,10 +410,10 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 });
 
 
-// Guardian Routes
-Route::prefix('guardian')->group(function () {
-    // Remove all middleware, make everything accessible    
-    // Remove auth:guardian middleware
-    Route::get('/', [GuardianController::class, 'index'])->name('guardian.home');
-    Route::get('/students/{student_number}/grades', [GuardianController::class, 'view_student_grades'])->name('guardian.student.grades');
+// Guardian routes 
+Route::prefix('guardian')->name('guardian.')->group(function () {
+    Route::get('/access/{token}', [GuardianController::class, 'access'])->name('access');
+    Route::get('/dashboard', [GuardianController::class, 'index'])->name('home');
+    Route::get('/student/{student_number}/grades', [GuardianController::class, 'view_student_grades'])->name('student.grades');
+    Route::get('/student/{student_number}/grades/data', [GuardianController::class, 'get_student_grades_data'])->name('student.grades.data');
 });

@@ -15,7 +15,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <h4 class="mb-3">Welcome, Guardian!</h4>
+                <h4 class="mb-3">Welcome, {{ session('guardian_name') }}!</h4>
                 <p class="text-muted">Monitor your students' academic progress and grades.</p>
             </div>
         </div>
@@ -25,45 +25,36 @@
     <div class="col-lg-4 col-6">
         <div class="small-box bg-primary">
             <div class="inner">
-                <h3>2</h3>
+                <h3>{{ $totalStudents }}</h3>
                 <p>My Students</p>
             </div>
             <div class="icon">
                 <i class="fas fa-users"></i>
             </div>
-            <a href="{{ route('guardian.students') }}" class="small-box-footer">
-                View Students <i class="fas fa-arrow-circle-right"></i>
-            </a>
         </div>
     </div>
 
     <div class="col-lg-4 col-6">
         <div class="small-box bg-secondary">
             <div class="inner">
-                <h3>89.5</h3>
+                <h3>{{ number_format($avgGrade, 1) }}</h3>
                 <p>Average Grade</p>
             </div>
             <div class="icon">
                 <i class="fas fa-chart-line"></i>
             </div>
-            <a href="{{ route('guardian.students') }}" class="small-box-footer">
-                View Details <i class="fas fa-arrow-circle-right"></i>
-            </a>
         </div>
     </div>
 
     <div class="col-lg-4 col-6">
         <div class="small-box bg-warning">
             <div class="inner">
-                <h3>12</h3>
+                <h3>{{ $totalSubjects }}</h3>
                 <p>Total Subjects</p>
             </div>
             <div class="icon">
                 <i class="fas fa-book"></i>
             </div>
-            <a href="{{ route('guardian.students') }}" class="small-box-footer">
-                View Subjects <i class="fas fa-arrow-circle-right"></i>
-            </a>
         </div>
     </div>
 
@@ -74,46 +65,56 @@
                 <h3 class="card-title">My Students</h3>
             </div>
             <div class="card-body">
+                @if($students->count() > 0)
                 <div class="row">
+                    @foreach($students as $student)
                     <div class="col-md-6">
                         <div class="card card-outline card-primary">
                             <div class="card-header">
-                                <h3 class="card-title">Maria Dela Cruz</h3>
-                                <span class="badge badge-primary float-right">Grade 11</span>
+                                <h3 class="card-title">{{ $student->full_name }}</h3>
+                                <span class="badge badge-primary float-right">{{ $student->level_name }}</span>
                             </div>
                             <div class="card-body">
-                                <p><strong>Student Number:</strong> 2024-0001</p>
-                                <p><strong>Section:</strong> STEM 11-A</p>
-                                <p><strong>Average Grade:</strong> <span class="badge badge-success">90.5</span></p>
-                                <a href="{{ route('guardian.student.grades', '2024-0001') }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-eye mr-1"></i> View Grades
-                                </a>
+                                <div class="row">
+                                    <div class="col-4 text-center">
+                                        <img class="img-circle" 
+                                             src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
+                                             alt="Student" 
+                                             style="width: 80px; height: 80px; object-fit: cover;">
+                                    </div>
+                                    <div class="col-8">
+                                        <p class="mb-1"><strong>Student Number:</strong> {{ $student->student_number }}</p>
+                                        <p class="mb-1"><strong>Section:</strong> {{ $student->section_name ?? 'N/A' }}</p>
+                                        <p class="mb-1"><strong>Type:</strong> 
+                                            <span class="badge badge-{{ $student->student_type == 'regular' ? 'primary' : 'secondary' }}">
+                                                {{ ucfirst($student->student_type) }}
+                                            </span>
+                                        </p>
+                                        @if($student->relationship)
+                                        <p class="mb-2"><small class="text-muted">Relationship: {{ ucfirst($student->relationship) }}</small></p>
+                                        @endif
+                                        <a href="{{ route('guardian.student.grades', $student->student_number) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye mr-1"></i> View Grades
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-md-6">
-                        <div class="card card-outline card-primary">
-                            <div class="card-header">
-                                <h3 class="card-title">Jose Dela Cruz</h3>
-                                <span class="badge badge-primary float-right">Grade 12</span>
-                            </div>
-                            <div class="card-body">
-                                <p><strong>Student Number:</strong> 2024-0002</p>
-                                <p><strong>Section:</strong> ABM 12-B</p>
-                                <p><strong>Average Grade:</strong> <span class="badge badge-success">88.5</span></p>
-                                <a href="{{ route('guardian.student.grades', '2024-0002') }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-eye mr-1"></i> View Grades
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
+                @else
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle mr-2"></i> No students linked to your account yet.
+                </div>
+                @endif
             </div>
         </div>
     </div>
 
     <!-- Recent Updates -->
+    @if($recentUpdates->count() > 0)
     <div class="col-12">
         <div class="card">
             <div class="card-header">
@@ -126,36 +127,35 @@
                             <th>Date</th>
                             <th>Student</th>
                             <th>Subject</th>
-                            <th>Quarter</th>
+                            <th>Semester</th>
                             <th>Grade</th>
+                            <th>Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
+                        @foreach($recentUpdates as $update)
                         <tr>
-                            <td>Jan 15, 2026</td>
-                            <td>Maria Dela Cruz</td>
-                            <td>General Mathematics</td>
-                            <td>Q2</td>
-                            <td><span class="badge badge-success">90.0</span></td>
+                            <td>{{ \Carbon\Carbon::parse($update->updated_at)->format('M d, Y') }}</td>
+                            <td>{{ $update->student_name }}</td>
+                            <td>{{ $update->class_name }}</td>
+                            <td>{{ $update->semester_name }}</td>
+                            <td>
+                                <span class="badge badge-{{ $update->final_grade >= 75 ? 'success' : 'danger' }}">
+                                    {{ number_format($update->final_grade, 2) }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ $update->remarks == 'PASSED' ? 'success' : 'danger' }}">
+                                    {{ $update->remarks }}
+                                </span>
+                            </td>
                         </tr>
-                        <tr>
-                            <td>Jan 14, 2026</td>
-                            <td>Jose Dela Cruz</td>
-                            <td>Business Mathematics</td>
-                            <td>Q2</td>
-                            <td><span class="badge badge-success">88.5</span></td>
-                        </tr>
-                        <tr>
-                            <td>Jan 12, 2026</td>
-                            <td>Maria Dela Cruz</td>
-                            <td>English for Academic Purposes</td>
-                            <td>Q2</td>
-                            <td><span class="badge badge-success">91.5</span></td>
-                        </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+    @endif
 </div>
 @endsection
