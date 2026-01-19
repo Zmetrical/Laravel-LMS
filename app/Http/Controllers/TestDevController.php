@@ -55,7 +55,7 @@ class TestDevController extends Controller
             }
 
             // Send email
-            Mail::send('emails.guardian_access', [
+            Mail::send('guardian.guardian_access', [
                 'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
                 'access_url' => $accessUrl,
                 'students' => $students

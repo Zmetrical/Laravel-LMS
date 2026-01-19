@@ -90,9 +90,6 @@
                                                 {{ ucfirst($student->student_type) }}
                                             </span>
                                         </p>
-                                        @if($student->relationship)
-                                        <p class="mb-2"><small class="text-muted">Relationship: {{ ucfirst($student->relationship) }}</small></p>
-                                        @endif
                                         <a href="{{ route('guardian.student.grades', $student->student_number) }}" 
                                            class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye mr-1"></i> View Grades

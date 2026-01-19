@@ -1,11 +1,13 @@
 $(document).ready(function() {
-    // Initialize Select2
-    $('#guardian_selector').select2({
-        placeholder: 'Select guardian...',
-        allowClear: true,
-        width: '100%'
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
     });
-
+    
+    console.log('Page loaded, initializing...');
+    console.log('API Routes:', API_ROUTES);
+    
     // Load guardians into selector and table
     loadGuardians();
 
@@ -20,7 +22,7 @@ $(document).ready(function() {
 
         // Find guardian data
         $.ajax({
-            url: '/testdev/get-guardians',
+            url: API_ROUTES.getGuardians,
             method: 'GET',
             success: function(guardians) {
                 const guardian = guardians.find(g => g.id == guardianId);
@@ -31,7 +33,7 @@ $(document).ready(function() {
                     
                     // Get student names
                     $.ajax({
-                        url: '/testdev/get-guardian-students/' + guardianId,
+                        url: API_ROUTES.getGuardianStudents + '/' + guardianId,
                         method: 'GET',
                         success: function(students) {
                             const studentNames = students.map(s => s.full_name).join(', ');
@@ -53,7 +55,7 @@ $(document).ready(function() {
         btn.html('<i class="fas fa-spinner fa-spin mr-2"></i>Sending...').prop('disabled', true);
 
         $.ajax({
-            url: '/testdev/send-guardian-email',
+            url: API_ROUTES.sendGuardianEmail,
             method: 'POST',
             data: $(this).serialize(),
             headers: {
@@ -61,7 +63,12 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    toastr.success(response.message);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Email Sent Successfully!',
+                        html: '<p><strong>Sent to:</strong> ' + response.guardian_email + '</p>',
+                        confirmButtonColor: '#28a745'
+                    });
                     
                     let resultHtml = '<div class="alert alert-success">';
                     resultHtml += '<h5><i class="fas fa-check-circle mr-2"></i>Email Sent Successfully!</h5>';
@@ -80,12 +87,22 @@ $(document).ready(function() {
                     $('#resultContent').html(resultHtml);
                     $('#resultCard').slideDown();
                 } else {
-                    toastr.error(response.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message,
+                        confirmButtonColor: '#dc3545'
+                    });
                 }
             },
             error: function(xhr) {
                 const error = xhr.responseJSON?.message || 'An error occurred';
-                toastr.error(error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error,
+                    confirmButtonColor: '#dc3545'
+                });
             },
             complete: function() {
                 btn.html(originalText).prop('disabled', false);
@@ -99,7 +116,14 @@ $(document).ready(function() {
         const input = $(this).closest('.input-group').find('input');
         input.select();
         document.execCommand('copy');
-        toastr.success('URL copied to clipboard!');
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'URL copied to clipboard!',
+            timer: 1500,
+            showConfirmButton: false
+        });
     });
 
     // Refresh guardians list
@@ -112,26 +136,41 @@ $(document).ready(function() {
         const input = $('#accessUrlInput');
         input.select();
         document.execCommand('copy');
-        toastr.success('URL copied to clipboard!');
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'URL copied to clipboard!',
+            timer: 1500,
+            showConfirmButton: false
+        });
     });
 });
 
 function loadGuardians() {
+    console.log('loadGuardians() called');
     $('#guardiansTableBody').html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>');
     
     $.ajax({
-        url: '/testdev/get-guardians',
+        url: API_ROUTES.getGuardians,
         method: 'GET',
+        beforeSend: function() {
+            console.log('Sending request to:', API_ROUTES.getGuardians);
+        },
         success: function(guardians) {
+            console.log('Guardians loaded:', guardians);
+            
             // Populate selector
             const selector = $('#guardian_selector');
             const currentValue = selector.val();
+            
             selector.empty();
-            selector.append(new Option('-- Select Guardian --', ''));
+            selector.append('<option value="">-- Select Guardian --</option>');
             
             guardians.forEach(function(guardian) {
                 const text = guardian.first_name + ' ' + guardian.last_name + ' (' + guardian.email + ')';
-                selector.append(new Option(text, guardian.id));
+                const option = $('<option></option>').attr('value', guardian.id).text(text);
+                selector.append(option);
             });
             
             // Restore selection
@@ -179,8 +218,6 @@ function loadGuardians() {
                 html += 'data-status="' + guardian.is_active + '" title="Toggle Status">';
                 html += '<i class="fas fa-toggle-' + (guardian.is_active ? 'on' : 'off') + '"></i></button>';
                 
-                html += '<button class="btn btn-danger delete-guardian-btn" data-id="' + guardian.id + '" title="Delete">';
-                html += '<i class="fas fa-trash"></i></button>';
                 html += '</div></td>';
                 html += '</tr>';
             });
@@ -192,14 +229,24 @@ function loadGuardians() {
             // Attach event handlers
             attachGuardianActions();
         },
-        error: function() {
+        error: function(xhr, status, error) {
+            console.error('Error loading guardians:', status, error);
+            console.error('Response:', xhr.responseText);
             $('#guardiansTableBody').html('<tr><td colspan="5" class="text-center text-danger">Error loading guardians</td></tr>');
-            toastr.error('Failed to load guardians');
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to load guardians: ' + error,
+                confirmButtonColor: '#dc3545'
+            });
         }
     });
 }
 
 function attachGuardianActions() {
+    console.log('Attaching guardian actions...');
+    
     // Send email directly from table
     $('.send-email-btn').click(function() {
         const guardianId = $(this).data('id');
@@ -225,51 +272,51 @@ function attachGuardianActions() {
         const currentStatus = $(this).data('status');
         const btn = $(this);
 
-        if (confirm('Are you sure you want to ' + (currentStatus ? 'deactivate' : 'activate') + ' this guardian?')) {
-            $.ajax({
-                url: '/testdev/toggle-guardian-status/' + id,
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        toastr.success(response.message);
-                        loadGuardians();
-                    } else {
-                        toastr.error(response.message);
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to ' + (currentStatus ? 'deactivate' : 'activate') + ' this guardian?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, ' + (currentStatus ? 'deactivate' : 'activate') + ' it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: API_ROUTES.toggleGuardianStatus + '/' + id,
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Updated!',
+                                text: response.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            loadGuardians();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message,
+                                confirmButtonColor: '#dc3545'
+                            });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to update status',
+                            confirmButtonColor: '#dc3545'
+                        });
                     }
-                },
-                error: function() {
-                    toastr.error('Failed to update status');
-                }
-            });
-        }
-    });
-
-    // Delete guardian
-    $('.delete-guardian-btn').click(function() {
-        const id = $(this).data('id');
-
-        if (confirm('Are you sure you want to delete this guardian? This will also remove all student associations.')) {
-            $.ajax({
-                url: '/testdev/delete-guardian/' + id,
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        toastr.success(response.message);
-                        loadGuardians();
-                    } else {
-                        toastr.error(response.message);
-                    }
-                },
-                error: function() {
-                    toastr.error('Failed to delete guardian');
-                }
-            });
-        }
+                });
+            }
+        });
     });
 }

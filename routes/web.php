@@ -424,9 +424,8 @@ Route::prefix('guardian')->name('guardian.')->group(function () {
 // Test & Development Routes
 Route::prefix('testdev')->name('testdev.')->group(function () {
     Route::get('/', [TestDevController::class, 'index'])->name('index');
-    Route::post('/send-guardian-email', [TestDevController::class, 'send_guardian_email']);
-    Route::get('/get-guardians', [TestDevController::class, 'get_guardians']);
-    Route::get('/get-guardian-students/{id}', [TestDevController::class, 'get_guardian_students']);
-    Route::delete('/delete-guardian/{id}', [TestDevController::class, 'delete_guardian']);
-    Route::post('/toggle-guardian-status/{id}', [TestDevController::class, 'toggle_guardian_status']);
-});
+    Route::post('/send-guardian-email', [TestDevController::class, 'send_guardian_email'])->name('send_guardian_email');
+    Route::get('/get-guardians', [TestDevController::class, 'get_guardians'])->name('get_guardians');
+    Route::get('/get-guardian-students/{id}', [TestDevController::class, 'get_guardian_students'])->name('get_guardian_students');
+    Route::post('/toggle-guardian-status/{id}', [TestDevController::class, 'toggle_guardian_status'])->name('toggle_guardian_status');
+}); 

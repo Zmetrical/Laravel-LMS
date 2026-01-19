@@ -51,8 +51,7 @@ class GuardianController extends Controller
                 's.student_type',
                 'sec.name as section_name',
                 'l.name as level_name',
-                'st.name as strand_name',
-                'gs.relationship'
+                'st.name as strand_name'
             )
             ->get()
             ->map(function($student) {

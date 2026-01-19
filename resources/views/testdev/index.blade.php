@@ -1,5 +1,14 @@
 @extends('layouts.main-test')
 
+@section('styles')
+    @if(isset($styles))
+        @foreach($styles as $style)
+            <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
+        @endforeach
+    @endif
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+@endsection
+
 @section('breadcrumb')
 <nav aria-label="breadcrumb" class="breadcrumb-custom">
     <i class="fas fa-flask breadcrumb-icon"></i>
@@ -18,10 +27,11 @@
                 <h3 class="card-title">Send Guardian Access Email</h3>
             </div>
             <form id="sendGuardianEmailForm">
+                @csrf
                 <div class="card-body">
                     <div class="form-group">
                         <label>Select Guardian <span class="text-danger">*</span></label>
-                        <select class="form-control select2" id="guardian_selector" name="guardian_id" required style="width: 100%;">
+                        <select class="form-control" id="guardian_selector" name="guardian_id" required style="width: 100%;">
                             <option value="">-- Select Guardian --</option>
                         </select>
                     </div>
@@ -155,4 +165,24 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    <script>
+        const API_ROUTES = {
+            sendGuardianEmail: "{{ route('testdev.send_guardian_email') }}",
+            getGuardians: "{{ route('testdev.get_guardians') }}",
+            getGuardianStudents: "{{ url('testdev/get-guardian-students') }}",
+            toggleGuardianStatus: "{{ url('testdev/toggle-guardian-status') }}",
+            guardianAccessRoute: "{{ route('guardian.access', ['token' => 'TOKEN_PLACEHOLDER']) }}"
+        };
+    </script>
+
+    @if(isset($scripts))
+        @foreach($scripts as $script)
+            <script src="{{ asset('js/' . $script) }}"></script>
+        @endforeach
+    @endif
 @endsection

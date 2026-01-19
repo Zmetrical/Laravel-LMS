@@ -1,6 +1,5 @@
 @extends('layouts.root')
 
-
 @section('head')
     @yield('styles')
     <style>
@@ -124,7 +123,7 @@
 
 
             <!-- Main Sidebar -->
-            <aside class="main-sidebar sidebar-dark-primary  elevation-4">
+            <aside class="main-sidebar sidebar-dark-primary elevation-4">
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
                         style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 <!-- School Year -->
@@ -139,8 +138,9 @@
                                 <a href="{{ route('testdev.index') }}"
                                     class="nav-link {{ Request::routeIs('testdev.index') ? 'active' : '' }}">
                                     <i class="far fa-circle nav-icon"></i>
-                                    <p>My Classes</p>
+                                    <p>Test & Development</p>
                                 </a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
