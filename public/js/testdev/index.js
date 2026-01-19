@@ -1,0 +1,275 @@
+$(document).ready(function() {
+    // Initialize Select2
+    $('#guardian_selector').select2({
+        placeholder: 'Select guardian...',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Load guardians into selector and table
+    loadGuardians();
+
+    // Guardian selector change event
+    $('#guardian_selector').change(function() {
+        const guardianId = $(this).val();
+        
+        if (!guardianId) {
+            $('#guardianInfo').hide();
+            return;
+        }
+
+        // Find guardian data
+        $.ajax({
+            url: '/testdev/get-guardians',
+            method: 'GET',
+            success: function(guardians) {
+                const guardian = guardians.find(g => g.id == guardianId);
+                
+                if (guardian) {
+                    $('#guardianName').text(guardian.first_name + ' ' + guardian.last_name);
+                    $('#guardianEmail').text(guardian.email);
+                    
+                    // Get student names
+                    $.ajax({
+                        url: '/testdev/get-guardian-students/' + guardianId,
+                        method: 'GET',
+                        success: function(students) {
+                            const studentNames = students.map(s => s.full_name).join(', ');
+                            $('#guardianStudents').text(studentNames || 'No students linked');
+                            $('#guardianInfo').slideDown();
+                        }
+                    });
+                }
+            }
+        });
+    });
+
+    // Send guardian email form
+    $('#sendGuardianEmailForm').submit(function(e) {
+        e.preventDefault();
+        
+        const btn = $(this).find('button[type="submit"]');
+        const originalText = btn.html();
+        btn.html('<i class="fas fa-spinner fa-spin mr-2"></i>Sending...').prop('disabled', true);
+
+        $.ajax({
+            url: '/testdev/send-guardian-email',
+            method: 'POST',
+            data: $(this).serialize(),
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                    
+                    let resultHtml = '<div class="alert alert-success">';
+                    resultHtml += '<h5><i class="fas fa-check-circle mr-2"></i>Email Sent Successfully!</h5>';
+                    resultHtml += '<p><strong>Sent to:</strong> ' + response.guardian_email + '</p>';
+                    resultHtml += '<p><strong>Access URL:</strong></p>';
+                    resultHtml += '<div class="input-group">';
+                    resultHtml += '<input type="text" class="form-control" value="' + response.access_url + '" readonly>';
+                    resultHtml += '<div class="input-group-append">';
+                    resultHtml += '<button class="btn btn-primary copy-url-btn" data-url="' + response.access_url + '">';
+                    resultHtml += '<i class="fas fa-copy"></i></button>';
+                    resultHtml += '</div></div>';
+                    resultHtml += '<a href="' + response.access_url + '" class="btn btn-sm btn-primary mt-2" target="_blank">';
+                    resultHtml += '<i class="fas fa-external-link-alt mr-2"></i>Test Access</a>';
+                    resultHtml += '</div>';
+                    
+                    $('#resultContent').html(resultHtml);
+                    $('#resultCard').slideDown();
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.message || 'An error occurred';
+                toastr.error(error);
+            },
+            complete: function() {
+                btn.html(originalText).prop('disabled', false);
+            }
+        });
+    });
+
+    // Copy URL button
+    $(document).on('click', '.copy-url-btn', function() {
+        const url = $(this).data('url');
+        const input = $(this).closest('.input-group').find('input');
+        input.select();
+        document.execCommand('copy');
+        toastr.success('URL copied to clipboard!');
+    });
+
+    // Refresh guardians list
+    $('#refreshGuardiansBtn').click(function() {
+        loadGuardians();
+    });
+
+    // Copy URL in modal
+    $('#copyUrlBtn').click(function() {
+        const input = $('#accessUrlInput');
+        input.select();
+        document.execCommand('copy');
+        toastr.success('URL copied to clipboard!');
+    });
+});
+
+function loadGuardians() {
+    $('#guardiansTableBody').html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>');
+    
+    $.ajax({
+        url: '/testdev/get-guardians',
+        method: 'GET',
+        success: function(guardians) {
+            // Populate selector
+            const selector = $('#guardian_selector');
+            const currentValue = selector.val();
+            selector.empty();
+            selector.append(new Option('-- Select Guardian --', ''));
+            
+            guardians.forEach(function(guardian) {
+                const text = guardian.first_name + ' ' + guardian.last_name + ' (' + guardian.email + ')';
+                selector.append(new Option(text, guardian.id));
+            });
+            
+            // Restore selection
+            if (currentValue) {
+                selector.val(currentValue).trigger('change');
+            }
+
+            // Populate table
+            if (guardians.length === 0) {
+                $('#guardiansTableBody').html('<tr><td colspan="5" class="text-center text-muted">No guardians found</td></tr>');
+                $('#totalGuardians').text('0');
+                $('#activeGuardians').text('0');
+                return;
+            }
+
+            let html = '';
+            let activeCount = 0;
+
+            guardians.forEach(function(guardian) {
+                if (guardian.is_active) activeCount++;
+
+                html += '<tr>';
+                html += '<td>' + guardian.first_name + ' ' + guardian.last_name + '</td>';
+                html += '<td><small>' + guardian.email + '</small></td>';
+                html += '<td class="text-center"><span class="badge badge-primary">' + guardian.student_count + '</span></td>';
+                html += '<td class="text-center">';
+                
+                if (guardian.is_active) {
+                    html += '<span class="badge badge-success">Active</span>';
+                } else {
+                    html += '<span class="badge badge-secondary">Inactive</span>';
+                }
+                
+                html += '</td>';
+                html += '<td class="text-right">';
+                html += '<div class="btn-group btn-group-sm">';
+                
+                html += '<button class="btn btn-primary send-email-btn" data-id="' + guardian.id + '" title="Send Email">';
+                html += '<i class="fas fa-paper-plane"></i></button>';
+                
+                html += '<button class="btn btn-secondary view-url-btn" data-url="' + guardian.access_url + '" title="View URL">';
+                html += '<i class="fas fa-link"></i></button>';
+                
+                html += '<button class="btn btn-warning toggle-status-btn" data-id="' + guardian.id + '" ';
+                html += 'data-status="' + guardian.is_active + '" title="Toggle Status">';
+                html += '<i class="fas fa-toggle-' + (guardian.is_active ? 'on' : 'off') + '"></i></button>';
+                
+                html += '<button class="btn btn-danger delete-guardian-btn" data-id="' + guardian.id + '" title="Delete">';
+                html += '<i class="fas fa-trash"></i></button>';
+                html += '</div></td>';
+                html += '</tr>';
+            });
+
+            $('#guardiansTableBody').html(html);
+            $('#totalGuardians').text(guardians.length);
+            $('#activeGuardians').text(activeCount);
+
+            // Attach event handlers
+            attachGuardianActions();
+        },
+        error: function() {
+            $('#guardiansTableBody').html('<tr><td colspan="5" class="text-center text-danger">Error loading guardians</td></tr>');
+            toastr.error('Failed to load guardians');
+        }
+    });
+}
+
+function attachGuardianActions() {
+    // Send email directly from table
+    $('.send-email-btn').click(function() {
+        const guardianId = $(this).data('id');
+        $('#guardian_selector').val(guardianId).trigger('change');
+        
+        // Scroll to form
+        $('html, body').animate({
+            scrollTop: $('#sendGuardianEmailForm').offset().top - 100
+        }, 500);
+    });
+
+    // View URL
+    $('.view-url-btn').click(function() {
+        const url = $(this).data('url');
+        $('#accessUrlInput').val(url);
+        $('#openUrlBtn').attr('href', url);
+        $('#viewUrlModal').modal('show');
+    });
+
+    // Toggle status
+    $('.toggle-status-btn').click(function() {
+        const id = $(this).data('id');
+        const currentStatus = $(this).data('status');
+        const btn = $(this);
+
+        if (confirm('Are you sure you want to ' + (currentStatus ? 'deactivate' : 'activate') + ' this guardian?')) {
+            $.ajax({
+                url: '/testdev/toggle-guardian-status/' + id,
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        loadGuardians();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error('Failed to update status');
+                }
+            });
+        }
+    });
+
+    // Delete guardian
+    $('.delete-guardian-btn').click(function() {
+        const id = $(this).data('id');
+
+        if (confirm('Are you sure you want to delete this guardian? This will also remove all student associations.')) {
+            $.ajax({
+                url: '/testdev/delete-guardian/' + id,
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        loadGuardians();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error('Failed to delete guardian');
+                }
+            });
+        }
+    });
+}

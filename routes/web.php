@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\TestDevController;
+
 use App\Http\Controllers\Auth\Data_Controller;
 use App\Http\Controllers\Auth\Login_Controller;
 use App\Http\Controllers\Class_Management\Class_List;
@@ -416,4 +418,15 @@ Route::prefix('guardian')->name('guardian.')->group(function () {
     Route::get('/dashboard', [GuardianController::class, 'index'])->name('home');
     Route::get('/student/{student_number}/grades', [GuardianController::class, 'view_student_grades'])->name('student.grades');
     Route::get('/student/{student_number}/grades/data', [GuardianController::class, 'get_student_grades_data'])->name('student.grades.data');
+});
+
+
+// Test & Development Routes
+Route::prefix('testdev')->name('testdev.')->group(function () {
+    Route::get('/', [TestDevController::class, 'index'])->name('index');
+    Route::post('/send-guardian-email', [TestDevController::class, 'send_guardian_email']);
+    Route::get('/get-guardians', [TestDevController::class, 'get_guardians']);
+    Route::get('/get-guardian-students/{id}', [TestDevController::class, 'get_guardian_students']);
+    Route::delete('/delete-guardian/{id}', [TestDevController::class, 'delete_guardian']);
+    Route::post('/toggle-guardian-status/{id}', [TestDevController::class, 'toggle_guardian_status']);
 });
