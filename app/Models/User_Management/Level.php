@@ -2,9 +2,9 @@
 
 namespace App\Models\User_Management;
 
-use App\Models\ParentModel;
+use Illuminate\Database\Eloquent\Model;
 
-class Level extends ParentModel
+class Level extends Model
 {
     protected $table = 'levels';
 }

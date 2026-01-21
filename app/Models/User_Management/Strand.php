@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Models\User_Management;
-use App\Models\ParentModel;
-class Strand extends ParentModel
+use Illuminate\Database\Eloquent\Model;
+
+class Strand extends Model
 {
     protected $table = 'strands';
 }

@@ -15,8 +15,8 @@ $(document).ready(function() {
             loadSections(strandId, levelId);
         } else {
             $('#sectionCapacityContainer').html(`
-                <div class="alert alert-primary">
-                    <i class="fas fa-primary-circle"></i> Select Strand and Level to view sections
+                <div class="alert alert-primary mb-0">
+                    <i class="fas fa-info-circle"></i> Select Strand and Level to view available sections
                 </div>
             `);
         }
@@ -42,35 +42,45 @@ $(document).ready(function() {
 
                 if (sections.length === 0) {
                     $('#sectionCapacityContainer').html(`
-                        <div class="alert alert-primary">
-                             No sections found for selected strand and level
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> No sections found for selected strand and level
                         </div>
                     `);
                     return;
                 }
 
-                let html = '<div class="mb-2">';
-                html += `<div class="alert alert-'primary' py-2">`;
-                html += `<strong><i class="fas fa-users"></i> Total Available: ${totalAvailableSlots} slots</strong>`;
-                html += '</div></div>';
+                let html = '<div class="row">';
+                
+                // Total capacity card
+                html += `
+                    <div class="col-md-12 mb-3">
+                        <div class="alert alert-primary mb-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-users"></i> <strong>Total Available Slots:</strong></span>
+                                <span class="badge badge-primary badge-lg">${totalAvailableSlots} slots</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
 
+                // Individual section cards
                 sections.forEach(function(section) {
                     const percentage = (section.enrolled_count / section.capacity) * 100;
-                    let statusClass = 'primary';
-
+                    let statusBadge = 'light';
+                    
                     html += `
-                        <div class="card mb-2">
-                            <div class="card-body p-2">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    ${section.name}
-                                    <span class="badge badge-${statusClass}">
-                                        ${section.available_slots} 
-                                    </span>
-                                </div>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-${statusClass}" 
-                                         style="width: ${percentage}%">
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card section-capacity-card mb-0">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">${section.name}</h6>
+                                        <span class="badge badge-${statusBadge}">${section.available_slots}</span>
+                                    </div>
+                                    <small class="text-muted d-block mb-2">
                                         ${section.enrolled_count} / ${section.capacity} enrolled
+                                    </small>
+                                    <div class="capacity-bar">
+                                        <div class="capacity-bar-fill" style="width: ${percentage}%"></div>
                                     </div>
                                 </div>
                             </div>
@@ -78,6 +88,7 @@ $(document).ready(function() {
                     `;
                 });
 
+                html += '</div>';
                 $('#sectionCapacityContainer').html(html);
             },
             error: function(xhr) {
@@ -86,56 +97,114 @@ $(document).ready(function() {
         });
     }
 
-    // Generate student rows
-    function generateStudentRow(index) {
+    // Generate student card
+    function generateStudentCard(index) {
         rowCounter++;
-        const row = `
-            <tr data-row="${rowCounter}">
-                <td class="text-center align-middle">${index}</td>
-                <td>
-                    <input type="email" class="form-control" 
-                           name="students[${rowCounter}][email]" 
-                           placeholder="student@email.com (optional)">
-                </td>
-                <td>
-                    <input type="text" class="form-control" 
-                           name="students[${rowCounter}][lastName]" 
-                           placeholder="Last Name" required>
-                </td>
-                <td>
-                    <input type="text" class="form-control" 
-                           name="students[${rowCounter}][firstName]" 
-                           placeholder="First Name" required>
-                </td>
-                <td>
-                    <input type="text" class="form-control" 
-                           name="students[${rowCounter}][middleInitial]" 
-                           placeholder="M.I." maxlength="3">
-                </td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-secondary btn-block gender-toggle" data-gender="Male">
-                        <i class="fas fa-mars"></i> Male
-                    </button>
-                    <input type="hidden" name="students[${rowCounter}][gender]" value="Male" class="gender-input">
-                </td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-secondary btn-block type-toggle" data-type="regular">
-                        <i class="fas fa-user-check"></i> Regular
-                    </button>
-                    <input type="hidden" name="students[${rowCounter}][studentType]" value="regular" class="type-input">
-                </td>
-                <td class="text-center align-middle">
-                    <button type="button" class="btn btn-secondary btn-sm remove-row">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
+        const card = `
+            <div class="card student-card mb-3" data-row="${rowCounter}">
+                <div class="card-header py-2">
+                    <h3 class="card-title">Student #${index}</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool text-danger remove-card" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Student Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><i class="fas fa-user mr-2"></i>Student Information</h6>
+                            
+                            <div class="form-group">
+                                <label>Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" 
+                                       name="students[${rowCounter}][lastName]" 
+                                       placeholder="Last Name" required>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label>First Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" 
+                                               name="students[${rowCounter}][firstName]" 
+                                               placeholder="First Name" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>M.I.</label>
+                                        <input type="text" class="form-control" 
+                                               name="students[${rowCounter}][middleInitial]" 
+                                               placeholder="M.I." maxlength="3">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" class="form-control" 
+                                       name="students[${rowCounter}][email]" 
+                                       placeholder="student@email.com (optional)">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Gender <span class="text-danger">*</span></label>
+                                        <button type="button" class="btn btn-secondary btn-block gender-toggle" data-gender="Male">
+                                            <i class="fas fa-mars"></i> Male
+                                        </button>
+                                        <input type="hidden" name="students[${rowCounter}][gender]" value="Male" class="gender-input">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Student Type <span class="text-danger">*</span></label>
+                                        <button type="button" class="btn btn-secondary btn-block type-toggle" data-type="regular">
+                                            <i class="fas fa-user-check"></i> Regular
+                                        </button>
+                                        <input type="hidden" name="students[${rowCounter}][studentType]" value="regular" class="type-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parent/Guardian Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><i class="fas fa-user-friends mr-2"></i>Parent/Guardian Information</h6>
+                            
+                            <div class="form-group">
+                                <label>Parent Last Name</label>
+                                <input type="text" class="form-control" 
+                                       name="students[${rowCounter}][parentLastName]" 
+                                       placeholder="Parent/Guardian Last Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Parent First Name</label>
+                                <input type="text" class="form-control" 
+                                       name="students[${rowCounter}][parentFirstName]" 
+                                       placeholder="Parent/Guardian First Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Parent Email</label>
+                                <input type="email" class="form-control" 
+                                       name="students[${rowCounter}][parentEmail]" 
+                                       placeholder="parent@email.com">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
-        return row;
+        return card;
     }
 
-    // Generate rows button - with capacity check
-    $('#generateRowsBtn').on('click', function() {
+    // Add students button (unified - works for 1 or multiple)
+    $('#addStudentsBtn').on('click', function() {
         const numRows = parseInt($('#numRows').val());
         
         if (!numRows || numRows < 1 || numRows > 100) {
@@ -148,77 +217,74 @@ $(document).ready(function() {
             return;
         }
 
-        if (numRows > totalAvailableSlots) {
+        const currentRows = $('.student-card').length;
+        const newTotal = currentRows + numRows;
+        
+        if (newTotal > totalAvailableSlots) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Insufficient Capacity',
                 html: `
-                    You're trying to add <strong>${numRows}</strong> students, 
-                    but only <strong>${totalAvailableSlots}</strong> slots are available.<br><br>
-                    <small class="text-muted">Please adjust the number of students or select a different strand/level.</small>
+                    Adding <strong>${numRows}</strong> student${numRows > 1 ? 's' : ''} would exceed available capacity.<br><br>
+                    <strong>Current students:</strong> ${currentRows}<br>
+                    <strong>Trying to add:</strong> ${numRows}<br>
+                    <strong>Available slots:</strong> ${totalAvailableSlots}<br>
+                    <strong>Would exceed by:</strong> ${newTotal - totalAvailableSlots}<br><br>
+                    <small class="text-muted">Please reduce the number or select a different strand/level.</small>
                 `,
                 confirmButtonText: 'OK'
             });
             return;
         }
 
-        $('#studentTableBody').empty();
-        rowCounter = 0;
+        $('#emptyState').hide();
         
         for (let i = 1; i <= numRows; i++) {
-            $('#studentTableBody').append(generateStudentRow(i));
+            $('#studentsContainer').append(generateStudentCard(currentRows + i));
         }
         
-        attachRowEvents();
-    });
-
-    // Add single row - with capacity check
-    $('#addRowBtn').on('click', function() {
-        if (!$('#strand').val() || !$('#level').val()) {
-            Swal.fire('Validation Error', 'Please select Strand and Year Level first', 'warning');
-            return;
-        }
-
-        const currentRows = $('#studentTableBody tr').length;
+        updateStudentCount();
         
-        if (currentRows >= totalAvailableSlots) {
+        // Show success message for multiple students
+        if (numRows > 1) {
             Swal.fire({
-                icon: 'warning',
-                title: 'Capacity Reached',
-                text: `All ${totalAvailableSlots} available slots are already filled.`,
-                confirmButtonText: 'OK'
+                icon: 'success',
+                title: 'Students Added',
+                text: `${numRows} student forms have been added successfully!`,
+                timer: 1500,
+                showConfirmButton: false
             });
-            return;
         }
-
-        $('#studentTableBody').append(generateStudentRow(currentRows + 1));
-        renumberRows();
-        attachRowEvents();
     });
 
-    // Remove row
-    $(document).on('click', '.remove-row', function() {
-        $(this).closest('tr').remove();
-        renumberRows();
+    // Remove card
+    $(document).on('click', '.remove-card', function() {
+        $(this).closest('.student-card').remove();
+        renumberCards();
+        updateStudentCount();
+        
+        if ($('.student-card').length === 0) {
+            $('#emptyState').show();
+        }
     });
 
     // Gender toggle
     $(document).on('click', '.gender-toggle', function() {
         const $btn = $(this);
-        const $row = $btn.closest('tr');
+        const $card = $btn.closest('.student-card');
         const currentGender = $btn.data('gender');
         const newGender = currentGender === 'Male' ? 'Female' : 'Male';
         const newIcon = newGender === 'Male' ? 'fa-mars' : 'fa-venus';
         
         $btn.data('gender', newGender);
         $btn.html(`<i class="fas ${newIcon}"></i> ${newGender}`);
-        $row.find('.gender-input').val(newGender);
+        $card.find('.gender-input').val(newGender);
     });
 
     // Type toggle
     $(document).on('click', '.type-toggle', function() {
         const $btn = $(this);
-        const $row = $btn.closest('tr');
+        const $card = $btn.closest('.student-card');
         const currentType = $btn.data('type');
         const newType = currentType === 'regular' ? 'irregular' : 'regular';
         const newIcon = newType === 'regular' ? 'fa-user-check' : 'fa-user-clock';
@@ -226,27 +292,25 @@ $(document).ready(function() {
         
         $btn.data('type', newType);
         $btn.html(`<i class="fas ${newIcon}"></i> ${newText}`);
-        $row.find('.type-input').val(newType);
+        $card.find('.type-input').val(newType);
     });
 
-    function attachRowEvents() {
-        // Events are handled by delegated events above
-    }
-
-    function renumberRows() {
-        $('#studentTableBody tr').each(function(index) {
-            $(this).find('td:first').text(index + 1);
+    function renumberCards() {
+        $('.student-card').each(function(index) {
+            $(this).find('.card-title').text(`Student #${index + 1}`);
         });
     }
 
-    // =========================================================================
-    // FORM SUBMISSION WITH CAPACITY VALIDATION
-    // =========================================================================
-    
+    function updateStudentCount() {
+        const count = $('.student-card').length;
+        $('#studentCount').text(`${count} Student${count !== 1 ? 's' : ''}`);
+        $('#submitBtn').prop('disabled', count === 0);
+    }
+
+    // Form submission
     $('#insert_students').on('submit', function(e) {
         e.preventDefault();
 
-        // Validate academic info
         const strandId = $('#selectedStrand').val();
         const levelId = $('#selectedLevel').val();
 
@@ -255,14 +319,12 @@ $(document).ready(function() {
             return;
         }
 
-        // Check if there are students
-        const studentCount = $('#studentTableBody tr').length;
+        const studentCount = $('.student-card').length;
         if (studentCount === 0) {
             Swal.fire('No Students', 'Please add at least one student', 'warning');
             return;
         }
 
-        // Check capacity
         if (studentCount > totalAvailableSlots) {
             Swal.fire({
                 icon: 'error',
@@ -277,35 +339,38 @@ $(document).ready(function() {
             return;
         }
 
-        // Collect all student data
+        // Collect student data
         const students = [];
         let hasErrors = false;
 
-        $('#studentTableBody tr').each(function() {
-            const $row = $(this);
-            const firstName = $row.find('input[name*="[firstName]"]').val().trim();
-            const lastName = $row.find('input[name*="[lastName]"]').val().trim();
+        $('.student-card').each(function() {
+            const $card = $(this);
+            const firstName = $card.find('input[name*="[firstName]"]').val().trim();
+            const lastName = $card.find('input[name*="[lastName]"]').val().trim();
 
             if (!firstName || !lastName) {
                 hasErrors = true;
-                $row.addClass('table-danger');
+                $card.addClass('border-danger');
                 return;
             }
 
-            $row.removeClass('table-danger');
+            $card.removeClass('border-danger');
 
             students.push({
-                email: $row.find('input[name*="[email]"]').val().trim(),
+                email: $card.find('input[name*="[email]"]').val().trim(),
                 firstName: firstName,
                 lastName: lastName,
-                middleInitial: $row.find('input[name*="[middleInitial]"]').val().trim(),
-                gender: $row.find('.gender-input').val(),
-                studentType: $row.find('.type-input').val()
+                middleInitial: $card.find('input[name*="[middleInitial]"]').val().trim(),
+                gender: $card.find('.gender-input').val(),
+                studentType: $card.find('.type-input').val(),
+                parentLastName: $card.find('input[name*="[parentLastName]"]').val().trim(),
+                parentFirstName: $card.find('input[name*="[parentFirstName]"]').val().trim(),
+                parentEmail: $card.find('input[name*="[parentEmail]"]').val().trim(),
             });
         });
 
         if (hasErrors) {
-            Swal.fire('Validation Error', 'Please fill in all required fields (highlighted in red)', 'error');
+            Swal.fire('Validation Error', 'Please fill in all required fields (cards with red border)', 'error');
             return;
         }
 
@@ -330,7 +395,7 @@ $(document).ready(function() {
                     <p class="text-muted">Auto-distributing across available sections</p>
                 </div>
                 <div class="progress" style="height: 30px;">
-                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
                          role="progressbar" style="width: 0%">
                         <span id="progressText" class="font-weight-bold">0%</span>
                     </div>
@@ -363,7 +428,7 @@ $(document).ready(function() {
                 title: 'Success!',
                 html: `
                     <div class="text-center">
-                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <i class="fas fa-check-circle fa-3x text-primary mb-3"></i>
                         <h4>All ${totalStudents} students created successfully!</h4>
                         <p class="text-muted">Students have been distributed across available sections</p>
                         <p class="text-muted">Redirecting to student list...</p>
@@ -410,7 +475,6 @@ $(document).ready(function() {
                     errorMessage += '<br><br><small>' + Object.values(errors).flat().join('<br>') + '</small>';
                 }
 
-                // Show shortage information if capacity error
                 let extraInfo = '';
                 if (xhr.responseJSON && xhr.responseJSON.shortage) {
                     extraInfo = `
@@ -442,7 +506,7 @@ $(document).ready(function() {
         });
     }
 
-    // Excel Import (updated with capacity check)
+    // Excel Import
     $('#importExcel').on('click', function() {
         if (!$('#strand').val() || !$('#level').val()) {
             Swal.fire('Validation Error', 'Please select Strand and Year Level first', 'warning');
@@ -473,6 +537,9 @@ $(document).ready(function() {
                         const middleInitial = row.getCell(4).value || '';
                         let genderRaw = row.getCell(5).value || 'Male';
                         const studentTypeRaw = row.getCell(6).value || 'regular';
+                        const parentLastName = row.getCell(7).value || '';
+                        const parentFirstName = row.getCell(8).value || '';
+                        const parentEmail = row.getCell(9).value || '';
 
                         if (!lastName || !firstName) {
                             return;
@@ -487,15 +554,14 @@ $(document).ready(function() {
                         }
 
                         const studentType = String(studentTypeRaw).toLowerCase().trim() === 'irregular' ? 'irregular' : 'regular';
-
                         tempStudents.push({
-                            email, lastName, firstName, middleInitial, gender, studentType
+                            email, lastName, firstName, middleInitial, gender, studentType,
+                            parentLastName, parentFirstName, parentEmail
                         });
                         importedCount++;
                     }
                 });
 
-                // Check capacity before importing
                 if (importedCount > totalAvailableSlots) {
                     Swal.fire({
                         icon: 'warning',
@@ -512,33 +578,38 @@ $(document).ready(function() {
                     return;
                 }
 
-                // If capacity is OK, populate the table
-                $('#studentTableBody').empty();
+                $('#studentsContainer').empty();
+                $('#emptyState').hide();
                 rowCounter = 0;
 
                 tempStudents.forEach((studentData, index) => {
-                    const newRow = generateStudentRow(index + 1);
-                    $('#studentTableBody').append(newRow);
+                    const newCard = generateStudentCard(index + 1);
+                    $('#studentsContainer').append(newCard);
                     
-                    const $lastRow = $('#studentTableBody tr:last');
-                    $lastRow.find('input[name*="[email]"]').val(studentData.email);
-                    $lastRow.find('input[name*="[lastName]"]').val(studentData.lastName);
-                    $lastRow.find('input[name*="[firstName]"]').val(studentData.firstName);
-                    $lastRow.find('input[name*="[middleInitial]"]').val(studentData.middleInitial);
+                    const $lastCard = $('.student-card:last');
+                    $lastCard.find('input[name*="[email]"]').val(studentData.email);
+                    $lastCard.find('input[name*="[lastName]"]').val(studentData.lastName);
+                    $lastCard.find('input[name*="[firstName]"]').val(studentData.firstName);
+                    $lastCard.find('input[name*="[middleInitial]"]').val(studentData.middleInitial);
+                    $lastCard.find('input[name*="[parentLastName]"]').val(studentData.parentLastName);
+                    $lastCard.find('input[name*="[parentFirstName]"]').val(studentData.parentFirstName);
+                    $lastCard.find('input[name*="[parentEmail]"]').val(studentData.parentEmail);
                     
-                    const $genderBtn = $lastRow.find('.gender-toggle');
+                    const $genderBtn = $lastCard.find('.gender-toggle');
                     const genderIcon = studentData.gender === 'Male' ? 'fa-mars' : 'fa-venus';
                     $genderBtn.data('gender', studentData.gender);
                     $genderBtn.html(`<i class="fas ${genderIcon}"></i> ${studentData.gender}`);
-                    $lastRow.find('.gender-input').val(studentData.gender);
+                    $lastCard.find('.gender-input').val(studentData.gender);
                     
-                    const $typeBtn = $lastRow.find('.type-toggle');
+                    const $typeBtn = $lastCard.find('.type-toggle');
                     const typeIcon = studentData.studentType === 'regular' ? 'fa-user-check' : 'fa-user-clock';
                     const typeText = studentData.studentType === 'regular' ? 'Regular' : 'Irregular';
                     $typeBtn.data('type', studentData.studentType);
                     $typeBtn.html(`<i class="fas ${typeIcon}"></i> ${typeText}`);
-                    $lastRow.find('.type-input').val(studentData.studentType);
+                    $lastCard.find('.type-input').val(studentData.studentType);
                 });
+
+                updateStudentCount();
 
                 if (importedCount > 0) {
                     Swal.fire('Success', `${importedCount} students imported from Excel`, 'success');
@@ -563,17 +634,19 @@ $(document).ready(function() {
             { header: 'Last Name', key: 'lastName', width: 20 },
             { header: 'First Name', key: 'firstName', width: 20 },
             { header: 'Middle Initial', key: 'middleInitial', width: 15 },
-            { header: 'Gender (M/F or Male/Female)', key: 'gender', width: 25 },
-            { header: 'Student Type', key: 'studentType', width: 15 }
+            { header: 'Gender (M/F)', key: 'gender', width: 15 },
+            { header: 'Student Type', key: 'studentType', width: 15 },
+            { header: 'Parent Last Name', key: 'parentLastName', width: 20 },
+            { header: 'Parent First Name', key: 'parentFirstName', width: 20 },
+            { header: 'Parent Email', key: 'parentEmail', width: 30 }
         ];
 
-        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
         worksheet.getRow(1).fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FF4472C4' }
+            fgColor: { argb: 'FF007BFF' }
         };
-        worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
 
         worksheet.addRow({
             email: 'student@example.com',
@@ -581,7 +654,10 @@ $(document).ready(function() {
             firstName: 'Juan',
             middleInitial: 'P',
             gender: 'M',
-            studentType: 'regular'
+            studentType: 'regular',
+            parentLastName: 'Dela Cruz',
+            parentFirstName: 'Pedro',
+            parentEmail: 'parent@example.com'
         });
 
         worksheet.addRow({
@@ -590,7 +666,10 @@ $(document).ready(function() {
             firstName: 'Maria',
             middleInitial: 'A',
             gender: 'F',
-            studentType: 'regular'
+            studentType: 'regular',
+            parentLastName: 'Santos',
+            parentFirstName: 'Rosa',
+            parentEmail: 'rosa.santos@example.com'
         });
 
         workbook.xlsx.writeBuffer().then(function(buffer) {
@@ -598,7 +677,7 @@ $(document).ready(function() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'student_template.xlsx';
+            a.download = 'student_import_template.xlsx';
             a.click();
             window.URL.revokeObjectURL(url);
         });

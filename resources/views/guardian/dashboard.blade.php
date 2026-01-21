@@ -81,7 +81,7 @@
                                              src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
                                              alt="Student" 
                                              style="width: 80px; height: 80px; object-fit: cover;">
-                                    </div>
+                                    </div>  
                                     <div class="col-8">
                                         <p class="mb-1"><strong>Student Number:</strong> {{ $student->student_number }}</p>
                                         <p class="mb-1"><strong>Section:</strong> {{ $student->section_name ?? 'N/A' }}</p>
