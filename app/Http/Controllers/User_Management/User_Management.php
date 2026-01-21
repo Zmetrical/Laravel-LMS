@@ -253,88 +253,20 @@ public function insert_students(Request $request)
         'students.*.middleInitial' => 'nullable|string|max:50',
         'students.*.gender' => 'required|in:Male,Female,M,F',
         'students.*.studentType' => 'required|in:regular,irregular',
+        'students.*.parentEmail' => 'nullable|email',
+        'students.*.parentFirstName' => 'nullable|string|max:255',
+        'students.*.parentLastName' => 'nullable|string|max:255',
     ]);
 
     try {
         DB::beginTransaction();
 
-        // Get active semester
-        $activeSemester = DB::table('semesters')->where('status', 'active')->first();
-        if (!$activeSemester) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No active semester found'
-            ], 422);
-        }
-
-        // Get available sections for this strand and level
-        $availableSections = DB::table('sections')
-            ->where('strand_id', $request->strand_id)
-            ->where('level_id', $request->level_id)
-            ->where('status', 1)
-            ->orderBy('name')
-            ->get()
-            ->map(function($section) use ($activeSemester) {
-                $enrolled = DB::table('student_semester_enrollment')
-                    ->where('section_id', $section->id)
-                    ->where('semester_id', $activeSemester->id)
-                    ->where('enrollment_status', 'enrolled')
-                    ->count();
-                
-                $section->enrolled_count = $enrolled;
-                $section->available_slots = $section->capacity - $enrolled;
-                
-                return $section;
-            })
-            ->filter(function($section) {
-                return $section->available_slots > 0;
-            })
-            ->sortByDesc('available_slots')
-            ->values();
-
-        // Calculate total available slots
-        $totalAvailableSlots = $availableSections->sum('available_slots');
-        $studentsToInsert = count($request->students);
-
-        // Check if there's enough capacity
-        if ($studentsToInsert > $totalAvailableSlots) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => "Insufficient capacity. You're trying to add {$studentsToInsert} students, but only {$totalAvailableSlots} slots are available in the selected strand and level.",
-                'required' => $studentsToInsert,
-                'available' => $totalAvailableSlots,
-                'shortage' => $studentsToInsert - $totalAvailableSlots
-            ], 422);
-        }
-
-        // Check for duplicate emails
-        $emails = array_filter(array_column($request->students, 'email'));
-        
-        if (!empty($emails)) {
-            $existingEmails = Student::whereIn('email', $emails)->pluck('email')->toArray();
-
-            if (!empty($existingEmails)) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Duplicate emails found',
-                    'errors' => ['These emails already exist: ' . implode(', ', $existingEmails)]
-                ], 422);
-            }
-        }
-
-        // Generate student numbers
-        $year = date('Y');
-        $lastStudent = Student::where('student_number', 'LIKE', $year . '%')
-            ->orderBy('student_number', 'DESC')
-            ->first();
-
-        $lastCount = $lastStudent ? (int)substr($lastStudent->student_number, 4) : 0;
+        // ... [Keep existing code for semester check and section distribution] ...
 
         $studentsData = [];
         $passwordMatrixData = [];
         $enrollmentData = [];
+        $guardianLinks = []; // NEW: Store guardian links to process
         $now = now();
 
         // Distribute students across available sections
@@ -393,20 +325,40 @@ public function insert_students(Request $request)
                 'updated_at' => $now
             ];
 
-            // Decrement available slots for current section
+            // NEW: Store guardian data for processing
+            if (!empty($studentData['parentEmail']) || !empty($studentData['parentFirstName']) || !empty($studentData['parentLastName'])) {
+                $guardianLinks[] = [
+                    'student_number' => $studentNumber,
+                    'email' => $studentData['parentEmail'] ?? '',
+                    'firstName' => $studentData['parentFirstName'] ?? '',
+                    'lastName' => $studentData['parentLastName'] ?? ''
+                ];
+            }
+
             $currentSectionSlots--;
         }
 
+        // Insert students
         Student::insert($studentsData);
         DB::table('student_password_matrix')->insert($passwordMatrixData);
         DB::table('student_semester_enrollment')->insert($enrollmentData);
+
+        // NEW: Process guardians
+        foreach ($guardianLinks as $guardianData) {
+            $this->createOrLinkGuardian([
+                'email' => $guardianData['email'],
+                'firstName' => $guardianData['firstName'],
+                'lastName' => $guardianData['lastName']
+            ], $guardianData['student_number']);
+        }
 
         DB::commit();
 
         return response()->json([
             'success' => true,
             'message' => count($studentsData) . " student(s) created successfully and distributed across sections!",
-            'count' => count($studentsData)
+            'count' => count($studentsData),
+            'guardians_linked' => count($guardianLinks)
         ]);
     } catch (\Exception $e) {
         DB::rollBack();
@@ -421,6 +373,54 @@ public function insert_students(Request $request)
             'message' => 'An error occurred: ' . $e->getMessage()
         ], 500);
     }
+}
+
+private function createOrLinkGuardian($guardianData, $studentNumber)
+{
+    if (empty($guardianData['email']) && empty($guardianData['firstName']) && empty($guardianData['lastName'])) {
+        return null; // No guardian info provided
+    }
+
+    $guardian = null;
+    
+    // Check if guardian exists by email
+    if (!empty($guardianData['email'])) {
+        $guardian = DB::table('guardians')->where('email', $guardianData['email'])->first();
+    }
+
+    // If guardian doesn't exist, create new one
+    if (!$guardian) {
+        $accessToken = Str::random(64);
+        
+        $guardianId = DB::table('guardians')->insertGetId([
+            'email' => $guardianData['email'] ?? '',
+            'first_name' => $guardianData['firstName'] ?? '',
+            'last_name' => $guardianData['lastName'] ?? '',
+            'access_token' => $accessToken,
+            'is_active' => 1,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+    } else {
+        $guardianId = $guardian->id;
+    }
+
+    // Link guardian to student (check if link doesn't already exist)
+    $existingLink = DB::table('guardian_students')
+        ->where('guardian_id', $guardianId)
+        ->where('student_number', $studentNumber)
+        ->exists();
+
+    if (!$existingLink) {
+        DB::table('guardian_students')->insert([
+            'guardian_id' => $guardianId,
+            'student_number' => $studentNumber,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+    }
+
+    return $guardianId;
 }
 
     private function processMiddleInitial($middleName)

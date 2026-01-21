@@ -649,27 +649,27 @@ $(document).ready(function() {
         };
 
         worksheet.addRow({
-            email: 'student@example.com',
-            lastName: 'Dela Cruz',
-            firstName: 'Juan',
-            middleInitial: 'P',
+            email: 'student@gmail.com',
+            lastName: '1',
+            firstName: 'Sample',
+            middleInitial: 'A',
             gender: 'M',
             studentType: 'regular',
-            parentLastName: 'Dela Cruz',
-            parentFirstName: 'Pedro',
-            parentEmail: 'parent@example.com'
+            parentLastName: '1',
+            parentFirstName: 'GuardianSample',
+            parentEmail: 'parent@gmail.com'
         });
 
         worksheet.addRow({
-            email: '',
-            lastName: 'Santos',
-            firstName: 'Maria',
+            email: 'student@gmail.com',
+            lastName: '2',
+            firstName: 'Sample',
             middleInitial: 'A',
             gender: 'F',
             studentType: 'regular',
-            parentLastName: 'Santos',
-            parentFirstName: 'Rosa',
-            parentEmail: 'rosa.santos@example.com'
+            parentLastName: '2',
+            parentFirstName: 'GuardianSample',
+            parentEmail: 'parent@gmail.com'
         });
 
         workbook.xlsx.writeBuffer().then(function(buffer) {
