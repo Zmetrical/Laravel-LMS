@@ -383,39 +383,51 @@ class StudentController extends Controller
         }
     }
 
-    /**
-     * Show student's own profile
-     */
-    public function showProfile()
-    {
-        $student = Auth::guard('student')->user();
-        
-        if (!$student) {
-            return redirect()->route('student.login')->with('error', 'Please login first');
-        }
-
-        // Get student with section, level, and strand information
-        $studentData = DB::table('students')
-            ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
-            ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
-            ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
-            ->select(
-                'students.*',
-                'sections.name as section',
-                'levels.name as level',
-                'strands.code as strand'
-            )
-            ->where('students.id', '=', $student->id)
-            ->first();
-
-        $data = [
-            'student' => $studentData,
-            'scripts' => ['student/student_profile.js']
-        ];
-
-        return view('student.student_profile', $data);
+/**
+ * Show student's own profile
+ */
+public function showProfile()
+{
+    $student = Auth::guard('student')->user();
+    
+    if (!$student) {
+        return redirect()->route('student.login')->with('error', 'Please login first');
     }
 
+    // Get student with section, level, and strand information
+    $studentData = DB::table('students')
+        ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
+        ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
+        ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
+        ->select(
+            'students.*',
+            'sections.name as section',
+            'levels.name as level',
+            'strands.code as strand'
+        )
+        ->where('students.id', '=', $student->id)
+        ->first();
+
+    // Get guardian information
+    $guardians = DB::table('guardian_students')
+        ->join('guardians', 'guardian_students.guardian_id', '=', 'guardians.id')
+        ->where('guardian_students.student_number', '=', $student->student_number)
+        ->where('guardians.is_active', '=', 1)
+        ->select(
+            'guardians.first_name',
+            'guardians.last_name',
+            'guardians.email'
+        )
+        ->get();
+
+    $data = [
+        'student' => $studentData,
+        'guardians' => $guardians,
+        'scripts' => ['student/student_profile.js']
+    ];
+
+    return view('student.student_profile', $data);
+}
     /**
      * Get enrollment history for logged-in student
      */

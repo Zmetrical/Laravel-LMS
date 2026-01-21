@@ -69,15 +69,31 @@ public function show_student($id)
             ->get();
     }
 
+    // Get guardians
+    $guardians = DB::table('guardian_students as gs')
+        ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+        ->where('gs.student_number', '=', $student->student_number)
+        ->where('g.is_active', '=', 1)
+        ->select(
+            'g.id',
+            'g.first_name',
+            'g.last_name',
+            'g.email'
+        )
+        ->get();
+
     $data = [
         'student' => $student,
         'enrolledSemesters' => $enrolledSemesters,
+        'guardians' => $guardians,
         'mode' => 'view',
         'scripts' => ['profile_management/view_profile_student.js']
     ];
 
     return view('modules.profile.view_profile_student', $data);
 }
+
+
 
 // Edit form
 public function edit_student($id)
@@ -133,15 +149,30 @@ public function edit_student($id)
             ->get();
     }
 
+    // Get guardians
+    $guardians = DB::table('guardian_students as gs')
+        ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+        ->where('gs.student_number', '=', $student->student_number)
+        ->where('g.is_active', '=', 1)
+        ->select(
+            'g.id',
+            'g.first_name',
+            'g.last_name',
+            'g.email'
+        )
+        ->get();
+
     $data = [
         'student' => $student,
         'enrolledSemesters' => $enrolledSemesters,
+        'guardians' => $guardians,
         'mode' => 'edit',
         'scripts' => ['profile_management/view_profile_student.js']
     ];
 
     return view('modules.profile.view_profile_student', $data);
 }
+
     public function update_student(Request $request, $id)
     {
         try {

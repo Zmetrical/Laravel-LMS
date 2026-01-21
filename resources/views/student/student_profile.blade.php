@@ -14,141 +14,146 @@
 
 @section('content')
     <div class="container-fluid">
-
-        <!-- Profile Card - Horizontal Layout -->
-        <div class="card card-primary card-outline">
-            <div class="card-body">
-                <div class="row">
-                    <!-- Profile Image Column -->
-                    <div class="col-md-3 text-center">
-                        <img id="profileImagePreview" 
-                             class="profile-user-img img-fluid img-circle mb-3" 
-                             src="{{ asset('img/default-avatar.png') }}"
-                             alt="Profile Image" 
-                             style="width: 200px; height: 200px; min-height: 200px; object-fit: cover;">
-                    </div>
-
-                    <!-- Profile Information Column -->
-                    <div class="col-md-9">
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h4 class="text-primary mb-1">
-                                    {{ $student->first_name . " " . ($student->middle_name ? substr($student->middle_name, 0, 1) . ". " : "") . $student->last_name }}
-                                </h4>
-                                <p class="text-muted">Student Portal</p>
-                            </div>
+        <div class="row">
+            <!-- Left Container -->
+            <div class="col-md-3">
+                <!-- Profile Card -->
+                <div class="card card-primary card-outline">
+                    <div class="card-body box-profile">
+                        <div class="text-center mb-3">
+                            <img id="profileImagePreview" class="profile-user-img img-fluid img-circle"
+                                src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}"
+                                alt="Profile Image"
+                                style="width: 200px; height: 200px; object-fit: cover;">
                         </div>
 
+                        <h3 class="profile-username text-center">{{ $student->student_number }}</h3>
+
+                        <ul class="list-group list-group-unbordered mb-3">
+                            <li class="list-group-item">
+                                <b><i class="fas fa-user mr-1"></i> Student Type</b>
+                                <span class="float-right">{{ ucfirst($student->student_type) }}</span>
+                            </li>
+                            <li class="list-group-item">
+                                <b><i class="fas fa-book mr-1"></i> Strand</b>
+                                <span class="float-right">{{ $student->strand ?? 'N/A' }}</span>
+                            </li>
+                            <li class="list-group-item">
+                                <b><i class="fas fa-layer-group mr-1"></i> Year Level</b>
+                                <span class="float-right">{{ $student->level ?? 'N/A' }}</span>
+                            </li>
+                            <li class="list-group-item">
+                                <b><i class="fas fa-users mr-1"></i> Section</b>
+                                <span class="float-right">{{ $student->section ?? 'N/A' }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Container -->
+            <div class="col-md-9">
+                <!-- Personal Information Card -->
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-user mr-2"></i>Personal Information</h3>
+                    </div>
+                    <div class="card-body">
                         <div class="row">
-                            <div class="col-md-5 col-lg-5">
+                            <div class="col-md-5">
                                 <div class="form-group">
-                                    <label class="text-sm"><i class="fas fa-user mr-1"></i>First Name</label>
-                                    <input type="text" class="form-control form-control-sm bg-light" readonly 
+                                    <label><i class="fas fa-user mr-1"></i>First Name</label>
+                                    <input type="text" class="form-control" readonly 
                                            value="{{ $student->first_name }}" />
                                 </div>
                             </div>
-                            <div class="col-md-2 col-lg-2">
+                            <div class="col-md-2">
                                 <div class="form-group">
-                                    <label class="text-sm"><i class="fas fa-user mr-1"></i>M.I.</label>
-                                    <input type="text" class="form-control form-control-sm bg-light" readonly 
+                                    <label><i class="fas fa-user mr-1"></i>M.I.</label>
+                                    <input type="text" class="form-control" readonly 
                                            value="{{ $student->middle_name ? strtoupper(substr($student->middle_name, 0, 1)) : '' }}" />
                                 </div>
                             </div>
-                            <div class="col-md-5 col-lg-5">
+                            <div class="col-md-5">
                                 <div class="form-group">
-                                    <label class="text-sm"><i class="fas fa-user mr-1"></i>Last Name</label>
-                                    <input type="text" class="form-control form-control-sm bg-light" readonly 
+                                    <label><i class="fas fa-user mr-1"></i>Last Name</label>
+                                    <input type="text" class="form-control" readonly 
                                            value="{{ $student->last_name }}" />
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 col-lg-6">
+                            <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="text-sm"><i class="fas fa-id-card mr-1"></i>Student ID</label>
-                                    <input type="text" class="form-control form-control-sm bg-light" readonly 
-                                           value="{{ $student->student_number }}" />
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6">
-                                <div class="form-group">
-                                    <label class="text-sm"><i class="fas fa-envelope mr-1"></i>Email Address</label>
-                                    <input type="email" class="form-control form-control-sm bg-light" readonly 
+                                    <label><i class="fas fa-envelope mr-1"></i>Email Address</label>
+                                    <input type="email" class="form-control" readonly 
                                            value="{{ $student->email }}" />
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-venus-mars mr-1"></i>Gender</label>
+                                    <input type="text" class="form-control" readonly 
+                                           value="{{ $student->gender }}" />
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Parent/Guardian Information -->
+                        <hr>
+                        <h6 class="mb-3"><i class="fas fa-user-friends mr-2"></i>Parent/Guardian Information</h6>
+
+                        @php
+                            // Ensure we always have at least one guardian slot to display
+                            $displayGuardians = (isset($guardians) && count($guardians) > 0) ? $guardians : [null];
+                        @endphp
+
+                        @foreach($displayGuardians as $index => $guardian)
+                            <div class="mb-3 p-3">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label><i class="fas fa-user mr-1"></i>First Name</label>
+                                            <input type="text" class="form-control" readonly 
+                                                value="{{ $guardian->first_name ?? '' }}" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label><i class="fas fa-user mr-1"></i>Last Name</label>
+                                            <input type="text" class="form-control" readonly 
+                                                value="{{ $guardian->last_name ?? '' }}" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group mb-0">
+                                            <label><i class="fas fa-envelope mr-1"></i>Email</label>
+                                            <input type="email" class="form-control" readonly 
+                                                value="{{ $guardian->email ?? '' }}" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @if(!$loop->last)
+                                <div class="mb-2"></div>
+                            @endif
+                        @endforeach
+
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Academic Information Card -->
-        <div class="card card-primary card-outline">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-graduation-cap mr-2"></i>Academic Information
-                </h3>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 col-sm-6">
-                        <div class="info-box bg-light">
-                            <span class="info-box-icon"><i class="fas fa-user"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Student Type</span>
-                                <span class="info-box-number">{{ ucfirst($student->student_type) }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3 col-sm-6">
-                        <div class="info-box bg-light">
-                            <span class="info-box-icon"><i class="fas fa-book"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Strand</span>
-                                <span class="info-box-number">{{ $student->strand ?? 'N/A' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3 col-sm-6">
-                        <div class="info-box bg-light">
-                            <span class="info-box-icon"><i class="fas fa-layer-group"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Year Level</span>
-                                <span class="info-box-number">{{ $student->level ?? 'N/A' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3 col-sm-6">
-                        <div class="info-box bg-light">
-                            <span class="info-box-icon"><i class="fas fa-users"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Section</span>
-                                <span class="info-box-number">{{ $student->section ?? 'N/A' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- Enrollment History Card -->
-            <div class="col-md-4">
+                <!-- Enrollment History Card -->
                 <div class="card card-primary card-outline">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-history mr-2"></i>Enrollment History
-                        </h3>
+                        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Enrollment History</h3>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead class="bg-light sticky-top">
+                        <div class="table-responsive" style="max-height: 300px;">
+                            <table class="table table-sm table-hover m-0">
+                                <thead>
                                     <tr>
                                         <th>School Year</th>
                                         <th>Semester</th>
@@ -156,8 +161,8 @@
                                 </thead>
                                 <tbody id="enrollmentHistoryBody">
                                     <tr>
-                                        <td colspan="2" class="text-center py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                                        <td colspan="2" class="text-center py-3">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
                                             <p class="mb-0">Loading enrollment history...</p>
                                         </td>
                                     </tr>
@@ -166,31 +171,27 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Enrolled Classes Card -->
-            <div class="col-md-8">
+                <!-- Enrolled Classes Card -->
                 <div class="card card-primary card-outline">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-book-open mr-2"></i>Enrolled Classes
-                        </h3>
+                        <h3 class="card-title"><i class="fas fa-book-open mr-2"></i>Enrolled Classes</h3>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead class="bg-light sticky-top">
+                        <div class="table-responsive" style="max-height: 300px;">
+                            <table class="table table-sm table-hover m-0">
+                                <thead>
                                     <tr>
-                                        <th style="width: 15%;">Code</th>
+                                        <th>Code</th>
                                         <th>Subject Name</th>
-                                        <th style="width: 20%;">School Year</th>
-                                        <th style="width: 15%;">Semester</th>
+                                        <th>School Year</th>
+                                        <th>Semester</th>
                                     </tr>
                                 </thead>
                                 <tbody id="enrolledClassesBody">
                                     <tr>
-                                        <td colspan="4" class="text-center py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                                        <td colspan="4" class="text-center py-3">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
                                             <p class="mb-0">Loading enrolled classes...</p>
                                         </td>
                                     </tr>

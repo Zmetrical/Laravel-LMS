@@ -10,70 +10,87 @@
 </nav>
 @endsection
 
+@section('styles')
+<style>
+    .student-info-card {
+        position: sticky;
+        top: 70px;
+        z-index: 100;
+    }
+    
+    @media (max-width: 767.98px) {
+        .student-info-card {
+            position: relative;
+            top: 0;
+        }
+        
+        .profile-img-mobile {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .student-detail {
+            font-size: 0.9rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+        
+        .table th, .table td {
+            padding: 0.5rem 0.25rem;
+            white-space: nowrap;
+        }
+        
+        .component-score {
+            font-size: 0.75rem;
+        }
+    }
+</style>
+@endsection
+
 @section('content')
 <div class="row">
     <!-- Student Info Card -->
-    <div class="col-md-4">
-        <div class="card card-primary card-outline">
-            <div class="card-body box-profile">
-                <div class="text-center">
-                    <img class="profile-user-img img-fluid img-circle" 
-                         src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
-                         alt="Student profile picture"
-                         style="width: 100px; height: 100px; object-fit: cover;">
-                </div>
-
-                <h3 class="profile-username text-center">{{ $student->full_name }}</h3>
-                <p class="text-muted text-center">{{ $student->student_number }}</p>
-
-                <ul class="list-group list-group-unbordered mb-3">
-                    <li class="list-group-item">
-                        <b>Level</b> 
-                        <span class="float-right">{{ $student->level_name }}</span>
-                    </li>
-                    <li class="list-group-item">
-                        <b>Section</b> 
-                        <span class="float-right">{{ $student->section_name ?? 'N/A' }}</span>
-                    </li>
-                    <li class="list-group-item">
-                        <b>Type</b> 
-                        <span class="float-right">
-                            <span class="badge badge-{{ $student->student_type == 'regular' ? 'primary' : 'secondary' }}">
-                                {{ ucfirst($student->student_type) }}
-                            </span>
-                        </span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Summary Card -->
-        <div class="card card-secondary">
-            <div class="card-header">
-                <h3 class="card-title">Grade Summary</h3>
-            </div>
-            <div class="card-body" id="grade-summary">
-                <div class="text-center text-muted">
-                    <i class="fas fa-spinner fa-spin"></i> Loading...
+    <div class="col-12">
+        <div class="card student-info-card">
+            <div class="card-body p-3">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <img class="img-circle profile-img-mobile" 
+                             src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
+                             alt="Student"
+                             style="width: 60px; height: 60px; object-fit: cover;">
+                    </div>
+                    <div class="col">
+                        <h5 class="mb-1 font-weight-bold">{{ $student->full_name }}</h5>
+                        <div class="student-detail text-muted small">
+                            <span class="mr-3"><i class="fas fa-id-card mr-1"></i>{{ $student->student_number }}</span>
+                            <span class="mr-3"><i class="fas fa-layer-group mr-1"></i>{{ $student->level_name }}</span>
+                            <span><i class="fas fa-users mr-1"></i>{{ $student->section_name ?? 'N/A' }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Grades Section -->
-    <div class="col-md-8">
+    <!-- Main Content -->
+    <div class="col-12">
         <!-- Semester Selector -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Select Semester</h3>
+        <div class="card mb-3">
+            <div class="card-header py-2">
+                <h3 class="card-title mb-0"><i class="fas fa-calendar-alt mr-2"></i>Select Semester</h3>
             </div>
-            <div class="card-body">
+            <div class="card-body p-3">
                 @if($semesters->count() > 0)
-                <div class="form-group">
+                <div class="form-group mb-0">
                     <select class="form-control" id="semester-selector">
                         <option value="">-- Select Semester --</option>
                         @foreach($semesters as $semester)
-                        <option value="{{ $semester->id }}">{{ $semester->display_name }}</option>
+                        <option value="{{ $semester->id }}" {{ $semester->status === 'active' ? 'selected' : '' }}>
+                            {{ $semester->display_name }}
+                        </option>
                         @endforeach
                     </select>
                 </div>
@@ -87,34 +104,34 @@
 
         <!-- Grades Table -->
         <div class="card" id="grades-card" style="display: none;">
-            <div class="card-header">
-                <h3 class="card-title">Grades Report</h3>
+            <div class="card-header py-2">
+                <h3 class="card-title mb-0"><i class="fas fa-chart-bar mr-2"></i>Grades Report</h3>
             </div>
             <div class="card-body p-0">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th class="text-center">Q1</th>
-                            <th class="text-center">Q2</th>
-                            <th class="text-center">Final</th>
-                            <th class="text-center">Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody id="grades-tbody">
-                        <!-- Will be populated via AJAX -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Performance Chart -->
-        <div class="card" id="chart-card" style="display: none;">
-            <div class="card-header">
-                <h3 class="card-title">Grade Performance</h3>
-            </div>
-            <div class="card-body">
-                <canvas id="gradeChart" style="height: 250px;"></canvas>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th rowspan="2" class="align-middle" style="min-width: 120px;">Subject</th>
+                                <th colspan="3" class="text-center">Quarter 1</th>
+                                <th colspan="3" class="text-center">Quarter 2</th>
+                                <th rowspan="2" class="text-center align-middle">Final</th>
+                                <th rowspan="2" class="text-center align-middle">Remarks</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center">WW</th>
+                                <th class="text-center">PT</th>
+                                <th class="text-center">QA</th>
+                                <th class="text-center">WW</th>
+                                <th class="text-center">PT</th>
+                                <th class="text-center">QA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grades-tbody">
+                            <!-- Will be populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -122,23 +139,30 @@
 @endsection
 
 @section('scripts')
-<script src="{{ asset('plugins/chart.js/Chart.min.js') }}"></script>
 <script>
 $(document).ready(function() {
-    let gradeChart = null;
     const studentNumber = '{{ $student->student_number }}';
+
+    // Auto-load active semester on page load
+    const activeSemester = $('#semester-selector').find('option:selected').val();
+    if (activeSemester) {
+        loadGrades(activeSemester);
+    }
 
     $('#semester-selector').change(function() {
         const semesterId = $(this).val();
         
         if (!semesterId) {
             $('#grades-card').hide();
-            $('#chart-card').hide();
             return;
         }
 
+        loadGrades(semesterId);
+    });
+
+    function loadGrades(semesterId) {
         // Show loading
-        $('#grades-tbody').html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading grades...</td></tr>');
+        $('#grades-tbody').html('<tr><td colspan="9" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading grades...</td></tr>');
         $('#grades-card').show();
         
         // Fetch grades
@@ -149,67 +173,44 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.grades && response.grades.length > 0) {
                     displayGrades(response.grades);
-                    updateSummary(response.stats);
-                    updateChart(response.grades);
-                    $('#chart-card').show();
                 } else {
-                    $('#grades-tbody').html('<tr><td colspan="5" class="text-center text-muted">No grades recorded for this semester yet.</td></tr>');
-                    $('#chart-card').hide();
-                    $('#grade-summary').html('<div class="alert alert-warning mb-0"><i class="fas fa-info-circle mr-2"></i> No grades available</div>');
+                    $('#grades-tbody').html('<tr><td colspan="9" class="text-center text-muted py-4">No grades recorded for this semester yet.</td></tr>');
                 }
             },
             error: function() {
-                $('#grades-tbody').html('<tr><td colspan="5" class="text-center text-danger">Error loading grades. Please try again.</td></tr>');
-                $('#chart-card').hide();
+                $('#grades-tbody').html('<tr><td colspan="9" class="text-center text-danger py-4">Error loading grades. Please try again.</td></tr>');
             }
         });
-    });
+    }
 
     function displayGrades(grades) {
         let html = '';
         
         grades.forEach(function(grade) {
             html += '<tr>';
-            html += '<td>' + grade.class_name + '</td>';
+            html += '<td><strong>' + grade.class_name + '</strong></td>';
             
-            // Q1 Grade
-            html += '<td class="text-center">';
-            if (grade.q1_grade !== null) {
-                const q1Class = grade.q1_grade >= 75 ? 'badge-success' : 'badge-danger';
-                html += '<span class="badge ' + q1Class + '">' + parseFloat(grade.q1_grade).toFixed(2) + '</span>';
-            } else {
-                html += '<span class="badge badge-secondary">N/A</span>';
-            }
-            html += '</td>';
+            // Q1 Components
+            html += '<td class="text-center component-score">' + formatScore(grade.q1_ww_ws, grade.ww_perc) + '</td>';
+            html += '<td class="text-center component-score">' + formatScore(grade.q1_pt_ws, grade.pt_perc) + '</td>';
+            html += '<td class="text-center component-score">' + formatScore(grade.q1_qa_ws, grade.qa_perc) + '</td>';
             
-            // Q2 Grade
-            html += '<td class="text-center">';
-            if (grade.q2_grade !== null) {
-                const q2Class = grade.q2_grade >= 75 ? 'badge-success' : 'badge-danger';
-                html += '<span class="badge ' + q2Class + '">' + parseFloat(grade.q2_grade).toFixed(2) + '</span>';
-            } else {
-                html += '<span class="badge badge-secondary">N/A</span>';
-            }
-            html += '</td>';
+            // Q2 Components
+            html += '<td class="text-center component-score">' + formatScore(grade.q2_ww_ws, grade.ww_perc) + '</td>';
+            html += '<td class="text-center component-score">' + formatScore(grade.q2_pt_ws, grade.pt_perc) + '</td>';
+            html += '<td class="text-center component-score">' + formatScore(grade.q2_qa_ws, grade.qa_perc) + '</td>';
             
             // Final Grade
-            html += '<td class="text-center">';
+            html += '<td class="text-center"><strong>';
             if (grade.final_grade !== null) {
-                const finalClass = grade.final_grade >= 75 ? 'badge-success' : 'badge-danger';
-                html += '<span class="badge ' + finalClass + '">' + parseFloat(grade.final_grade).toFixed(2) + '</span>';
+                html += parseFloat(grade.final_grade).toFixed(2);
             } else {
-                html += '<span class="badge badge-secondary">N/A</span>';
+                html += '-';
             }
-            html += '</td>';
+            html += '</strong></td>';
             
             // Remarks
-            html += '<td class="text-center">';
-            let remarksClass = 'badge-secondary';
-            if (grade.remarks === 'PASSED') remarksClass = 'badge-success';
-            else if (grade.remarks === 'FAILED') remarksClass = 'badge-danger';
-            else if (grade.remarks === 'INC') remarksClass = 'badge-warning';
-            html += '<span class="badge ' + remarksClass + '">' + grade.remarks + '</span>';
-            html += '</td>';
+            html += '<td class="text-center"><small>' + (grade.remarks || '-') + '</small></td>';
             
             html += '</tr>';
         });
@@ -217,101 +218,11 @@ $(document).ready(function() {
         $('#grades-tbody').html(html);
     }
 
-    function updateSummary(stats) {
-        const avgGrade = stats.average ? parseFloat(stats.average).toFixed(2) : 'N/A';
-        
-        let html = '<div class="row">';
-        html += '<div class="col-12 mb-3">';
-        html += '<div class="info-box bg-primary">';
-        html += '<div class="info-box-content">';
-        html += '<span class="info-box-text">Overall Average</span>';
-        html += '<span class="info-box-number">' + avgGrade + '</span>';
-        html += '</div></div></div>';
-        
-        html += '<div class="col-6">';
-        html += '<div class="info-box bg-success">';
-        html += '<div class="info-box-content">';
-        html += '<span class="info-box-text">Passed</span>';
-        html += '<span class="info-box-number">' + stats.passed + '</span>';
-        html += '</div></div></div>';
-        
-        html += '<div class="col-6">';
-        html += '<div class="info-box bg-danger">';
-        html += '<div class="info-box-content">';
-        html += '<span class="info-box-text">Failed</span>';
-        html += '<span class="info-box-number">' + stats.failed + '</span>';
-        html += '</div></div></div>';
-        
-        html += '</div>';
-        
-        $('#grade-summary').html(html);
-    }
-
-    function updateChart(grades) {
-        const ctx = document.getElementById('gradeChart').getContext('2d');
-        
-        if (gradeChart) {
-            gradeChart.destroy();
+    function formatScore(score, weight) {
+        if (score === null || score === undefined) {
+            return '-';
         }
-        
-        const labels = grades.map(g => {
-            const name = g.class_name;
-            return name.length > 20 ? name.substring(0, 20) + '...' : name;
-        });
-        
-        const q1Data = grades.map(g => g.q1_grade);
-        const q2Data = grades.map(g => g.q2_grade);
-        const finalData = grades.map(g => g.final_grade);
-        
-        gradeChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Q1 Grade',
-                        data: q1Data,
-                        backgroundColor: 'rgba(20, 29, 92, 0.7)',
-                        borderColor: 'rgba(20, 29, 92, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Q2 Grade',
-                        data: q2Data,
-                        backgroundColor: 'rgba(108, 117, 125, 0.7)',
-                        borderColor: 'rgba(108, 117, 125, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Final Grade',
-                        data: finalData,
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
-                        borderColor: 'rgba(255, 193, 7, 1)',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        min: 60,
-                        max: 100,
-                        ticks: {
-                            stepSize: 10
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    }
-                }
-            }
-        });
+        return parseFloat(score).toFixed(2) + '<br><small class="text-muted">(' + weight + '%)</small>';
     }
 });
 </script>

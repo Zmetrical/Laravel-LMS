@@ -185,16 +185,6 @@
                 <div class="url-display">{{ $access_url }}</div>
             </div>
 
-            <div class="info-box">
-                <h4>Important Information:</h4>
-                <ul>
-                    <li><strong>No Password Required:</strong> Your unique link provides direct access to the portal</li>
-                    <li><strong>Keep this link secure:</strong> Anyone with this link can view your students' grades</li>
-                    <li><strong>Bookmark for easy access:</strong> Save this link for future use</li>
-                    <li><strong>No expiration:</strong> This link remains active unless deactivated by the school</li>
-                </ul>
-            </div>
-
             <div class="message">
                 <p><strong>What you can do in the Guardian Portal:</strong></p>
                 <ul style="padding-left: 20px;">
@@ -206,15 +196,14 @@
             </div>
 
             <div class="message">
-                <p>If you have any questions or concerns about your students' academic progress, please don't hesitate to contact the school.</p>
+
+                <p><strong>Trinity University</strong></p>
+                <p>This is an automated message. Please do not reply to this email.</p>
+                <p>If you did not request this access or believe you received this email in error, please contact the school administration immediately.</p>
+
             </div>
         </div>
         
-        <div class="footer">
-            <p><strong>Trinity University</strong></p>
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>If you did not request this access or believe you received this email in error, please contact the school administration immediately.</p>
-        </div>
     </div>
 </body>
 </html>

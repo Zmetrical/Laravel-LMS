@@ -99,33 +99,6 @@
             margin-right: 10px;
         }
 
-        .semester-group {
-            margin: 10px 0;
-        }
-
-        .semester-header {
-            padding: 8px 15px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255,255,255,0.6);
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .semester-header:hover {
-            background-color: rgba(255,255,255,0.05);
-        }
-
-        .semester-header i {
-            float: right;
-            transition: transform 0.3s;
-        }
-
-        .semester-header.collapsed i {
-            transform: rotate(-90deg);
-        }
     </style>
 @endsection
 
@@ -164,14 +137,22 @@
                         style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
 
-                <!-- Guardian Info -->
+                <!-- School Year Info -->
                 <div class="user-panel py-3 px-3 d-flex flex-column">
                     <div class="info w-100">
-                        <div class="text-white font-weight-bold mb-1" style="font-size: 14px;">
-                            <i class="fas fa-user-shield mr-2"></i>Guardian Portal
-                        </div>
-                        <div class="text-white-50 small">
-                            {{ session('guardian_name', 'Welcome') }}
+                        <div class="d-flex justify-content-center align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="text-white font-weight-bold mb-1" style="font-size: 14px;">
+                                    @if($activeSemester)
+                                        SY {{ $activeSemester->school_year_code }}
+                                    @else
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>No Active Semester
+                                    @endif
+                                </div>
+                                <div class="text-white-50 small">
+                                    {{ $activeSemester->semester_name ?? 'N/A' }}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -206,35 +187,22 @@
                                     )
                                     ->orderBy('s.first_name')
                                     ->get();
-
-                                // Group students by level
-                                $studentsByLevel = $students->groupBy('level_name');
                             @endphp
 
                             @if($students->count() > 0)
-                                <li class="nav-header">MY STUDENTS</li>
 
-                                @foreach($studentsByLevel as $levelName => $levelStudents)
-                                    <div class="semester-group">
-                                        <div class="semester-header" data-toggle="collapse" data-target="#level-{{ Str::slug($levelName) }}">
-                                            {{ $levelName ?? 'No Level' }}
-                                            <i class="fas fa-chevron-down"></i>
-                                        </div>
-                                        <div class="collapse show" id="level-{{ Str::slug($levelName) }}">
-                                            @foreach($levelStudents as $student)
-                                                <li class="nav-item student-nav-item">
-                                                    <a href="{{ route('guardian.student.grades', $student->student_number) }}"
-                                                        class="nav-link {{ Request::is('guardian/student/' . $student->student_number . '*') ? 'active' : '' }}">
-                                                        <img src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
-                                                             alt="{{ $student->first_name }}" 
-                                                             class="student-avatar">
-                                                        <span>{{ $student->first_name }} {{ $student->last_name }}</span>
-                                                    </a>
-                                                </li>
-                                            @endforeach
-                                        </div>
-                                    </div>
+                                @foreach($students as $student)
+                                    <li class="nav-item student-nav-item">
+                                        <a href="{{ route('guardian.student.grades', $student->student_number) }}"
+                                            class="nav-link {{ Request::is('guardian/student/' . $student->student_number . '*') ? 'active' : '' }}">
+                                            <img src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
+                                                 alt="{{ $student->first_name }}" 
+                                                 class="student-avatar">
+                                            <span>{{ $student->first_name }} {{ $student->last_name }}</span>
+                                        </a>
+                                    </li>
                                 @endforeach
+
                             @endif
                         </ul>
                     </nav>
@@ -280,11 +248,6 @@
 @section('foot')
     <script>
         $(document).ready(function() {
-            // Collapse/expand animation
-            $('.semester-header').click(function() {
-                $(this).toggleClass('collapsed');
-            });
-
             // Keep sidebar state persistent
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 $('body').addClass('sidebar-collapse');

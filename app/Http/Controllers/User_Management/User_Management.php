@@ -261,12 +261,77 @@ public function insert_students(Request $request)
     try {
         DB::beginTransaction();
 
-        // ... [Keep existing code for semester check and section distribution] ...
+        // Get active semester
+        $activeSemester = DB::table('semesters')->where('status', 'active')->first();
+        if (!$activeSemester) {
+            throw new Exception('No active semester found');
+        }
+
+        // Get available sections for the selected strand and level
+        $availableSections = DB::table('sections')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->select(
+                'sections.id',
+                'sections.code',
+                'sections.name',
+                'sections.capacity',
+                'sections.strand_id',
+                'sections.level_id'
+            )
+            ->where('sections.status', 1)
+            ->where('sections.strand_id', $request->strand_id)
+            ->where('sections.level_id', $request->level_id)
+            ->orderBy('sections.name')
+            ->get()
+            ->map(function($section) use ($activeSemester) {
+                // Count enrolled students in active semester
+                $enrolled = DB::table('student_semester_enrollment')
+                    ->where('section_id', $section->id)
+                    ->where('semester_id', $activeSemester->id)
+                    ->where('enrollment_status', 'enrolled')
+                    ->count();
+                
+                $section->enrolled_count = $enrolled;
+                $section->available_slots = $section->capacity - $enrolled;
+                $section->is_full = $enrolled >= $section->capacity;
+                
+                return $section;
+            })
+            ->filter(function($section) {
+                return !$section->is_full; // Only return sections with available slots
+            })
+            ->values(); // Re-index array
+
+        // Check if there are any available sections
+        if ($availableSections->isEmpty()) {
+            throw new Exception('No sections available with capacity for the selected strand and level');
+        }
+
+        // Calculate total available slots
+        $totalAvailableSlots = $availableSections->sum('available_slots');
+        $studentsToAdd = count($request->students);
+
+        // Check if there are enough slots
+        if ($studentsToAdd > $totalAvailableSlots) {
+            throw new Exception("Insufficient capacity: {$studentsToAdd} students requested but only {$totalAvailableSlots} slots available");
+        }
+
+        // Get the last student number for the current year
+        $year = date('Y');
+        $lastStudent = Student::whereYear('created_at', $year)
+            ->orderBy('student_number', 'desc')
+            ->first();
+        
+        $lastCount = 0;
+        if ($lastStudent) {
+            $lastCount = intval(substr($lastStudent->student_number, 4));
+        }
 
         $studentsData = [];
         $passwordMatrixData = [];
         $enrollmentData = [];
-        $guardianLinks = []; // NEW: Store guardian links to process
+        $guardianLinks = [];
         $now = now();
 
         // Distribute students across available sections
@@ -278,6 +343,9 @@ public function insert_students(Request $request)
             // Check if current section is full, move to next
             if ($currentSectionSlots <= 0) {
                 $sectionIndex++;
+                if ($sectionIndex >= $availableSections->count()) {
+                    throw new Exception('Unexpected error: ran out of sections during distribution');
+                }
                 $currentSectionId = $availableSections[$sectionIndex]->id;
                 $currentSectionSlots = $availableSections[$sectionIndex]->available_slots;
             }
@@ -325,7 +393,7 @@ public function insert_students(Request $request)
                 'updated_at' => $now
             ];
 
-            // NEW: Store guardian data for processing
+            // Store guardian data for processing
             if (!empty($studentData['parentEmail']) || !empty($studentData['parentFirstName']) || !empty($studentData['parentLastName'])) {
                 $guardianLinks[] = [
                     'student_number' => $studentNumber,
@@ -343,7 +411,7 @@ public function insert_students(Request $request)
         DB::table('student_password_matrix')->insert($passwordMatrixData);
         DB::table('student_semester_enrollment')->insert($enrollmentData);
 
-        // NEW: Process guardians
+        // Process guardians
         foreach ($guardianLinks as $guardianData) {
             $this->createOrLinkGuardian([
                 'email' => $guardianData['email'],

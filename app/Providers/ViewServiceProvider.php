@@ -15,7 +15,7 @@ class ViewServiceProvider extends ServiceProvider
         View::composer(['layouts.main', 'admin.grade_management.*', 'admin.enroll_management.*', 
         'layouts.main-teacher',
         'layouts.main-student',
-        'layouts.main-guardian' 
+        'layouts.main-guardian'
 
         ], Active_Schoolyear::class);
 

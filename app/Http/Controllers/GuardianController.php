@@ -158,20 +158,20 @@ class GuardianController extends Controller
 
         $student->full_name = trim($student->first_name . ' ' . $student->middle_name . ' ' . $student->last_name);
 
-        // Get all semesters with grades for this student
-        $semesters = DB::table('grades_final as gf')
-            ->join('semesters as sem', 'gf.semester_id', '=', 'sem.id')
-            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
-            ->where('gf.student_number', $student_number)
-            ->select('sem.id', 'sem.name', 'sy.code as school_year_code')
-            ->distinct()
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.id', 'desc')
-            ->get()
-            ->map(function($sem) {
-                $sem->display_name = 'SY ' . $sem->school_year_code . ' - ' . $sem->name;
-                return $sem;
-            });
+// Get all semesters with grades for this student
+$semesters = DB::table('grades_final as gf')
+    ->join('semesters as sem', 'gf.semester_id', '=', 'sem.id')
+    ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+    ->where('gf.student_number', $student_number)
+    ->select('sem.id', 'sem.name', 'sem.status', 'sy.code as school_year_code')
+    ->distinct()
+    ->orderBy('sy.year_start', 'desc')
+    ->orderBy('sem.id', 'desc')
+    ->get()
+    ->map(function($sem) {
+        $sem->display_name = 'SY ' . $sem->school_year_code . ' - ' . $sem->name;
+        return $sem;
+    });
 
         $data = [
             'scripts' => ['guardian/student_grades.js'],
