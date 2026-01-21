@@ -39,11 +39,6 @@
         
         .table th, .table td {
             padding: 0.5rem 0.25rem;
-            white-space: nowrap;
-        }
-        
-        .component-score {
-            font-size: 0.75rem;
         }
     }
 </style>
@@ -110,21 +105,13 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover mb-0">
-                        <thead class="thead-light">
+                        <thead>
                             <tr>
-                                <th rowspan="2" class="align-middle" style="min-width: 120px;">Subject</th>
-                                <th colspan="3" class="text-center">Quarter 1</th>
-                                <th colspan="3" class="text-center">Quarter 2</th>
-                                <th rowspan="2" class="text-center align-middle">Final</th>
-                                <th rowspan="2" class="text-center align-middle">Remarks</th>
-                            </tr>
-                            <tr>
-                                <th class="text-center">WW</th>
-                                <th class="text-center">PT</th>
-                                <th class="text-center">QA</th>
-                                <th class="text-center">WW</th>
-                                <th class="text-center">PT</th>
-                                <th class="text-center">QA</th>
+                                <th style="min-width: 200px;">Subject</th>
+                                <th class="text-center" style="min-width: 100px;">Quarter 1</th>
+                                <th class="text-center" style="min-width: 100px;">Quarter 2</th>
+                                <th class="text-center" style="min-width: 100px;">Final Grade</th>
+                                <th class="text-center" style="min-width: 100px;">Remarks</th>
                             </tr>
                         </thead>
                         <tbody id="grades-tbody">
@@ -162,7 +149,7 @@ $(document).ready(function() {
 
     function loadGrades(semesterId) {
         // Show loading
-        $('#grades-tbody').html('<tr><td colspan="9" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading grades...</td></tr>');
+        $('#grades-tbody').html('<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading grades...</td></tr>');
         $('#grades-card').show();
         
         // Fetch grades
@@ -174,11 +161,11 @@ $(document).ready(function() {
                 if (response.grades && response.grades.length > 0) {
                     displayGrades(response.grades);
                 } else {
-                    $('#grades-tbody').html('<tr><td colspan="9" class="text-center text-muted py-4">No grades recorded for this semester yet.</td></tr>');
+                    $('#grades-tbody').html('<tr><td colspan="5" class="text-center text-muted py-4">No grades recorded for this semester yet.</td></tr>');
                 }
             },
             error: function() {
-                $('#grades-tbody').html('<tr><td colspan="9" class="text-center text-danger py-4">Error loading grades. Please try again.</td></tr>');
+                $('#grades-tbody').html('<tr><td colspan="5" class="text-center text-danger py-4">Error loading grades. Please try again.</td></tr>');
             }
         });
     }
@@ -188,41 +175,38 @@ $(document).ready(function() {
         
         grades.forEach(function(grade) {
             html += '<tr>';
-            html += '<td><strong>' + grade.class_name + '</strong></td>';
+            html += '<td class="font-weight-bold">' + grade.class_name + '</td>';
             
-            // Q1 Components
-            html += '<td class="text-center component-score">' + formatScore(grade.q1_ww_ws, grade.ww_perc) + '</td>';
-            html += '<td class="text-center component-score">' + formatScore(grade.q1_pt_ws, grade.pt_perc) + '</td>';
-            html += '<td class="text-center component-score">' + formatScore(grade.q1_qa_ws, grade.qa_perc) + '</td>';
+            // Quarter 1
+            html += '<td class="text-center">';
+            html += grade.q1_transmuted_grade !== null 
+                ? parseFloat(grade.q1_transmuted_grade).toFixed(2) 
+                : '-';
+            html += '</td>';
             
-            // Q2 Components
-            html += '<td class="text-center component-score">' + formatScore(grade.q2_ww_ws, grade.ww_perc) + '</td>';
-            html += '<td class="text-center component-score">' + formatScore(grade.q2_pt_ws, grade.pt_perc) + '</td>';
-            html += '<td class="text-center component-score">' + formatScore(grade.q2_qa_ws, grade.qa_perc) + '</td>';
+            // Quarter 2
+            html += '<td class="text-center">';
+            html += grade.q2_transmuted_grade !== null 
+                ? parseFloat(grade.q2_transmuted_grade).toFixed(2) 
+                : '-';
+            html += '</td>';
             
             // Final Grade
-            html += '<td class="text-center"><strong>';
-            if (grade.final_grade !== null) {
-                html += parseFloat(grade.final_grade).toFixed(2);
-            } else {
-                html += '-';
-            }
-            html += '</strong></td>';
+            html += '<td class="text-center font-weight-bold">';
+            html += grade.final_grade !== null 
+                ? parseFloat(grade.final_grade).toFixed(2) 
+                : '-';
+            html += '</td>';
             
-            // Remarks
-            html += '<td class="text-center"><small>' + (grade.remarks || '-') + '</small></td>';
+            // Remarks (no badge, just plain text)
+            html += '<td class="text-center">';
+            html += grade.remarks || '-';
+            html += '</td>';
             
             html += '</tr>';
         });
         
         $('#grades-tbody').html(html);
-    }
-
-    function formatScore(score, weight) {
-        if (score === null || score === undefined) {
-            return '-';
-        }
-        return parseFloat(score).toFixed(2) + '<br><small class="text-muted">(' + weight + '%)</small>';
     }
 });
 </script>

@@ -1480,114 +1480,114 @@ private function generateFilename($class, $section, $semester)
     /**
      * Submit final grades for the semester
      */
-    public function submitFinalGrades(Request $request, $classId)
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
-            
-            $hasAccess = DB::table('teacher_class_matrix')
-                ->where('teacher_id', $teacher->id)
-                ->where('class_id', $classId)
-                ->exists();
+public function submitFinalGrades(Request $request, $classId)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
 
-            if (!$hasAccess) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $validated = $request->validate([
-                'grades' => 'required|array',
-                'grades.*.student_number' => 'required|exists:students,student_number',
-                'grades.*.q1_grade' => 'required|numeric|min:0|max:100',
-                'grades.*.q2_grade' => 'required|numeric|min:0|max:100',
-                'grades.*.final_grade' => 'required|integer|min:0|max:100',
-                'grades.*.remarks' => 'required|in:PASSED,FAILED,INC,DRP,W',
-                'semester_id' => 'required|exists:semesters,id',
-                'section_id' => 'required|exists:sections,id'
-            ]);
-
-            $class = DB::table('classes')->where('id', $classId)->first();
-            $semesterId = $validated['semester_id'];
-
-            DB::beginTransaction();
-
-            foreach ($validated['grades'] as $gradeData) {
-                // Check if student belongs to this section
-                $student = DB::table('students')
-                    ->where('student_number', $gradeData['student_number'])
-                    ->first();
-
-                if (!$student) continue;
-
-                // Verify enrollment
-                $isEnrolled = false;
-                
-                if ($student->student_type === 'regular') {
-                    $isEnrolled = DB::table('section_class_matrix')
-                        ->where('section_id', $validated['section_id'])
-                        ->where('class_id', $classId)
-                        ->where('semester_id', $semesterId)
-                        ->exists();
-                } else {
-                    $isEnrolled = DB::table('student_class_matrix')
-                        ->where('student_number', $gradeData['student_number'])
-                        ->where('class_code', $class->class_code)
-                        ->where('semester_id', $semesterId)
-                        ->where('enrollment_status', 'enrolled')
-                        ->exists();
-                }
-
-                if (!$isEnrolled) {
-                    continue;
-                }
-
-                // Store both semester average and transmuted final grade
-                DB::table('grades_final')->updateOrInsert(
-                    [
-                        'student_number' => $gradeData['student_number'],
-                        'class_code' => $class->class_code,
-                        'semester_id' => $semesterId
-                    ],
-                    [
-                        'q1_grade' => $gradeData['q1_grade'],
-                        'q2_grade' => $gradeData['q2_grade'],
-                        'semester_average' => $gradeData['semester_average'], // Add this
-                        'final_grade' => $gradeData['final_grade'], // This is transmuted
-                        'remarks' => $gradeData['remarks'],
-                        'computed_by' => $teacher->id,
-                        'computed_at' => now(),
-                        'updated_at' => now()
-                    ]
-                );
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Final grades submitted successfully'
-            ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (Exception $e) {
-            DB::rollBack();
-            
-            \Log::error('Failed to submit final grades', [
-                'class_id' => $classId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to submit final grades: ' . $e->getMessage()
-            ], 500);
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
+
+        $validated = $request->validate([
+            'grades' => 'required|array',
+            'grades.*.student_number' => 'required|exists:students,student_number',
+            'grades.*.q1_grade' => 'required|numeric|min:0|max:100',
+            'grades.*.q2_grade' => 'required|numeric|min:0|max:100',
+            'grades.*.final_grade' => 'required|integer|min:0|max:100',
+            'grades.*.remarks' => 'required|in:PASSED,FAILED,INC,DRP,W',
+            // Remove semester_average from validation
+            'semester_id' => 'required|exists:semesters,id',
+            'section_id' => 'required|exists:sections,id'
+        ]);
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        $semesterId = $validated['semester_id'];
+
+        DB::beginTransaction();
+
+        foreach ($validated['grades'] as $gradeData) {
+            // Check if student belongs to this section
+            $student = DB::table('students')
+                ->where('student_number', $gradeData['student_number'])
+                ->first();
+
+            if (!$student) continue;
+
+            // Verify enrollment
+            $isEnrolled = false;
+            
+            if ($student->student_type === 'regular') {
+                $isEnrolled = DB::table('section_class_matrix')
+                    ->where('section_id', $validated['section_id'])
+                    ->where('class_id', $classId)
+                    ->where('semester_id', $semesterId)
+                    ->exists();
+            } else {
+                $isEnrolled = DB::table('student_class_matrix')
+                    ->where('student_number', $gradeData['student_number'])
+                    ->where('class_code', $class->class_code)
+                    ->where('semester_id', $semesterId)
+                    ->where('enrollment_status', 'enrolled')
+                    ->exists();
+            }
+
+            if (!$isEnrolled) {
+                continue;
+            }
+
+            DB::table('grades_final')->updateOrInsert(
+                [
+                    'student_number' => $gradeData['student_number'],
+                    'class_code' => $class->class_code,
+                    'semester_id' => $semesterId
+                ],
+                [
+                    'q1_grade' => $gradeData['q1_grade'],
+                    'q2_grade' => $gradeData['q2_grade'],
+                    // Remove semester_average from here - it's calculated in final_grade comment
+                    'final_grade' => $gradeData['final_grade'],
+                    'remarks' => $gradeData['remarks'],
+                    'computed_by' => $teacher->id,
+                    'computed_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Final grades submitted successfully'
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (Exception $e) {
+        DB::rollBack();
+        
+        \Log::error('Failed to submit final grades', [
+            'class_id' => $classId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to submit final grades: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Check if final grades are already submitted

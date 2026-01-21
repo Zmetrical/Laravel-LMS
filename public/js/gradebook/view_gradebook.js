@@ -278,21 +278,25 @@ $(document).ready(function () {
         $('#finalGradeTableBody').html(html);
     }
 
-    function renderFinalGradeRow(student) {
-        const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
-        
-        return `
-            <tr data-student="${escapeHtml(student.student_number)}">
-                <td>${escapeHtml(student.student_number)}</td>
-                <td>${escapeHtml(student.full_name)}</td>
-                <td class="text-center">${student.q1_grade}</td>
-                <td class="text-center">${student.q2_grade}</td>
-                <td class="text-center">${student.semester_grade}</td>
-                <td class="text-center grade-cell"><strong>${student.final_grade}</strong></td>
-                <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
-            </tr>
-        `;
-    }
+function renderFinalGradeRow(student) {
+    const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
+    
+    // Calculate semester average here
+    const semesterAverage = student.semester_average || 
+        ((parseFloat(student.q1_grade || 0) + parseFloat(student.q2_grade || 0)) / 2).toFixed(2);
+    
+    return `
+        <tr data-student="${escapeHtml(student.student_number)}">
+            <td>${escapeHtml(student.student_number)}</td>
+            <td>${escapeHtml(student.full_name)}</td>
+            <td class="text-center">${student.q1_grade || '-'}</td>
+            <td class="text-center">${student.q2_grade || '-'}</td>
+            <td class="text-center">${semesterAverage}</td>
+            <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
+            <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
+        </tr>
+    `;
+}
 
     function showTabLoading() {
         const loadingHtml = '<tr class="loading-row"><td colspan="100"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
@@ -721,15 +725,11 @@ $('#passcodeModal').on('hidden.bs.modal', function() {
     function submitFinalGrades(grades) {
         const btn = $('#submitFinalGradeBtn');
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Submitting...');
-        const gradesWithAverage = grades.map(g => ({
-            ...g,
-            semester_average: ((g.q1_grade + g.q2_grade) / 2).toFixed(2)
-        }));
         $.ajax({
             url: API_ROUTES.submitFinalGrades,
             type: 'POST',
             data: {
-            grades: gradesWithAverage,
+            grades: grades,
                 semester_id: ACTIVE_SEMESTER_ID,
                 section_id: currentSectionId
             },
