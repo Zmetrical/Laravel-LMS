@@ -18,7 +18,11 @@ use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Class_Management\Quiz_Attempt;
 use App\Http\Controllers\Class_Management\Quiz_Submit;
 use App\Http\Controllers\Grade_Management\Grade_Management;
+
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
+use App\Http\Controllers\Grade_Management\GradebookViewController;
+use App\Http\Controllers\Grade_Management\GradebookEditController;
+use App\Http\Controllers\Grade_Management\GradebookImportExportController;
 use App\Http\Controllers\Grade_Management\SectionGrade_Management;
 
 use App\Http\Controllers\Grade_Management\Grade_List;
@@ -330,7 +334,7 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
 
         // Class Pages
-            Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
+        Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
         Route::get('/adviser/grade-cards', [Adviser_List::class, 'index'])
                 ->name('adviser.grade.cards');
                 
@@ -363,51 +367,83 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             });
         });
 
+        // Route::prefix('gradebook')->name('gradebook.')->group(function() {
+        //     Route::get('/{classId}/edit', [GradeBook_Management::class, 'edit_gradebook'])
+        //         ->name('edit');
+        //     Route::get('/{classId}/view', [GradeBook_Management::class, 'view_gradebook'])
+        //         ->name('view');
+        //     Route::post('/{classId}/verify-passcode', [GradeBook_Management::class, 'verify_passcode'])
+        //     ->name('verify-passcode');
+        //     Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
+        //         ->name('data');
+        //     Route::get('/{classId}/final-grade', [GradeBook_Management::class, 'getFinalGradeData'])
+        //         ->name('final-grade');
+        //     Route::post('/{classId}/column/{columnId}/toggle', [GradeBook_Management::class, 'toggleColumn'])
+        //         ->name('column.toggle');
+        //     Route::put('/{classId}/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
+        //         ->name('column.update');
+        //     Route::post('/{classId}/scores/batch', [GradeBook_Management::class, 'batchUpdateScores'])
+        //         ->name('scores.batch');
+        //     Route::get('/{classId}/quizzes', [GradeBook_Management::class, 'getAvailableQuizzes'])
+        //         ->name('quizzes');
+        //     Route::post('/class/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
+        //         ->name('export');
+        //     // In teacher gradebook routes group
+        //     Route::post('/{classId}/import', [GradeBook_Management::class, 'importGrades'])
+        //         ->name('import');
+        //         // In teacher gradebook routes group
+        //     Route::post('/{classId}/column/{columnId}/import', [GradeBook_Management::class, 'importColumnGrades'])
+        //         ->name('column.import');
+        //                     // Final grades submission
+        //         Route::post('/{classId}/submit-final-grades', [
+        //             GradeBook_Management::class, 
+        //             'submitFinalGrades'
+        //         ])->name('submit-final-grades');
+        //         // Check final grades status
+        //         Route::get('/{classId}/check-final-status', [
+        //             GradeBook_Management::class, 
+        //             'checkFinalGradesStatus'
+        //         ])->name('check-final-status');
+        //     });
+
+
         Route::prefix('gradebook')->name('gradebook.')->group(function() {
-            Route::get('/{classId}/edit', [GradeBook_Management::class, 'edit_gradebook'])
-                ->name('edit');
-            Route::get('/{classId}/view', [GradeBook_Management::class, 'view_gradebook'])
+            
+            // View-only routes (GradebookViewController)
+            Route::get('/{classId}/view', [GradebookViewController::class, 'view_gradebook'])
                 ->name('view');
-            Route::post('/{classId}/verify-passcode', [GradeBook_Management::class, 'verify_passcode'])
-            ->name('verify-passcode');
-
-            Route::get('/{classId}/data', [GradeBook_Management::class, 'getGradebookData'])
+            Route::get('/{classId}/data', [GradebookViewController::class, 'getGradebookData'])
                 ->name('data');
-            Route::get('/{classId}/final-grade', [GradeBook_Management::class, 'getFinalGradeData'])
+            Route::get('/{classId}/final-grade', [GradebookViewController::class, 'getFinalGradeData'])
                 ->name('final-grade');
-                    
-            Route::post('/{classId}/column/{columnId}/toggle', [GradeBook_Management::class, 'toggleColumn'])
-                ->name('column.toggle');
-            Route::put('/{classId}/column/{columnId}', [GradeBook_Management::class, 'updateColumn'])
-                ->name('column.update');
-
-            Route::post('/{classId}/scores/batch', [GradeBook_Management::class, 'batchUpdateScores'])
-                ->name('scores.batch');
-            
-            Route::get('/{classId}/quizzes', [GradeBook_Management::class, 'getAvailableQuizzes'])
+            Route::get('/{classId}/quizzes', [GradebookViewController::class, 'getAvailableQuizzes'])
                 ->name('quizzes');
-            Route::post('/class/{classId}/export', [GradeBook_Management::class, 'exportGradebook'])
-                ->name('export');
-            // In teacher gradebook routes group
-            Route::post('/{classId}/import', [GradeBook_Management::class, 'importGrades'])
-                ->name('import');
-
-            // In teacher gradebook routes group
-        Route::post('/{classId}/column/{columnId}/import', [GradeBook_Management::class, 'importColumnGrades'])
-            ->name('column.import');
-                        // Final grades submission
-            Route::post('/{classId}/submit-final-grades', [
-                GradeBook_Management::class, 
-                'submitFinalGrades'
-            ])->name('submit-final-grades');
             
-            // Check final grades status
-            Route::get('/{classId}/check-final-status', [
-                GradeBook_Management::class, 
-                'checkFinalGradesStatus'
-            ])->name('check-final-status');
-
+            // Edit routes (GradebookEditController)
+            Route::post('/{classId}/verify-passcode', [GradebookEditController::class, 'verify_passcode'])
+                ->name('verify-passcode');
+            Route::get('/{classId}/edit', [GradebookEditController::class, 'edit_gradebook'])
+                ->name('edit');
+            Route::post('/{classId}/column/{columnId}/toggle', [GradebookEditController::class, 'toggleColumn'])
+                ->name('column.toggle');
+            Route::put('/{classId}/column/{columnId}', [GradebookEditController::class, 'updateColumn'])
+                ->name('column.update');
+            Route::post('/{classId}/scores/batch', [GradebookEditController::class, 'batchUpdateScores'])
+                ->name('scores.batch');
+            Route::post('/{classId}/submit-final-grades', [GradebookEditController::class, 'submitFinalGrades'])
+                ->name('submit-final-grades');
+            Route::get('/{classId}/check-final-status', [GradebookEditController::class, 'checkFinalGradesStatus'])
+                ->name('check-final-status');
+            
+            // Import/Export routes (GradebookImportExportController)
+            Route::post('/class/{classId}/export', [GradebookImportExportController::class, 'exportGradebook'])
+                ->name('export');
+            Route::post('/{classId}/import', [GradebookImportExportController::class, 'importGrades'])
+                ->name('import');
+            Route::post('/{classId}/column/{columnId}/import', [GradebookImportExportController::class, 'importColumnGrades'])
+                ->name('column.import');
         });
+            
     });
 });
 

@@ -192,7 +192,6 @@
             display: none;
         }
 
-        /* Highlight missing grades */
         .row-missing-grade {
             background-color: rgba(255, 193, 7, 0.15) !important;
         }
@@ -240,9 +239,6 @@
                     <button class="btn btn-secondary btn-sm" id="editBtn">
                         <i class="fas fa-edit"></i> Edit Gradebook
                     </button>
-                    <button class="btn btn-primary btn-sm" id="exportBtn">
-                        <i class="fas fa-file-excel"></i> Export to Excel
-                    </button>
                 </div>
             </div>
         </div>
@@ -250,7 +246,10 @@
 
     <div class="card">
         <div class="card-body">
-            <div class="filter-controls">
+
+            <div class="row align-items-center">
+
+            <div class="col-md-6 filter-controls">
                 <div class="filter-group">
                     <label>View:</label>
                     <div class="btn-group btn-group-sm btn-group-quarter" role="group">
@@ -280,6 +279,15 @@
                     </select>
                 </div>
             </div>
+
+            <div class="col-md-6 text-right">
+                    <button class="btn btn-primary btn-sm" id="exportBtn">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </button>
+                </div>
+
+            </div>
+
         </div>
     </div>
 
@@ -344,7 +352,6 @@
                 </div>
 
                 <div class="tab-pane fade" id="summary" role="tabpanel">
-                    <!-- Quarter Summary Table -->
                     <div class="summary-table-wrapper">
                         <table class="table table-bordered table-hover table-sm">
                             <thead class="summary-header">
@@ -362,7 +369,6 @@
                         </table>
                     </div>
 
-                    <!-- Final Grade Table (Hidden by default) -->
                     <div id="finalGradeTable">
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover table-sm">
@@ -392,7 +398,6 @@
         </div>
     </div>
 
-    <!-- Export Modal -->
     <div class="modal fade" id="exportModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -422,46 +427,45 @@
         </div>
     </div>
 
-    <!-- Passcode Verification Modal -->
-<div class="modal fade" id="passcodeModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fas fa-lock"></i> Verify Passcode
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form id="passcodeForm">
-                <div class="modal-body">
-                    <p class="text-muted mb-3">
-                        <i class="fas fa-info-circle"></i> Please enter your passcode to access edit mode
-                    </p>
-                    <div class="form-group">
-                        <label for="passcode">Passcode <span class="text-danger">*</span></label>
-                        <input type="password" 
-                               class="form-control" 
-                               id="passcode" 
-                               name="passcode" 
-                               placeholder="Enter your passcode"
-                               autocomplete="off"
-                               required>
+    <div class="modal fade" id="passcodeModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary">
+                    <h5 class="modal-title text-white" id="passcodeModalTitle">
+                        <i class="fas fa-lock"></i> Verify Passcode
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <form id="passcodeForm">
+                    <div class="modal-body">
+                        <p class="text-muted mb-3" id="passcodeModalMessage">
+                            <i class="fas fa-info-circle"></i> Please enter your passcode
+                        </p>
+                        <div class="form-group">
+                            <label for="passcode">Passcode <span class="text-danger">*</span></label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="passcode" 
+                                   name="passcode" 
+                                   placeholder="Enter your passcode"
+                                   autocomplete="off"
+                                   required>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="verifyPasscodeBtn">
-                        <i class="fas fa-check"></i> Verify
-                    </button>
-                </div>
-            </form>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="verifyPasscodeBtn">
+                            <i class="fas fa-check"></i> Verify
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -470,8 +474,6 @@
         const CLASS_ID = {{ $classId }};
         const QUARTERS = @json($quarters);
         const CLASS_INFO = @json($class);
-        
-        // Get active semester ID
         const ACTIVE_SEMESTER_ID = {{ DB::table('semesters')->where('status', 'active')->value('id') ?? 'null' }};
         
         const API_ROUTES = {

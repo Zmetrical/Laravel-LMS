@@ -228,9 +228,6 @@
                 </div>
 
                 <div class="col-md-6 text-right">
-                    <button class="btn btn-success btn-sm" id="importBtn">
-                        <i class="fas fa-file-import"></i> Import Scores
-                    </button>
                     <button class="btn btn-outline-secondary btn-sm" id="viewBtn">
                         Back to View
                     </button>
@@ -241,7 +238,9 @@
     </div>
     <div class="card card-dark card-outline">
         <div class="card-body">
-            <div class="filter-controls">
+            <div class="row align-items-center">
+
+            <div class="col-md-6 filter-controls">
                 <div class="filter-group">
                     <label>Quarter:</label>
                     <div class="btn-group btn-group-sm btn-group-quarter" role="group">
@@ -263,6 +262,13 @@
                             <option value="{{ $section->id }}">{{ $section->name }}</option>
                         @endforeach
                     </select>
+                </div>
+            </div>
+
+                <div class="col-md-6 text-right">
+                    <button class="btn btn-primary btn-sm" id="importBtn">
+                        <i class="fas fa-file-import"></i> Import Scores
+                    </button>
                 </div>
             </div>
         </div>

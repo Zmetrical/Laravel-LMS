@@ -14,6 +14,7 @@ $(document).ready(function () {
     let classInfo = null;
     let allStudentsData = null;
     let finalGradesSubmitted = false;
+    let pendingAction = null;
 
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
@@ -190,7 +191,6 @@ $(document).ready(function () {
         $('#finalGradeTable').show();
         $('#submitFinalGradeBtn').show();
         
-        // Check if grades already submitted
         $.ajax({
             url: API_ROUTES.checkFinalGradesStatus,
             type: 'GET',
@@ -209,7 +209,6 @@ $(document).ready(function () {
                     }
                 }
                 
-                // Load the grades
                 $.ajax({
                     url: API_ROUTES.getFinalGrade,
                     type: 'GET',
@@ -278,25 +277,23 @@ $(document).ready(function () {
         $('#finalGradeTableBody').html(html);
     }
 
-function renderFinalGradeRow(student) {
-    const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
-    
-    // Calculate semester average here
-    const semesterAverage = student.semester_average || 
-        ((parseFloat(student.q1_grade || 0) + parseFloat(student.q2_grade || 0)) / 2).toFixed(2);
-    
-    return `
-        <tr data-student="${escapeHtml(student.student_number)}">
-            <td>${escapeHtml(student.student_number)}</td>
-            <td>${escapeHtml(student.full_name)}</td>
-            <td class="text-center">${student.q1_grade || '-'}</td>
-            <td class="text-center">${student.q2_grade || '-'}</td>
-            <td class="text-center">${semesterAverage}</td>
-            <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
-            <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
-        </tr>
-    `;
-}
+    function renderFinalGradeRow(student) {
+        const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
+        const semesterAverage = student.semester_average || 
+            ((parseFloat(student.q1_grade || 0) + parseFloat(student.q2_grade || 0)) / 2).toFixed(2);
+        
+        return `
+            <tr data-student="${escapeHtml(student.student_number)}">
+                <td>${escapeHtml(student.student_number)}</td>
+                <td>${escapeHtml(student.full_name)}</td>
+                <td class="text-center">${student.q1_grade || '-'}</td>
+                <td class="text-center">${student.q2_grade || '-'}</td>
+                <td class="text-center">${semesterAverage}</td>
+                <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
+                <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
+            </tr>
+        `;
+    }
 
     function showTabLoading() {
         const loadingHtml = '<tr class="loading-row"><td colspan="100"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
@@ -386,10 +383,8 @@ function renderFinalGradeRow(student) {
     function renderStudentRow(student, cols, componentType, activeColumns, totalMaxPoints) {
         let hasMissing = false;
         let rowHtml = '<tr';
-        
         let total = 0;
         
-        // Check for missing grades
         activeColumns.forEach(col => {
             const scoreData = student[componentType.toLowerCase()][col.column_name] || {};
             const score = scoreData.score;
@@ -514,8 +509,7 @@ function renderFinalGradeRow(student) {
         const qaWeighted = qaPerc * (classInfo.qa_perce / 100);
 
         const initialGrade = wwWeighted + ptWeighted + qaWeighted;
-            const transmutedGrade = transmuteGrade(initialGrade);
-
+        const transmutedGrade = transmuteGrade(initialGrade);
         const quarterlyGrade = transmutedGrade;
 
         let rowClass = hasMissing ? ' class="row-missing-grade"' : '';
@@ -533,142 +527,52 @@ function renderFinalGradeRow(student) {
         `;
     }
 
-    // Add transmutation function
-function transmuteGrade(initialGrade) {
-const table = [
-    {min: 100.00, max: 100.00, grade: 100},
-    {min: 98.40, max: 99.99, grade: 99},
-    {min: 96.80, max: 98.39, grade: 98},
-    {min: 95.20, max: 96.79, grade: 97},
-    {min: 93.60, max: 95.19, grade: 96},
-    {min: 92.00, max: 93.59, grade: 95},
-    {min: 90.40, max: 91.99, grade: 94},
-    {min: 88.80, max: 90.39, grade: 93},
-    {min: 87.20, max: 88.79, grade: 92},
-    {min: 85.60, max: 87.19, grade: 91},
-    {min: 84.00, max: 85.59, grade: 90},
-    {min: 82.40, max: 83.99, grade: 89},
-    {min: 80.80, max: 82.39, grade: 88},
-    {min: 79.20, max: 80.79, grade: 87},
-    {min: 77.60, max: 79.19, grade: 86},
-    {min: 76.00, max: 77.59, grade: 85},
-    {min: 74.40, max: 75.99, grade: 84},
-    {min: 72.80, max: 74.39, grade: 83},
-    {min: 71.20, max: 72.79, grade: 82},
-    {min: 69.60, max: 71.19, grade: 81},
-    {min: 68.00, max: 69.59, grade: 80},
-    {min: 66.40, max: 67.99, grade: 79},
-    {min: 64.80, max: 66.39, grade: 78},
-    {min: 63.20, max: 64.79, grade: 77},
-    {min: 61.60, max: 63.19, grade: 76},
-    {min: 60.00, max: 61.59, grade: 75},
-    {min: 56.00, max: 59.99, grade: 74},
-    {min: 52.00, max: 55.99, grade: 73},
-    {min: 48.00, max: 51.99, grade: 72},
-    {min: 44.00, max: 47.99, grade: 71},
-    {min: 40.00, max: 43.99, grade: 70},
-    {min: 36.00, max: 39.99, grade: 69},
-    {min: 32.00, max: 35.99, grade: 68},
-    {min: 28.00, max: 31.99, grade: 67},
-    {min: 24.00, max: 27.99, grade: 66},
-    {min: 20.00, max: 23.99, grade: 65},
-    {min: 16.00, max: 19.99, grade: 64},
-    {min: 12.00, max: 15.99, grade: 63},
-    {min: 8.00, max: 11.99, grade: 62},
-    {min: 4.00, max: 7.99, grade: 61},
-    {min: 0.00, max: 3.99, grade: 60}
-];
+    function transmuteGrade(initialGrade) {
+        const table = [
+            {min: 100.00, max: 100.00, grade: 100}, {min: 98.40, max: 99.99, grade: 99},
+            {min: 96.80, max: 98.39, grade: 98}, {min: 95.20, max: 96.79, grade: 97},
+            {min: 93.60, max: 95.19, grade: 96}, {min: 92.00, max: 93.59, grade: 95},
+            {min: 90.40, max: 91.99, grade: 94}, {min: 88.80, max: 90.39, grade: 93},
+            {min: 87.20, max: 88.79, grade: 92}, {min: 85.60, max: 87.19, grade: 91},
+            {min: 84.00, max: 85.59, grade: 90}, {min: 82.40, max: 83.99, grade: 89},
+            {min: 80.80, max: 82.39, grade: 88}, {min: 79.20, max: 80.79, grade: 87},
+            {min: 77.60, max: 79.19, grade: 86}, {min: 76.00, max: 77.59, grade: 85},
+            {min: 74.40, max: 75.99, grade: 84}, {min: 72.80, max: 74.39, grade: 83},
+            {min: 71.20, max: 72.79, grade: 82}, {min: 69.60, max: 71.19, grade: 81},
+            {min: 68.00, max: 69.59, grade: 80}, {min: 66.40, max: 67.99, grade: 79},
+            {min: 64.80, max: 66.39, grade: 78}, {min: 63.20, max: 64.79, grade: 77},
+            {min: 61.60, max: 63.19, grade: 76}, {min: 60.00, max: 61.59, grade: 75},
+            {min: 56.00, max: 59.99, grade: 74}, {min: 52.00, max: 55.99, grade: 73},
+            {min: 48.00, max: 51.99, grade: 72}, {min: 44.00, max: 47.99, grade: 71},
+            {min: 40.00, max: 43.99, grade: 70}, {min: 36.00, max: 39.99, grade: 69},
+            {min: 32.00, max: 35.99, grade: 68}, {min: 28.00, max: 31.99, grade: 67},
+            {min: 24.00, max: 27.99, grade: 66}, {min: 20.00, max: 23.99, grade: 65},
+            {min: 16.00, max: 19.99, grade: 64}, {min: 12.00, max: 15.99, grade: 63},
+            {min: 8.00, max: 11.99, grade: 62}, {min: 4.00, max: 7.99, grade: 61},
+            {min: 0.00, max: 3.99, grade: 60}
+        ];
 
-    for (let range of table) {
-        if (initialGrade >= range.min && initialGrade <= range.max) {
-            return range.grade;
+        for (let range of table) {
+            if (initialGrade >= range.min && initialGrade <= range.max) {
+                return range.grade;
+            }
         }
+        return initialGrade;
     }
-
-    return initialGrade;
-}
 
     function escapeHtml(text) {
         if (!text) return '';
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
+        const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-$('#editBtn').on('click', function() {
-    $('#passcodeModal').modal('show');
-    $('#passcode').val('').focus();
-});
-
-// Handle passcode form submission
-$('#passcodeForm').submit(function(e) {
-    e.preventDefault();
-    
-    const passcode = $('#passcode').val().trim();
-    
-    if (!passcode) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Passcode Required',
-            text: 'Please enter your passcode',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000
-        });
-        return;
-    }
-
-    const btn = $('#verifyPasscodeBtn');
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
-
-    $.ajax({
-        url: API_ROUTES.verifyPasscode, 
-        type: 'POST',
-        data: { passcode: passcode },
-        success: function(response) {
-            if (response.success) {
-                $('#passcodeModal').modal('hide');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Verified!',
-                    text: response.message,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000
-                });
-                
-                // Redirect after brief delay
-                setTimeout(function() {
-                    window.location.href = response.redirect;
-                }, 500);
-            }
-        },
-        error: function(xhr) {
-            const errorMsg = xhr.responseJSON?.message || 'Verification failed';
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Passcode',
-                text: errorMsg,
-                confirmButtonColor: '#dc3545'
-            });
-            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
-            $('#passcode').val('').focus();
-        }
+    $('#editBtn').on('click', function() {
+        pendingAction = 'edit';
+        $('#passcodeModalTitle').text('Verify Passcode');
+        $('#passcodeModalMessage').html('<i class="fas fa-info-circle"></i> Please enter your passcode to access edit mode');
+        $('#passcodeModal').modal('show');
+        $('#passcode').val('').focus();
     });
-});
-
-// Clear passcode when modal is hidden
-$('#passcodeModal').on('hidden.bs.modal', function() {
-    $('#passcode').val('');
-    $('#verifyPasscodeBtn').prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
-});
 
     $('#submitFinalGradeBtn').click(function() {
         if (finalGradesSubmitted) {
@@ -680,7 +584,6 @@ $('#passcodeModal').on('hidden.bs.modal', function() {
             return;
         }
 
-        // Collect all student grades
         const grades = [];
         $('#finalGradeTableBody tr:not(.gender-separator)').each(function() {
             const $row = $(this);
@@ -706,30 +609,93 @@ $('#passcodeModal').on('hidden.bs.modal', function() {
             return;
         }
 
-        Swal.fire({
-            title: 'Submit Final Grades?',
-            html: `You are about to submit final grades for <strong>${grades.length}</strong> student(s).<br><br>This action cannot be undone.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#007bff',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-check"></i> Yes, Submit',
-            cancelButtonText: '<i class="fas fa-times"></i> Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                submitFinalGrades(grades);
+        window.pendingGrades = grades;
+        pendingAction = 'submit';
+        $('#passcodeModalTitle').text('Verify Passcode');
+        $('#passcodeModalMessage').html(`<i class="fas fa-info-circle text-secondary"></i> You are about to submit final grades for <strong>${grades.length}</strong> student(s).`);
+        $('#passcodeModal').modal('show');
+        $('#passcode').val('').focus();
+    });
+
+    $('#passcodeForm').submit(function(e) {
+        e.preventDefault();
+        
+        const passcode = $('#passcode').val().trim();
+        
+        if (!passcode) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Passcode Required',
+                text: 'Please enter your passcode',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+
+        const btn = $('#verifyPasscodeBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+
+        $.ajax({
+            url: API_ROUTES.verifyPasscode, 
+            type: 'POST',
+            data: { passcode: passcode },
+            success: function(response) {
+                if (response.success) {
+                    $('#passcodeModal').modal('hide');
+                    
+                    if (pendingAction === 'edit') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Verified!',
+                            text: response.message,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                        
+                        setTimeout(function() {
+                            window.location.href = response.redirect;
+                        }, 500);
+                    } else if (pendingAction === 'submit') {
+                        submitFinalGrades(window.pendingGrades);
+                    }
+                    
+                    pendingAction = null;
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Verification failed';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Passcode',
+                    text: errorMsg,
+                    confirmButtonColor: '#dc3545'
+                });
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
+                $('#passcode').val('').focus();
             }
         });
+    });
+
+    $('#passcodeModal').on('hidden.bs.modal', function() {
+        $('#passcode').val('');
+        $('#verifyPasscodeBtn').prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
+        pendingAction = null;
     });
 
     function submitFinalGrades(grades) {
         const btn = $('#submitFinalGradeBtn');
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Submitting...');
+        
         $.ajax({
             url: API_ROUTES.submitFinalGrades,
             type: 'POST',
             data: {
-            grades: grades,
+                grades: grades,
                 semester_id: ACTIVE_SEMESTER_ID,
                 section_id: currentSectionId
             },
@@ -765,86 +731,82 @@ $('#passcodeModal').on('hidden.bs.modal', function() {
         });
     }
 
-$('#exportBtn').click(function () {
-    if (!currentQuarterId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Quarter Required',
-            text: 'Please select a quarter first'
-        });
-        return;
-    }
-    if (!currentSectionId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Section Required',
-            text: 'Please select a section first'
-        });
-        return;
-    }
-    if (currentViewType === 'final') {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Export Not Available',
-            text: 'Export is only available for quarter view'
-        });
-        return;
-    }
-    
-    // Update modal to show section info
-    const sectionName = $('#sectionFilter option:selected').text();
-    $('#exportQuarterName').html(`${$('#exportQuarterName').text()}<br><strong>Section:</strong> ${sectionName}`);
-    
-    $('#exportModal').modal('show');
-});
+    $('#exportBtn').click(function () {
+        if (!currentQuarterId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Quarter Required',
+                text: 'Please select a quarter first'
+            });
+            return;
+        }
+        if (!currentSectionId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section first'
+            });
+            return;
+        }
+        if (currentViewType === 'final') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Export Not Available',
+                text: 'Export is only available for quarter view'
+            });
+            return;
+        }
+        
+        const sectionName = $('#sectionFilter option:selected').text();
+        $('#exportQuarterName').html(`${$('#exportQuarterName').text()}<br><strong>Section:</strong> ${sectionName}`);
+        
+        $('#exportModal').modal('show');
+    });
 
-$('#exportForm').submit(function (e) {
-    e.preventDefault();
+    $('#exportForm').submit(function (e) {
+        e.preventDefault();
 
-    const btn = $('#exportForm button[type="submit"]');
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
+        const btn = $('#exportForm button[type="submit"]');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
 
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = API_ROUTES.exportGradebook;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = API_ROUTES.exportGradebook;
 
-    // CSRF Token
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = '_token';
-    csrfInput.value = $('meta[name="csrf-token"]').attr('content');
-    form.appendChild(csrfInput);
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = $('meta[name="csrf-token"]').attr('content');
+        form.appendChild(csrfInput);
 
-    // Quarter ID
-    const quarterInput = document.createElement('input');
-    quarterInput.type = 'hidden';
-    quarterInput.name = 'quarter_id';
-    quarterInput.value = currentQuarterId;
-    form.appendChild(quarterInput);
+        const quarterInput = document.createElement('input');
+        quarterInput.type = 'hidden';
+        quarterInput.name = 'quarter_id';
+        quarterInput.value = currentQuarterId;
+        form.appendChild(quarterInput);
 
-    // Section ID - ADDED
-    const sectionInput = document.createElement('input');
-    sectionInput.type = 'hidden';
-    sectionInput.name = 'section_id';
-    sectionInput.value = currentSectionId;
-    form.appendChild(sectionInput);
+        const sectionInput = document.createElement('input');
+        sectionInput.type = 'hidden';
+        sectionInput.name = 'section_id';
+        sectionInput.value = currentSectionId;
+        form.appendChild(sectionInput);
 
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
 
-    setTimeout(function () {
-        btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
-        $('#exportModal').modal('hide');
-        Swal.fire({
-            icon: 'success',
-            title: 'Export Started',
-            text: 'Your download should begin shortly',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000
-        });
-    }, 1000);
-});
+        setTimeout(function () {
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
+            $('#exportModal').modal('hide');
+            Swal.fire({
+                icon: 'success',
+                title: 'Export Started',
+                text: 'Your download should begin shortly',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }, 1000);
+    });
 });
