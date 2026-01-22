@@ -28,6 +28,19 @@
         50% { transform: scale(1.05); }
     }
     
+    #violationBadge {
+        font-size: 13px;
+        padding: 8px;
+        border-radius: 4px;
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+    }
+    
+    #violationBadge .badge-danger {
+        background-color: #dc3545 !important;
+        animation: pulse 1s infinite;
+    }
+    
     /* Question Navigation Sidebar */
     .question-nav-sidebar {
         position: sticky;
@@ -232,7 +245,7 @@
 
     /* Multiple Answer Checkboxes */
     .option-card[data-type="checkbox"] .option-letter {
-        border-radius: 4px; /* Square for checkboxes */
+        border-radius: 4px;
     }
 
     .option-card[data-type="checkbox"].selected .option-letter {
@@ -281,7 +294,7 @@
                             <i class="fas fa-clipboard-list"></i> {{ $quiz->title }}
                         </h4>
                         <small class="text-white d-block d-md-none">
-                            <i class="fas fa-info-circle"></i> Tap on an option card to select
+                            <i class="fas fa-info-circle"></i> Stay on this tab during the quiz
                         </small>
                     </div>
                     <div>
@@ -309,7 +322,6 @@
                     <p class="lead font-weight-normal mb-4">{{ $question['question_text'] }}</p>
 
                     @if($question['question_type'] === 'multiple_choice')
-                        <!-- Multiple Choice Options as Cards -->
                         <div class="options-container">
                             @foreach($question['options'] as $optIndex => $option)
                             <div class="card option-card" data-option-id="{{ $option->id }}" data-question-index="{{ $index }}">
@@ -329,7 +341,6 @@
                         </div>
 
                     @elseif($question['question_type'] === 'true_false')
-                        <!-- True/False Options as Cards -->
                         <div class="options-container">
                             @foreach($question['options'] as $optIndex => $option)
                             <div class="card option-card" data-option-id="{{ $option->id }}" data-question-index="{{ $index }}">
@@ -349,42 +360,41 @@
                             </div>
                             @endforeach
                         </div>
-                @elseif($question['question_type'] === 'multiple_answer')
-                    <!-- Multiple Answer (Checkboxes) -->
-                    <div class="options-container">
-                        @foreach($question['options'] as $optIndex => $option)
-                        <div class="card option-card" data-option-id="{{ $option->id }}" data-question-index="{{ $index }}" data-type="checkbox">
-                            <div class="card-body">
-                                <div class="option-letter">{{ chr(65 + $optIndex) }}</div>
-                                <div class="option-text">{{ $option->option_text }}</div>
-                                <input type="checkbox" 
-                                    id="q{{ $index }}_opt{{ $optIndex }}" 
-                                    name="question_{{ $question['id'] }}[]" 
-                                    class="option-checkbox question-answer" 
-                                    value="{{ $option->id }}"
-                                    data-question-id="{{ $question['id'] }}"
-                                    data-question-index="{{ $index }}">
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                    <small class="form-text text-muted mt-2">
-                        <i class="fas fa-info-circle"></i> Select all correct answers
-                    </small>
 
-                @elseif($question['question_type'] === 'short_answer')
-                    <!-- Short Answer -->
-                    <div class="form-group">
-                        <input type="text" 
-                            class="form-control form-control-lg short-answer-input question-answer" 
-                            id="short_{{ $index }}"
-                            placeholder="Type your answer here..."
-                            data-question-id="{{ $question['id'] }}"
-                            data-question-index="{{ $index }}"
-                            maxlength="500">
-                    </div>
+                    @elseif($question['question_type'] === 'multiple_answer')
+                        <div class="options-container">
+                            @foreach($question['options'] as $optIndex => $option)
+                            <div class="card option-card" data-option-id="{{ $option->id }}" data-question-index="{{ $index }}" data-type="checkbox">
+                                <div class="card-body">
+                                    <div class="option-letter">{{ chr(65 + $optIndex) }}</div>
+                                    <div class="option-text">{{ $option->option_text }}</div>
+                                    <input type="checkbox" 
+                                        id="q{{ $index }}_opt{{ $optIndex }}" 
+                                        name="question_{{ $question['id'] }}[]" 
+                                        class="option-checkbox question-answer" 
+                                        value="{{ $option->id }}"
+                                        data-question-id="{{ $question['id'] }}"
+                                        data-question-index="{{ $index }}">
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        <small class="form-text text-muted mt-2">
+                            <i class="fas fa-info-circle"></i> Select all correct answers
+                        </small>
+
+                    @elseif($question['question_type'] === 'short_answer')
+                        <div class="form-group">
+                            <input type="text" 
+                                class="form-control form-control-lg short-answer-input question-answer" 
+                                id="short_{{ $index }}"
+                                placeholder="Type your answer here..."
+                                data-question-id="{{ $question['id'] }}"
+                                data-question-index="{{ $index }}"
+                                maxlength="500">
+                        </div>
+
                     @elseif($question['question_type'] === 'essay')
-                        <!-- Essay Answer -->
                         <div class="form-group">
                             <textarea class="form-control essay-textarea question-answer" 
                                       id="essay_{{ $index }}"
@@ -546,24 +556,16 @@
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
 <script>
-    // CSRF Token
-
-    // Quiz Configuration
     const QUIZ_ID = {{ $quiz->id }};
     const LESSON_ID = {{ $lesson->id }};
     const ATTEMPT_ID = {{ $attemptId }};
     const TIME_LIMIT = {{ $quiz->time_limit ?? 0 }};
     const PASSING_SCORE = {{ $quiz->passing_score ?? 75 }};
-    
-    // Questions Data
     const QUESTIONS = @json($questions);
-    
-    // Resume Data
     const IS_RESUMING = {{ $isResuming ? 'true' : 'false' }};
     const ELAPSED_SECONDS = {{ $elapsedSeconds ?? 0 }};
     const SAVED_ANSWERS = {{ $isResuming ? 'true' : 'false' }};
 
-    // API Routes
     const API_ROUTES = {
         submitQuiz: "{{ route('student.class.quiz.submit', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id]) }}",
         backToQuiz: "{{ route('student.class.quiz.view', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id]) }}",
@@ -571,7 +573,6 @@
         saveProgress: "{{ route('student.class.quiz.save-progress', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id]) }}"
     };
 
-    // Debug log
     console.log('Quiz initialized with:', {
         quizId: QUIZ_ID,
         attemptId: ATTEMPT_ID,

@@ -138,11 +138,6 @@
             }
         }
 
-        .badge-info {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
         .gender-separator .jsgrid-cell {
             background-color: #6c757d !important;
             color: #fff !important;
@@ -329,43 +324,43 @@
             </div>
         </div>
     </div>
-<!-- Enable Column Modal -->
-<div class="modal fade" id="enableColumnModal" tabindex="-1">
+
+<div class="modal fade" id="columnModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white">
-                    <i class="fas fa-toggle-on"></i> Enable Column: <span id="enableColumnName"></span>
+                <h5 class="modal-title text-white" id="columnModalTitle">
+                    <i class="fas fa-edit"></i> Column Settings
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
-            <form id="enableColumnForm">
-                <input type="hidden" id="enableColumnId">
+            <form id="columnForm">
+                <input type="hidden" id="columnId">
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Maximum Points <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="enableMaxPoints" required min="1" step="1">
+                    <div class="alert alert-primary">
+                        <i class="fas fa-white-circle"></i> Column: <strong id="columnName"></strong>
                     </div>
 
                     <div class="form-group">
-                        <label>Grade Source <span class="text-danger">*</span></label>
-                        <select class="form-control" id="enableGradeSource" required>
-                            <option value="">Select Grade Source</option>
-                            <option value="manual">Manual Entry (No automatic grades)</option>
-                            <option value="online">Online Quiz Grades</option>
-                            <option value="import">Import from File</option>
+                        <label>Maximum Points <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="maxPoints" required min="1" step="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Grade Type <span class="text-danger">*</span></label>
+                        <select class="form-control" id="gradeType" required>
+                            <option value="">Select Grade Type</option>
+                            <option value="face-to-face">Face-to-Face Grade</option>
+                            <option value="online">Online Grade</option>
                         </select>
-                        <small class="form-text text-muted">
-                            Choose how grades will be populated for this column
-                        </small>
                     </div>
 
                     <!-- Online Quiz Option -->
-                    <div class="form-group" id="enableOnlineQuizGroup" style="display: none;">
+                    <div class="form-group" id="onlineQuizGroup" style="display: none;">
                         <label>Select Online Quiz <span class="text-danger">*</span></label>
-                        <select class="form-control" id="enableQuizId">
+                        <select class="form-control" id="quizId">
                             <option value="">Select Quiz</option>
                         </select>
                         <small class="form-text text-muted">
@@ -373,15 +368,14 @@
                         </small>
                     </div>
 
-                    <!-- Import File Option -->
-                    <div id="enableImportGroup" style="display: none;">
-
+                    <!-- Face-to-Face Import File Option -->
+                    <div id="importFileGroup" style="display: none;">
                         <div class="form-group">
-                            <label>Excel File <span class="text-danger">*</span></label>
+                            <label>Import Excel File <small class="text-muted">(Optional)</small></label>
                             <div class="custom-file">
-                                <input type="file" class="custom-file-input" id="enableImportFile" 
+                                <input type="file" class="custom-file-input" id="importFile" 
                                        accept=".xlsx,.xls">
-                                <label class="custom-file-label" for="enableImportFile">Choose file...</label>
+                                <label class="custom-file-label" for="importFile">Choose file (optional)...</label>
                             </div>
                             <small class="form-text text-muted">
                                 Maximum file size: 5MB. Accepted formats: .xlsx, .xls
@@ -393,8 +387,8 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check"></i> Enable Column
+                    <button type="submit" class="btn btn-primary" id="columnModalBtn">
+                        <i class="fas fa-save"></i> Save
                     </button>
                 </div>
             </form>
@@ -402,44 +396,6 @@
     </div>
 </div>
 
-    <!-- Edit Column Modal -->
-    <div class="modal fade" id="editColumnModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-dark">
-                    <h5 class="modal-title text-white"><i class="fas fa-edit"></i> Edit Column</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <form id="editColumnForm">
-                    <input type="hidden" id="editColumnId">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Column Name</label>
-                            <input type="text" class="form-control" id="editColumnName" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Maximum Points <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="editMaxPoints" required min="1" step="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Link to Online Quiz (Optional)</label>
-                            <select class="form-control" id="editQuizId">
-                                <option value="">Manual Entry</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-dark">
-                            <i class="fas fa-save"></i> Update
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">

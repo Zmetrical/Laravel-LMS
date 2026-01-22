@@ -398,34 +398,67 @@
         </div>
     </div>
 
-    <div class="modal fade" id="exportModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary">
-                    <h5 class="modal-title text-white">
-                        <i class="fas fa-file-excel"></i> Export Gradebook
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-file-excel"></i> Export Gradebook
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="exportInitialContent">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-file-excel fa-3x text-primary"></i>
+                    </div>
+                    <p class="text-center mb-3">
+                        <strong>Class:</strong> {{ $class->class_name }}
+                    </p>
+                    <p class="text-center mb-3">
+                        <strong>Section:</strong> <span id="exportSectionName"></span>
+                    </p>
                 </div>
-                <form id="exportForm">
-                    <div class="modal-body">
-                        <p><strong>Class:</strong> {{ $class->class_name }}</p>
-                        <p class="mb-0"><strong>Quarter:</strong> <span id="exportQuarterName"></span></p>
+
+                <div id="exportProgressContent" style="display: none;">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-spinner fa-spin fa-3x text-secondary"></i>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-download"></i> Download Excel
-                        </button>
+                    <h6 class="text-center mb-3">Generating Excel File...</h6>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                             role="progressbar" 
+                             id="exportProgressBar"
+                             style="width: 0%">
+                            <span id="exportProgressText">0%</span>
+                        </div>
                     </div>
-                </form>
+                    <p class="text-center text-muted mt-3 mb-0">
+                        <small>Please wait while we prepare your file...</small>
+                    </p>
+                </div>
+
+                <div id="exportCompleteContent" style="display: none;">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-check-circle fa-3x text-primary"></i>
+                    </div>
+                    <h6 class="text-center mb-3">Export Successful!</h6>
+                    <p class="text-center text-muted mb-0">
+                        Your download should begin shortly.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" id="exportDownloadBtn">
+                    <i class="fas fa-download"></i> Download Excel
+                </button>
             </div>
         </div>
     </div>
+</div>
 
     <div class="modal fade" id="passcodeModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog">

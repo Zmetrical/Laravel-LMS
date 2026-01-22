@@ -9,6 +9,8 @@ $(document).ready(function() {
     let isSubmitting = false;
     let lastSavedAnswers = {};
     let pendingSave = false;
+    let tabViolationCount = 0;
+    const MAX_VIOLATIONS = 3;
 
     const Toast = Swal.mixin({
         toast: true,
@@ -28,6 +30,7 @@ $(document).ready(function() {
     startHeartbeat();
     startAutoSave();
     preventBrowserManipulation();
+    initTabSwitchDetection();
     
     // Show resume message if resuming
     if (typeof IS_RESUMING !== 'undefined' && IS_RESUMING) {
@@ -35,6 +38,91 @@ $(document).ready(function() {
             icon: 'info',
             title: 'Quiz resumed. Your previous answers have been restored.',
             timer: 4000
+        });
+    }
+
+    // Tab Switch Detection
+    function initTabSwitchDetection() {
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Tab switched away or minimized
+                handleTabSwitch();
+            }
+        });
+
+        // Also detect window blur (clicking outside browser)
+        window.addEventListener('blur', function() {
+            // Only count if page is visible but focus lost
+            if (!document.hidden) {
+                handleTabSwitch();
+            }
+        });
+    }
+
+    function handleTabSwitch() {
+        // Don't trigger if already submitting
+        if (isSubmitting) return;
+
+        tabViolationCount++;
+        
+        console.log('Tab switch detected. Violation count:', tabViolationCount);
+
+        // Update violation display
+        updateViolationDisplay();
+
+        if (tabViolationCount === 1) {
+            showViolationWarning(1);
+        } else if (tabViolationCount === 2) {
+            showViolationWarning(2);
+        } else if (tabViolationCount >= MAX_VIOLATIONS) {
+            showViolationWarning(3);
+            // Auto-submit after showing warning
+            setTimeout(() => {
+                submitQuiz(false, true); // true = violation submit
+            }, 3000);
+        }
+    }
+
+    function updateViolationDisplay() {
+        const violationHtml = `
+            <span class="badge badge-${tabViolationCount >= 2 ? 'danger' : 'warning'}">
+                <i class="fas fa-exclamation-triangle"></i> 
+                Violations: ${tabViolationCount}/${MAX_VIOLATIONS}
+            </span>
+        `;
+        
+        if ($('#violationBadge').length === 0) {
+            $('.quiz-timer .card-body').append(`<div id="violationBadge" class="mt-2">${violationHtml}</div>`);
+        } else {
+            $('#violationBadge').html(violationHtml);
+        }
+    }
+
+    function showViolationWarning(level) {
+        let title, text, icon;
+
+        if (level === 1) {
+            title = 'Warning: Tab Switch Detected';
+            text = 'Please stay on this tab during the quiz. You have 2 more warnings before your quiz is auto-submitted.';
+            icon = 'warning';
+        } else if (level === 2) {
+            title = 'Warning: Tab Switch Detected!';
+            text = 'This is your last warning. One more tab switch will result in automatic submission of your quiz.';
+            icon = 'error';
+        } else {
+            title = 'Quiz Auto-Submitted';
+            text = 'You have exceeded the maximum number of tab switches. Your quiz is being submitted automatically.';
+            icon = 'error';
+        }
+
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: icon,
+            confirmButtonColor: level === 3 ? '#dc3545' : '#007bff',
+            confirmButtonText: 'I Understand',
+            allowOutsideClick: false,
+            allowEscapeKey: false
         });
     }
 
@@ -102,7 +190,6 @@ $(document).ready(function() {
         navigateToQuestion(index - 1);
     });
 
-    // Track Answers with debounce for essays
     // Track Answers with debounce for text inputs
     let textDebounce = null;
     $('.question-answer').on('change input', function() {
@@ -140,7 +227,7 @@ $(document).ready(function() {
             });
             answer = {
                 question_id: questionId,
-                option_ids: checkedOptions // Array of option IDs
+                option_ids: checkedOptions
             };
             answers[questionId] = answer;
             updateNavigationButton(questionIndex);
@@ -184,7 +271,6 @@ $(document).ready(function() {
     // Warn before leaving page
     window.addEventListener('beforeunload', function(e) {
         if (!isSubmitting) {
-            // Try to save before leaving (sync request)
             if (Object.keys(answers).length > 0) {
                 saveProgressSync();
             }
@@ -202,22 +288,19 @@ $(document).ready(function() {
             history.pushState(null, null, location.href);
         });
 
-        // Detect visibility changes
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
                 console.log('Tab hidden - saving progress...');
-                saveProgressToServer(true); // Force immediate save
+                saveProgressToServer(true);
             }
         });
 
-        // Handle page focus
         window.addEventListener('focus', function() {
             console.log('Tab focused - checking session...');
             checkSessionValidity();
         });
     }
 
-    // Check if session is still valid
     function checkSessionValidity() {
         $.ajax({
             url: API_ROUTES.heartbeat,
@@ -238,7 +321,6 @@ $(document).ready(function() {
         });
     }
 
-    // Heartbeat to keep session alive
     function startHeartbeat() {
         heartbeatInterval = setInterval(function() {
             $.ajax({
@@ -260,7 +342,7 @@ $(document).ready(function() {
                     }
                 }
             });
-        }, 120000); // 2 minutes
+        }, 120000);
     }
 
     function handleSessionExpired() {
@@ -295,20 +377,17 @@ $(document).ready(function() {
         });
     }
 
-    // Auto-save answers to server
     function startAutoSave() {
         autoSaveInterval = setInterval(function() {
             saveProgressToServer(false);
-        }, 30000); // Every 30 seconds
+        }, 30000);
     }
 
     function saveProgressToServer(forceImmediate = false) {
-        // Only save if there are changes
         if (JSON.stringify(answers) === JSON.stringify(lastSavedAnswers)) {
             return;
         }
 
-        // Prevent multiple simultaneous saves
         if (pendingSave && !forceImmediate) {
             return;
         }
@@ -346,7 +425,6 @@ $(document).ready(function() {
         });
     }
 
-    // Synchronous save for beforeunload (best effort)
     function saveProgressSync() {
         if (JSON.stringify(answers) === JSON.stringify(lastSavedAnswers)) {
             return;
@@ -357,7 +435,6 @@ $(document).ready(function() {
             answers: answers
         });
 
-        // Use sendBeacon for reliable page exit
         const blob = new Blob([data], { type: 'application/json' });
         const sent = navigator.sendBeacon(
             API_ROUTES.saveProgress + '?_token=' + CSRF_TOKEN,
@@ -365,7 +442,6 @@ $(document).ready(function() {
         );
 
         if (!sent) {
-            // Fallback to synchronous XHR (blocks page unload)
             const xhr = new XMLHttpRequest();
             xhr.open('POST', API_ROUTES.saveProgress, false);
             xhr.setRequestHeader('Content-Type', 'application/json');
@@ -381,9 +457,8 @@ $(document).ready(function() {
     function initializeTimer() {
         if (TIME_LIMIT === 0) return;
 
-        // Calculate time remaining from elapsed seconds (server-calculated)
-        const totalTime = TIME_LIMIT * 60; // Convert minutes to seconds
-        const elapsed = Math.floor(Math.abs(ELAPSED_SECONDS)); // Round and ensure positive
+        const totalTime = TIME_LIMIT * 60;
+        const elapsed = Math.floor(Math.abs(ELAPSED_SECONDS));
         timeRemaining = Math.max(0, totalTime - elapsed);
 
         console.log('Timer initialized:', {
@@ -394,7 +469,6 @@ $(document).ready(function() {
             remainingMinutes: Math.floor(timeRemaining / 60)
         });
 
-        // If time already expired
         if (timeRemaining <= 0) {
             Toast.fire({
                 icon: 'error',
@@ -539,8 +613,8 @@ $(document).ready(function() {
         }
     });
 
-    function submitQuiz(timeExpired = false) {
-        if (!timeExpired && Object.keys(answers).length === 0) {
+    function submitQuiz(timeExpired = false, violationSubmit = false) {
+        if (!timeExpired && !violationSubmit && Object.keys(answers).length === 0) {
             Toast.fire({
                 icon: 'warning',
                 title: 'Please answer at least one question'
@@ -548,12 +622,11 @@ $(document).ready(function() {
             return;
         }
 
-        // Save progress before submitting
         saveProgressToServer(true);
 
         const answersArray = Object.values(answers);
 
-        if (!timeExpired) {
+        if (!timeExpired && !violationSubmit) {
             Swal.fire({
                 title: 'Submit Quiz?',
                 text: "You cannot change your answers after submission.",
@@ -565,15 +638,15 @@ $(document).ready(function() {
                 cancelButtonText: 'Continue answering'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    performSubmit(answersArray, timeExpired);
+                    performSubmit(answersArray, timeExpired, violationSubmit);
                 }
             });
         } else {
-            performSubmit(answersArray, timeExpired);
+            performSubmit(answersArray, timeExpired, violationSubmit);
         }
     }
 
-    function performSubmit(answersArray, timeExpired) {
+    function performSubmit(answersArray, timeExpired, violationSubmit) {
         $('#reviewModal').modal('hide');
         
         isSubmitting = true;
@@ -582,17 +655,9 @@ $(document).ready(function() {
         const originalHtml = submitBtn.html();
         submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Submitting...');
 
-        if (timerInterval) {
-            clearInterval(timerInterval);
-        }
-        
-        if (heartbeatInterval) {
-            clearInterval(heartbeatInterval);
-        }
-
-        if (autoSaveInterval) {
-            clearInterval(autoSaveInterval);
-        }
+        if (timerInterval) clearInterval(timerInterval);
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
 
         $.ajax({
             url: API_ROUTES.submitQuiz,
@@ -601,12 +666,18 @@ $(document).ready(function() {
                 'X-CSRF-TOKEN': CSRF_TOKEN,
                 'Content-Type': 'application/json'
             },
-            data: JSON.stringify({ answers: answersArray }),
+            data: JSON.stringify({ 
+                answers: answersArray,
+                violation_submit: violationSubmit
+            }),
             success: function(response) {
                 if (response.success) {
                     if (!response.data.has_essay) {
                         const percentage = response.data.percentage;
                         const passed = percentage >= PASSING_SCORE;
+                        
+                        let violationNote = violationSubmit ? 
+                            '<p class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Auto-submitted due to tab switch violations</p>' : '';
                         
                         Swal.fire({
                             title: passed ? 'Congratulations!' : 'Quiz Completed',
@@ -619,6 +690,7 @@ $(document).ready(function() {
                                     <p class="mb-0">
                                         <strong class="text-${passed ? 'success' : 'danger'}">${passed ? 'PASSED' : 'FAILED'}</strong>
                                     </p>
+                                    ${violationNote}
                                 </div>
                             `,
                             icon: passed ? 'success' : 'info',
@@ -629,6 +701,9 @@ $(document).ready(function() {
                             window.location.href = API_ROUTES.backToQuiz;
                         });
                     } else {
+                        let violationNote = violationSubmit ? 
+                            '<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Auto-submitted due to tab switch violations</p>' : '';
+                        
                         Swal.fire({
                             title: 'Quiz Submitted!',
                             html: `
@@ -636,6 +711,7 @@ $(document).ready(function() {
                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                                     <p>Your answers have been submitted successfully.</p>
                                     <p class="text-muted">Some questions require manual grading. Your final score will be available once grading is complete.</p>
+                                    ${violationNote}
                                 </div>
                             `,
                             icon: 'success',
@@ -689,7 +765,6 @@ $(document).ready(function() {
                 } else if (question.question_type === 'short_answer') {
                     $(`#short_${index}`).val(savedAnswer.answer_text || '');
                 } else if (question.question_type === 'multiple_answer') {
-                    // Multiple checkboxes
                     if (savedAnswer.option_ids && Array.isArray(savedAnswer.option_ids)) {
                         savedAnswer.option_ids.forEach(optionId => {
                             const checkbox = $(`input[name="question_${question.id}[]"][value="${optionId}"]`);
@@ -698,7 +773,6 @@ $(document).ready(function() {
                         });
                     }
                 } else if (savedAnswer.option_id) {
-                    // Single radio
                     const radio = $(`input[name="question_${question.id}"][value="${savedAnswer.option_id}"]`);
                     radio.prop('checked', true);
                     radio.closest('.option-card').addClass('selected');

@@ -731,37 +731,117 @@ $(document).ready(function () {
         });
     }
 
-    $('#exportBtn').click(function () {
-        if (!currentQuarterId) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Quarter Required',
-                text: 'Please select a quarter first'
-            });
-            return;
-        }
-        if (!currentSectionId) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Section Required',
-                text: 'Please select a section first'
-            });
-            return;
-        }
-        if (currentViewType === 'final') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Export Not Available',
-                text: 'Export is only available for quarter view'
-            });
-            return;
-        }
-        
-        const sectionName = $('#sectionFilter option:selected').text();
-        $('#exportQuarterName').html(`${$('#exportQuarterName').text()}<br><strong>Section:</strong> ${sectionName}`);
-        
-        $('#exportModal').modal('show');
-    });
+// Replace the exportBtn click handler and exportForm submit handler in view_gradebook.js
+
+$('#exportBtn').click(function () {
+    if (!currentQuarterId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Quarter Required',
+            text: 'Please select a quarter first'
+        });
+        return;
+    }
+    if (!currentSectionId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Section Required',
+            text: 'Please select a section first'
+        });
+        return;
+    }
+    if (currentViewType === 'final') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Export Not Available',
+            text: 'Export is only available for quarter view'
+        });
+        return;
+    }
+    
+    // Reset modal to initial state
+    $('#exportInitialContent').show();
+    $('#exportProgressContent').hide();
+    $('#exportCompleteContent').hide();
+    $('#exportDownloadBtn').prop('disabled', false).show();
+    $('#exportProgressBar').css('width', '0%');
+    $('#exportProgressText').text('0%');
+    
+    // Set section name
+    const sectionName = $('#sectionFilter option:selected').text();
+    $('#exportSectionName').text(sectionName);
+    
+    $('#exportModal').modal('show');
+});
+
+$('#exportDownloadBtn').click(function () {
+    const btn = $(this);
+    btn.prop('disabled', true);
+    
+    // Show spinner
+    $('#exportInitialContent').hide();
+    $('#exportProgressContent').show();
+    $('#exportProgressContent').html(`
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+            <h6 class="mb-2">Generating Excel File...</h6>
+            <p class="text-muted mb-0">
+                <small>This may take a few moments. Your download will begin shortly.</small>
+            </p>
+        </div>
+    `);
+    
+    // Create and submit form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = API_ROUTES.exportGradebook;
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = $('meta[name="csrf-token"]').attr('content');
+    form.appendChild(csrfInput);
+
+    const quarterInput = document.createElement('input');
+    quarterInput.type = 'hidden';
+    quarterInput.name = 'quarter_id';
+    quarterInput.value = currentQuarterId;
+    form.appendChild(quarterInput);
+
+    const sectionInput = document.createElement('input');
+    sectionInput.type = 'hidden';
+    sectionInput.name = 'section_id';
+    sectionInput.value = currentSectionId;
+    form.appendChild(sectionInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    // After a reasonable delay, show completion message
+    // (This assumes the file generation takes ~3-5 seconds)
+    setTimeout(function () {
+        $('#exportProgressContent').hide();
+        $('#exportCompleteContent').show();
+        $('#exportCompleteContent').html(`
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-primary mb-3"></i>
+                <h6 class="mb-2">Export Successful!</h6>
+                <p class="text-muted mb-3">
+                    <small>Your download should begin shortly.</small>
+                </p>
+            </div>
+        `);
+    }, 4000); // Adjust based on your typical export time
+});
+
+// Reset modal when closed
+$('#exportModal').on('hidden.bs.modal', function() {
+    $('#exportInitialContent').show();
+    $('#exportProgressContent').hide();
+    $('#exportCompleteContent').hide();
+    $('#exportDownloadBtn').prop('disabled', false);
+});
 
     $('#exportForm').submit(function (e) {
         e.preventDefault();
