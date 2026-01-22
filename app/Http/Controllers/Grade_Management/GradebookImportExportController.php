@@ -15,433 +15,603 @@ class GradebookImportExportController extends MainController
     const MAX_PT_COLUMNS = 10;
     const MAX_QA_COLUMNS = 1;
 
-    /**
-     * Export gradebook to Excel using template
-     */
-    public function exportGradebook(Request $request, $classId)
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
-            
-            $hasAccess = DB::table('teacher_class_matrix')
-                ->where('teacher_id', $teacher->id)
-                ->where('class_id', $classId)
-                ->exists();
+/**
+ * Export gradebook with embedded validation metadata
+ */
+public function exportGradebook(Request $request, $classId)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
 
-            if (!$hasAccess) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $validated = $request->validate([
-                'section_id' => 'required|exists:sections,id'
-            ]);
-
-            $sectionId = $validated['section_id'];
-            
-            $class = DB::table('classes')->where('id', $classId)->first();
-            $section = DB::table('sections')->where('id', $sectionId)->first();
-            
-            if (!$section) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Section not found'
-                ], 404);
-            }
-            
-            $activeSemester = DB::table('semesters')->where('status', 'active')->first();
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'No active semester found'
-                ], 404);
-            }
-            
-            $quarters = DB::table('quarters')
-                ->where('semester_id', $activeSemester->id)
-                ->orderBy('order_number')
-                ->get();
-                
-            if ($quarters->count() < 2) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Both quarters must be configured for the active semester'
-                ], 404);
-            }
-            
-            $q1 = $quarters->where('order_number', 1)->first();
-            $q2 = $quarters->where('order_number', 2)->first();
-            
-            if (!$q1 || !$q2) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Q1 and Q2 quarters not found'
-                ], 404);
-            }
-            
-            $templatePath = storage_path('app/templates/SHS-E-Class-Record.xlsx');
-            
-            if (!file_exists($templatePath)) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Template file not found. Please contact administrator.'
-                ], 404);
-            }
-
-            $spreadsheet = IOFactory::load($templatePath);
-            
-            $this->populateInputDataSheet($spreadsheet, $class, $section, $activeSemester, $teacher, $q1, $sectionId);
-            $this->populateGradeSheet($spreadsheet, '1ST', $classId, $class, $q1->id, $sectionId);
-            $this->populateGradeSheet($spreadsheet, '2ND', $classId, $class, $q2->id, $sectionId);
-            
-            $filename = $this->generateFilename($class, $section, $activeSemester);
-            $exportPath = storage_path('app/exports/' . $filename);
-            
-            if (!file_exists(storage_path('app/exports'))) {
-                mkdir(storage_path('app/exports'), 0755, true);
-            }
-            
-            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-            $writer->save($exportPath);
-            
-            return response()->download($exportPath, $filename)->deleteFileAfterSend(true);
-
-        } catch (Exception $e) {
-            \Log::error('Failed to export gradebook', [
-                'class_id' => $classId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to export gradebook: ' . $e->getMessage()
-            ], 500);
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
+
+        $validated = $request->validate([
+            'section_id' => 'required|exists:sections,id'
+        ]);
+
+        $sectionId = $validated['section_id'];
+        
+        $class = DB::table('classes')->where('id', $classId)->first();
+        $section = DB::table('sections')->where('id', $sectionId)->first();
+        
+        if (!$section) {
+            return response()->json(['success' => false, 'message' => 'Section not found'], 404);
+        }
+        
+        $activeSemester = DB::table('semesters')->where('status', 'active')->first();
+        if (!$activeSemester) {
+            return response()->json(['success' => false, 'message' => 'No active semester found'], 404);
+        }
+        
+        $quarters = DB::table('quarters')
+            ->where('semester_id', $activeSemester->id)
+            ->orderBy('order_number')
+            ->get();
+                
+        if ($quarters->count() < 2) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Both quarters must be configured for the active semester'
+            ], 404);
+        }
+        
+        $q1 = $quarters->where('order_number', 1)->first();
+        $q2 = $quarters->where('order_number', 2)->first();
+        
+        if (!$q1 || !$q2) {
+            return response()->json(['success' => false, 'message' => 'Q1 and Q2 quarters not found'], 404);
+        }
+        
+        $templatePath = storage_path('app/templates/SHS-E-Class-Record.xlsx');
+        
+        if (!file_exists($templatePath)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Template file not found. Please contact administrator.'
+            ], 404);
+        }
+
+        $spreadsheet = IOFactory::load($templatePath);
+        
+        // Populate sheets with data
+        $this->populateInputDataSheet($spreadsheet, $class, $section, $activeSemester, $teacher, $q1, $sectionId);
+        $this->populateGradeSheet($spreadsheet, '1ST', $classId, $class, $q1->id, $sectionId);
+        $this->populateGradeSheet($spreadsheet, '2ND', $classId, $class, $q2->id, $sectionId);
+        
+        // **NEW: Embed validation metadata**
+        $this->embedValidationMetadata($spreadsheet, $class, $section, $activeSemester);
+        
+        $filename = $this->generateFilename($class, $section, $activeSemester);
+        $exportPath = storage_path('app/exports/' . $filename);
+        
+        if (!file_exists(storage_path('app/exports'))) {
+            mkdir(storage_path('app/exports'), 0755, true);
+        }
+        
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save($exportPath);
+        
+        return response()->download($exportPath, $filename)->deleteFileAfterSend(true);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to export gradebook', [
+            'class_id' => $classId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to export gradebook: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Embed validation metadata into Excel
+ */
+private function embedValidationMetadata($spreadsheet, $class, $section, $semester)
+{
+    $sheet = $spreadsheet->getSheetByName('INPUT DATA');
+    
+    if (!$sheet) {
+        throw new Exception('INPUT DATA sheet not found');
     }
 
-    /**
-     * Import grades from Excel file
-     */
-    public function importGrades(Request $request, $classId)
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
-            
-            $hasAccess = DB::table('teacher_class_matrix')
-                ->where('teacher_id', $teacher->id)
-                ->where('class_id', $classId)
-                ->exists();
+    // Get school year
+    $schoolYear = DB::table('school_years')
+        ->where('id', $semester->school_year_id)
+        ->first();
 
-            if (!$hasAccess) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $validated = $request->validate([
-                'file' => 'required|file|mimes:xlsx,xls|max:5120',
-                'quarter_id' => 'required|exists:quarters,id',
-                'component_type' => 'required|in:WW,PT,QA',
-                'column_number' => 'required|integer|min:1',
-                'section_id' => 'required|exists:sections,id'
-            ]);
-
-            $file = $request->file('file');
-            $quarterId = $validated['quarter_id'];
-            $componentType = $validated['component_type'];
-            $columnNumber = $validated['column_number'];
-            $sectionId = $validated['section_id'];
-
-            // Validate column number
-            if ($componentType === 'WW' && $columnNumber > self::MAX_WW_COLUMNS) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid WW column number. Maximum is ' . self::MAX_WW_COLUMNS
-                ], 400);
-            }
-            
-            if ($componentType === 'PT' && $columnNumber > self::MAX_PT_COLUMNS) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid PT column number. Maximum is ' . self::MAX_PT_COLUMNS
-                ], 400);
-            }
-            
-            if ($componentType === 'QA' && $columnNumber > self::MAX_QA_COLUMNS) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid QA column number. Maximum is ' . self::MAX_QA_COLUMNS
-                ], 400);
-            }
-
-            $spreadsheet = IOFactory::load($file->getPathname());
-            
-            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
-            $sheetName = $quarter->order_number == 1 ? '1ST' : '2ND';
-            
-            try {
-                $sheet = $spreadsheet->getSheetByName($sheetName);
-            } catch (Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Sheet '{$sheetName}' not found in the uploaded file"
-                ], 400);
-            }
-
-            $class = DB::table('classes')->where('id', $classId)->first();
-            
-            $columnName = $componentType === 'QA' ? 'QA' : $componentType . $columnNumber;
-            
-            $gradebookColumn = DB::table('gradebook_columns')
-                ->where('class_code', $class->class_code)
-                ->where('quarter_id', $quarterId)
-                ->where('component_type', $componentType)
-                ->where('column_name', $columnName)
-                ->first();
-
-            if (!$gradebookColumn) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Column {$columnName} not found in gradebook"
-                ], 404);
-            }
-
-            $excelColumn = $this->getExcelColumnLetter($componentType, $columnNumber);
-            
-            $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
-            $studentMap = $students->keyBy('student_number');
-
-            DB::beginTransaction();
-
-            $imported = 0;
-            $skipped = 0;
-            $errors = [];
-
-            // Male students (rows 13-62)
-            for ($row = 13; $row <= 62; $row++) {
-                $studentNumber = $sheet->getCell('A' . $row)->getValue();
-                $score = $sheet->getCell($excelColumn . $row)->getValue();
-                
-                $result = $this->processImportRow(
-                    $studentNumber, 
-                    $score, 
-                    $studentMap, 
-                    $gradebookColumn, 
-                    $row
-                );
-                
-                if ($result['success']) {
-                    $imported++;
-                } else {
-                    $skipped++;
-                    if ($result['error']) {
-                        $errors[] = $result['error'];
-                    }
-                }
-            }
-
-            // Female students (rows 64-113)
-            for ($row = 64; $row <= 113; $row++) {
-                $studentNumber = $sheet->getCell('A' . $row)->getValue();
-                $score = $sheet->getCell($excelColumn . $row)->getValue();
-                
-                $result = $this->processImportRow(
-                    $studentNumber, 
-                    $score, 
-                    $studentMap, 
-                    $gradebookColumn, 
-                    $row
-                );
-                
-                if ($result['success']) {
-                    $imported++;
-                } else {
-                    $skipped++;
-                    if ($result['error']) {
-                        $errors[] = $result['error'];
-                    }
-                }
-            }
-
-            DB::commit();
-
-            $message = "Import completed: {$imported} scores imported";
-            if ($skipped > 0) {
-                $message .= ", {$skipped} skipped";
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'data' => [
-                    'imported' => $imported,
-                    'skipped' => $skipped,
-                    'errors' => $errors
-                ]
-            ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (Exception $e) {
-            DB::rollBack();
-            
-            \Log::error('Failed to import grades', [
-                'class_id' => $classId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to import grades: ' . $e->getMessage()
-            ], 500);
-        }
+    // Metadata values - just the 4 core identifiers
+    $classCode = $class->class_code;
+    $sectionId = strval($section->id);
+    $semesterCode = $semester->code;
+    $schoolYearCode = $schoolYear ? $schoolYear->code : '';
+    
+    // Write to hidden cells (rows 115-118)
+    $sheet->setCellValue('A120', 'MetaData');
+    $sheet->setCellValue('A121', $classCode);
+    $sheet->setCellValue('A122', $sectionId);
+    $sheet->setCellValue('A123', $semesterCode);
+    $sheet->setCellValue('A124', $schoolYearCode);
+    
+    // Hide metadata rows (115-118)
+    for ($row = 120; $row <= 125; $row++) {
+        $sheet->getRowDimension($row)->setVisible(false);
     }
+    
+    \Log::info('Embedded validation metadata', [
+        'class_code' => $classCode,
+        'section_id' => $sectionId,
+        'semester_code' => $semesterCode,
+        'school_year' => $schoolYearCode
+    ]);
+}
 
-    /**
-     * Import grades when enabling a column
-     */
-    public function importColumnGrades(Request $request, $classId, $columnId)
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
-            
-            $hasAccess = DB::table('teacher_class_matrix')
-                ->where('teacher_id', $teacher->id)
-                ->where('class_id', $classId)
-                ->exists();
-
-            if (!$hasAccess) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $validated = $request->validate([
-                'file' => 'required|file|mimes:xlsx,xls|max:5120',
-                'section_id' => 'required|exists:sections,id'
-            ]);
-
-            $file = $request->file('file');
-            $sectionId = $validated['section_id'];
-
-            $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
-            
-            if (!$column) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Column not found'
-                ], 404);
-            }
-
-            $quarter = DB::table('quarters')->where('id', $column->quarter_id)->first();
-            $sheetName = $quarter->order_number == 1 ? '1ST' : '2ND';
-
-            $spreadsheet = IOFactory::load($file->getPathname());
-            
-            try {
-                $sheet = $spreadsheet->getSheetByName($sheetName);
-            } catch (Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Sheet '{$sheetName}' not found in the uploaded file"
-                ], 400);
-            }
-
-            preg_match('/(\d+)$/', $column->column_name, $matches);
-            $columnNumber = isset($matches[1]) ? (int)$matches[1] : 1;
-
-            $excelColumn = $this->getExcelColumnLetter($column->component_type, $columnNumber);
-
-            $class = DB::table('classes')->where('id', $classId)->first();
-            $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
-            $studentMap = $students->keyBy('student_number');
-
-            DB::beginTransaction();
-
-            $imported = 0;
-            $skipped = 0;
-            $errors = [];
-
-            // Male students (rows 13-62)
-            for ($row = 13; $row <= 62; $row++) {
-                $studentNumber = $sheet->getCell('A' . $row)->getValue();
-                $score = $sheet->getCell($excelColumn . $row)->getValue();
-                
-                $result = $this->processImportRow(
-                    $studentNumber, 
-                    $score, 
-                    $studentMap, 
-                    $column, 
-                    $row
-                );
-                
-                if ($result['success']) {
-                    $imported++;
-                } else {
-                    $skipped++;
-                    if ($result['error']) {
-                        $errors[] = $result['error'];
-                    }
-                }
-            }
-
-            // Female students (rows 64-113)
-            for ($row = 64; $row <= 113; $row++) {
-                $studentNumber = $sheet->getCell('A' . $row)->getValue();
-                $score = $sheet->getCell($excelColumn . $row)->getValue();
-                
-                $result = $this->processImportRow(
-                    $studentNumber, 
-                    $score, 
-                    $studentMap, 
-                    $column, 
-                    $row
-                );
-                
-                if ($result['success']) {
-                    $imported++;
-                } else {
-                    $skipped++;
-                    if ($result['error']) {
-                        $errors[] = $result['error'];
-                    }
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'imported' => $imported,
-                    'skipped' => $skipped,
-                    'errors' => $errors
-                ]
-            ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (Exception $e) {
-            DB::rollBack();
-            
-            \Log::error('Failed to import column grades', [
-                'class_id' => $classId,
-                'column_id' => $columnId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to import grades: ' . $e->getMessage()
-            ], 500);
+/**
+ * Validate Excel file metadata before import
+ */
+private function validateExcelMetadata($spreadsheet, $classId, $sectionId)
+{
+    try {
+        $sheet = $spreadsheet->getSheetByName('INPUT DATA');
+        
+        if (!$sheet) {
+            return [
+                'valid' => false,
+                'message' => 'Invalid Excel file: INPUT DATA sheet not found'
+            ];
         }
+
+        // Extract metadata from hidden cells
+        $excelClassCode = $sheet->getCell('A121')->getValue();
+        $excelSectionId = $sheet->getCell('A122')->getValue();
+        $excelSemesterCode = $sheet->getCell('A123')->getValue();
+        $excelSchoolYear = $sheet->getCell('A124')->getValue();
+        
+        // Check if metadata exists
+        if (empty($excelClassCode) || empty($excelSectionId) || empty($excelSemesterCode) || empty($excelSchoolYear)) {
+            return [
+                'valid' => false,
+                'message' => 'This Excel file does not contain validation metadata. Please export a new file from the system.'
+            ];
+        }
+
+        // Get current context from database
+        $class = DB::table('classes')->where('id', $classId)->first();
+        $section = DB::table('sections')->where('id', $sectionId)->first();
+        $activeSemester = DB::table('semesters')->where('status', 'active')->first();
+        
+        if (!$class || !$section || !$activeSemester) {
+            return [
+                'valid' => false,
+                'message' => 'Unable to verify current class/section/semester'
+            ];
+        }
+
+        $currentSchoolYear = DB::table('school_years')
+            ->where('id', $activeSemester->school_year_id)
+            ->first();
+
+        // Validate class code match
+        if ($excelClassCode !== $class->class_code) {
+            return [
+                'valid' => false,
+                'message' => "Class mismatch: This file was exported for '{$excelClassCode}' but you're trying to import to '{$class->class_code}'"
+            ];
+        }
+
+        // Validate section ID match
+        if (strval($excelSectionId) !== strval($sectionId)) {
+            $excelSectionName = DB::table('sections')->where('id', $excelSectionId)->value('name') ?? 'Unknown';
+            
+            return [
+                'valid' => false,
+                'message' => "Section mismatch: This file was exported for section '{$excelSectionName}' but you selected '{$section->name}'"
+            ];
+        }
+
+        // Validate semester match
+        if ($excelSemesterCode !== $activeSemester->code) {
+            return [
+                'valid' => false,
+                'message' => "Semester mismatch: This file was exported for '{$excelSemesterCode}' but the active semester is '{$activeSemester->code}'"
+            ];
+        }
+
+        // Validate school year match
+        if ($currentSchoolYear && $excelSchoolYear !== $currentSchoolYear->code) {
+            return [
+                'valid' => false,
+                'message' => "School year mismatch: This file was exported for '{$excelSchoolYear}' but the current school year is '{$currentSchoolYear->code}'"
+            ];
+        }
+
+        // All validations passed
+        \Log::info('Excel metadata validation passed', [
+            'class_code' => $excelClassCode,
+            'section_id' => $excelSectionId,
+            'semester_code' => $excelSemesterCode,
+            'school_year' => $excelSchoolYear
+        ]);
+
+        return [
+            'valid' => true,
+            'message' => 'Validation successful',
+            'metadata' => [
+                'class_code' => $excelClassCode,
+                'section_id' => $excelSectionId,
+                'semester_code' => $excelSemesterCode,
+                'school_year' => $excelSchoolYear
+            ]
+        ];
+
+    } catch (Exception $e) {
+        \Log::error('Metadata validation error', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return [
+            'valid' => false,
+            'message' => 'Unable to validate file: ' . $e->getMessage()
+        ];
     }
+}
+
+/**
+ * Modified import grades method with validation
+ */
+public function importGrades(Request $request, $classId)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:5120',
+            'quarter_id' => 'required|exists:quarters,id',
+            'component_type' => 'required|in:WW,PT,QA',
+            'column_number' => 'required|integer|min:1',
+            'section_id' => 'required|exists:sections,id'
+        ]);
+
+        $file = $request->file('file');
+        $quarterId = $validated['quarter_id'];
+        $componentType = $validated['component_type'];
+        $columnNumber = $validated['column_number'];
+        $sectionId = $validated['section_id'];
+
+        // Validate column number
+        if ($componentType === 'WW' && $columnNumber > self::MAX_WW_COLUMNS) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid WW column number. Maximum is ' . self::MAX_WW_COLUMNS
+            ], 400);
+        }
+        
+        if ($componentType === 'PT' && $columnNumber > self::MAX_PT_COLUMNS) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid PT column number. Maximum is ' . self::MAX_PT_COLUMNS
+            ], 400);
+        }
+        
+        if ($componentType === 'QA' && $columnNumber > self::MAX_QA_COLUMNS) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid QA column number. Maximum is ' . self::MAX_QA_COLUMNS
+            ], 400);
+        }
+
+        $spreadsheet = IOFactory::load($file->getPathname());
+        
+        // **NEW: Validate metadata before proceeding**
+        $validationResult = $this->validateExcelMetadata($spreadsheet, $classId, $sectionId);
+        
+        if (!$validationResult['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => $validationResult['message']
+            ], 400);
+        }
+        
+        $quarter = DB::table('quarters')->where('id', $quarterId)->first();
+        $sheetName = $quarter->order_number == 1 ? '1ST' : '2ND';
+        
+        try {
+            $sheet = $spreadsheet->getSheetByName($sheetName);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Sheet '{$sheetName}' not found in the uploaded file"
+            ], 400);
+        }
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        
+        $columnName = $componentType === 'QA' ? 'QA' : $componentType . $columnNumber;
+        
+        $gradebookColumn = DB::table('gradebook_columns')
+            ->where('class_code', $class->class_code)
+            ->where('quarter_id', $quarterId)
+            ->where('component_type', $componentType)
+            ->where('column_name', $columnName)
+            ->first();
+
+        if (!$gradebookColumn) {
+            return response()->json([
+                'success' => false,
+                'message' => "Column {$columnName} not found in gradebook"
+            ], 404);
+        }
+
+        $excelColumn = $this->getExcelColumnLetter($componentType, $columnNumber);
+        
+        $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
+        $studentMap = $students->keyBy('student_number');
+
+        DB::beginTransaction();
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Male students (rows 13-62)
+        for ($row = 13; $row <= 62; $row++) {
+            $studentNumber = $sheet->getCell('A' . $row)->getValue();
+            $score = $sheet->getCell($excelColumn . $row)->getValue();
+            
+            $result = $this->processImportRow(
+                $studentNumber, 
+                $score, 
+                $studentMap, 
+                $gradebookColumn, 
+                $row
+            );
+            
+            if ($result['success']) {
+                $imported++;
+            } else {
+                $skipped++;
+                if ($result['error']) {
+                    $errors[] = $result['error'];
+                }
+            }
+        }
+
+        // Female students (rows 64-113)
+        for ($row = 64; $row <= 113; $row++) {
+            $studentNumber = $sheet->getCell('A' . $row)->getValue();
+            $score = $sheet->getCell($excelColumn . $row)->getValue();
+            
+            $result = $this->processImportRow(
+                $studentNumber, 
+                $score, 
+                $studentMap, 
+                $gradebookColumn, 
+                $row
+            );
+            
+            if ($result['success']) {
+                $imported++;
+            } else {
+                $skipped++;
+                if ($result['error']) {
+                    $errors[] = $result['error'];
+                }
+            }
+        }
+
+        DB::commit();
+
+        $message = "Import completed: {$imported} scores imported";
+        if ($skipped > 0) {
+            $message .= ", {$skipped} skipped";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => [
+                'imported' => $imported,
+                'skipped' => $skipped,
+                'errors' => $errors,
+                'file_metadata' => $validationResult['metadata']
+            ]
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (Exception $e) {
+        DB::rollBack();
+        
+        \Log::error('Failed to import grades', [
+            'class_id' => $classId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to import grades: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Modified importColumnGrades method with validation
+ */
+public function importColumnGrades(Request $request, $classId, $columnId)
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
+        
+        $hasAccess = DB::table('teacher_class_matrix')
+            ->where('teacher_id', $teacher->id)
+            ->where('class_id', $classId)
+            ->exists();
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:5120',
+            'section_id' => 'required|exists:sections,id'
+        ]);
+
+        $file = $request->file('file');
+        $sectionId = $validated['section_id'];
+
+        $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
+        
+        if (!$column) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Column not found'
+            ], 404);
+        }
+
+        $spreadsheet = IOFactory::load($file->getPathname());
+        
+        // **NEW: Validate metadata**
+        $validationResult = $this->validateExcelMetadata($spreadsheet, $classId, $sectionId);
+        
+        if (!$validationResult['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => $validationResult['message']
+            ], 400);
+        }
+
+        $quarter = DB::table('quarters')->where('id', $column->quarter_id)->first();
+        $sheetName = $quarter->order_number == 1 ? '1ST' : '2ND';
+
+        try {
+            $sheet = $spreadsheet->getSheetByName($sheetName);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Sheet '{$sheetName}' not found in the uploaded file"
+            ], 400);
+        }
+
+        preg_match('/(\d+)$/', $column->column_name, $matches);
+        $columnNumber = isset($matches[1]) ? (int)$matches[1] : 1;
+
+        $excelColumn = $this->getExcelColumnLetter($column->component_type, $columnNumber);
+
+        $class = DB::table('classes')->where('id', $classId)->first();
+        $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
+        $studentMap = $students->keyBy('student_number');
+
+        DB::beginTransaction();
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Male students (rows 13-62)
+        for ($row = 13; $row <= 62; $row++) {
+            $studentNumber = $sheet->getCell('A' . $row)->getValue();
+            $score = $sheet->getCell($excelColumn . $row)->getValue();
+            
+            $result = $this->processImportRow(
+                $studentNumber, 
+                $score, 
+                $studentMap, 
+                $column, 
+                $row
+            );
+            
+            if ($result['success']) {
+                $imported++;
+            } else {
+                $skipped++;
+                if ($result['error']) {
+                    $errors[] = $result['error'];
+                }
+            }
+        }
+
+        // Female students (rows 64-113)
+        for ($row = 64; $row <= 113; $row++) {
+            $studentNumber = $sheet->getCell('A' . $row)->getValue();
+            $score = $sheet->getCell($excelColumn . $row)->getValue();
+            
+            $result = $this->processImportRow(
+                $studentNumber, 
+                $score, 
+                $studentMap, 
+                $column, 
+                $row
+            );
+            
+            if ($result['success']) {
+                $imported++;
+            } else {
+                $skipped++;
+                if ($result['error']) {
+                    $errors[] = $result['error'];
+                }
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported' => $imported,
+                'skipped' => $skipped,
+                'errors' => $errors,
+                'file_metadata' => $validationResult['metadata']
+            ]
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (Exception $e) {
+        DB::rollBack();
+        
+        \Log::error('Failed to import column grades', [
+            'class_id' => $classId,
+            'column_id' => $columnId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to import grades: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     // Private helper methods
 
