@@ -25,7 +25,32 @@ class Grade_Management extends MainController
             ->orderBy('s.code', 'asc')
             ->get();
 
-        $activeSemester = $semesters->where('status', 'active')->first();
+
+        $activeSemesterData = DB::table('semesters as s')
+            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+            ->where('s.status', 'active')
+            ->select(
+                's.id as semester_id',
+                's.name as semester_name',
+                's.code as semester_code',
+                'sy.code as school_year_code'
+            )
+            ->first();
+
+        // If no active semester, get the most recent one
+        if (!$activeSemesterData) {
+            $activeSemesterData = DB::table('semesters as s')
+                ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('s.start_date', 'desc')
+                ->select(
+                    's.id as semester_id',
+                    's.name as semester_name',
+                    's.code as semester_code',
+                    'sy.code as school_year_code'
+                )
+                ->first();
+        }
 
         $classes = DB::table('classes')
             ->select('id', 'class_code', 'class_name')
@@ -89,7 +114,7 @@ class Grade_Management extends MainController
         $data = [
             'scripts' => ['grade_management/list_grades.js'],
             'semesters' => $semesters,
-            'activeSemester' => $activeSemester,
+            'activeSemesterData' => $activeSemesterData,
             'classes' => $classes,
             'sections' => $sections,
             'grades' => $grades

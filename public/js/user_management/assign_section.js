@@ -485,8 +485,8 @@ function updateCapacityDisplay() {
                         <input type="checkbox" class="student-checkbox" checked>
                     </td>
                     <td class="text-center align-middle">${index + 1}</td>
-                    <td>${student.student_number}</td>
-                    <td><strong>${fullName}</strong></td>
+                    <td><strong>${student.student_number}</strong></td>
+                    <td>${fullName}</td>
                     <td>
                         <small>${currentSection}</small><br>
                         <small class="text-muted">${currentInfo}</small>

@@ -196,14 +196,39 @@ Route::post('/section-assignment/get-section-capacity', [Section_Management::cla
         // ---------------------------------------------------------------------------
         // CLASS MANAGEMENT
         // ---------------------------------------------------------------------------
-        Route::prefix('class_management')->group(function () {
-            Route::post('/insert_class', [Class_Management::class, 'insert_class'])->name('insert_class');
-            Route::get('/list_class', [Class_Management::class, 'list_class'])->name('list_class');
-            Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');
-            Route::get('/list_section', [Class_Management::class, 'list_section'])->name('list_section');
-            Route::get('/get_class/{id}', [Class_Management::class, 'getClassData'])->name('get_class');
-            Route::put('/update_class/{id}', [Class_Management::class, 'updateClass'])->name('update_class');
-        });
+Route::prefix('class_management')->group(function () {
+    // Classes
+    Route::post('/insert_class', [Class_Management::class, 'insert_class'])->name('insert_class');
+    Route::get('/list_class', [Class_Management::class, 'list_class'])->name('list_class');
+    Route::get('/get_class/{id}', [Class_Management::class, 'getClassData'])->name('get_class');
+    Route::put('/update_class/{id}', [Class_Management::class, 'updateClass'])->name('update_class');
+    Route::get('/get_classes_data', [Class_Management::class, 'getClassesData'])->name('get_classes_data');
+    
+    // Strands
+    Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');
+    Route::get('/strands/data', [Class_Management::class, 'getStrandsData'])->name('strands.data');
+    Route::post('/strands/create', [Class_Management::class, 'createStrand'])->name('strands.create');
+    Route::put('/strands/update/{id}', [Class_Management::class, 'updateStrand'])->name('strands.update');
+    Route::get('/strands/{id}/sections', [Class_Management::class, 'getStrandSections'])->name('strands.sections');
+    
+    // Sections
+    Route::get('/list_section', [Class_Management::class, 'list_section'])->name('list_section');
+    Route::get('/sections/data', [Class_Management::class, 'getSectionsData'])->name('sections.data');
+    Route::post('/sections/create', [Class_Management::class, 'createSection'])->name('sections.create');
+    Route::put('/sections/update/{id}', [Class_Management::class, 'updateSection'])->name('sections.update');
+    Route::get('/sections/{id}/classes', [Class_Management::class, 'getSectionClasses'])->name('sections.classes');
+    Route::get('/sections/{id}/available-classes', [Class_Management::class, 'getAvailableClasses'])->name('sections.available-classes');
+    Route::post('/sections/assign-class', [Class_Management::class, 'assignClassToSection'])->name('sections.assign-class');
+    Route::delete('/sections/remove-class/{id}', [Class_Management::class, 'removeClassFromSection'])->name('sections-class.remove-class');
+    
+    // Levels
+    Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');
+    
+    // Semesters
+    Route::get('/get_semesters', [Class_Management::class, 'getSemesters'])->name('get_semesters');
+    Route::get('/semesters/data', [Class_Management::class, 'getSemestersData'])->name('semesters.data');
+});
+
     });
 });
 

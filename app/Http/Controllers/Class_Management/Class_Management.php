@@ -22,14 +22,11 @@ class Class_Management extends MainController
     {
         $prefix = 'CLASS';
         
-        // Get the last class ID or count
         $lastClass = DB::table('classes')->orderBy('id', 'desc')->first();
         $nextNumber = $lastClass ? $lastClass->id + 1 : 1;
         
-        // Format: CLS-001, CLS-002, etc.
         $code = $prefix . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
         
-        // Ensure uniqueness (in case of deletions)
         while (DB::table('classes')->where('class_code', $code)->exists()) {
             $nextNumber++;
             $code = $prefix . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
@@ -39,7 +36,7 @@ class Class_Management extends MainController
     }
 
     /**
-     * Insert Class (Updated - Auto Code Generation)
+     * Insert Class
      */
     public function insert_class(Request $request)
     {
@@ -51,7 +48,6 @@ class Class_Management extends MainController
         ]);
 
         try {
-            // Validate percentages total 100
             $totalPercentage = $request->ww_perc + $request->pt_perc + $request->qa_perce;
             if ($totalPercentage != 100) {
                 return response()->json([
@@ -62,7 +58,6 @@ class Class_Management extends MainController
 
             DB::beginTransaction();
 
-            // Auto-generate class code
             $classCode = $this->generateClassCode();
 
             $class = DB::table('classes')->insertGetId([
@@ -118,7 +113,6 @@ class Class_Management extends MainController
         ]);
 
         try {
-            // Check if class exists
             $class = DB::table('classes')->where('id', $id)->first();
 
             if (!$class) {
@@ -128,7 +122,6 @@ class Class_Management extends MainController
                 ], 404);
             }
 
-            // Validate percentages total 100
             $totalPercentage = $request->ww_perc + $request->pt_perc + $request->qa_perce;
             if ($totalPercentage != 100) {
                 return response()->json([
@@ -209,13 +202,9 @@ class Class_Management extends MainController
             ], 500);
         }
     }
-    // ---------------------------------------------------------------------------
-    //  List Class
-    // ---------------------------------------------------------------------------
 
     public function list_class()
     {
-
         $classes = Classes::all();
 
         $data = [
@@ -225,10 +214,6 @@ class Class_Management extends MainController
 
         return view('admin.class_management.list_class', $data);
     }
-
-    // ---------------------------------------------------------------------------
-    //  Create Strand
-    // ---------------------------------------------------------------------------
 
     public function list_strand()
     {
@@ -246,7 +231,7 @@ class Class_Management extends MainController
     {
         $sections = DB::table('sections')
             ->join('levels', 'sections.level_id', '=', 'levels.id')
-            ->join('strands', 'sections.strand_id', '=', second: 'strands.id')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
             ->select(
                 'sections.code as code',
                 'sections.name as name',
@@ -263,10 +248,6 @@ class Class_Management extends MainController
         return view('admin.class_management.list_section', $data);
     }
 
-
-    // ---------------------------------------------------------------------------
-    //  Get Strands Data 
-    // ---------------------------------------------------------------------------
     public function getStrandsData()
     {
         try {
@@ -302,9 +283,6 @@ class Class_Management extends MainController
         }
     }
 
-    // ---------------------------------------------------------------------------
-    //  Create Strand
-    // ---------------------------------------------------------------------------
     public function createStrand(Request $request)
     {
         $validated = $request->validate([
@@ -351,9 +329,6 @@ class Class_Management extends MainController
         }
     }
 
-    // ---------------------------------------------------------------------------
-    //  Update Strand
-    // ---------------------------------------------------------------------------
     public function updateStrand(Request $request, $id)
     {
         $validated = $request->validate([
@@ -362,7 +337,6 @@ class Class_Management extends MainController
         ]);
 
         try {
-            // Check if strand exists
             $strand = DB::table('strands')->where('id', $id)->first();
 
             if (!$strand) {
@@ -409,9 +383,7 @@ class Class_Management extends MainController
             ], 500);
         }
     }
-    /**
-     * Get sections for a specific strand
-     */
+
     public function getStrandSections($id)
     {
         try {
@@ -447,8 +419,6 @@ class Class_Management extends MainController
         }
     }
 
-
-    
     /**
      * Get sections data with filters (AJAX)
      */
@@ -472,7 +442,6 @@ class Class_Management extends MainController
                     'strands.name as strand_name'
                 );
 
-            // Apply filters
             if ($request->has('strand') && $request->strand != '') {
                 $query->where('strands.code', $request->strand);
             }
@@ -494,11 +463,20 @@ class Class_Management extends MainController
                 ->orderBy('sections.name', 'asc')
                 ->get();
 
-            // Get enrolled classes count for each section
+            // Get semester filter if provided
+            $semesterId = $request->has('semester') && $request->semester != '' ? $request->semester : null;
+
             foreach ($sections as $section) {
-                $section->classes_count = DB::table('section_class_matrix')
-                    ->where('section_id', $section->id)
-                    ->count();
+                if ($semesterId) {
+                    $section->classes_count = DB::table('section_class_matrix')
+                        ->where('section_id', $section->id)
+                        ->where('semester_id', $semesterId)
+                        ->count();
+                } else {
+                    $section->classes_count = DB::table('section_class_matrix')
+                        ->where('section_id', $section->id)
+                        ->count();
+                }
             }
 
             return response()->json([
@@ -544,117 +522,57 @@ class Class_Management extends MainController
         }
     }
 
-/**
- * Create section
- */
-public function createSection(Request $request)
-{
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'strand_id' => 'required|exists:strands,id',
-        'level_id' => 'required|exists:levels,id',
-    ]);
+    /**
+     * Get semesters data (AJAX)
+     */
+    public function getSemestersData()
+    {
+        try {
+            $semesters = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->select(
+                    'semesters.id',
+                    'semesters.name',
+                    'semesters.code',
+                    'semesters.status',
+                    'school_years.code as school_year_code'
+                )
+                ->orderBy('school_years.year_start', 'desc')
+                ->orderBy('semesters.code', 'asc')
+                ->get();
 
-    try {
-        // Get strand and level info
-        $strand = DB::table('strands')->where('id', $request->strand_id)->first();
-        $level = DB::table('levels')->where('id', $request->level_id)->first();
+            return response()->json([
+                'success' => true,
+                'data' => $semesters
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get semesters data', [
+                'error' => $e->getMessage()
+            ]);
 
-        DB::beginTransaction();
-
-        // Get the next sequence number for this strand-level combination
-        $maxCode = DB::table('sections')
-            ->where('code', 'LIKE', $strand->code . '-' . $level->name . '-%')
-            ->orderBy('code', 'desc')
-            ->first();
-
-        $nextNumber = 1;
-        if ($maxCode) {
-            // Extract the number from the last code (e.g., "STEM-11-3" -> 3)
-            $parts = explode('-', $maxCode->code);
-            $lastNumber = (int) end($parts);
-            $nextNumber = $lastNumber + 1;
-        }
-
-        // Create code format: STRAND-LEVEL-NUMBER (e.g., STEM-11-1)
-        $code = strtoupper($strand->code . '-' . $level->name . '-' . $nextNumber);
-
-        $sectionId = DB::table('sections')->insertGetId([
-            'code' => $code,
-            'name' => strtoupper($request->name),
-            'strand_id' => $request->strand_id,
-            'level_id' => $request->level_id,
-            'status' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        \Log::info('Section created successfully', [
-            'section_id' => $sectionId,
-            'code' => $code,
-            'name' => $request->name,
-        ]);
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Section created successfully!',
-            'section_id' => $sectionId,
-            'code' => $code
-        ], 201);
-    } catch (Exception $e) {
-        DB::rollBack();
-
-        \Log::error('Failed to create section', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to create section: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Update section
- */
-public function updateSection(Request $request, $id)
-{
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'strand_id' => 'required|exists:strands,id',
-        'level_id' => 'required|exists:levels,id',
-    ]);
-
-    try {
-        // Check if section exists
-        $section = DB::table('sections')->where('id', $id)->first();
-
-        if (!$section) {
             return response()->json([
                 'success' => false,
-                'message' => 'Section not found.'
-            ], 404);
+                'message' => 'Failed to load semesters data.'
+            ], 500);
         }
+    }
 
-        // Get strand and level info
-        $strand = DB::table('strands')->where('id', $request->strand_id)->first();
-        $level = DB::table('levels')->where('id', $request->level_id)->first();
+    public function createSection(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'strand_id' => 'required|exists:strands,id',
+            'level_id' => 'required|exists:levels,id',
+        ]);
 
-        DB::beginTransaction();
+        try {
+            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
+            $level = DB::table('levels')->where('id', $request->level_id)->first();
 
-        // Check if strand or level changed
-        $strandChanged = $section->strand_id != $request->strand_id;
-        $levelChanged = $section->level_id != $request->level_id;
+            DB::beginTransaction();
 
-        if ($strandChanged || $levelChanged) {
-            // Need to generate new code if strand or level changed
             $maxCode = DB::table('sections')
                 ->where('code', 'LIKE', $strand->code . '-' . $level->name . '-%')
-                ->where('id', '!=', $id)
                 ->orderBy('code', 'desc')
                 ->first();
 
@@ -666,65 +584,154 @@ public function updateSection(Request $request, $id)
             }
 
             $code = strtoupper($strand->code . '-' . $level->name . '-' . $nextNumber);
-        } else {
-            // Keep the existing code if strand and level didn't change
-            $code = $section->code;
-        }
 
-        DB::table('sections')
-            ->where('id', $id)
-            ->update([
+            $sectionId = DB::table('sections')->insertGetId([
                 'code' => $code,
                 'name' => strtoupper($request->name),
                 'strand_id' => $request->strand_id,
                 'level_id' => $request->level_id,
+                'status' => 1,
+                'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-        \Log::info('Section updated successfully', [
-            'section_id' => $id,
-            'code' => $code,
-            'name' => $request->name,
-        ]);
+            \Log::info('Section created successfully', [
+                'section_id' => $sectionId,
+                'code' => $code,
+                'name' => $request->name,
+            ]);
 
-        DB::commit();
+            DB::commit();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Section updated successfully!',
-            'code' => $code
-        ]);
-    } catch (Exception $e) {
-        DB::rollBack();
+            return response()->json([
+                'success' => true,
+                'message' => 'Section created successfully!',
+                'section_id' => $sectionId,
+                'code' => $code
+            ], 201);
+        } catch (Exception $e) {
+            DB::rollBack();
 
-        \Log::error('Failed to update section', [
-            'section_id' => $id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+            \Log::error('Failed to create section', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to update section: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create section: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    public function updateSection(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'strand_id' => 'required|exists:strands,id',
+            'level_id' => 'required|exists:levels,id',
+        ]);
+
+        try {
+            $section = DB::table('sections')->where('id', $id)->first();
+
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found.'
+                ], 404);
+            }
+
+            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
+            $level = DB::table('levels')->where('id', $request->level_id)->first();
+
+            DB::beginTransaction();
+
+            $strandChanged = $section->strand_id != $request->strand_id;
+            $levelChanged = $section->level_id != $request->level_id;
+
+            if ($strandChanged || $levelChanged) {
+                $maxCode = DB::table('sections')
+                    ->where('code', 'LIKE', $strand->code . '-' . $level->name . '-%')
+                    ->where('id', '!=', $id)
+                    ->orderBy('code', 'desc')
+                    ->first();
+
+                $nextNumber = 1;
+                if ($maxCode) {
+                    $parts = explode('-', $maxCode->code);
+                    $lastNumber = (int) end($parts);
+                    $nextNumber = $lastNumber + 1;
+                }
+
+                $code = strtoupper($strand->code . '-' . $level->name . '-' . $nextNumber);
+            } else {
+                $code = $section->code;
+            }
+
+            DB::table('sections')
+                ->where('id', $id)
+                ->update([
+                    'code' => $code,
+                    'name' => strtoupper($request->name),
+                    'strand_id' => $request->strand_id,
+                    'level_id' => $request->level_id,
+                    'updated_at' => now(),
+                ]);
+
+            \Log::info('Section updated successfully', [
+                'section_id' => $id,
+                'code' => $code,
+                'name' => $request->name,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Section updated successfully!',
+                'code' => $code
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Failed to update section', [
+                'section_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
-     * Get section classes (enrolled classes for a section)
+     * Get section classes (filtered by semester)
      */
-    public function getSectionClasses($id)
+    public function getSectionClasses($id, Request $request)
     {
         try {
-            $classes = DB::table('section_class_matrix')
+            $query = DB::table('section_class_matrix')
                 ->join('classes', 'section_class_matrix.class_id', '=', 'classes.id')
-                ->where('section_class_matrix.section_id', $id)
-                ->select(
+                ->where('section_class_matrix.section_id', $id);
+
+            // Filter by semester if provided
+            if ($request->has('semester_id') && $request->semester_id != '') {
+                $query->where('section_class_matrix.semester_id', $request->semester_id);
+            }
+
+            $classes = $query->select(
                     'classes.id',
                     'classes.class_code',
                     'classes.class_name',
                     'classes.ww_perc',
                     'classes.pt_perc',
-                    'classes.qa_perce'
+                    'classes.qa_perce',
+                    'section_class_matrix.semester_id',
+                    'section_class_matrix.id as matrix_id'
                 )
                 ->orderBy('classes.class_code', 'asc')
                 ->get();
@@ -746,5 +753,157 @@ public function updateSection(Request $request, $id)
         }
     }
 
+    /**
+     * Get available classes for section (not yet assigned for a semester)
+     */
+    public function getAvailableClasses($sectionId, Request $request)
+    {
+        try {
+            $semesterId = $request->semester_id;
 
+            if (!$semesterId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester ID is required.'
+                ], 422);
+            }
+
+            // Get all classes that are NOT assigned to this section in this semester
+            $availableClasses = DB::table('classes')
+                ->whereNotIn('id', function($query) use ($sectionId, $semesterId) {
+                    $query->select('class_id')
+                        ->from('section_class_matrix')
+                        ->where('section_id', $sectionId)
+                        ->where('semester_id', $semesterId);
+                })
+                ->select('id', 'class_code', 'class_name')
+                ->orderBy('class_code', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $availableClasses
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get available classes', [
+                'section_id' => $sectionId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load available classes.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Assign class to section for a semester
+     */
+    public function assignClassToSection(Request $request)
+    {
+        $validated = $request->validate([
+            'section_id' => 'required|exists:sections,id',
+            'class_id' => 'required|exists:classes,id',
+            'semester_id' => 'required|exists:semesters,id',
+        ]);
+
+        try {
+            // Check if already assigned
+            $exists = DB::table('section_class_matrix')
+                ->where('section_id', $request->section_id)
+                ->where('class_id', $request->class_id)
+                ->where('semester_id', $request->semester_id)
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This class is already assigned to this section for the selected semester.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            DB::table('section_class_matrix')->insert([
+                'section_id' => $request->section_id,
+                'class_id' => $request->class_id,
+                'semester_id' => $request->semester_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            \Log::info('Class assigned to section', [
+                'section_id' => $request->section_id,
+                'class_id' => $request->class_id,
+                'semester_id' => $request->semester_id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Class assigned successfully!'
+            ], 201);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Failed to assign class', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to assign class: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove class from section
+     */
+    public function removeClassFromSection($matrixId)
+    {
+        try {
+            $matrix = DB::table('section_class_matrix')->where('id', $matrixId)->first();
+
+            if (!$matrix) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Assignment not found.'
+                ], 404);
+            }
+
+            DB::beginTransaction();
+
+            DB::table('section_class_matrix')->where('id', $matrixId)->delete();
+
+            \Log::info('Class removed from section', [
+                'matrix_id' => $matrixId,
+                'section_id' => $matrix->section_id,
+                'class_id' => $matrix->class_id,
+                'semester_id' => $matrix->semester_id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Class removed successfully!'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Failed to remove class', [
+                'matrix_id' => $matrixId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove class: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -56,7 +56,7 @@
                         <option value="">All Semesters</option>
                         @foreach($semesters as $sem)
                             <option value="{{ $sem->id }}" 
-                                {{ isset($activeSemester) && $activeSemester->semester_id == $sem->id ? 'selected' : '' }}>
+                                {{ (isset($activeSemesterData) && $activeSemesterData && $activeSemesterData->semester_id == $sem->id) ? 'selected' : '' }}>
                                 {{ $sem->display_name }}
                             </option>
                         @endforeach
@@ -67,7 +67,7 @@
                     <select class="form-control" id="classFilter" style="width: 100%;">
                         <option value="">All Classes</option>
                         @foreach($classes as $class)
-                            <option value="{{ $class->class_code }}">{{ $class->class_code }} - {{ $class->class_name }}</option>
+                            <option value="{{ $class->class_code }}">{{ $class->class_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -76,7 +76,7 @@
                     <select class="form-control" id="sectionFilter" style="width: 100%;">
                         <option value="">All Sections</option>
                         @foreach($sections as $section)
-                            <option value="{{ $section->section_code }}">{{ $section->section_code }} - {{ $section->section_name }}</option>
+                            <option value="{{ $section->section_code }}">{{ $section->section_name }}</option>
                         @endforeach
                     </select>
                 </div>
