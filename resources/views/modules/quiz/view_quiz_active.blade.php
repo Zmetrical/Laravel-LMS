@@ -28,18 +28,6 @@
         50% { transform: scale(1.05); }
     }
     
-    #violationBadge {
-        font-size: 13px;
-        padding: 8px;
-        border-radius: 4px;
-        background-color: #fff3cd;
-        border: 1px solid #ffc107;
-    }
-    
-    #violationBadge .badge-danger {
-        background-color: #dc3545 !important;
-        animation: pulse 1s infinite;
-    }
     
     /* Question Navigation Sidebar */
     .question-nav-sidebar {

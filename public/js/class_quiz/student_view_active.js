@@ -10,7 +10,7 @@ $(document).ready(function() {
     let lastSavedAnswers = {};
     let pendingSave = false;
     let tabViolationCount = 0;
-    const MAX_VIOLATIONS = 3;
+    const MAX_WARNINGS = 2;
 
     const Toast = Swal.mixin({
         toast: true,
@@ -31,7 +31,7 @@ $(document).ready(function() {
     startAutoSave();
     preventBrowserManipulation();
     initTabSwitchDetection();
-    
+    initializeViolationDisplay();
     // Show resume message if resuming
     if (typeof IS_RESUMING !== 'undefined' && IS_RESUMING) {
         Toast.fire({
@@ -45,14 +45,11 @@ $(document).ready(function() {
     function initTabSwitchDetection() {
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                // Tab switched away or minimized
                 handleTabSwitch();
             }
         });
 
-        // Also detect window blur (clicking outside browser)
         window.addEventListener('blur', function() {
-            // Only count if page is visible but focus lost
             if (!document.hidden) {
                 handleTabSwitch();
             }
@@ -60,66 +57,98 @@ $(document).ready(function() {
     }
 
     function handleTabSwitch() {
-        // Don't trigger if already submitting
         if (isSubmitting) return;
 
         tabViolationCount++;
         
         console.log('Tab switch detected. Violation count:', tabViolationCount);
 
-        // Update violation display
         updateViolationDisplay();
 
         if (tabViolationCount === 1) {
             showViolationWarning(1);
         } else if (tabViolationCount === 2) {
             showViolationWarning(2);
-        } else if (tabViolationCount >= MAX_VIOLATIONS) {
-            showViolationWarning(3);
-            // Auto-submit after showing warning
+        } else if (tabViolationCount > MAX_WARNINGS) {
+            Swal.fire({
+                title: 'Quiz Auto-Submitted',
+                text: 'You have exceeded the maximum number of warnings. Your quiz is being submitted automatically.',
+                icon: 'error',
+                confirmButtonColor: '#dc3545',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                timer: 3000
+            });
             setTimeout(() => {
-                submitQuiz(false, true); // true = violation submit
+                submitQuiz(false, true);
             }, 3000);
         }
     }
 
-    function updateViolationDisplay() {
+function initializeViolationDisplay() {
+    // Wait for timer to be ready
+    setTimeout(function() {
         const violationHtml = `
-            <span class="badge badge-${tabViolationCount >= 2 ? 'danger' : 'warning'}">
-                <i class="fas fa-exclamation-triangle"></i> 
-                Violations: ${tabViolationCount}/${MAX_VIOLATIONS}
-            </span>
+            <div id="violationBadge" class="mt-3 pt-3 border-top">
+                <h5 class="mb-2 text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Warnings
+                </h5>
+                <h2 class="mb-0 text-danger">${tabViolationCount} / ${MAX_WARNINGS}</h2>
+            </div>
         `;
         
-        if ($('#violationBadge').length === 0) {
-            $('.quiz-timer .card-body').append(`<div id="violationBadge" class="mt-2">${violationHtml}</div>`);
-        } else {
-            $('#violationBadge').html(violationHtml);
-        }
+        // Add to both mobile and desktop timers
+        $('.quiz-timer .card-body').each(function() {
+            if ($(this).find('#violationBadge').length === 0) {
+                $(this).append(violationHtml);
+            }
+        });
+        
+        console.log('Violation display initialized');
+    }, 100);
+}
+
+
+function updateViolationDisplay() {
+    console.log('Updating violation display:', tabViolationCount);
+    
+    if ($('#violationBadge').length === 0) {
+        console.log('Violation badge not found, creating it...');
+        const violationHtml = `
+            <div id="violationBadge" class="mt-3 pt-3 border-top">
+                <h5 class="mb-2 text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Warnings
+                </h5>
+                <h2 class="mb-0 text-danger">${tabViolationCount} / ${MAX_WARNINGS}</h2>
+            </div>
+        `;
+        $('.quiz-timer .card-body').each(function() {
+            $(this).append(violationHtml);
+        });
+    } else {
+        console.log('Updating existing violation badge');
+        // Update just the counter text
+        $('#violationBadge h2').text(`${tabViolationCount} / ${MAX_WARNINGS}`);
     }
+}
 
     function showViolationWarning(level) {
-        let title, text, icon;
+        let title, text;
 
         if (level === 1) {
-            title = 'Warning: Tab Switch Detected';
-            text = 'Please stay on this tab during the quiz. You have 2 more warnings before your quiz is auto-submitted.';
-            icon = 'warning';
+            title = 'Warning 1 of 2';
+            text = 'Please stay on this tab during the quiz. You have 2 more warnings remaining.';
         } else if (level === 2) {
-            title = 'Warning: Tab Switch Detected!';
-            text = 'This is your last warning. One more tab switch will result in automatic submission of your quiz.';
-            icon = 'error';
-        } else {
-            title = 'Quiz Auto-Submitted';
-            text = 'You have exceeded the maximum number of tab switches. Your quiz is being submitted automatically.';
-            icon = 'error';
+            title = 'Warning 2 of 2';
+            text = 'This is your second warning. You have 1 more warning remaining before auto-submission.';
         }
 
         Swal.fire({
             title: title,
             text: text,
-            icon: icon,
-            confirmButtonColor: level === 3 ? '#dc3545' : '#007bff',
+            icon: 'warning',
+            confirmButtonColor: '#007bff',
             confirmButtonText: 'I Understand',
             allowOutsideClick: false,
             allowEscapeKey: false
@@ -150,12 +179,10 @@ $(document).ready(function() {
         const type = $(this).data('type');
         
         if (type === 'checkbox') {
-            // Multiple answer - toggle checkbox
             $(this).toggleClass('selected');
             const checkbox = $(this).find('.option-checkbox');
             checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
         } else {
-            // Single answer - radio behavior
             $(this).siblings('.option-card').removeClass('selected');
             $(this).addClass('selected');
             const radio = $(this).find('.option-radio');
@@ -198,7 +225,6 @@ $(document).ready(function() {
         let answer;
 
         if ($(this).is('textarea')) {
-            // Essay answer
             clearTimeout(textDebounce);
             textDebounce = setTimeout(() => {
                 answer = {
@@ -209,7 +235,6 @@ $(document).ready(function() {
                 updateNavigationButton(questionIndex);
             }, 500);
         } else if ($(this).is('input[type="text"]')) {
-            // Short answer
             clearTimeout(textDebounce);
             textDebounce = setTimeout(() => {
                 answer = {
@@ -220,7 +245,6 @@ $(document).ready(function() {
                 updateNavigationButton(questionIndex);
             }, 500);
         } else if ($(this).is('.option-checkbox')) {
-            // Multiple answer - collect all checked options
             const checkedOptions = [];
             $(`input[name="question_${questionId}[]"]:checked`).each(function() {
                 checkedOptions.push(parseInt($(this).val()));
@@ -232,7 +256,6 @@ $(document).ready(function() {
             answers[questionId] = answer;
             updateNavigationButton(questionIndex);
         } else {
-            // Single answer (radio)
             answer = {
                 question_id: questionId,
                 option_id: parseInt($(this).val())
@@ -676,21 +699,15 @@ $(document).ready(function() {
                         const percentage = response.data.percentage;
                         const passed = percentage >= PASSING_SCORE;
                         
-                        let violationNote = violationSubmit ? 
-                            '<p class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Auto-submitted due to tab switch violations</p>' : '';
-                        
                         Swal.fire({
-                            title: passed ? 'Congratulations!' : 'Quiz Completed',
+                            title:'Quiz Completed',
                             html: `
                                 <div class="text-center">
-                                    <i class="fas fa-${passed ? 'trophy' : 'clipboard-check'} fa-3x text-${passed ? 'success' : 'info'} mb-3"></i>
                                     <h4>Your Score</h4>
-                                    <h2 class="text-primary">${response.data.score} / ${response.data.total_points}</h2>
-                                    <h3 class="text-${passed ? 'success' : 'danger'}">${percentage}%</h3>
+                                    <h2 >${response.data.score} / ${response.data.total_points}</h2>
                                     <p class="mb-0">
-                                        <strong class="text-${passed ? 'success' : 'danger'}">${passed ? 'PASSED' : 'FAILED'}</strong>
+                                        <strong>${passed ? 'PASSED' : 'FAILED'}</strong>
                                     </p>
-                                    ${violationNote}
                                 </div>
                             `,
                             icon: passed ? 'success' : 'info',
@@ -701,9 +718,7 @@ $(document).ready(function() {
                             window.location.href = API_ROUTES.backToQuiz;
                         });
                     } else {
-                        let violationNote = violationSubmit ? 
-                            '<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Auto-submitted due to tab switch violations</p>' : '';
-                        
+
                         Swal.fire({
                             title: 'Quiz Submitted!',
                             html: `
@@ -711,7 +726,6 @@ $(document).ready(function() {
                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                                     <p>Your answers have been submitted successfully.</p>
                                     <p class="text-muted">Some questions require manual grading. Your final score will be available once grading is complete.</p>
-                                    ${violationNote}
                                 </div>
                             `,
                             icon: 'success',
@@ -731,6 +745,8 @@ $(document).ready(function() {
                     submitBtn.prop('disabled', false).html(originalHtml);
                 }
             },
+
+            
             error: function(xhr) {
                 console.error('Error submitting quiz:', xhr);
                 isSubmitting = false;
