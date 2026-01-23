@@ -149,39 +149,13 @@ class Section_Management extends MainController
                 ->orderBy('id', 'asc')
                 ->first();
 
-            // Get sections for current level
-            $currentLevelSections = DB::table('sections')
-                ->join('levels', 'sections.level_id', '=', 'levels.id')
-                ->where('sections.strand_id', $strandId)
-                ->where('sections.level_id', $currentLevelId)
-                ->where('sections.status', 1)
-                ->select(
-                    'sections.id',
-                    'sections.code',
-                    'sections.name',
-                    'sections.level_id',
-                    'levels.name as level_name'
-                )
-                ->orderBy('sections.name')
-                ->get();
+            // Get sections for current level with capacity info
+            $currentLevelSections = $this->getSectionsWithCapacity($strandId, $currentLevelId, $semesterId);
 
             // Get sections for next level (if exists)
             $nextLevelSections = [];
             if ($nextLevel) {
-                $nextLevelSections = DB::table('sections')
-                    ->join('levels', 'sections.level_id', '=', 'levels.id')
-                    ->where('sections.strand_id', $strandId)
-                    ->where('sections.level_id', $nextLevel->id)
-                    ->where('sections.status', 1)
-                    ->select(
-                        'sections.id',
-                        'sections.code',
-                        'sections.name',
-                        'sections.level_id',
-                        'levels.name as level_name'
-                    )
-                    ->orderBy('sections.name')
-                    ->get();
+                $nextLevelSections = $this->getSectionsWithCapacity($strandId, $nextLevel->id, $semesterId);
             }
 
             return response()->json([
@@ -208,6 +182,124 @@ class Section_Management extends MainController
                 'message' => 'An error occurred: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Helper function to get sections with capacity information
+     */
+    private function getSectionsWithCapacity($strandId, $levelId, $semesterId)
+    {
+        $sections = DB::table('sections')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->where('sections.strand_id', $strandId)
+            ->where('sections.level_id', $levelId)
+            ->where('sections.status', 1)
+            ->select(
+                'sections.id',
+                'sections.code',
+                'sections.name',
+                'sections.capacity',
+                'sections.level_id',
+                'levels.name as level_name'
+            )
+            ->orderBy('sections.name')
+            ->get();
+
+        // Add enrolled count for each section
+        foreach ($sections as $section) {
+            $section->enrolled_count = $this->getSectionEnrolledCount($section->id, $semesterId);
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Get section capacity and enrolled count for a specific semester
+     */
+    public function get_section_capacity(Request $request)
+    {
+        $request->validate([
+            'section_id' => 'required|exists:sections,id',
+            'semester_id' => 'nullable|exists:semesters,id'
+        ]);
+
+        try {
+            $sectionId = $request->section_id;
+            $semesterId = $request->semester_id;
+
+            // Get section capacity
+            $section = DB::table('sections')
+                ->where('id', $sectionId)
+                ->first(['capacity']);
+
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found'
+                ], 404);
+            }
+
+            // Get enrolled count
+            $enrolledCount = $this->getSectionEnrolledCount($sectionId, $semesterId);
+
+            return response()->json([
+                'success' => true,
+                'capacity' => (int) $section->capacity,
+                'enrolled_count' => $enrolledCount
+            ]);
+
+        } catch (Exception $e) {
+            \Log::error('Failed to get section capacity', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper function to get enrolled count for a section in a specific semester
+     */
+    private function getSectionEnrolledCount($sectionId, $semesterId)
+    {
+        if (!$semesterId) {
+            // No semester filter - count all students in section
+            return DB::table('students')
+                ->where('section_id', $sectionId)
+                ->count();
+        }
+
+        // Count students enrolled in this section for this semester
+        // Regular students (enrolled via section)
+        $regularCount = DB::table('students')
+            ->where('students.section_id', $sectionId)
+            ->where('students.student_type', 'regular')
+            ->whereExists(function($query) use ($semesterId) {
+                $query->select(DB::raw(1))
+                    ->from('student_semester_enrollment')
+                    ->whereColumn('student_semester_enrollment.student_number', 'students.student_number')
+                    ->where('student_semester_enrollment.semester_id', $semesterId)
+                    ->where('student_semester_enrollment.enrollment_status', 'enrolled');
+            })
+            ->count();
+
+        // Irregular students (enrolled individually)
+        $irregularCount = DB::table('students')
+            ->where('students.section_id', $sectionId)
+            ->where('students.student_type', 'irregular')
+            ->whereExists(function($query) use ($semesterId) {
+                $query->select(DB::raw(1))
+                    ->from('student_semester_enrollment')
+                    ->whereColumn('student_semester_enrollment.student_number', 'students.student_number')
+                    ->where('student_semester_enrollment.semester_id', $semesterId)
+                    ->where('student_semester_enrollment.enrollment_status', 'enrolled');
+            })
+            ->count();
+
+        return $regularCount + $irregularCount;
     }
 
     /**
@@ -300,11 +392,12 @@ class Section_Management extends MainController
                     ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
                     ->leftJoin('levels', 'sections.level_id', '=', 'levels.id')
                     ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
-                    ->whereExists(function($query) use ($sourceSectionId, $sourceSemesterId) {
+                    ->whereExists(function($query) use ($sourceSemesterId) {
                         $query->select(DB::raw(1))
-                            ->from('section_class_matrix')
-                            ->where('section_class_matrix.section_id', $sourceSectionId)
-                            ->where('section_class_matrix.semester_id', $sourceSemesterId);
+                            ->from('student_semester_enrollment')
+                            ->whereColumn('student_semester_enrollment.student_number', 'students.student_number')
+                            ->where('student_semester_enrollment.semester_id', $sourceSemesterId)
+                            ->where('student_semester_enrollment.enrollment_status', 'enrolled');
                     })
                     ->where('students.section_id', $sourceSectionId)
                     ->where('students.student_type', 'regular')
@@ -333,10 +426,10 @@ class Section_Management extends MainController
                     ->leftJoin('strands', 'sections.strand_id', '=', 'strands.id')
                     ->whereExists(function($query) use ($sourceSemesterId) {
                         $query->select(DB::raw(1))
-                            ->from('student_class_matrix')
-                            ->whereColumn('student_class_matrix.student_number', 'students.student_number')
-                            ->where('student_class_matrix.semester_id', $sourceSemesterId)
-                            ->where('student_class_matrix.enrollment_status', 'enrolled');
+                            ->from('student_semester_enrollment')
+                            ->whereColumn('student_semester_enrollment.student_number', 'students.student_number')
+                            ->where('student_semester_enrollment.semester_id', $sourceSemesterId)
+                            ->where('student_semester_enrollment.enrollment_status', 'enrolled');
                     })
                     ->where('students.section_id', $sourceSectionId)
                     ->where('students.student_type', 'irregular')

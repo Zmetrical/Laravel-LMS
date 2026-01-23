@@ -232,6 +232,7 @@ CREATE TABLE `sections` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `code` varchar(100) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `capacity` int(11) NOT NULL,
   `strand_id` bigint(20) UNSIGNED NOT NULL,
   `level_id` int(11) NOT NULL,
   `semester_id` int(11) DEFAULT NULL,

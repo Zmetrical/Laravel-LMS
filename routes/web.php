@@ -106,7 +106,8 @@ Route::post('/section-assignment/get-section-details', [Section_Management::clas
 
 Route::post('/section-assignment/get-target-sections', [Section_Management::class, 'get_target_sections'])
     ->name('section_assignment.get_target_sections');
-
+Route::post('/section-assignment/get-section-capacity', [Section_Management::class, 'get_section_capacity'])
+    ->name('section_assignment.get_section_capacity');
 
         // Section Grades View
     Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])

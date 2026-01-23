@@ -1,6 +1,8 @@
 @extends('layouts.main')
 
 @section('styles')
+    
+
     @if(isset($styles))
         @foreach($styles as $style)
             <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
@@ -9,7 +11,17 @@
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
-@endsection
+
+    <style>
+        .section-capacity-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+    </style>
+
+    @endsection
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
@@ -33,7 +45,7 @@
                     </div>
                     <div class="card-body">
                         <div class="form-group">
-                            <label>Previous Semester </label>
+                            <label>Previous Semester</label>
                             <select class="form-control" id="source_semester">
                                 <option value="">All Students in Section</option>
                                 @foreach($semesters as $semester)
@@ -120,6 +132,9 @@
                                 <option value="">Select section...</option>
                             </select>
                         </div>
+
+                        <!-- Capacity Info Display -->
+                        <div id="capacityInfo" style="display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -211,6 +226,7 @@ const API_ROUTES = {
     loadStudents: "{{ route('admin.section_assignment.load_students') }}",
     getSectionDetails: "{{ route('admin.section_assignment.get_section_details') }}",
     getTargetSections: "{{ route('admin.section_assignment.get_target_sections') }}",
+    getSectionCapacity: "{{ route('admin.section_assignment.get_section_capacity') }}",
     assignStudents: "{{ route('admin.section_assignment.assign_students') }}",
     redirectAfterSubmit: "{{ route('admin.list_student') }}"
 };

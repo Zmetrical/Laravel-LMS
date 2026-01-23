@@ -2,6 +2,8 @@ $(document).ready(function() {
     let loadedStudents = [];
     let sourceStrandId = null;
     let sourceLevelId = null;
+    let targetSectionCapacity = null;
+    let targetSectionEnrolled = null;
 
     // =========================================================================
     // TOAST CONFIGURATION
@@ -92,8 +94,11 @@ $(document).ready(function() {
         const strandId = $(this).val();
         const semesterId = $('#target_semester').val();
         
-        // Clear target section
+        // Clear target section and capacity info
         $('#target_section').empty().append('<option value="">Select section...</option>');
+        $('#capacityInfo').hide();
+        targetSectionCapacity = null;
+        targetSectionEnrolled = null;
         
         if (!strandId || !sourceLevelId) {
             return;
@@ -123,11 +128,20 @@ $(document).ready(function() {
         });
     });
 
-    // Target Section (no AJAX, populated by strand selection)
+    // Target Section Select
     $('#target_section').select2({
         theme: 'bootstrap4',
         placeholder: 'Select section...',
-        allowClear: true
+        allowClear: true,
+        width: '100%'
+    }).on('select2:select', function(e) {
+        const sectionId = e.params.data.id;
+        loadSectionCapacity(sectionId);
+    }).on('select2:clear', function() {
+        $('#capacityInfo').hide();
+        targetSectionCapacity = null;
+        targetSectionEnrolled = null;
+        validateSubmitButton();
     });
 
     $('#source_student').select2({
@@ -164,7 +178,63 @@ $(document).ready(function() {
     });
 
     // =========================================================================
-    // POPULATE TARGET SECTIONS (GROUPED BY LEVEL)
+    // LOAD SECTION CAPACITY
+    // =========================================================================
+    function loadSectionCapacity(sectionId) {
+        const semesterId = $('#target_semester').val();
+        
+        $.ajax({
+            url: API_ROUTES.getSectionCapacity,
+            type: 'POST',
+            data: {
+                _token: $('input[name="_token"]').val(),
+                section_id: sectionId,
+                semester_id: semesterId
+            },
+            success: function(response) {
+                if (response.success) {
+                    targetSectionCapacity = response.capacity;
+                    targetSectionEnrolled = response.enrolled_count;
+                    updateCapacityDisplay();
+                    validateSubmitButton();
+                }
+            },
+            error: function() {
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Failed to load section capacity'
+                });
+            }
+        });
+    }
+
+    // =========================================================================
+    // UPDATE CAPACITY DISPLAY
+    // =========================================================================
+function updateCapacityDisplay() {
+    const selectedCount = $('.student-checkbox:checked').length;
+    const availableSlots = targetSectionCapacity - targetSectionEnrolled;
+    const afterAssignment = targetSectionEnrolled + selectedCount;
+    
+    const statusText = selectedCount > availableSlots ? 'Exceeds' : `${availableSlots} slots`;
+    const targetSectionName = $('#target_section option:selected').text().split(' - ')[0] || 'Section';
+    
+    $('#capacityInfo').html(`
+        <div class="card section-capacity-card mb-0">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">${targetSectionName}</h6>
+                    <span class="badge badge-light border">${statusText}</span>
+                </div>
+                <small class="text-muted d-block mb-2">
+                    ${afterAssignment} / ${targetSectionCapacity} enrolled
+                </small>
+            </div>
+        </div>
+    `).show();
+}
+    // =========================================================================
+    // POPULATE TARGET SECTIONS 
     // =========================================================================
     function populateTargetSections(currentLevel, nextLevel) {
         const $select = $('#target_section');
@@ -175,8 +245,10 @@ $(document).ready(function() {
         if (currentLevel && currentLevel.sections.length > 0) {
             const currentGroup = $('<optgroup>').attr('label', `Current Level (${currentLevel.name})`);
             currentLevel.sections.forEach(function(section) {
+                const available = section.capacity - section.enrolled_count;
+                const label = `${section.name} (${section.code})`;
                 currentGroup.append(
-                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
+                    $('<option>').val(section.id).text(label)
                 );
             });
             $select.append(currentGroup);
@@ -186,8 +258,10 @@ $(document).ready(function() {
         if (nextLevel && nextLevel.sections.length > 0) {
             const nextGroup = $('<optgroup>').attr('label', `Next Level (${nextLevel.name})`);
             nextLevel.sections.forEach(function(section) {
+                const available = section.capacity - section.enrolled_count;
+                const label = `${section.name} (${section.code})`;
                 nextGroup.append(
-                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
+                    $('<option>').val(section.id).text(label)
                 );
             });
             $select.append(nextGroup);
@@ -211,7 +285,7 @@ $(document).ready(function() {
             </tr>
         `);
         updateStudentCount();
-        $('#submitBtn').prop('disabled', true);
+        validateSubmitButton();
     }
 
     // =========================================================================
@@ -324,7 +398,10 @@ $(document).ready(function() {
         });
 
         updateStudentCount();
-        $('#submitBtn').prop('disabled', false);
+        if (targetSectionCapacity) {
+            updateCapacityDisplay();
+        }
+        validateSubmitButton();
     });
 
     // =========================================================================
@@ -427,7 +504,10 @@ $(document).ready(function() {
         });
 
         updateStudentCount();
-        $('#submitBtn').prop('disabled', false);
+        if (targetSectionCapacity) {
+            updateCapacityDisplay();
+        }
+        validateSubmitButton();
     }
 
     // =========================================================================
@@ -464,12 +544,20 @@ $(document).ready(function() {
             $(this).closest('tr').attr('data-selected', isChecked);
         });
         updateStudentCount();
+        if (targetSectionCapacity) {
+            updateCapacityDisplay();
+        }
+        validateSubmitButton();
     });
 
     $(document).on('change', '.student-checkbox', function() {
         const isChecked = $(this).is(':checked');
         $(this).closest('tr').attr('data-selected', isChecked);
         updateStudentCount();
+        if (targetSectionCapacity) {
+            updateCapacityDisplay();
+        }
+        validateSubmitButton();
         
         const totalCheckboxes = $('.student-checkbox:visible').length;
         const checkedCheckboxes = $('.student-checkbox:visible:checked').length;
@@ -508,6 +596,10 @@ $(document).ready(function() {
                 renumberRows();
                 updateStudentCount();
                 $('#selectAllCheckbox').prop('checked', false);
+                if (targetSectionCapacity) {
+                    updateCapacityDisplay();
+                }
+                validateSubmitButton();
                 
                 if ($('#assignmentTableBody tr').length === 0) {
                     clearStudentTable();
@@ -557,6 +649,22 @@ $(document).ready(function() {
         $('#studentCount').text(`${selectedStudents} / ${totalStudents} Selected`);
     }
 
+    function validateSubmitButton() {
+        const hasSelectedStudents = $('.student-checkbox:checked').length > 0;
+        const hasTargetSection = $('#target_section').val();
+        const hasCapacityInfo = targetSectionCapacity !== null;
+        
+        let canSubmit = hasSelectedStudents && hasTargetSection;
+        
+        if (canSubmit && hasCapacityInfo) {
+            const selectedCount = $('.student-checkbox:checked').length;
+            const availableSlots = targetSectionCapacity - targetSectionEnrolled;
+            canSubmit = selectedCount <= availableSlots;
+        }
+        
+        $('#submitBtn').prop('disabled', !canSubmit);
+    }
+
     // =========================================================================
     // FORM SUBMISSION
     // =========================================================================
@@ -593,6 +701,22 @@ $(document).ready(function() {
             return;
         }
 
+        // Final capacity check
+        if (targetSectionCapacity) {
+            const availableSlots = targetSectionCapacity - targetSectionEnrolled;
+            if (students.length > availableSlots) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Capacity Exceeded',
+                    html: `
+                        <p>Cannot assign ${students.length} students.</p>
+                        <p>Only <strong>${availableSlots}</strong> slot(s) available in the target section.</p>
+                    `
+                });
+                return;
+            }
+        }
+
         const targetSectionText = $('#target_section option:selected').text();
         const targetSemesterName = $('#target_semester option:selected').text();
         const targetStrandName = $('#target_strand option:selected').text();
@@ -606,6 +730,10 @@ $(document).ready(function() {
                     <p><strong>Strand:</strong> ${targetStrandName}</p>
                     <p><strong>Section:</strong> ${targetSectionText}</p>
                     <p><strong>Semester:</strong> ${targetSemesterName}</p>
+                    ${targetSectionCapacity ? `
+                        <hr>
+                        <p><strong>Section Capacity:</strong> ${targetSectionEnrolled + students.length} / ${targetSectionCapacity}</p>
+                    ` : ''}
                     <hr>
                     <p class="text-muted small">This will:</p>
                     <ul class="text-muted small">
