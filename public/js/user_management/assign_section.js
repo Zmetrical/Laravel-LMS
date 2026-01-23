@@ -725,8 +725,9 @@ function updateCapacityDisplay() {
             title: 'Confirm Assignment',
             html: `
                 <div class="text-left">
-                    <p><strong>Assigning ${students.length} student(s)</strong></p>
                     <hr>
+                    <p><strong>Assigning ${students.length} student(s)</strong></p>
+
                     <p><strong>Strand:</strong> ${targetStrandName}</p>
                     <p><strong>Section:</strong> ${targetSectionText}</p>
                     <p><strong>Semester:</strong> ${targetSemesterName}</p>
@@ -735,12 +736,6 @@ function updateCapacityDisplay() {
                         <p><strong>Section Capacity:</strong> ${targetSectionEnrolled + students.length} / ${targetSectionCapacity}</p>
                     ` : ''}
                     <hr>
-                    <p class="text-muted small">This will:</p>
-                    <ul class="text-muted small">
-                        <li>Update each student's section</li>
-                        <li>Enroll them in the target semester</li>
-                        <li>Enroll them in all classes for the target section</li>
-                    </ul>
                 </div>
             `,
             icon: 'question',

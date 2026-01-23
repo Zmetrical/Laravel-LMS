@@ -51,167 +51,156 @@ class SectionController extends MainController
     /**
      * Get sections list with filters
      */
-    public function getSectionsList()
-    {
-        try {
-            $sections = DB::table('sections as sec')
-                ->join('levels as l', 'sec.level_id', '=', 'l.id')
-                ->join('strands as str', 'sec.strand_id', '=', 'str.id')
-                ->leftJoin('section_class_matrix as scm', 'sec.id', '=', 'scm.section_id')
-                ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
-                ->where('sec.status', 1)
-                ->select(
-                    'sec.id',
-                    'sec.code',
-                    'sec.name',
-                    'sec.level_id',
-                    'sec.strand_id',
-                    'l.name as level_name',
-                    'str.name as strand_name',
-                    'str.code as strand_code',
-                    DB::raw('COUNT(DISTINCT scm.class_id) as class_count'),
-                    DB::raw('COUNT(DISTINCT s.id) as student_count')
-                )
-                ->groupBy(
-                    'sec.id',
-                    'sec.code',
-                    'sec.name',
-                    'sec.level_id',
-                    'sec.strand_id',
-                    'l.name',
-                    'str.name',
-                    'str.code'
-                )
-                ->orderBy('l.name')
-                ->orderBy('str.name')
-                ->orderBy('sec.name')
-                ->get();
+public function getSectionsList()
+{
+    try {
+        // Get active semester
+        $activeSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
 
-            $levels = DB::table('levels')
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get();
-
-            $strands = DB::table('strands')
-                ->where('status', 1)
-                ->select('id', 'name', 'code')
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'sections' => $sections,
-                'levels' => $levels,
-                'strands' => $strands
-            ]);
-        } catch (Exception $e) {
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load sections: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No active semester found'
+            ], 400);
         }
+
+        $sections = DB::table('sections as sec')
+            ->join('levels as l', 'sec.level_id', '=', 'l.id')
+            ->join('strands as st', 'sec.strand_id', '=', 'st.id')
+            ->where('sec.status', 1)
+            ->select(
+                'sec.id',
+                'sec.code',
+                'sec.name',
+                'sec.capacity',
+                'sec.level_id',
+                'sec.strand_id',
+                'l.name as level_name',
+                'st.code as strand_code',
+                'st.name as strand_name',
+                // Count students enrolled in current semester only
+                DB::raw("(SELECT COUNT(*) FROM student_semester_enrollment 
+                         WHERE section_id = sec.id 
+                         AND semester_id = {$activeSemester->id}
+                         AND enrollment_status = 'enrolled') as student_count"),
+                // Count classes for current semester only
+                DB::raw("(SELECT COUNT(*) FROM section_class_matrix 
+                         WHERE section_id = sec.id 
+                         AND semester_id = {$activeSemester->id}) as class_count")
+            )
+            ->orderBy('l.name')
+            ->orderBy('st.code')
+            ->orderBy('sec.name')
+            ->get();
+
+        $levels = DB::table('levels')
+            ->orderBy('name')
+            ->get();
+
+        $strands = DB::table('strands')
+            ->where('status', 1)
+            ->orderBy('code')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'sections' => $sections,
+            'levels' => $levels,
+            'strands' => $strands,
+            'semester_id' => $activeSemester->id
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Sections list error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load sections'
+        ], 500);
     }
+}
 
     /**
      * Get section classes and students
      */
-    public function getSectionDetails($id)
-    {
-        try {
-            $activeSemester = $this->getActiveSemester();
-            
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active semester found'
-                ], 400);
-            }
 
-            // Get section info
-            $section = DB::table('sections as sec')
-                ->join('levels as l', 'sec.level_id', '=', 'l.id')
-                ->join('strands as str', 'sec.strand_id', '=', 'str.id')
-                ->where('sec.id', $id)
-                ->select(
-                    'sec.id',
-                    'sec.code',
-                    'sec.name',
-                    'l.name as level_name',
-                    'str.name as strand_name',
-                    'str.code as strand_code'
-                )
-                ->first();
+public function getSectionDetails($id)
+{
+    try {
+        // Get active semester
+        $activeSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
 
-            if (!$section) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Section not found'
-                ], 404);
-            }
-
-            // Get enrolled classes for this semester
-            $classes = DB::table('section_class_matrix as scm')
-                ->join('classes as c', 'scm.class_id', '=', 'c.id')
-                ->leftJoin('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
-                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-                ->where('scm.section_id', $id)
-                ->where('scm.semester_id', $activeSemester->semester_id)
-                ->select(
-                    'c.id',
-                    'c.class_code',
-                    'c.class_name',
-                    DB::raw("GROUP_CONCAT(DISTINCT CONCAT(t.first_name, ' ', t.last_name) SEPARATOR ', ') as teacher_names")
-                )
-                ->groupBy('c.id', 'c.class_code', 'c.class_name')
-                ->get();
-
-            // Format classes with teachers
-            $formattedClasses = $classes->map(function($class) {
-                $teachers = [];
-                if ($class->teacher_names) {
-                    foreach (explode(', ', $class->teacher_names) as $name) {
-                        $teachers[] = ['name' => $name];
-                    }
-                }
-                
-                return [
-                    'id' => $class->id,
-                    'class_code' => $class->class_code,
-                    'class_name' => $class->class_name,
-                    'teachers' => $teachers
-                ];
-            });
-
-            // Get students in this section with gender
-            $students = DB::table('students as s')
-                ->where('s.section_id', $id)
-                ->select(
-                    's.id',
-                    's.student_number',
-                    's.first_name',
-                    's.middle_name',
-                    's.last_name',
-                    's.email',
-                    's.gender',
-                    's.student_type'
-                )
-                ->orderBy('s.last_name')
-                ->orderBy('s.first_name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'section' => $section,
-                'classes' => $formattedClasses,
-                'students' => $students
-            ]);
-        } catch (Exception $e) {
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load section details: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No active semester found'
+            ], 400);
         }
+
+        $section = DB::table('sections')->find($id);
+        
+        if (!$section) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Section not found'
+            ], 404);
+        }
+
+        // Get enrolled classes for this section in current semester
+        $classes = DB::table('section_class_matrix as scm')
+            ->join('classes as c', 'scm.class_id', '=', 'c.id')
+            ->leftJoin('teacher_class_matrix as tcm', function($join) use ($activeSemester) {
+                $join->on('tcm.class_id', '=', 'c.id')
+                     ->where('tcm.semester_id', '=', $activeSemester->id);
+            })
+            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->where('scm.section_id', $id)
+            ->where('scm.semester_id', $activeSemester->id)
+            ->select(
+                'c.id',
+                'c.class_name',
+                DB::raw("GROUP_CONCAT(CONCAT(t.first_name, ' ', t.last_name) SEPARATOR ', ') as teachers")
+            )
+            ->groupBy('c.id', 'c.class_name')
+            ->get();
+
+        // Get students enrolled in this section for current semester ONLY
+        $students = DB::table('students as s')
+            ->join('student_semester_enrollment as sse', 's.student_number', '=', 'sse.student_number')
+            ->where('sse.section_id', $id)
+            ->where('sse.semester_id', $activeSemester->id)
+            ->where('sse.enrollment_status', 'enrolled')
+            ->select(
+                's.student_number',
+                's.first_name',
+                's.middle_name',
+                's.last_name',
+                's.email',
+                's.gender',
+                's.student_type'
+            )
+            ->orderBy('s.last_name')
+            ->orderBy('s.first_name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'classes' => $classes,
+            'students' => $students,
+            'semester_id' => $activeSemester->id
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Section details error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load section details'
+        ], 500);
     }
+}
 
     /**
      * Get available classes not enrolled in section

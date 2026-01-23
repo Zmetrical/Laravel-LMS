@@ -70,26 +70,34 @@ $(document).ready(function () {
         $.fn.dataTable.ext.search.pop();
     });
 
-    // Filter by semester - Shows students with ANY enrollment in selected semester
+    // Filter by semester - FIXED VERSION
     $('#semester').on('change', function() {
         const selectedSemesterId = $(this).val();
         
-        if (!selectedSemesterId) {
-            // Show all students
-            $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(f => !f.name || f.name !== 'semesterFilter');
-            dataTable.draw();
-            return;
-        }
+        console.log('Semester filter changed to:', selectedSemesterId);
         
         // Remove previous semester filter if exists
         $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(f => !f.name || f.name !== 'semesterFilter');
+        
+        if (!selectedSemesterId || selectedSemesterId === '') {
+            // Show all students when no semester selected
+            dataTable.draw();
+            return;
+        }
         
         // Add new semester filter
         const semesterFilter = function(settings, data, dataIndex) {
             const row = dataTable.row(dataIndex).node();
             const rowSemesterId = $(row).find('td').eq(COL.SEMESTER).data('semester-id');
             
-            // Show row if semester matches (includes enrolled, completed, dropped)
+            console.log('Checking row:', dataIndex, 'Semester ID:', rowSemesterId, 'Selected:', selectedSemesterId);
+            
+            // Handle empty semester IDs (students with no enrollment)
+            if (!rowSemesterId || rowSemesterId === '') {
+                return false; // Don't show students without semester enrollment
+            }
+            
+            // Show row if semester matches
             return String(rowSemesterId) === String(selectedSemesterId);
         };
         semesterFilter.name = 'semesterFilter';
@@ -197,4 +205,9 @@ $(document).ready(function () {
     });
 
     updateStudentCount();
+    
+    // Trigger initial filter if active semester is selected
+    if ($('#semester').val()) {
+        $('#semester').trigger('change');
+    }
 });
