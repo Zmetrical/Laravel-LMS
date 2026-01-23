@@ -139,7 +139,8 @@
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
                         style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
-                                <!-- School Year -->
+
+                <!-- School Year -->
                 <div class="user-panel py-3 px-3 d-flex flex-column">
                     <div class="info w-100">
                         <div class="d-flex justify-content-center align-items-start">
@@ -154,6 +155,16 @@
                                 <div class="text-white-50 small">
                                     </i>{{ $activeSemester->semester_name ?? 'N/A' }}
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-between">
+                            <div class="text-white font-weight-bold mb-1" style="font-size: 20px;">
+                            Student
                             </div>
                         </div>
                     </div>

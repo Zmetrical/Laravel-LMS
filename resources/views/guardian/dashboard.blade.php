@@ -2,7 +2,6 @@
 
 @section('breadcrumb')
 <nav aria-label="breadcrumb" class="breadcrumb-custom">
-    <i class="fas fa-home breadcrumb-icon"></i>
     <ol class="breadcrumb mb-0 bg-transparent">
         <li class="breadcrumb-item active">Dashboard</li>
     </ol>

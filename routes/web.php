@@ -100,6 +100,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::post('/section-adviser/save', [Section_Management::class, 'save_section_adviser'])->name('admin.section_adviser.save');
 Route::post('/section-adviser/search-teachers', [Section_Management::class, 'search_teachers'])->name('admin.section_adviser.search_teachers');
 
+
+Route::post('/section-assignment/get-section-details', [Section_Management::class, 'get_source_section_details'])
+    ->name('section_assignment.get_section_details');
+
+Route::post('/section-assignment/get-target-sections', [Section_Management::class, 'get_target_sections'])
+    ->name('section_assignment.get_target_sections');
+
+
         // Section Grades View
     Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])
         ->name('grades.section-view');

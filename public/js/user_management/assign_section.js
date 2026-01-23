@@ -1,5 +1,7 @@
 $(document).ready(function() {
     let loadedStudents = [];
+    let sourceStrandId = null;
+    let sourceLevelId = null;
 
     // =========================================================================
     // TOAST CONFIGURATION
@@ -48,52 +50,84 @@ $(document).ready(function() {
         },
         minimumInputLength: 0
     }).on('select2:select', function(e) {
-        // Auto-load students when section is selected
         const sourceSectionId = e.params.data.id;
-        const sourceSemesterId = $('#source_semester').val();
         
+        // Get source section details to set target strand
+        $.ajax({
+            url: API_ROUTES.getSectionDetails,
+            type: 'POST',
+            data: {
+                _token: $('input[name="_token"]').val(),
+                section_id: sourceSectionId
+            },
+            success: function(response) {
+                if (response.success) {
+                    sourceStrandId = response.section.strand_id;
+                    sourceLevelId = response.section.level_id;
+                    
+                    // Auto-select target strand
+                    $('#target_strand').val(sourceStrandId).trigger('change');
+                    
+                    // Show strand info
+                    Toast.fire({
+                        icon: 'info',
+                        title: `Source: ${response.section.strand_name} - ${response.section.level_name}`
+                    });
+                }
+            }
+        });
+        
+        // Auto-load students
+        const sourceSemesterId = $('#source_semester').val();
         loadStudentsFromSection(sourceSectionId, sourceSemesterId);
     }).on('select2:clear', function() {
-        // Clear table when section is cleared
-        $('#assignmentTableBody').html(`
-            <tr>
-                <td colspan="6" class="text-center text-muted py-5">
-                    <i class="fas fa-arrow-left fa-2x mb-3"></i>
-                    <p>Select a source section or search for a student to begin</p>
-                </td>
-            </tr>
-        `);
-        updateStudentCount();
-        $('#submitBtn').prop('disabled', true);
+        sourceStrandId = null;
+        sourceLevelId = null;
+        $('#target_strand').val('').trigger('change');
+        clearStudentTable();
     });
 
-    // Target Section Select2
+    // Target Strand Select
+    $('#target_strand').on('change', function() {
+        const strandId = $(this).val();
+        const semesterId = $('#target_semester').val();
+        
+        // Clear target section
+        $('#target_section').empty().append('<option value="">Select section...</option>');
+        
+        if (!strandId || !sourceLevelId) {
+            return;
+        }
+        
+        // Load sections for this strand (grouped by level)
+        $.ajax({
+            url: API_ROUTES.getTargetSections,
+            type: 'POST',
+            data: {
+                _token: $('input[name="_token"]').val(),
+                strand_id: strandId,
+                current_level_id: sourceLevelId,
+                semester_id: semesterId
+            },
+            success: function(response) {
+                if (response.success) {
+                    populateTargetSections(response.current_level, response.next_level);
+                }
+            },
+            error: function() {
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Failed to load target sections'
+                });
+            }
+        });
+    });
+
+    // Target Section (no AJAX, populated by strand selection)
     $('#target_section').select2({
         theme: 'bootstrap4',
-        placeholder: 'Search for section...',
-        allowClear: true,
-        ajax: {
-            url: API_ROUTES.searchSections,
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    search: params.term
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.map(function(section) {
-                        return {
-                            id: section.id,
-                            text: section.name + ' (' + section.code + ')'
-                        };
-                    })
-                };
-            },
-            cache: true
-        },
-        minimumInputLength: 0
+        placeholder: 'Select section...',
+        allowClear: true
     });
 
     $('#source_student').select2({
@@ -130,10 +164,60 @@ $(document).ready(function() {
     });
 
     // =========================================================================
+    // POPULATE TARGET SECTIONS (GROUPED BY LEVEL)
+    // =========================================================================
+    function populateTargetSections(currentLevel, nextLevel) {
+        const $select = $('#target_section');
+        $select.empty();
+        $select.append('<option value="">Select section...</option>');
+        
+        // Current Level Group
+        if (currentLevel && currentLevel.sections.length > 0) {
+            const currentGroup = $('<optgroup>').attr('label', `Current Level (${currentLevel.name})`);
+            currentLevel.sections.forEach(function(section) {
+                currentGroup.append(
+                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
+                );
+            });
+            $select.append(currentGroup);
+        }
+        
+        // Next Level Group
+        if (nextLevel && nextLevel.sections.length > 0) {
+            const nextGroup = $('<optgroup>').attr('label', `Next Level (${nextLevel.name})`);
+            nextLevel.sections.forEach(function(section) {
+                nextGroup.append(
+                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
+                );
+            });
+            $select.append(nextGroup);
+        }
+        
+        if (currentLevel.sections.length === 0 && (!nextLevel || nextLevel.sections.length === 0)) {
+            $select.append('<option value="" disabled>No sections available for this strand</option>');
+        }
+    }
+
+    // =========================================================================
+    // CLEAR STUDENT TABLE
+    // =========================================================================
+    function clearStudentTable() {
+        $('#assignmentTableBody').html(`
+            <tr>
+                <td colspan="6" class="text-center text-muted py-5">
+                    <i class="fas fa-arrow-left fa-2x mb-3"></i>
+                    <p>Select a source section or search for a student to begin</p>
+                </td>
+            </tr>
+        `);
+        updateStudentCount();
+        $('#submitBtn').prop('disabled', true);
+    }
+
+    // =========================================================================
     // LOAD STUDENTS FROM SECTION FUNCTION
     // =========================================================================
     function loadStudentsFromSection(sourceSectionId, sourceSemesterId) {
-        // Show loading state
         $('#assignmentTableBody').html(`
             <tr>
                 <td colspan="6" class="text-center py-4">
@@ -164,14 +248,7 @@ $(document).ready(function() {
                     }
                 } else {
                     Swal.fire('Error', response.message || 'Failed to load students', 'error');
-                    $('#assignmentTableBody').html(`
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                                <p>Failed to load students</p>
-                            </td>
-                        </tr>
-                    `);
+                    clearStudentTable();
                 }
             },
             error: function(xhr) {
@@ -180,14 +257,7 @@ $(document).ready(function() {
                     errorMsg = xhr.responseJSON.message;
                 }
                 Swal.fire('Error', errorMsg, 'error');
-                $('#assignmentTableBody').html(`
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                            <p>Failed to load students</p>
-                        </td>
-                    </tr>
-                `);
+                clearStudentTable();
             }
         });
     }
@@ -207,57 +277,6 @@ $(document).ready(function() {
         $('#sourceSectionBtn').removeClass('active btn-secondary').addClass('btn-default');
         $('#sourceStudentGroup').show();
         $('#sourceSectionGroup').hide();
-    });
-
-    // =========================================================================
-    // LOAD STUDENTS FROM SOURCE SECTION
-    // =========================================================================
-    $('#loadStudentsBtn').on('click', function() {
-        const sourceSectionId = $('#source_section').val();
-        const sourceSemesterId = $('#source_semester').val();
-
-        if (!sourceSectionId) {
-            Swal.fire('Missing Selection', 'Please select a source section first', 'warning');
-            return;
-        }
-
-        const $btn = $(this);
-        $btn.prop('disabled', true);
-        $btn.html('<i class="fas fa-spinner fa-spin mr-2"></i> Loading...');
-
-        $.ajax({
-            url: API_ROUTES.loadStudents,
-            type: 'POST',
-            data: {
-                _token: $('input[name="_token"]').val(),
-                source_section_id: sourceSectionId,
-                source_semester_id: sourceSemesterId
-            },
-            success: function(response) {
-                if (response.success) {
-                    loadedStudents = response.students;
-                    populateStudentTable(response.students);
-                    
-                    Toast.fire({
-                        icon: 'success',
-                        title: `${response.count} student(s) loaded successfully`
-                    });
-                } else {
-                    Swal.fire('Error', response.message || 'Failed to load students', 'error');
-                }
-            },
-            error: function(xhr) {
-                let errorMsg = 'Failed to load students';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                Swal.fire('Error', errorMsg, 'error');
-            },
-            complete: function() {
-                $btn.prop('disabled', false);
-                $btn.html('<i class="fas fa-download mr-2"></i> Load Students');
-            }
-        });
     });
 
     // =========================================================================
@@ -281,6 +300,13 @@ $(document).ready(function() {
                 title: 'This student is already in the list'
             });
             return;
+        }
+
+        // Set source strand and level from student
+        if (!sourceStrandId && student.strand_id) {
+            sourceStrandId = student.strand_id;
+            sourceLevelId = student.level_id;
+            $('#target_strand').val(sourceStrandId).trigger('change');
         }
 
         // Add student to loaded students array
@@ -412,7 +438,7 @@ $(document).ready(function() {
         
         $('#assignmentTableBody tr').each(function() {
             const $row = $(this);
-            if ($row.find('.student-checkbox').length === 0) return; // Skip empty state row
+            if ($row.find('.student-checkbox').length === 0) return;
             
             const text = $row.text().toLowerCase();
             if (text.indexOf(searchValue) > -1) {
@@ -484,15 +510,7 @@ $(document).ready(function() {
                 $('#selectAllCheckbox').prop('checked', false);
                 
                 if ($('#assignmentTableBody tr').length === 0) {
-                    $('#assignmentTableBody').html(`
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-3"></i>
-                                <p>No students in the list</p>
-                            </td>
-                        </tr>
-                    `);
-                    $('#submitBtn').prop('disabled', true);
+                    clearStudentTable();
                 }
             }
         });
@@ -550,6 +568,11 @@ $(document).ready(function() {
             return;
         }
 
+        if (!$('#target_strand').val()) {
+            Swal.fire('Missing Selection', 'Please select a target strand', 'warning');
+            return;
+        }
+
         if (!$('#target_section').val()) {
             Swal.fire('Missing Selection', 'Please select a target section', 'warning');
             return;
@@ -570,8 +593,9 @@ $(document).ready(function() {
             return;
         }
 
-        const targetSectionText = $('#target_section option:selected').text() || $('#target_section').select2('data')[0].text;
+        const targetSectionText = $('#target_section option:selected').text();
         const targetSemesterName = $('#target_semester option:selected').text();
+        const targetStrandName = $('#target_strand option:selected').text();
 
         Swal.fire({
             title: 'Confirm Assignment',
@@ -579,7 +603,8 @@ $(document).ready(function() {
                 <div class="text-left">
                     <p><strong>Assigning ${students.length} student(s)</strong></p>
                     <hr>
-                    <p><strong>To:</strong> ${targetSectionText}</p>
+                    <p><strong>Strand:</strong> ${targetStrandName}</p>
+                    <p><strong>Section:</strong> ${targetSectionText}</p>
                     <p><strong>Semester:</strong> ${targetSemesterName}</p>
                     <hr>
                     <p class="text-muted small">This will:</p>

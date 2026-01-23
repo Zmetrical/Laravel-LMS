@@ -31,12 +31,19 @@ class Section_Management extends MainController
             ->orderBy('semesters.id', 'desc')
             ->get();
 
+        // Get all strands for target selection
+        $strands = DB::table('strands')
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get();
+
         $data = [
             'scripts' => [
                 'user_management/assign_section.js',
             ],
             'sections' => $sections,
             'semesters' => $semesters,
+            'strands' => $strands,
         ];
 
         return view('admin.user_management.assign_section', $data);
@@ -63,6 +70,144 @@ class Section_Management extends MainController
             ->get();
 
         return response()->json($sections);
+    }
+
+    /**
+     * Get source section details including strand and level
+     */
+    public function get_source_section_details(Request $request)
+    {
+        $request->validate([
+            'section_id' => 'required|exists:sections,id'
+        ]);
+
+        try {
+            $section = DB::table('sections')
+                ->join('strands', 'sections.strand_id', '=', 'strands.id')
+                ->join('levels', 'sections.level_id', '=', 'levels.id')
+                ->where('sections.id', $request->section_id)
+                ->select(
+                    'sections.id',
+                    'sections.code',
+                    'sections.name',
+                    'sections.strand_id',
+                    'sections.level_id',
+                    'strands.code as strand_code',
+                    'strands.name as strand_name',
+                    'levels.id as level_id',
+                    'levels.name as level_name'
+                )
+                ->first();
+
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'section' => $section
+            ]);
+
+        } catch (Exception $e) {
+            \Log::error('Failed to get section details', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get available target sections for a specific strand
+     * Grouped by level (current and next level)
+     */
+    public function get_target_sections(Request $request)
+    {
+        $request->validate([
+            'strand_id' => 'required|exists:strands,id',
+            'current_level_id' => 'required|exists:levels,id',
+            'semester_id' => 'nullable|exists:semesters,id'
+        ]);
+
+        try {
+            $strandId = $request->strand_id;
+            $currentLevelId = $request->current_level_id;
+            $semesterId = $request->semester_id;
+
+            // Get current level info
+            $currentLevel = DB::table('levels')->find($currentLevelId);
+
+            // Determine next level (assuming level IDs are sequential)
+            $nextLevel = DB::table('levels')
+                ->where('id', '>', $currentLevelId)
+                ->orderBy('id', 'asc')
+                ->first();
+
+            // Get sections for current level
+            $currentLevelSections = DB::table('sections')
+                ->join('levels', 'sections.level_id', '=', 'levels.id')
+                ->where('sections.strand_id', $strandId)
+                ->where('sections.level_id', $currentLevelId)
+                ->where('sections.status', 1)
+                ->select(
+                    'sections.id',
+                    'sections.code',
+                    'sections.name',
+                    'sections.level_id',
+                    'levels.name as level_name'
+                )
+                ->orderBy('sections.name')
+                ->get();
+
+            // Get sections for next level (if exists)
+            $nextLevelSections = [];
+            if ($nextLevel) {
+                $nextLevelSections = DB::table('sections')
+                    ->join('levels', 'sections.level_id', '=', 'levels.id')
+                    ->where('sections.strand_id', $strandId)
+                    ->where('sections.level_id', $nextLevel->id)
+                    ->where('sections.status', 1)
+                    ->select(
+                        'sections.id',
+                        'sections.code',
+                        'sections.name',
+                        'sections.level_id',
+                        'levels.name as level_name'
+                    )
+                    ->orderBy('sections.name')
+                    ->get();
+            }
+
+            return response()->json([
+                'success' => true,
+                'current_level' => [
+                    'id' => $currentLevel->id,
+                    'name' => $currentLevel->name,
+                    'sections' => $currentLevelSections
+                ],
+                'next_level' => $nextLevel ? [
+                    'id' => $nextLevel->id,
+                    'name' => $nextLevel->name,
+                    'sections' => $nextLevelSections
+                ] : null
+            ]);
+
+        } catch (Exception $e) {
+            \Log::error('Failed to get target sections', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -102,8 +247,11 @@ class Section_Management extends MainController
                     'students.section_id as current_section_id',
                     'sections.name as current_section',
                     'sections.code as current_section_code',
+                    'sections.strand_id',
+                    'sections.level_id',
                     'levels.name as current_level',
-                    'strands.code as current_strand'
+                    'strands.code as current_strand',
+                    'strands.name as current_strand_name'
                 )
                 ->orderBy('students.last_name')
                 ->orderBy('students.first_name')
@@ -170,8 +318,11 @@ class Section_Management extends MainController
                         'students.section_id as current_section_id',
                         'sections.name as current_section',
                         'sections.code as current_section_code',
+                        'sections.strand_id',
+                        'sections.level_id',
                         'levels.name as current_level',
-                        'strands.code as current_strand'
+                        'strands.code as current_strand',
+                        'strands.name as current_strand_name'
                     )
                     ->get();
 
@@ -199,8 +350,11 @@ class Section_Management extends MainController
                         'students.section_id as current_section_id',
                         'sections.name as current_section',
                         'sections.code as current_section_code',
+                        'sections.strand_id',
+                        'sections.level_id',
                         'levels.name as current_level',
-                        'strands.code as current_strand'
+                        'strands.code as current_strand',
+                        'strands.name as current_strand_name'
                     )
                     ->get();
 
@@ -228,8 +382,11 @@ class Section_Management extends MainController
                         'students.section_id as current_section_id',
                         'sections.name as current_section',
                         'sections.code as current_section_code',
+                        'sections.strand_id',
+                        'sections.level_id',
                         'levels.name as current_level',
-                        'strands.code as current_strand'
+                        'strands.code as current_strand',
+                        'strands.name as current_strand_name'
                     )
                     ->orderBy('students.last_name')
                     ->orderBy('students.first_name')
@@ -286,6 +443,15 @@ class Section_Management extends MainController
                     
                     if (!$student) {
                         $errors[] = "Student {$studentNumber} not found";
+                        continue;
+                    }
+
+                    // Validate strand compatibility
+                    $studentSection = DB::table('sections')->find($student->section_id);
+                    $targetSection = DB::table('sections')->find($newSectionId);
+
+                    if ($studentSection && $targetSection && $studentSection->strand_id != $targetSection->strand_id) {
+                        $errors[] = "Student {$studentNumber} cannot be assigned to a different strand";
                         continue;
                     }
 

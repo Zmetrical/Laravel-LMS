@@ -26,67 +26,67 @@
         <div class="row">
             <!-- Left Sidebar -->
             <div class="col-lg-3">
-<!-- Source Selection Card -->
-<div class="card card-secondary card-outline">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
-    </div>
-    <div class="card-body">
-        <div class="form-group">
-            <label>Previous Semester </label>
-            <select class="form-control" id="source_semester">
-                <option value="">All Students in Section</option>
-                @foreach($semesters as $semester)
-                    <option value="{{ $semester->id }}">
-                        {{ $semester->year_code }} - {{ $semester->semester_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+                <!-- Source Selection Card -->
+                <div class="card card-secondary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Previous Semester </label>
+                            <select class="form-control" id="source_semester">
+                                <option value="">All Students in Section</option>
+                                @foreach($semesters as $semester)
+                                    <option value="{{ $semester->id }}">
+                                        {{ $semester->year_code }} - {{ $semester->semester_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-        <!-- Source Type Toggle -->
-        <div class="form-group">
-            <label>Source Type</label>
-            <div class="btn-group btn-block">
-                <button type="button" class="btn btn-secondary active" id="sourceSectionBtn">
-                    <i class="fas fa-users"></i> Section
-                </button>
-                <button type="button" class="btn btn-default" id="sourceStudentBtn">
-                    <i class="fas fa-user"></i> Student
-                </button>
-            </div>
-        </div>
+                        <!-- Source Type Toggle -->
+                        <div class="form-group">
+                            <label>Source Type</label>
+                            <div class="btn-group btn-block">
+                                <button type="button" class="btn btn-secondary active" id="sourceSectionBtn">
+                                    <i class="fas fa-users"></i> Section
+                                </button>
+                                <button type="button" class="btn btn-default" id="sourceStudentBtn">
+                                    <i class="fas fa-user"></i> Student
+                                </button>
+                            </div>
+                        </div>
 
-        <!-- Source Section -->
-        <div id="sourceSectionGroup">
-            <div class="form-group mb-0">
-                <label>Source Section <span class="text-danger">*</span></label>
-                <select class="form-control select2" id="source_section" style="width: 100%;">
-                    <option value="">Search for section...</option>
-                </select>
-            </div>
-        </div>
+                        <!-- Source Section -->
+                        <div id="sourceSectionGroup">
+                            <div class="form-group mb-0">
+                                <label>Source Section <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="source_section" style="width: 100%;">
+                                    <option value="">Search for section...</option>
+                                </select>
+                            </div>
+                        </div>
 
-        <!-- Source Student -->
-        <div id="sourceStudentGroup" style="display: none;">
-            <div class="form-group">
-                <label>Search Student <span class="text-danger">*</span></label>
-                <select class="form-control select2" id="source_student" style="width: 100%;">
-                    <option value="">Type student number or name...</option>
-                </select>
-            </div>
+                        <!-- Source Student -->
+                        <div id="sourceStudentGroup" style="display: none;">
+                            <div class="form-group">
+                                <label>Search Student <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="source_student" style="width: 100%;">
+                                    <option value="">Type student number or name...</option>
+                                </select>
+                            </div>
 
-            <button type="button" class="btn btn-secondary btn-block" id="addStudentBtn">
-                <i class="fas fa-user-plus mr-2"></i> Add Student
-            </button>
-        </div>
-    </div>
-</div>
+                            <button type="button" class="btn btn-secondary btn-block" id="addStudentBtn">
+                                <i class="fas fa-user-plus mr-2"></i> Add Student
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Target Section Card -->
                 <div class="card card-primary card-outline mt-3">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-bullseye mr-2"></i>Target Section</h3>
+                        <h3 class="card-title"><i class="fas fa-bullseye mr-2"></i>Target Assignment</h3>
                     </div>
                     <div class="card-body">
                         <div class="form-group">
@@ -97,7 +97,18 @@
                                     <option value="{{ $semester->id }}" 
                                         @if($semester->status === 'active') selected @endif>
                                         {{ $semester->year_code }} - {{ $semester->semester_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
+                        <div class="form-group">
+                            <label>Target Strand <span class="text-danger">*</span></label>
+                            <select class="form-control" id="target_strand" name="strand_id" required>
+                                <option value="">Select Strand</option>
+                                @foreach($strands as $strand)
+                                    <option value="{{ $strand->id }}">
+                                        {{ $strand->name }} ({{ $strand->code }})
                                     </option>
                                 @endforeach
                             </select>
@@ -105,8 +116,8 @@
 
                         <div class="form-group">
                             <label>Target Section <span class="text-danger">*</span></label>
-                            <select class="form-control select2" id="target_section" name="section_id" style="width: 100%;" required>
-                                <option value="">Search for section...</option>
+                            <select class="form-control" id="target_section" name="section_id" required>
+                                <option value="">Select section...</option>
                             </select>
                         </div>
                     </div>
@@ -187,57 +198,6 @@
         </div>
     </form>
 </div>
-
-
-<!-- Assign Adviser Modal -->
-<div class="modal fade" id="assignAdviserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title"><i class="fas fa-chalkboard-teacher mr-2"></i>Assign Adviser</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-            </div>
-            <form id="assignAdviserForm">
-                @csrf
-                <div class="modal-body">
-                    <input type="hidden" id="adviser_section_id" name="section_id">
-                    
-                    <div class="form-group">
-                        <label>Section</label>
-                        <input type="text" class="form-control" id="adviser_section_name" readonly>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Semester <span class="text-danger">*</span></label>
-                        <select class="form-control" id="adviser_semester_id" name="semester_id" required>
-                            <option value="">Select Semester</option>
-                            @foreach($semesters as $semester)
-                                <option value="{{ $semester->id }}" 
-                                    @if($semester->status === 'active') selected @endif>
-                                    {{ $semester->year_code }} - {{ $semester->semester_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Adviser <span class="text-danger">*</span></label>
-                        <select class="form-control select2" id="adviser_teacher_id" name="teacher_id" style="width: 100%;" required>
-                            <option value="">Search for teacher...</option>
-                        </select>
-                        <small class="form-text text-muted">Current adviser will be shown if one exists</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-1"></i> Assign Adviser
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -249,6 +209,8 @@ const API_ROUTES = {
     searchSections: "{{ route('admin.section_assignment.search_sections') }}",
     searchStudents: "{{ route('admin.section_assignment.search_students') }}",
     loadStudents: "{{ route('admin.section_assignment.load_students') }}",
+    getSectionDetails: "{{ route('admin.section_assignment.get_section_details') }}",
+    getTargetSections: "{{ route('admin.section_assignment.get_target_sections') }}",
     assignStudents: "{{ route('admin.section_assignment.assign_students') }}",
     redirectAfterSubmit: "{{ route('admin.list_student') }}"
 };

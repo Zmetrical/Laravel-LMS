@@ -38,9 +38,7 @@
             background-color: #6c757d; 
             color: white; 
         }
-        .select2-container .select2-selection--single {
-            height: calc(2.25rem + 2px) !important;
-        }
+
         .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
             line-height: calc(2.25rem + 2px) !important;
         }
@@ -200,6 +198,10 @@
                             <tr>
                                 <th>Section:</th>
                                 <td id="detailSection"></td>
+                            </tr>
+                            <tr>
+                                <th>Grade Level:</th>
+                                <td id="detailLevel"></td>
                             </tr>
                         </table>
                     </div>

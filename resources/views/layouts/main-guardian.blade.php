@@ -156,7 +156,15 @@
                         </div>
                     </div>
                 </div>
-
+                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-between">
+                            <div class="text-white font-weight-bold mb-1" style="font-size: 20px;">
+                            Guardian
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="sidebar">
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
@@ -167,7 +175,7 @@
                                 <a href="{{ route('guardian.home') }}"
                                     class="nav-link {{ Request::routeIs('guardian.home') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-home"></i>
-                                    <p>Dashboard</p>
+                                    <p>Home</p>
                                 </a>
                             </li>
 
@@ -211,9 +219,6 @@
                 <!-- Info Section at Bottom -->
                 <div class="sidebar-bottom p-3">
                     <div class="text-white-50 small text-center">
-                        <i class="fas fa-link mr-2"></i>Link-based Access
-                        <br>
-                        <small>No password required</small>
                     </div>
                 </div>
             </aside>

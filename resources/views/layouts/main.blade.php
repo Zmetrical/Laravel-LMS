@@ -156,6 +156,18 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-between">
+                            <div class="text-white font-weight-bold mb-1" style="font-size: 20px;">
+                            Admin
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
                 <div class="sidebar">
 
                     <!-- Navigation Menu -->

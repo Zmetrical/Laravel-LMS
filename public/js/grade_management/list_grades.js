@@ -53,8 +53,8 @@ $(document).ready(function () {
     dataTable = $('#gradesTable').DataTable({
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        scrollX: true,
-        autoWidth: false,
+        scrollX: false,
+        autoWidth: true,
         order: [[4, 'desc'], [1, 'asc']], // Sort by semester (desc), then student name (asc)
         searching: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
@@ -259,11 +259,8 @@ $(document).ready(function () {
         $('#detailStudentNumber').text(grade.student_number);
         $('#detailStudentName').text(grade.full_name);
         
-        const sectionInfo = grade.section_name ? 
-            `${grade.section_name} (${grade.strand_code || ''} - ${grade.level_name || ''})` : 
-            'N/A';
-        $('#detailSection').text(sectionInfo);
-
+        $('#detailSection').text(grade.section_name);
+        $('#detailLevel').text(grade.level_name);
         // Class and Semester Info
         $('#detailClass').text(grade.class_name);
         $('#detailSemester').text(grade.semester_display);

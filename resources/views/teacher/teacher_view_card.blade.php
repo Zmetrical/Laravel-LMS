@@ -451,11 +451,52 @@
     <button class="btn btn-primary" onclick="window.print()">
         <i class="fas fa-print"></i> Print
     </button>
-    <button class="btn btn-primary">
+    <button class="btn btn-primary " onclick="exportToPDF()">
         <i class="fas fa-file-pdf"></i> Export
     </button>
 </div>
 @endsection
 
 @section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+function exportToPDF() {
+    const exportBtn = event.target.closest('button');
+    const originalHTML = exportBtn.innerHTML;
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+
+    html2canvas(document.querySelector('.report-card-page'), {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+    }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jspdf.jsPDF({
+            orientation: 'portrait',
+            unit: 'in',
+            format: 'letter'
+        });
+        const imgWidth = 8.5;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        const studentName = document.querySelector('.info-value')?.textContent.trim() || 'Student';
+        const schoolYear = document.querySelectorAll('.school-year')[0]?.textContent.trim() || '';
+        const filename = `Report_Card_${studentName.replace(/[^a-z0-9]/gi, '_')}_${schoolYear.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+        
+        pdf.save(filename);
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = originalHTML;
+    }).catch(error => {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try again.');
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = originalHTML;
+    });
+}
+</script>
 @endsection

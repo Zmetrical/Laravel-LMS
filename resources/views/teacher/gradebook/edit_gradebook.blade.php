@@ -7,8 +7,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         .jsgrid-header-row > .jsgrid-header-cell {
-            background-color: #343a40;
-            color: #fff;
+            background-color: #fff;
+            color: black;
             font-weight: 600;
             vertical-align: top;
             padding: 10px 5px;
@@ -57,7 +57,7 @@
         }
 
         .component-header {
-            background-color: #495057 !important;
+            background-color: #fff !important;
         }
         
         .column-header {
@@ -139,7 +139,7 @@
         }
 
         .gender-separator .jsgrid-cell {
-            background-color: #6c757d !important;
+            background-color: #2a347e !important;
             color: #fff !important;
             font-weight: 700;
             text-align: left !important;
@@ -165,7 +165,7 @@
         }
 
         .total-cell {
-            background-color: #e9ecef;
+            background-color: #fff;
             font-weight: 600;
         }
 
@@ -213,7 +213,7 @@
 @endsection
 
 @section('content')
-    <div class="card card-dark card-outline">
+    <div class="card">
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-6">
@@ -223,42 +223,41 @@
                 </div>
 
                 <div class="col-md-6 text-right">
-                    <button class="btn btn-outline-secondary btn-sm" id="viewBtn">
-                        Back to View
+                    <button class="btn btn-secondary btn-sm" id="viewBtn">
+                        <i class="fas fa-eye"></i> Back to View
                     </button>
                 </div>
             </div>
-            
         </div>
     </div>
-    <div class="card card-dark card-outline">
+
+    <div class="card">
         <div class="card-body">
             <div class="row align-items-center">
+                <div class="col-md-6 filter-controls">
+                    <div class="filter-group">
+                        <label><i class="fas fa-users"></i> Section:</label>
+                        <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
+                            <option value="">Select Section</option>
+                            @foreach($sections as $section)
+                                <option value="{{ $section->id }}">{{ $section->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-            <div class="col-md-6 filter-controls">
-                <div class="filter-group">
-                    <label>Quarter:</label>
-                    <div class="btn-group btn-group-sm btn-group-quarter" role="group">
-                        @foreach($quarters as $quarter)
-                            <button type="button" 
-                                    class="btn btn-outline-secondary quarter-btn" 
-                                    data-quarter="{{ $quarter->id }}">
-                                {{ $quarter->name }}
-                            </button>
-                        @endforeach
+                    <div class="filter-group">
+                        <label>View:</label>
+                        <div class="btn-group btn-group-sm btn-group-quarter" role="group">
+                            @foreach($quarters as $quarter)
+                                <button type="button" 
+                                        class="btn btn-outline-secondary quarter-btn" 
+                                        data-quarter="{{ $quarter->id }}">
+                                    {{ $quarter->name }}
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
-
-                <div class="filter-group">
-                    <label><i class="fas fa-users"></i> Section:</label>
-                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
-                        <option value="">Select Section</option>
-                        @foreach($sections as $section)
-                            <option value="{{ $section->id }}">{{ $section->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
 
                 <div class="col-md-6 text-right">
                     <button class="btn btn-primary btn-sm" id="importBtn">
@@ -273,7 +272,7 @@
         <i class="fas fa-save"></i> <span id="saveChangesText">Save Changes</span>
     </button>
 
-    <div class="card card-dark card-outline card-tabs">
+    <div class="card card-outline card-tabs">
         <div class="card-header p-0 pt-1 border-bottom-0">
             <ul class="nav nav-tabs" id="custom-tabs" role="tablist">
                 <li class="nav-item">
@@ -340,7 +339,7 @@
                 <input type="hidden" id="columnId">
                 <div class="modal-body">
                     <div class="alert alert-primary">
-                        <i class="fas fa-white-circle"></i> Column: <strong id="columnName"></strong>
+                        <i class="fas fa-info-circle"></i> Column: <strong id="columnName"></strong>
                     </div>
 
                     <div class="form-group">
@@ -396,7 +395,6 @@
     </div>
 </div>
 
-
     <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
     <div class="modal-dialog">
@@ -411,7 +409,6 @@
             </div>
             <form id="importForm" enctype="multipart/form-data">
                 <div class="modal-body">
-
                     <div class="form-group">
                         <label>Excel File <span class="text-danger">*</span></label>
                         <div class="custom-file">
@@ -454,7 +451,6 @@
     </div>
 </div>
 
-
 @endsection
 
 @section('scripts')
@@ -473,10 +469,8 @@
             updateColumn: "{{ route('teacher.gradebook.column.update', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
             getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
-            import: "{{ route('teacher.gradebook.import', ['classId' => $classId]) }}", // Add this line
-                importColumn: "{{ route('teacher.gradebook.column.import', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}" // Add this
-
-
+            import: "{{ route('teacher.gradebook.import', ['classId' => $classId]) }}",
+            importColumn: "{{ route('teacher.gradebook.column.import', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}"
         };
     </script>
     

@@ -246,7 +246,7 @@ $(document).ready(function () {
                     const isChanged = pendingChanges.hasOwnProperty(key);
 
                     if (isOnline) {
-                        return `<span class="badge badge-info">${val}</span>`;
+                        return `<span class="badge badge-primary">${val}</span>`;
                     }
 
                     const changedClass = isChanged ? 'changed-cell-value' : '';
@@ -319,7 +319,7 @@ $(document).ready(function () {
                             }
                         }
                     });
-                    return `<strong>${total.toFixed(2)}</strong>`;
+                    return `${total.toFixed(2)}`;
                 },
                 headerCss: "component-header"
             },
@@ -345,7 +345,7 @@ $(document).ready(function () {
                         }
                     });
                     const perc = totalMaxPoints > 0 ? (total / totalMaxPoints * 100).toFixed(2) : '0.00';
-                    return `<strong>${perc}%</strong>`;
+                    return `${perc}%`;
                 },
                 headerCss: "component-header"
             }
@@ -422,7 +422,7 @@ $(document).ready(function () {
     }
 
     function createColumnHeader(col) {
-        const badge = col.source_type === 'online' ? '<span class="badge badge-info online-badge">Online</span>' : '';
+        const badge = col.source_type === 'online' ? '<span class="badge badge-primary online-badge">Online</span>' : '';
         const statusIcon = col.is_active ?
             '<i class="fas fa-toggle-on text-white toggle-column-btn" title="Disable column"></i>' :
             '<i class="fas fa-toggle-off text-secondary toggle-column-btn" title="Enable column"></i>';

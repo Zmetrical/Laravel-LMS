@@ -157,6 +157,17 @@
                         </div>
                     </div>
                 </div>
+
+                                <div class="user-panel py-3 px-3 d-flex flex-column">
+                    <div class="info w-100">
+                        <div class="d-flex justify-content-between">
+                            <div class="text-white font-weight-bold mb-1" style="font-size: 20px;">
+                            Teacher
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="sidebar">
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
@@ -164,15 +175,15 @@
                             <li class="nav-item">
                                 <a href="{{ route('teacher.list_class') }}"
                                     class="nav-link {{ Request::routeIs('teacher.list_class') ? 'active' : '' }}">
-                                    <i class="far fa-circle nav-icon"></i>
-                                    <p>My Classes</p>
+                                <i class="nav-icon fas fa-th-list"></i>                                    
+                                <p>My Classes</p>
                                 </a>
                             </li>
 
                                 <li class="nav-item">
                                 <a href="{{ route('teacher.adviser.grade.cards') }}"
                                     class="nav-link {{ Request::routeIs('teacher.adviser.grade.cards') ? 'active' : '' }}">
-                                    <i class="far fa-circle nav-icon"></i>
+                                    <i class="nav-icon fas fa-th-list"></i>      
                                     <p>My Students</p>
                                 </a>
                             </li>
