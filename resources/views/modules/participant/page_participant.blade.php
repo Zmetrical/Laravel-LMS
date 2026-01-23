@@ -8,7 +8,7 @@
     <div class="col-12">
         <!-- Participants List Card -->
         <div class="card">
-            <div class="card-header bg-primary">
+            <div class="card-header ">
                 <h3 class="card-title">
                     <i class="fas fa-users"></i> Enrolled Participants
                 </h3>
@@ -66,7 +66,6 @@
                                 <th style="width: 25%;">Student Number</th>
                                 <th style="width: 30%;">Student Information</th>
                                 <th style="width: 20%;">Section</th>
-                                <th style="width: 10%;" class="text-center">Gender</th>
                                 <th style="width: 10%;" class="text-center">Type</th>
                             </tr>
                         </thead>

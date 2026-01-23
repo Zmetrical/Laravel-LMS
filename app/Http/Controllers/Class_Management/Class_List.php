@@ -274,38 +274,80 @@ class Class_List extends MainController
         return view('modules.class.list_class', $data);
     }
 
-    public function getTeacherClasses()
-    {
-        try {
-            $teacher = Auth::guard('teacher')->user();
+public function getTeacherClasses()
+{
+    try {
+        $teacher = Auth::guard('teacher')->user();
 
-            if (!$teacher) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 401);
-            }
-
-            $classes = DB::table('teacher_class_matrix as tcm')
-                ->join('classes as c', 'tcm.class_id', '=', 'c.id')
-                ->where('tcm.teacher_id', $teacher->id)
-                ->select(
-                    'c.id',
-                    'c.class_code',
-                    'c.class_name'
-                )
-                ->orderBy('c.class_code')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $classes
-            ]);
-        } catch (\Exception $e) {
+        if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load classes: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Unauthorized'
+            ], 401);
         }
+
+        // Get active semester
+        $activeSemester = DB::table('semesters')
+            ->where('status', 'active')
+            ->first();
+
+        if (!$activeSemester) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'No active semester found'
+            ]);
+        }
+
+        $classes = DB::table('teacher_class_matrix as tcm')
+            ->join('classes as c', 'tcm.class_id', '=', 'c.id')
+            ->where('tcm.teacher_id', $teacher->id)
+            ->where('tcm.semester_id', $activeSemester->id)
+            ->select(
+                'c.id',
+                'c.class_code',
+                'c.class_name'
+            )
+            ->orderBy('c.class_code')
+            ->get();
+
+        // Add counts for each class
+        foreach ($classes as $class) {
+            // Count sections assigned to this class
+            $class->section_count = DB::table('section_class_matrix')
+                ->where('class_id', $class->id)
+                ->where('semester_id', $activeSemester->id)
+                ->distinct()
+                ->count('section_id');
+
+            // Count students (both regular and irregular)
+            $regularStudents = DB::table('section_class_matrix as scm')
+                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+                ->join('students as s', 'sec.id', '=', 's.section_id')
+                ->where('scm.class_id', $class->id)
+                ->where('scm.semester_id', $activeSemester->id)
+                ->where('s.student_type', 'regular')
+                ->distinct()
+                ->count('s.student_number');
+
+            $irregularStudents = DB::table('student_class_matrix as stcm')
+                ->where('stcm.class_code', $class->class_code)
+                ->where('stcm.semester_id', $activeSemester->id)
+                ->where('stcm.enrollment_status', 'enrolled')
+                ->count();
+
+            $class->student_count = $regularStudents + $irregularStudents;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $classes
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load classes: ' . $e->getMessage()
+        ], 500);
     }
+}
 }

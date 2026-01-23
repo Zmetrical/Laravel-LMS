@@ -10,8 +10,8 @@
         }
         
         .table-gradebook thead th {
-            background-color: #343a40;
-            color: #fff;
+            background-color: #fff;
+            color: black;
             font-weight: 600;
             vertical-align: top;
             padding: 10px 5px;
@@ -33,7 +33,7 @@
             top: 0;
             bottom: 0;
             width: 1px;
-            background-color: #dee2e6;
+            background-color: #fff;
         }
         
         .table-gradebook .score-cell {
@@ -41,19 +41,19 @@
         }
         
         .table-gradebook .total-cell {
-            background-color: #e9ecef;
+            background-color: #fff;
             font-weight: 600;
         }
         
         .table-gradebook .grade-cell {
-            background-color: #6c757d;
-            color: #fff;
+            background-color: #fff;
+            color: black;
             font-weight: 700;
             font-size: 14px;
         }
         
         .component-header {
-            background-color: #495057 !important;
+            background-color: #fff !important;
         }
         
         .online-badge {
@@ -95,8 +95,8 @@
         }
 
         .summary-header th {
-            background-color: #343a40 !important;
-            color: #fff !important;
+            background-color: #fff !important;
+            color: black !important;
             font-weight: 600;
             vertical-align: top;
             padding: 10px 5px;
@@ -110,7 +110,7 @@
             position: sticky;
             left: 0;
             z-index: 11;
-            background-color: #343a40;
+            background-color: #fff;
         }
 
         .summary-header th:nth-child(2) {
@@ -123,7 +123,7 @@
         }
 
         .gender-separator {
-            background-color: #6c757d !important;
+            background-color: #2a347e !important;
             color: #fff !important;
             font-weight: 700;
             text-align: left !important;
@@ -135,7 +135,7 @@
             position: sticky;
             left: 0;
             z-index: 8;
-            background-color: #6c757d;
+            background-color: #2a347e;
         }
 
         .loading-row td,
@@ -179,12 +179,12 @@
         }
 
         .remarks-passed {
-            color: #28a745;
+            color: black;
             font-weight: 700;
         }
 
         .remarks-failed {
-            color: #dc3545;
+            color: black;
             font-weight: 700;
         }
 
@@ -250,6 +250,16 @@
             <div class="row align-items-center">
 
             <div class="col-md-6 filter-controls">
+
+                <div class="filter-group">
+                    <label><i class="fas fa-users"></i> Section:</label>
+                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
+                        <option value="">Select Section</option>
+                        @foreach($sections as $section)
+                            <option value="{{ $section->id }}">{{ $section->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="filter-group">
                     <label>View:</label>
                     <div class="btn-group btn-group-sm btn-group-quarter" role="group">
@@ -269,15 +279,6 @@
                     </div>
                 </div>
 
-                <div class="filter-group">
-                    <label><i class="fas fa-users"></i> Section:</label>
-                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
-                        <option value="">Select Section</option>
-                        @foreach($sections as $section)
-                            <option value="{{ $section->id }}">{{ $section->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
             </div>
 
             <div class="col-md-6 text-right">
@@ -291,7 +292,7 @@
         </div>
     </div>
 
-    <div class="card card-dark card-outline card-tabs">
+    <div class="card card-outline card-tabs">
         <div class="card-header p-0 pt-1 border-bottom-0">
             <ul class="nav nav-tabs" id="custom-tabs" role="tablist">
                 <li class="nav-item">

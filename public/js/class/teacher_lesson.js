@@ -281,33 +281,30 @@ function renderQuarterLessons(quarter) {
                     ${lesson.description ? `<p class="text-muted mb-0 mt-2"><small>${escapeHtml(lesson.description)}</small></p>` : ''}
                 </div>
                 <div class="card-body p-0">
-                    <div class="p-2">
-                        <button class="btn btn-primary btn-sm create-lecture-btn mr-1" data-lesson-id="${lesson.id}">
-                            <i class="fas fa-plus"></i> Add Lecture
-                        </button>
-                        <button class="btn btn-info btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
-                            <i class="fas fa-plus"></i> Add Quiz
-                        </button>
-                    </div>
-                    
-                    <div class="row no-gutters">
-                        <div class="col-md-6 border-right">
-                            <div class="p-2 bg-light border-bottom">
-                                <small class="font-weight-bold">
-                                    <i class="fas fa-chalkboard-teacher text-primary"></i> Lectures
-                                </small>
-                            </div>
-                            ${lecturesHtml}
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-2 bg-light border-bottom">
-                                <small class="font-weight-bold">
-                                    <i class="fas fa-clipboard-list text-info"></i> Quizzes
-                                </small>
-                            </div>
-                            ${quizzesHtml}
-                        </div>
-                    </div>
+<div class="row no-gutters">
+    <div class="col-md-6 border-right">
+        <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+            <small class="font-weight-bold">
+                <i class="fas fa-chalkboard-teacher text-primary"></i> Lectures
+            </small>
+            <button class="btn btn-primary btn-sm create-lecture-btn" data-lesson-id="${lesson.id}">
+                <i class="fas fa-plus"></i> Add
+            </button>
+        </div>
+        ${lecturesHtml}
+    </div>
+    <div class="col-md-6">
+        <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+            <small class="font-weight-bold">
+                <i class="fas fa-clipboard-list text-secondary"></i> Quizzes
+            </small>
+            <button class="btn btn-info btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
+                <i class="fas fa-plus"></i> Add
+            </button>
+        </div>
+        ${quizzesHtml}
+    </div>
+</div>
                 </div>
             </div>
         `;

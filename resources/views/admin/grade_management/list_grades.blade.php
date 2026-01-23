@@ -152,7 +152,7 @@
                                 <td data-semester-id="{{ $grade->semester_id }}">{{ $grade->semester_display }}</td>
                                 <td class="text-center"><strong>{{ $grade->final_grade }}</strong></td>
                                 <td class="text-center">
-                                    <span class="badge badge-{{ strtolower($grade->remarks) }}">
+                                    <span class="badge badge-white">
                                         {{ $grade->remarks }}
                                     </span>
                                 </td>
@@ -228,7 +228,6 @@
                 <hr>
 
                 <!-- Grade Breakdown -->
-                <h6 class="mb-3"><i class="fas fa-calculator"></i> Quarter Grades</h6>
                 <div class="row">
                     <div class="col-md-4">
                         <div class="card">
@@ -256,11 +255,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Close
-                </button>
             </div>
         </div>
     </div>

@@ -80,7 +80,7 @@ $(document).ready(function() {
         // Render Male Section  
         if (maleParticipants.length > 0) {
             rows += `
-                <tr class="bg-secondary">
+                <tr class="bg-primary">
                     <td colspan="6" class="font-weight-bold">
                         <i class="fas fa-mars mr-2"></i>MALE (${maleParticipants.length})
                     </td>
@@ -95,7 +95,7 @@ $(document).ready(function() {
         // Render Female Section
         if (femaleParticipants.length > 0) {
             rows += `
-                <tr class="bg-secondary">
+                <tr class="bg-primary">
                     <td colspan="6" class="font-weight-bold">
                         <i class="fas fa-venus mr-2"></i>FEMALE (${femaleParticipants.length})
                     </td>
@@ -112,9 +112,6 @@ $(document).ready(function() {
     }
 
     function renderParticipantRow(participant, index) {
-        const genderBadge = participant.gender.toLowerCase() === 'male' 
-            ? '<span class="badge badge-primary">Male</span>'  
-            : '<span class="badge badge-secondary">Female</span>';
         
         const typeBadge = participant.student_type === 'regular'
             ? '<span class="badge badge-primary">Regular</span>'
@@ -130,10 +127,9 @@ $(document).ready(function() {
                     <strong>${participant.student_number}</strong>
                 </td>
                 <td>
-                    <strong>${participant.full_name}</strong>
+                    ${participant.full_name}
                 </td>
                 <td>${sectionDisplay}</td>
-                <td class="text-center">${genderBadge}</td>
                 <td class="text-center">${typeBadge}</td>
             </tr>
         `;

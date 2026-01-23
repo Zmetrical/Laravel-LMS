@@ -322,7 +322,7 @@ $(document).ready(function () {
         let headerHtml = '<th class="student-info">USN</th><th class="student-info">Student Name</th>';
         
         cols.forEach(col => {
-            const badge = col.source_type === 'online' ? '<span class="badge badge-info online-badge">Online</span>' : '';
+            const badge = col.source_type === 'online' ? '<span class="badge badge-primary online-badge">Online</span>' : '';
             
             headerHtml += `<th>
                 <div class="column-header">

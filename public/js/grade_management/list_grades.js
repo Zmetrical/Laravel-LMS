@@ -281,21 +281,9 @@ $(document).ready(function () {
         $('#detailQ2').text(grade.q2_grade || 'N/A');
         $('#detailFinalGrade').text(grade.final_grade);
         
-        const remarksClass = getRemarksClass(grade.remarks);
-        $('#detailRemarks').html(`<span class="badge ${remarksClass}">${grade.remarks}</span>`);
+        $('#detailRemarks').html(`<span class="badge badge-white">${grade.remarks}</span>`);
 
         $('#gradeDetailsModal').modal('show');
-    }
-
-    function getRemarksClass(remarks) {
-        const remarksMap = {
-            'PASSED': 'badge-passed',
-            'FAILED': 'badge-failed',
-            'INC': 'badge-inc',
-            'DRP': 'badge-drp',
-            'W': 'badge-w'
-        };
-        return remarksMap[remarks] || 'badge-secondary';
     }
 
     updateGradesCount();

@@ -100,7 +100,7 @@ $(document).ready(function() {
         // Add summary columns
         $thead.append(`
             <th class="text-center bg-light">Total Score</th>
-            <th class="text-center bg-light">Average %</th>
+            <th class="text-center bg-light">Average</th>
         `);
 
         // Separate by gender (already sorted by backend)
@@ -114,7 +114,7 @@ $(document).ready(function() {
         // Render Male Section
         if (maleGrades.length > 0) {
             $tbody.append(`
-                <tr class="bg-secondary">
+                <tr class="bg-primary">
                     <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
                         <i class="fas fa-mars mr-2"></i>MALE (${maleGrades.length})
                     </td>
@@ -129,7 +129,7 @@ $(document).ready(function() {
         // Render Female Section
         if (femaleGrades.length > 0) {
             $tbody.append(`
-                <tr class="bg-secondary">
+                <tr class="bg-primary">
                     <td colspan="${quizCount + 2}" class="font-weight-bold" style="position: sticky; left: 0; z-index: 10;">
                         <i class="fas fa-venus mr-2"></i>FEMALE (${femaleGrades.length})
                     </td>
@@ -165,7 +165,7 @@ $(document).ready(function() {
                     <strong>${student.student_number}</strong>
                 </td>
                 <td>
-                    <strong>${student.full_name}</strong>
+                    ${student.full_name}
                 </td>
         `;
         
@@ -197,7 +197,7 @@ $(document).ready(function() {
 
         row += `
                 <td class="text-center bg-light">
-                    <strong>${studentTotal.toFixed(2)} / ${studentMax.toFixed(2)}</strong>
+                    ${studentTotal.toFixed(2)} / ${studentMax.toFixed(2)}
                 </td>
                 <td class="text-center bg-light">
                     <span>${studentAvg}%</span>

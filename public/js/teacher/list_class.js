@@ -62,69 +62,69 @@ $(document).ready(function() {
     /**
      * Display classes for teacher (card grid view)
      */
-    function displayClasses(classes) {
-        $('#loadingState').hide();
-        $('#emptyState').hide();
-        $('#classesGrid').show();
+function displayClasses(classes) {
+    $('#loadingState').hide();
+    $('#emptyState').hide();
+    $('#classesGrid').show();
 
-        let grid = $('#classesGrid');
-        grid.empty();
+    let grid = $('#classesGrid');
+    grid.empty();
 
-        classes.forEach(function(classData) {
-            // Calculate statistics (placeholder - can be populated from backend)
-            let studentCount = classData.student_count || 0;
-            let lessonCount = classData.lesson_count || 0;
-            
-            let statsHtml = `
-                <div class="row text-center mt-3">
-                    <div class="col-6">
-                        <div class="border-right">
-                            <h5 class="mb-0 text-primary">${studentCount}</h5>
-                            <small class="text-muted">Students</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <h5 class="mb-0 text-info">${lessonCount}</h5>
-                        <small class="text-muted">Lessons</small>
+    classes.forEach(function(classData) {
+        // Calculate statistics
+        let studentCount = classData.student_count || 0;
+        let sectionCount = classData.section_count || 0;
+        
+        let statsHtml = `
+            <div class="row text-center mt-3">
+                <div class="col-6">
+                    <div class="border-right">
+                        <h5 class="mb-0 text-primary">${studentCount}</h5>
+                        <small class="text-muted">Students</small>
                     </div>
                 </div>
-            `;
-            
-            let card = `
-                <div class="col-md-4 col-sm-6 mb-4">
-                    <div class="card card-primary card-outline h-100">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-book"></i> ${escapeHtml(classData.class_name)}
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            ${statsHtml}
-                        </div>
-                        <div class="card-footer">
-                            <div class="btn-group btn-block" role="group">
-                                <button class="btn btn-primary btn-sm view-class-btn" 
-                                        data-class-id="${classData.id}"
-                                        data-class-code="${escapeHtml(classData.class_code)}"
-                                        data-class-name="${escapeHtml(classData.class_name)}"
-                                        style="flex: 1;">
-                                    <i class="fas fa-book-open"></i> View Lessons
-                                </button>
-                                <button class="btn btn-secondary btn-sm view-gradebook-btn" 
-                                        data-class-id="${classData.id}"
-                                        data-class-code="${escapeHtml(classData.class_code)}"
-                                        data-class-name="${escapeHtml(classData.class_name)}"
-                                        style="flex: 1;">
-                                    <i class="fas fa-table"></i> Gradebook
-                                </button>
-                            </div>
+                <div class="col-6">
+                    <h5 class="mb-0 text-secondary">${sectionCount}</h5>
+                    <small class="text-muted">Sections</small>
+                </div>
+            </div>
+        `;
+        
+        let card = `
+            <div class="col-md-4 col-sm-6 mb-4">
+                <div class="card card-primary card-outline h-100">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-book"></i> ${escapeHtml(classData.class_name)}
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        ${statsHtml}
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group btn-block" role="group">
+                            <button class="btn btn-primary btn-sm view-class-btn" 
+                                    data-class-id="${classData.id}"
+                                    data-class-code="${escapeHtml(classData.class_code)}"
+                                    data-class-name="${escapeHtml(classData.class_name)}"
+                                    style="flex: 1;">
+                                <i class="fas fa-book-open"></i> View Lessons
+                            </button>
+                            <button class="btn btn-secondary btn-sm view-gradebook-btn" 
+                                    data-class-id="${classData.id}"
+                                    data-class-code="${escapeHtml(classData.class_code)}"
+                                    data-class-name="${escapeHtml(classData.class_name)}"
+                                    style="flex: 1;">
+                                <i class="fas fa-table"></i> Gradebook
+                            </button>
                         </div>
                     </div>
                 </div>
-            `;
-            grid.append(card);
-        });
-    }
+            </div>
+        `;
+        grid.append(card);
+    });
+}
 
     /**
      * Show empty state
