@@ -22,22 +22,6 @@
             text-transform: uppercase;
             margin-bottom: 0.25rem;
         }
-        .badge-passed { 
-            background-color: #28a745; 
-            color: white; 
-        }
-        .badge-failed { 
-            background-color: #dc3545; 
-            color: white; 
-        }
-        .badge-inc { 
-            background-color: #ffc107; 
-            color: #212529; 
-        }
-        .badge-drp, .badge-w { 
-            background-color: #6c757d; 
-            color: white; 
-        }
 
         .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
             line-height: calc(2.25rem + 2px) !important;
@@ -143,14 +127,24 @@
                     <tbody>
                         @foreach ($grades as $grade)
                             <tr>
-                                <td>{{ $grade->student_number }}</td>
+                                <td><strong>{{ $grade->student_number }}</strong></td>
                                 <td>{{ $grade->last_name }}, {{ $grade->first_name }}</td>
                                 <td data-class-code="{{ $grade->class_code }}">{{ $grade->class_name }}</td>
                                 <td data-section-code="{{ $grade->section_code }}">{{ $grade->section_name ?? 'N/A' }}</td>
                                 <td data-semester-id="{{ $grade->semester_id }}">{{ $grade->semester_display }}</td>
                                 <td class="text-center"><strong>{{ $grade->final_grade }}</strong></td>
                                 <td class="text-center">
-                                    <span class="badge badge-white">
+                                    @php
+                                        $text = 'text-black';
+                                        if ($grade->remarks == 'PASSED') {
+                                            $text = 'text-success';
+                                        } elseif ($grade->remarks == 'FAILED') {
+                                            $text = 'text-danger';
+                                        } else {
+                                            $text = 'text-black';
+                                        } 
+                                    @endphp
+                                    <span class="{{ $text }}">
                                         {{ $grade->remarks }}
                                     </span>
                                 </td>

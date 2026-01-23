@@ -312,7 +312,7 @@ $(document).ready(function () {
                             <i class="fas fa-edit"></i>
                         </button>
                         ${sem.status !== 'active' ? `
-                        <button class="btn btn-sm btn-success activate-semester-btn" data-semester-id="${sem.id}" 
+                        <button class="btn btn-sm btn-primary activate-semester-btn" data-semester-id="${sem.id}" 
                                 data-semester-name="${sem.name}" title="Set Active">
                             <i class="fas fa-check"></i>
                         </button>

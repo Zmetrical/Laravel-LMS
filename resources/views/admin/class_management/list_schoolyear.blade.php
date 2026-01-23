@@ -84,14 +84,6 @@
                     <!-- Details Content -->
                     <div id="detailsContent" style="display: none;">
                         <!-- Action Buttons -->
-                        <div class="mb-4" id="actionButtons">
-                            <button class="btn btn-success btn-sm" id="activateBtn" style="display: none;">
-                                <i class="fas fa-check-circle"></i> Set as Active
-                            </button>
-                            <button class="btn btn-warning btn-sm" id="archiveBtn" style="display: none;">
-                                <i class="fas fa-archive"></i> Archive
-                            </button>
-                        </div>
 
                         <hr>
 
@@ -104,7 +96,7 @@
                                 <button class="btn btn-secondary btn-sm mr-2" id="viewSemestersBtn">
                                     <i class="fas fa-eye"></i> View Semesters
                                 </button>
-                                <button class="btn btn-primary btn-sm" id="addSemesterBtn">
+                                <button class="btn btn-secondary btn-sm" id="addSemesterBtn">
                                     <i class="fas fa-plus"></i> Add Semester
                                 </button>
                             </div>
@@ -140,6 +132,17 @@
                             <p class="text-muted">No semesters added yet</p>
                         </div>
                     </div>
+                </div>
+
+                <div class="card-footer">
+                        <div class="mb-4 d-flex justify-content-center" id="actionButtons">
+                            <button class="btn btn-primary " id="activateBtn" style="display: none;">
+                                <i class="fas fa-check-circle"></i> Set as Active
+                            </button>
+                            <button class="btn btn-primary" id="archiveBtn" style="display: none;">
+                                <i class="fas fa-archive"></i> Archive
+                            </button>
+                        </div>
                 </div>
             </div>
         </div>

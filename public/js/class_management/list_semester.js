@@ -395,9 +395,9 @@ $(document).ready(function () {
                                 displayGrade !== '-' ? 'FAILED' : '-';
             }
             
-            const remarksBadge = displayRemarks === 'PASSED' ? 'badge-success' :
-                               displayRemarks === 'FAILED' ? 'badge-danger' : 
-                               displayRemarks === 'INC' ? 'badge-warning' : 'badge-secondary';
+            const remarksBadge = displayRemarks === 'PASSED' ? 'text-success' :
+                               displayRemarks === 'FAILED' ? 'text-danger' : 
+                               displayRemarks === 'INC' ? 'text-secondary' : 'text-secondary';
 
             const row = `
                 <tr>
@@ -411,7 +411,7 @@ $(document).ready(function () {
                         ${displayGrade !== '-' ? `<strong>${displayGrade}</strong>` : '-'}
                     </td>
                     <td>
-                        ${displayRemarks !== '-' ? `<span class="badge ${remarksBadge}">${displayRemarks}</span>` : '-'}
+                        ${displayRemarks !== '-' ? `<span class="${remarksBadge}">${displayRemarks}</span>` : '-'}
                     </td>
                 </tr>
             `;
