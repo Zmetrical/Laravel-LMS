@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 23, 2026 at 07:11 AM
+-- Generation Time: Jan 26, 2026 at 04:49 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -129,7 +129,7 @@ INSERT INTO `gradebook_columns` (`id`, `class_code`, `quarter_id`, `component_ty
 (76, 'CLASS-002', 3, 'WW', 'WW3', 2.00, 3, 'online', 9, 1, '2025-11-27 17:44:26', '2025-12-01 14:12:12'),
 (77, 'CLASS-002', 3, 'WW', 'WW4', 8.00, 4, 'online', 8, 1, '2025-11-27 17:44:26', '2025-12-17 11:30:52'),
 (78, 'CLASS-002', 3, 'WW', 'WW5', 1.00, 5, 'online', 10, 1, '2025-11-27 17:44:26', '2025-12-17 11:31:15'),
-(79, 'CLASS-002', 3, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-01 14:13:13'),
+(79, 'CLASS-002', 3, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 1, '2025-11-27 17:44:26', '2026-01-24 07:29:20'),
 (80, 'CLASS-002', 3, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:24'),
 (81, 'CLASS-002', 3, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:36'),
 (82, 'CLASS-002', 3, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:43'),
@@ -1172,7 +1172,8 @@ CREATE TABLE `guardians` (
 
 INSERT INTO `guardians` (`id`, `email`, `first_name`, `last_name`, `access_token`, `created_at`, `updated_at`, `is_active`) VALUES
 (3, 'bersaminajohnkyle@gmail.com', 'GuardianSample', '1', 'LRtz33eqd1AzK1gpncu8VVfuxVHCctn25bTBm4ygPAPmhrc6rOnLJiU7szwqAHup', '2026-01-21 10:11:04', '2026-01-21 10:11:04', 1),
-(4, 'zmetricaltemp1@gmail.com', 'GuardianSample', '2', '0fYbMa6uNWvP4Vaa6vxElK9hljV3j3gs8gfJ5d9btqhiQLFgZ8Iypf2g6tr4UQTM', '2026-01-21 10:11:04', '2026-01-21 10:11:04', 1);
+(4, 'zmetricaltemp1@gmail.com', 'GuardianSample', '2', '0fYbMa6uNWvP4Vaa6vxElK9hljV3j3gs8gfJ5d9btqhiQLFgZ8Iypf2g6tr4UQTM', '2026-01-21 10:11:04', '2026-01-21 10:11:04', 1),
+(5, 'a@gmail.com', 'a', '', 'mBiFkRrjv3jPcsbhRw96Mh61SVVPWAqAbUz67trLRioSSTRbamuDQkw4Qut6dT6g', '2026-01-23 09:12:49', '2026-01-23 09:12:49', 1);
 
 -- --------------------------------------------------------
 
@@ -1194,7 +1195,8 @@ CREATE TABLE `guardian_students` (
 
 INSERT INTO `guardian_students` (`id`, `guardian_id`, `student_number`, `created_at`, `updated_at`) VALUES
 (3, 3, '202500082', '2026-01-21 10:11:04', '2026-01-21 10:11:04'),
-(4, 4, '202600002', '2026-01-21 10:11:04', '2026-01-21 10:11:04');
+(4, 4, '202600002', '2026-01-21 10:11:04', '2026-01-21 10:11:04'),
+(5, 5, '202600003', '2026-01-23 09:12:49', '2026-01-23 09:12:49');
 
 -- --------------------------------------------------------
 
@@ -1714,7 +1716,7 @@ CREATE TABLE `school_years` (
 --
 
 INSERT INTO `school_years` (`id`, `year_start`, `year_end`, `code`, `status`, `created_at`, `updated_at`) VALUES
-(1, '2024', '2025', '2024-2025', 'active', '2025-11-17 00:23:31', '2025-11-19 07:36:51'),
+(1, '2024', '2025', '2024-2025', 'active', '2025-11-17 00:23:31', '2026-01-24 07:10:25'),
 (4, '2025', '2026', '2025-2026', 'upcoming', '2025-11-27 15:14:25', '2025-11-27 15:14:25');
 
 -- --------------------------------------------------------
@@ -1730,7 +1732,6 @@ CREATE TABLE `sections` (
   `name` varchar(255) NOT NULL,
   `strand_id` bigint(20) UNSIGNED NOT NULL,
   `level_id` int(11) NOT NULL,
-  `semester_id` int(11) DEFAULT NULL,
   `status` int(11) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -1740,21 +1741,21 @@ CREATE TABLE `sections` (
 -- Dumping data for table `sections`
 --
 
-INSERT INTO `sections` (`id`, `code`, `capacity`, `name`, `strand_id`, `level_id`, `semester_id`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'ICT-11A', 50, 'Sagittarius', 1, 1, NULL, 1, '2025-10-19 09:17:04', '2026-01-06 12:48:26'),
-(2, 'ICT-11B', 50, 'Capricorn', 1, 1, NULL, 1, '2025-10-19 09:17:04', '2026-01-06 12:48:50'),
-(3, 'ABM-11A', 50, 'Virgo', 2, 1, NULL, 1, '2025-10-19 09:17:04', '2026-01-06 12:48:28'),
-(4, 'ABM-12A', 50, 'Aries', 2, 2, NULL, 1, '2025-10-19 09:17:04', '2026-01-06 12:48:33'),
-(5, 'HUMMS-12A', 50, 'Gemini', 3, 2, NULL, 1, '2025-10-19 09:17:04', '2026-01-06 12:48:31'),
-(6, 'HUMMS-12B', 50, 'Libra', 3, 2, NULL, 1, '2025-10-19 09:17:04', '2026-01-06 12:48:34'),
-(7, 'HUMMS-11A', 50, 'Pisces', 3, 1, NULL, 1, '2025-10-19 09:36:06', '2026-01-06 12:48:35'),
-(8, 'HUMMS-11B', 50, 'Aquarius', 3, 1, NULL, 1, '2025-10-19 09:36:06', '2026-01-06 12:48:37'),
-(9, 'GAS-11A', 50, 'Ophiuchus', 4, 1, NULL, 1, '2025-10-19 09:36:32', '2026-01-06 12:48:38'),
-(10, 'GAS-11B', 50, 'Leo', 4, 1, NULL, 1, '2025-10-19 09:36:32', '2026-01-06 12:48:39'),
-(11, 'HE-11A', 50, 'Taurus', 5, 1, NULL, 1, '2025-10-19 09:37:56', '2026-01-06 12:48:41'),
-(12, 'HE-11B', 50, 'Cancer', 5, 1, NULL, 1, '2025-10-19 09:37:56', '2026-01-06 12:48:43'),
-(13, 'HE-11C', 50, 'Scorpio', 5, 1, NULL, 1, '2025-10-19 09:37:56', '2026-01-06 12:48:46'),
-(21, 'HUMSS-GRADE 12-1', 50, 'SAMPLE', 3, 2, NULL, 1, '2025-11-27 14:15:51', '2026-01-06 12:48:47');
+INSERT INTO `sections` (`id`, `code`, `capacity`, `name`, `strand_id`, `level_id`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'ICT-11A', 50, 'Sagittarius', 1, 1, 1, '2025-10-19 09:17:04', '2026-01-23 13:30:58'),
+(2, 'ICT-11B', 50, 'Capricorn', 1, 1, 1, '2025-10-19 09:17:04', '2026-01-23 13:30:59'),
+(3, 'ABM-11A', 50, 'Virgo', 2, 1, 1, '2025-10-19 09:17:04', '2026-01-23 13:31:01'),
+(4, 'ABM-12A', 50, 'Aries', 2, 2, 1, '2025-10-19 09:17:04', '2026-01-23 13:31:02'),
+(5, 'HUMSS-12A', 50, 'Gemini', 3, 2, 1, '2025-10-19 09:17:04', '2026-01-26 10:00:52'),
+(6, 'HUMMS-12B', 50, 'Libra', 3, 2, 1, '2025-10-19 09:17:04', '2026-01-23 13:31:12'),
+(7, 'HUMMS-11A', 50, 'Pisces', 3, 1, 1, '2025-10-19 09:36:06', '2026-01-23 13:31:13'),
+(8, 'HUMMS-11B', 50, 'Aquarius', 3, 1, 1, '2025-10-19 09:36:06', '2026-01-23 13:31:14'),
+(9, 'GAS-11A', 50, 'Ophiuchus', 4, 1, 1, '2025-10-19 09:36:32', '2026-01-23 13:31:16'),
+(10, 'GAS-11B', 50, 'Leo', 4, 1, 1, '2025-10-19 09:36:32', '2026-01-23 13:31:17'),
+(11, 'HE-11A', 50, 'Taurus', 5, 1, 1, '2025-10-19 09:37:56', '2026-01-23 13:31:19'),
+(12, 'HE-11B', 50, 'Cancer', 5, 1, 1, '2025-10-19 09:37:56', '2026-01-23 13:31:25'),
+(13, 'HE-11C', 50, 'Scorpio', 5, 1, 1, '2025-10-19 09:37:56', '2026-01-23 13:31:27'),
+(21, 'HUMSS-11C', 50, 'SAMPLE', 3, 2, 1, '2025-11-27 14:15:51', '2026-01-23 13:31:44');
 
 -- --------------------------------------------------------
 
@@ -1850,8 +1851,8 @@ CREATE TABLE `semesters` (
 --
 
 INSERT INTO `semesters` (`id`, `school_year_id`, `name`, `code`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, '1st Semester', 'SEM1', '2025-11-01', '2025-11-30', 'active', '2025-11-17 00:51:42', '2025-11-18 23:36:51'),
-(2, 1, '2nd Semester', 'SEM2', '2025-12-01', '2025-12-31', 'upcoming', '2025-11-17 01:02:50', '2025-11-17 01:02:50'),
+(1, 1, '1st Semester', 'SEM1', '2025-11-01', '2025-11-30', 'active', '2025-11-17 00:51:42', '2026-01-24 07:10:25'),
+(2, 1, '2nd Semester', 'SEM2', '2025-12-01', '2025-12-31', 'upcoming', '2025-11-17 01:02:50', '2026-01-24 07:10:25'),
 (3, 4, '1st Semester', 'SEM1', '2025-11-01', '2025-11-30', 'upcoming', '2025-11-27 15:14:59', '2025-11-27 15:54:51'),
 (4, 4, '2nd Semester', 'SEM2', '2025-12-01', '2025-12-31', 'upcoming', '2025-11-27 15:34:35', '2025-11-27 15:34:35');
 
@@ -1875,9 +1876,8 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('4EDBW08vvrdWivkV7wXI4HmDTI5WHZIEZ0APjeci', 202500002, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YToxNTp7czo2OiJfdG9rZW4iO3M6NDA6Im5mU0pxaWJtYXJxZ1NYUnI3VUljdWhnWHhoQ1JMT29ob0pTNlA2aGkiO3M6OToiX3ByZXZpb3VzIjthOjE6e3M6MzoidXJsIjtzOjU0OiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvc3R1ZGVudC9jbGFzcy8yL2xlc3Nvbi82L3F1aXovMTMiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUyOiJsb2dpbl9hZG1pbl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjI7czo1NDoibG9naW5fdGVhY2hlcl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjY7czo1NDoibG9naW5fc3R1ZGVudF81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtzOjk6IjIwMjUwMDAwMiI7czoyNDoic3R1ZGVudF9jbGFzc2VzXzMxX3NlbV8xIjthOjQ6e2k6MDtPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjE7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDEiO3M6MTA6ImNsYXNzX25hbWUiO3M6MjM6IkVmZmVjdGl2ZSBDb21tdW5pY2F0aW9uIjt9aToxO086ODoic3RkQ2xhc3MiOjM6e3M6MjoiaWQiO2k6MjtzOjEwOiJjbGFzc19jb2RlIjtzOjk6IkNMQVNTLTAwMiI7czoxMDoiY2xhc3NfbmFtZSI7czoxOToiR2VuZXJhbCBNYXRoZW1hdGljcyI7fWk6MjtPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjM7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDMiO3M6MTA6ImNsYXNzX25hbWUiO3M6MTU6IkdlbmVyYWwgU2NpZW5jZSI7fWk6MztPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjQ7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDQiO3M6MTA6ImNsYXNzX25hbWUiO3M6MjI6IkxpZmUgYW5kIENhcmVlciBTa2lsbHMiO319czoxMToiZ3VhcmRpYW5faWQiO2k6MztzOjEzOiJndWFyZGlhbl9uYW1lIjtzOjE2OiJHdWFyZGlhblNhbXBsZSAxIjtzOjE5OiJhY3RpdmVfcXVpel9hdHRlbXB0IjtpOjE4NjtzOjE0OiJhY3RpdmVfcXVpel9pZCI7czoyOiIxMyI7czoxODoicXVpel90aW1lcl9zdGFydGVkIjtzOjE5OiIyMDI2LTAxLTIyIDE3OjMwOjMyIjtzOjE1OiJxdWl6X3RpbWVfbGltaXQiO2k6NjA7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czoyNDoicGVuZGluZ19xdWl6emVzXzMxX3NlbV8xIjthOjE6e2k6MjtpOjE7fX0=', 1769078772),
-('LFAJK0T8wkqdK5Lfp0TXW3NXPPF1sfrHuWNZaKKe', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiV1VZOFdERGI2TThmR1BxZ1VORndFV3M3Rzc5alR0U1JOZ3JLTU1VUCI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1769148324),
-('X8omyND9BQKl243ZmLFo8qraxUXn7odKoudOTQbR', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoidXVlbTMwZ0hVTWk1OUp5R1hmVjMyRmpvUTFDT3dBdHluMEVQWm5SaCI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTI6ImxvZ2luX2FkbWluXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6Mjt9', 1769148702);
+('EJFrDytpZPkTSakYSvqHxxmwH4c9SGy9chaajdVR', 6, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0', 'YTo5OntzOjY6Il90b2tlbiI7czo0MDoiUERsU0NTVEpONmxaenNEWU9BRHRGVlBkTTVybndWblZOc3l2R1VCMSI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6NjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC90ZWFjaGVyL2FkdmlzZXIvZ3JhZGVzL2NhcmQvMjAyNTAwMDA1LzEiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUyOiJsb2dpbl9hZG1pbl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo1NDoibG9naW5fdGVhY2hlcl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjY7czo1NDoibG9naW5fc3R1ZGVudF81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtzOjk6IjIwMjUwMDAwMiI7czoyNDoic3R1ZGVudF9jbGFzc2VzXzMxX3NlbV8xIjthOjQ6e2k6MDtPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjE7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDEiO3M6MTA6ImNsYXNzX25hbWUiO3M6MjM6IkVmZmVjdGl2ZSBDb21tdW5pY2F0aW9uIjt9aToxO086ODoic3RkQ2xhc3MiOjM6e3M6MjoiaWQiO2k6MjtzOjEwOiJjbGFzc19jb2RlIjtzOjk6IkNMQVNTLTAwMiI7czoxMDoiY2xhc3NfbmFtZSI7czoxOToiR2VuZXJhbCBNYXRoZW1hdGljcyI7fWk6MjtPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjM7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDMiO3M6MTA6ImNsYXNzX25hbWUiO3M6MTU6IkdlbmVyYWwgU2NpZW5jZSI7fWk6MztPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjQ7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDQiO3M6MTA6ImNsYXNzX25hbWUiO3M6MjI6IkxpZmUgYW5kIENhcmVlciBTa2lsbHMiO319czoyNDoicGVuZGluZ19xdWl6emVzXzMxX3NlbV8xIjthOjE6e2k6MjtpOjI7fX0=', 1769422447),
+('Qfz7c0c3fUJ6zdJII4viP9xLpfX7i37Lo6z1a70A', 202500002, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'YTo3OntzOjY6Il90b2tlbiI7czo0MDoiQWd0VkNuUTd6U3pMY3ZvNGhRc2NkakJNVnhYOFRvNXNpWVVNNXdUNiI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6NjA6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9zdHVkZW50L2NsYXNzLzIvbGVzc29uLzYvcXVpei8xMy9zdGFydCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTQ6ImxvZ2luX3N0dWRlbnRfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7czo5OiIyMDI1MDAwMDIiO3M6MjQ6InN0dWRlbnRfY2xhc3Nlc18zMV9zZW1fMSI7YTo0OntpOjA7Tzo4OiJzdGRDbGFzcyI6Mzp7czoyOiJpZCI7aToxO3M6MTA6ImNsYXNzX2NvZGUiO3M6OToiQ0xBU1MtMDAxIjtzOjEwOiJjbGFzc19uYW1lIjtzOjIzOiJFZmZlY3RpdmUgQ29tbXVuaWNhdGlvbiI7fWk6MTtPOjg6InN0ZENsYXNzIjozOntzOjI6ImlkIjtpOjI7czoxMDoiY2xhc3NfY29kZSI7czo5OiJDTEFTUy0wMDIiO3M6MTA6ImNsYXNzX25hbWUiO3M6MTk6IkdlbmVyYWwgTWF0aGVtYXRpY3MiO31pOjI7Tzo4OiJzdGRDbGFzcyI6Mzp7czoyOiJpZCI7aTozO3M6MTA6ImNsYXNzX2NvZGUiO3M6OToiQ0xBU1MtMDAzIjtzOjEwOiJjbGFzc19uYW1lIjtzOjE1OiJHZW5lcmFsIFNjaWVuY2UiO31pOjM7Tzo4OiJzdGRDbGFzcyI6Mzp7czoyOiJpZCI7aTo0O3M6MTA6ImNsYXNzX2NvZGUiO3M6OToiQ0xBU1MtMDA0IjtzOjEwOiJjbGFzc19uYW1lIjtzOjIyOiJMaWZlIGFuZCBDYXJlZXIgU2tpbGxzIjt9fXM6MjQ6InBlbmRpbmdfcXVpenplc18zMV9zZW1fMSI7YToxOntpOjI7aToxO319', 1769422585);
 
 -- --------------------------------------------------------
 
@@ -1977,7 +1977,7 @@ INSERT INTO `students` (`id`, `student_number`, `student_password`, `rememberTok
 (407, '202500041', '$2y$12$.fh3.hb3t2HLStftqQgAXuhbAN5GkTey8NTkgbCtJCjs6AO5HmxvG', NULL, '', 'Jaine Rose', 'C', 'Verunque', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
 (408, '202500042', '$2y$12$tFCUuOfLyUGKfjLkERacpuF1a2/9fWz8EN/lYvPnR2YTRrZA/w1/i', NULL, 'qwe1@gmail.com', 'Beatrice', 'B', 'Agustin', 'Male', NULL, 4, NULL, 'regular', '2025-11-27', '2025-11-27 14:02:15', '2025-12-06 19:02:27'),
 (409, '202500043', '$2y$12$zm6Q5uCCHHqrCSSXOAqGP.g//0Kvff1AnCeWpw1.yNRabTC4ni2Ee', NULL, 'student@gmail', 'John', 'M', 'Student', 'Male', NULL, 4, NULL, 'regular', '2025-11-27', '2025-11-27 14:05:37', '2025-12-06 18:57:35'),
-(410, '202500044', '$2y$12$LDzVI/ZO0mRFqQKsckT2kue5lS6l7tKLAgLa7EROTyZsUq5OKEdJK', NULL, 'sample1@gmail.com', 'sample', '1', 'humms', 'Male', NULL, 21, NULL, 'irregular', '2025-11-27', '2025-11-27 14:18:02', '2025-12-06 18:47:04'),
+(410, '202500044', '$2y$12$LDzVI/ZO0mRFqQKsckT2kue5lS6l7tKLAgLa7EROTyZsUq5OKEdJK', NULL, 'sample1@gmail.com', 'sample', '1', 'humms', 'Male', NULL, 5, NULL, 'irregular', '2025-11-27', '2025-11-27 14:18:02', '2026-01-23 12:05:56'),
 (448, '202500082', '$2y$12$AB5ijJsVTsrn2Ppp1wEIXeSNUQTb/CcBN1pr8ZP9BDs0bwUTHmdmu', NULL, '', 'S', 'G', 'Angelo', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
 (449, '202500083', '$2y$12$O0jFRvsNl.Tz5TB3yWGmDeDul8CxuaHVaAfoqIVyLXM6SPxX594Re', NULL, '', 'J', 'M', 'Annika', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
 (450, '202500084', '$2y$12$fa2Nj7HKBP8M3caCUqNVLuMWPwp385nNuGMUudzl3yu1J64tQ/Fem', NULL, '', 'V', 'M', 'Anthony', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
@@ -1997,7 +1997,8 @@ INSERT INTO `students` (`id`, `student_number`, `student_password`, `rememberTok
 (538, '202500172', '$2y$12$QMSyjsVS9SlcekytpNshfOiq8n5Ogp6UScYiV7F4lSlAZPmcX385S', NULL, 'qwe11@gmail.com', 'John Loue', 'D', 'Bersamina', 'Male', NULL, 1, NULL, 'regular', '2025-12-07', '2025-12-06 18:33:53', '2025-12-06 18:33:53'),
 (539, '202500173', '$2y$12$EWxDMakGRgEl9NS.llIL2.xj3ML/eUSegsD0Q4cLT6Zd4uYK1RGfi', NULL, 'student@example.com', 'Juan', 'P', 'Dela Cruz', 'Male', NULL, 1, NULL, 'regular', '2025-12-12', '2025-12-12 06:24:45', '2025-12-12 06:24:45'),
 (546, '202600001', '$2y$12$swbm//ROmXVkCTArJpT52.sHIrzc2fxX19IztMDuVJzuqHDDS4AMO', NULL, 'student1@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
-(547, '202600002', '$2y$12$MeaitQ51bpXCwP2Ky.Kzve5/0oXi3FbTD8QfqhYD3PDfh6xIr8zD.', NULL, 'student@2gmail.com', 'Sample', 'A', '2', 'Female', NULL, 2, NULL, 'regular', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03');
+(547, '202600002', '$2y$12$MeaitQ51bpXCwP2Ky.Kzve5/0oXi3FbTD8QfqhYD3PDfh6xIr8zD.', NULL, 'student@2gmail.com', 'Sample', 'A', '2', 'Female', NULL, 2, NULL, 'regular', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
+(548, '202600003', '$2y$12$RMDID5HtSVMaRTHOtlwGrunDJD2zOuJADxzvBM/i952b4k0YLLJWe', NULL, 'asd@gmail.com', 'a', 'A', 'a', 'Male', NULL, 2, NULL, 'regular', '2026-01-23', '2026-01-23 09:12:49', '2026-01-23 09:12:49');
 
 -- --------------------------------------------------------
 
@@ -2253,7 +2254,8 @@ INSERT INTO `student_password_matrix` (`id`, `student_number`, `plain_password`)
 (514, '202600004', 'DY372LdsE8'),
 (515, '202600005', 'FSqs2PEGbL'),
 (516, '202600001', 'L2AGCoYx29'),
-(517, '202600002', 'FyJIztyDgO');
+(517, '202600002', 'FyJIztyDgO'),
+(518, '202600003', 'A1zzt9Zx2R');
 
 -- --------------------------------------------------------
 
@@ -2427,7 +2429,8 @@ INSERT INTO `student_quiz_attempts` (`id`, `student_number`, `quiz_id`, `semeste
 (160, '202500171', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:38:00', '2025-12-01 03:03:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
 (161, '202500171', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:18:00', '2025-11-28 06:33:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
 (162, '202500171', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:28:00', '2025-12-01 06:43:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:32:48'),
-(203, '202500002', 13, 1, 4, 1, 0.00, 1.00, '2026-01-22 10:45:58', '2026-01-22 10:46:08', 'graded', '2026-01-22 10:45:58', '2026-01-22 10:46:08');
+(204, '202500002', 11, 1, 4, 1, 0.00, 1.00, '2026-01-26 10:14:59', '2026-01-26 10:15:20', 'graded', '2026-01-26 10:14:59', '2026-01-26 10:15:20'),
+(205, '202500002', 13, 1, 4, 1, NULL, 1.00, '2026-01-26 10:15:31', NULL, 'in_progress', '2026-01-26 10:15:31', '2026-01-26 10:16:25');
 
 -- --------------------------------------------------------
 
@@ -2456,7 +2459,6 @@ INSERT INTO `student_semester_enrollment` (`id`, `student_number`, `semester_id`
 (3, '202500002', 1, 1, 'enrolled', '2025-11-06', '2025-11-06 12:49:13', '2025-11-06 12:49:13'),
 (4, '202500003', 1, 4, 'enrolled', '2025-11-08', '2025-11-07 22:03:01', '2025-11-20 15:10:57'),
 (5, '202500004', 1, 4, 'enrolled', '2025-11-08', '2025-11-07 22:03:01', '2025-11-07 22:03:01'),
-(6, '202500005', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 20:55:30'),
 (7, '202500006', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
 (8, '202500007', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
 (9, '202500008', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
@@ -2494,7 +2496,7 @@ INSERT INTO `student_semester_enrollment` (`id`, `student_number`, `semester_id`
 (41, '202500041', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
 (42, '202500042', 1, 1, 'completed', '2025-11-27', '2025-11-27 06:02:15', '2025-12-06 19:02:27'),
 (43, '202500043', 1, 1, 'enrolled', '2025-11-27', '2025-11-27 06:05:37', '2025-11-27 06:06:57'),
-(44, '202500044', 1, 21, 'enrolled', '2025-11-27', '2025-11-27 06:18:02', '2025-11-27 06:18:02'),
+(44, '202500044', 1, 21, 'completed', '2025-11-27', '2025-11-27 06:18:02', '2026-01-23 12:05:56'),
 (45, '202500082', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
 (46, '202500083', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
 (47, '202500084', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
@@ -2512,7 +2514,6 @@ INSERT INTO `student_semester_enrollment` (`id`, `student_number`, `semester_id`
 (59, '202500127', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:34', '2025-11-27 19:57:34'),
 (60, '202500171', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 22:25:30', '2025-11-27 22:25:57'),
 (61, '202500043', 2, 4, 'enrolled', '2025-12-07', NULL, '2025-12-06 18:57:35'),
-(62, '202500005', 2, 5, 'enrolled', '2025-12-07', NULL, '2025-12-06 18:58:57'),
 (63, '202500042', 2, 4, 'enrolled', '2025-12-07', '2025-12-06 19:02:27', '2025-12-06 19:02:27'),
 (64, '202500173', 1, 1, 'enrolled', '2025-12-12', '2025-12-12 06:24:45', '2025-12-12 06:24:45'),
 (65, '202500174', 1, 1, 'enrolled', '2025-12-12', '2025-12-12 06:24:45', '2025-12-12 06:24:45'),
@@ -2522,7 +2523,9 @@ INSERT INTO `student_semester_enrollment` (`id`, `student_number`, `semester_id`
 (69, '202600004', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 09:55:53', '2026-01-21 09:55:53'),
 (70, '202600005', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 09:55:53', '2026-01-21 09:55:53'),
 (71, '202600001', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
-(72, '202600002', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03');
+(72, '202600002', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
+(73, '202600003', 1, 2, 'enrolled', '2026-01-23', '2026-01-23 09:12:49', '2026-01-23 09:12:49'),
+(74, '202500044', 2, 5, 'enrolled', '2026-01-23', '2026-01-23 12:05:56', '2026-01-23 12:05:56');
 
 -- --------------------------------------------------------
 
@@ -2764,8 +2767,7 @@ ALTER TABLE `school_years`
 -- Indexes for table `sections`
 --
 ALTER TABLE `sections`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `semester_id` (`semester_id`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `section_adviser_matrix`
@@ -2912,13 +2914,13 @@ ALTER TABLE `grades_final`
 -- AUTO_INCREMENT for table `guardians`
 --
 ALTER TABLE `guardians`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `guardian_students`
 --
 ALTER TABLE `guardian_students`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `lectures`
@@ -3020,7 +3022,7 @@ ALTER TABLE `strands`
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=548;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=549;
 
 --
 -- AUTO_INCREMENT for table `student_class_matrix`
@@ -3038,7 +3040,7 @@ ALTER TABLE `student_lecture_progress`
 -- AUTO_INCREMENT for table `student_password_matrix`
 --
 ALTER TABLE `student_password_matrix`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=518;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=519;
 
 --
 -- AUTO_INCREMENT for table `student_quiz_answers`
@@ -3050,13 +3052,13 @@ ALTER TABLE `student_quiz_answers`
 -- AUTO_INCREMENT for table `student_quiz_attempts`
 --
 ALTER TABLE `student_quiz_attempts`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=204;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=206;
 
 --
 -- AUTO_INCREMENT for table `student_semester_enrollment`
 --
 ALTER TABLE `student_semester_enrollment`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `teachers`
@@ -3085,12 +3087,6 @@ ALTER TABLE `users`
 --
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `sections`
---
-ALTER TABLE `sections`
-  ADD CONSTRAINT `sections_ibfk_1` FOREIGN KEY (`semester_id`) REFERENCES `semesters` (`id`);
 
 --
 -- Constraints for table `semesters`
