@@ -13,6 +13,34 @@ section_class_matrix - is for regular student
 
 i dont use current semester of students table
 
+-- Main audit log table
+CREATE TABLE `audit_logs` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_type` enum('admin','teacher','student','guardian','system') NOT NULL,
+  `user_identifier` varchar(255) DEFAULT NULL COMMENT 'email, student_number, or teacher_id',
+  `action` varchar(100) NOT NULL COMMENT 'created, updated, deleted, viewed, exported, etc',
+  `module` varchar(100) NOT NULL COMMENT 'students, grades, classes, quizzes, etc',
+  `record_id` varchar(100) DEFAULT NULL COMMENT 'ID of affected record',
+  `description` text DEFAULT NULL COMMENT 'Human readable description',
+  `old_values` json DEFAULT NULL COMMENT 'Previous values for updates',
+  `new_values` json DEFAULT NULL COMMENT 'New values for creates/updates',
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Login history table
+CREATE TABLE `audit_login` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_type` enum('admin','teacher','student','guardian') NOT NULL,
+  `user_identifier` varchar(255) NOT NULL COMMENT 'email, student_number, etc',
+  `ip_address` varchar(45) DEFAULT NULL,
+  `session_id` varchar(255) DEFAULT NULL,
+  `logout_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,

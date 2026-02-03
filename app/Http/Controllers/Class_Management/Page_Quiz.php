@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Class_Management;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainController;
+use App\Traits\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class Page_Quiz extends MainController
 {
+    use AuditLogger;
+
     public function teacherIndex($classId)
     {
         $class = DB::table('classes')->where('id', $classId)->first();
@@ -199,6 +202,16 @@ class Page_Quiz extends MainController
                 }
             }
 
+            // Get related data for audit log
+            $class = DB::table('classes')->where('id', $classId)->first();
+            $lesson = DB::table('lessons')->where('id', $lessonId)->first();
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $request->semester_id)
+                ->select('semesters.*', 'school_years.code as sy_code')
+                ->first();
+            $quarter = DB::table('quarters')->where('id', $request->quarter_id)->first();
+
             $quizId = DB::table('quizzes')->insertGetId([
                 'lesson_id' => $lessonId,
                 'semester_id' => $request->semester_id,
@@ -217,6 +230,9 @@ class Page_Quiz extends MainController
                 'updated_at' => now()
             ]);
 
+            $totalPoints = 0;
+            $questionTypes = [];
+
             foreach ($request->questions as $index => $qData) {
                 $questionId = DB::table('quiz_questions')->insertGetId([
                     'quiz_id' => $quizId,
@@ -228,6 +244,9 @@ class Page_Quiz extends MainController
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
+
+                $totalPoints += $qData['points'];
+                $questionTypes[$qData['question_type']] = ($questionTypes[$qData['question_type']] ?? 0) + 1;
 
                 if (isset($qData['options']) && is_array($qData['options'])) {
                     foreach ($qData['options'] as $optIndex => $opt) {
@@ -253,6 +272,37 @@ class Page_Quiz extends MainController
                     }
                 }
             }
+
+            // Audit Log
+            $this->logAudit(
+                'created',
+                'quizzes',
+                (string)$quizId,
+                "Created quiz '{$request->title}' for lesson '{$lesson->title}' in class '{$class->class_name}' - {$quarter->name} {$semester->name} {$semester->sy_code}",
+                null,
+                [
+                    'quiz_id' => $quizId,
+                    'quiz_title' => $request->title,
+                    'lesson_id' => $lessonId,
+                    'lesson_title' => $lesson->title,
+                    'class_id' => $classId,
+                    'class_code' => $class->class_code,
+                    'class_name' => $class->class_name,
+                    'semester_id' => $request->semester_id,
+                    'semester_name' => $semester->name,
+                    'quarter_id' => $request->quarter_id,
+                    'quarter_name' => $quarter->name,
+                    'school_year' => $semester->sy_code,
+                    'total_questions' => count($request->questions),
+                    'total_points' => $totalPoints,
+                    'question_types' => $questionTypes,
+                    'time_limit' => $request->time_limit,
+                    'passing_score' => $request->passing_score,
+                    'max_attempts' => $request->max_attempts,
+                    'available_from' => $request->available_from,
+                    'available_until' => $request->available_until
+                ]
+            );
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Quiz created successfully', 'data' => ['quiz_id' => $quizId]]);
@@ -313,6 +363,26 @@ class Page_Quiz extends MainController
                 }
             }
 
+            // Get old quiz data for audit log
+            $oldQuiz = DB::table('quizzes')->where('id', $quizId)->first();
+            $oldQuestions = DB::table('quiz_questions')->where('quiz_id', $quizId)->get();
+            
+            $oldTotalPoints = $oldQuestions->sum('points');
+            $oldQuestionTypes = [];
+            foreach ($oldQuestions as $q) {
+                $oldQuestionTypes[$q->question_type] = ($oldQuestionTypes[$q->question_type] ?? 0) + 1;
+            }
+
+            // Get related data for audit log
+            $class = DB::table('classes')->where('id', $classId)->first();
+            $lesson = DB::table('lessons')->where('id', $lessonId)->first();
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $request->semester_id)
+                ->select('semesters.*', 'school_years.code as sy_code')
+                ->first();
+            $quarter = DB::table('quarters')->where('id', $request->quarter_id)->first();
+
             DB::table('quizzes')->where('id', $quizId)->where('lesson_id', $lessonId)->update([
                 'title' => $request->title,
                 'description' => $request->description,
@@ -333,6 +403,9 @@ class Page_Quiz extends MainController
             }
             DB::table('quiz_questions')->where('quiz_id', $quizId)->delete();
 
+            $totalPoints = 0;
+            $questionTypes = [];
+
             foreach ($request->questions as $index => $qData) {
                 $questionId = DB::table('quiz_questions')->insertGetId([
                     'quiz_id' => $quizId,
@@ -344,6 +417,9 @@ class Page_Quiz extends MainController
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
+
+                $totalPoints += $qData['points'];
+                $questionTypes[$qData['question_type']] = ($questionTypes[$qData['question_type']] ?? 0) + 1;
 
                 if (isset($qData['options'])) {
                     foreach ($qData['options'] as $optIndex => $opt) {
@@ -370,6 +446,48 @@ class Page_Quiz extends MainController
                 }
             }
 
+            // Audit Log
+            $this->logAudit(
+                'updated',
+                'quizzes',
+                (string)$quizId,
+                "Updated quiz '{$request->title}' for lesson '{$lesson->title}' in class '{$class->class_name}' - {$quarter->name} {$semester->name} {$semester->sy_code}",
+                [
+                    'quiz_title' => $oldQuiz->title,
+                    'total_questions' => $oldQuestions->count(),
+                    'total_points' => $oldTotalPoints,
+                    'question_types' => $oldQuestionTypes,
+                    'time_limit' => $oldQuiz->time_limit,
+                    'passing_score' => $oldQuiz->passing_score,
+                    'max_attempts' => $oldQuiz->max_attempts,
+                    'semester_id' => $oldQuiz->semester_id,
+                    'quarter_id' => $oldQuiz->quarter_id,
+                    'available_from' => $oldQuiz->available_from,
+                    'available_until' => $oldQuiz->available_until
+                ],
+                [
+                    'quiz_title' => $request->title,
+                    'lesson_id' => $lessonId,
+                    'lesson_title' => $lesson->title,
+                    'class_id' => $classId,
+                    'class_code' => $class->class_code,
+                    'class_name' => $class->class_name,
+                    'semester_id' => $request->semester_id,
+                    'semester_name' => $semester->name,
+                    'quarter_id' => $request->quarter_id,
+                    'quarter_name' => $quarter->name,
+                    'school_year' => $semester->sy_code,
+                    'total_questions' => count($request->questions),
+                    'total_points' => $totalPoints,
+                    'question_types' => $questionTypes,
+                    'time_limit' => $request->time_limit,
+                    'passing_score' => $request->passing_score,
+                    'max_attempts' => $request->max_attempts,
+                    'available_from' => $request->available_from,
+                    'available_until' => $request->available_until
+                ]
+            );
+
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Quiz updated successfully']);
 
@@ -382,10 +500,67 @@ class Page_Quiz extends MainController
     public function destroy($classId, $lessonId, $quizId)
     {
         try {
+            // Get quiz data before deletion for audit log
+            $quiz = DB::table('quizzes')
+                ->where('id', $quizId)
+                ->where('lesson_id', $lessonId)
+                ->first();
+
+            if (!$quiz) {
+                return response()->json(['success' => false, 'message' => 'Quiz not found'], 404);
+            }
+
+            // Get related data for audit log
+            $class = DB::table('classes')
+                ->join('lessons', 'classes.id', '=', 'lessons.class_id')
+                ->where('lessons.id', $lessonId)
+                ->select('classes.*')
+                ->first();
+            
+            $lesson = DB::table('lessons')->where('id', $lessonId)->first();
+            
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $quiz->semester_id)
+                ->select('semesters.*', 'school_years.code as sy_code')
+                ->first();
+            
+            $quarter = DB::table('quarters')->where('id', $quiz->quarter_id)->first();
+
+            $questionCount = DB::table('quiz_questions')->where('quiz_id', $quizId)->count();
+
             DB::table('quizzes')->where('id', $quizId)->where('lesson_id', $lessonId)->update([
                 'status' => 0,
                 'updated_at' => now()
             ]);
+
+            // Audit Log
+            $this->logAudit(
+                'deleted',
+                'quizzes',
+                (string)$quizId,
+                "Deleted quiz '{$quiz->title}' from lesson '{$lesson->title}' in class '{$class->class_name}' - {$quarter->name} {$semester->name} {$semester->sy_code}",
+                [
+                    'quiz_id' => $quizId,
+                    'quiz_title' => $quiz->title,
+                    'total_questions' => $questionCount,
+                    'status' => 1
+                ],
+                [
+                    'status' => 0,
+                    'lesson_id' => $lessonId,
+                    'lesson_title' => $lesson->title,
+                    'class_id' => $classId,
+                    'class_code' => $class->class_code,
+                    'class_name' => $class->class_name,
+                    'semester_id' => $quiz->semester_id,
+                    'semester_name' => $semester->name,
+                    'quarter_id' => $quiz->quarter_id,
+                    'quarter_name' => $quarter->name,
+                    'school_year' => $semester->sy_code
+                ]
+            );
+
             return response()->json(['success' => true, 'message' => 'Quiz deleted']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

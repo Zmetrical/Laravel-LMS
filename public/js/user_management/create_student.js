@@ -437,7 +437,7 @@ $(document).ready(function() {
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
-                window.location.href = API_ROUTES.redirectAfterSubmit;
+                // window.location.href = API_ROUTES.redirectAfterSubmit;
             });
             return;
         }

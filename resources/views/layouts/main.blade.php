@@ -10,10 +10,45 @@
             right: 0;
             background-color: #343a40;
             border-top: 1px solid #4b545c;
+            z-index: 1000;
         }
 
         .sidebar {
             padding-bottom: 80px;
+            max-height: calc(100vh - 380px); /* Accounts for logo + user panels + logout button */
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Ensure main-sidebar takes full height */
+        .main-sidebar {
+            height: 100vh;
+            position: fixed;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbar Styling */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #2c3136;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #4b545c;
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #5a6268;
+        }
+
+        /* For Firefox */
+        .sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: #4b545c #2c3136;
         }
 
         .nav-sidebar>.nav-item.menu-open>.nav-link,
@@ -323,6 +358,51 @@
                                             class="nav-link {{ Request::routeIs('admin.list_section') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>List Section</p>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <div class="nav-divider"></div>
+
+                            <!-- Audit & Monitoring Section -->
+                            <li class="nav-section-title">Audit & Monitoring</li>
+
+                            <li class="nav-item {{ Request::is('audit/*') ? 'menu-open' : '' }}">
+                                <a href="#" class="nav-link {{ Request::is('audit/*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-history"></i>
+                                    <p>
+                                        Audit Logs
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    <li class="nav-item">
+                                        <a href="{{ route('admin.audit.admin.index') }}" 
+                                        class="nav-link {{ Request::routeIs('admin.audit.admin.index') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Admin Activity</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('admin.audit.teachers.index') }}" 
+                                        class="nav-link {{ Request::routeIs('admin.audit.teachers.index') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Teacher Activity</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('admin.audit.students.index') }}" 
+                                        class="nav-link {{ Request::routeIs('admin.audit.students.index') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Student Activity</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('admin.audit.login.index') }}" 
+                                        class="nav-link {{ Request::routeIs('admin.audit.login.index') ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Login History</p>
                                         </a>
                                     </li>
                                 </ul>

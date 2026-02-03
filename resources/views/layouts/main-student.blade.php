@@ -11,10 +11,45 @@
             right: 0;
             background-color: #343a40;
             border-top: 1px solid #4b545c;
+            z-index: 1000;
         }
 
         .sidebar {
             padding-bottom: 80px;
+            max-height: calc(100vh - 380px); /* Accounts for logo + user panels + logout button */
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Ensure main-sidebar takes full height */
+        .main-sidebar {
+            height: 100vh;
+            position: fixed;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbar Styling */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #2c3136;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #4b545c;
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #5a6268;
+        }
+
+        /* For Firefox */
+        .sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: #4b545c #2c3136;
         }
 
         .nav-sidebar>.nav-item.menu-open>.nav-link,

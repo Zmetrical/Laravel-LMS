@@ -1,0 +1,3288 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Feb 02, 2026 at 04:19 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `trinity_lms`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admins`
+--
+
+CREATE TABLE `admins` (
+  `id` int(11) NOT NULL,
+  `admin_name` varchar(100) NOT NULL,
+  `admin_password` varchar(100) NOT NULL,
+  `admin_type` int(11) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `admins`
+--
+
+INSERT INTO `admins` (`id`, `admin_name`, `admin_password`, `admin_type`, `email`, `created_at`, `updated_at`) VALUES
+(2, 'Admin', '$2y$12$6YYP.5SoGLRzkAgDah878umv9DdPTYi5yGeQfSs92F2wXIckx3SIK', 0, 'admin@trinity.edu', '2026-01-08 13:33:46', '2026-01-08 13:33:46'),
+(3, 'Super Admin', '$2y$12$7X35/qkrvRupOAUJe8HcruNBq/3eGGg.N4xIEIxzyuZxC0KOhngee', 1, 'super_admin@trinity.edu', '2026-01-08 13:33:46', '2026-01-08 13:33:46');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `audit_login`
+--
+
+CREATE TABLE `audit_login` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_type` enum('admin','teacher','student','guardian') NOT NULL,
+  `user_identifier` varchar(255) NOT NULL COMMENT 'email, student_number, etc',
+  `login_status` enum('success','failed','blocked') NOT NULL,
+  `failure_reason` varchar(255) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `session_id` varchar(255) DEFAULT NULL,
+  `logout_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `audit_logs`
+--
+
+CREATE TABLE `audit_logs` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_type` enum('admin','teacher','student','guardian','system') NOT NULL,
+  `user_identifier` varchar(255) DEFAULT NULL,
+  `action` varchar(100) NOT NULL,
+  `module` varchar(100) NOT NULL,
+  `record_id` varchar(100) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `old_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `new_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `audit_logs`
+--
+
+INSERT INTO `audit_logs` (`id`, `user_type`, `user_identifier`, `action`, `module`, `record_id`, `description`, `old_values`, `new_values`, `ip_address`, `created_at`) VALUES
+(2, 'admin', 'admin@trinity.edu', 'updated', 'classes', '9', 'Updated class: Applied Economicss (CLASS-007)', '{\"class_name\":\"Applied Economics\",\"ww_perc\":40,\"pt_perc\":30,\"qa_perce\":30}', '{\"class_name\":\"Applied Economicss\",\"ww_perc\":\"40\",\"pt_perc\":\"30\",\"qa_perce\":\"30\"}', '127.0.0.1', '2026-02-01 12:54:47'),
+(3, 'admin', 'admin@trinity.edu', 'updated', 'classes', '10', 'Updated class: Oral Communications (CLASS-010)', '{\"class_name\":\"Oral Communication\",\"ww_perc\":20,\"pt_perc\":60,\"qa_perce\":20}', '{\"class_name\":\"Oral Communications\",\"ww_perc\":\"20\",\"pt_perc\":\"60\",\"qa_perce\":\"20\"}', '127.0.0.1', '2026-02-01 12:58:48'),
+(4, 'admin', 'admin@trinity.edu', 'updated', 'classes', '10', 'Updated class: Oral Communicationss (CLASS-010)', '{\"class_name\":\"Oral Communications\",\"ww_perc\":20,\"pt_perc\":60,\"qa_perce\":20}', '{\"class_name\":\"Oral Communicationss\",\"ww_perc\":\"20\",\"pt_perc\":\"60\",\"qa_perce\":\"20\"}', '127.0.0.1', '2026-02-01 14:08:48'),
+(19, 'system', 'system', 'created', 'guardians', '25', 'Created guardian: GuardianSample 1 (xcvparent@gmail.com) linked to student 202600024', NULL, '{\"guardian_id\":25,\"email\":\"xcvparent@gmail.com\",\"first_name\":\"GuardianSample\",\"last_name\":\"1\",\"student_number\":\"202600024\",\"access_token\":\"[REDACTED]\"}', '127.0.0.1', '2026-02-01 15:51:21'),
+(20, 'system', 'system', 'created', 'students', NULL, 'Batch created 1 students for ICT - Grade 11', NULL, '{\"batch_type\":\"student_registration\",\"strand_id\":\"1\",\"strand_code\":\"ICT\",\"level_id\":\"1\",\"level_name\":\"Grade 11\",\"total_students\":1,\"semester_id\":1,\"semester_name\":\"1st Semester\",\"guardians_linked\":1,\"distribution\":{\"Capricorn\":1}}', '127.0.0.1', '2026-02-01 15:51:21'),
+(21, 'system', 'system', 'created', 'teachers', '16', 'Created teacher: zxc zxc (zxczxc@gmail.com)', NULL, '{\"teacher_id\":16,\"first_name\":\"zxc\",\"middle_name\":\"zc\",\"last_name\":\"zxc\",\"email\":\"zxczxc@gmail.com\",\"phone\":\"123123\",\"gender\":\"Female\",\"status\":1}', '127.0.0.1', '2026-02-01 15:53:22'),
+(22, 'admin', 'admin@trinity.edu', 'updated', 'teachers', '8', 'Updated teacher profile: Testd #1 (Test1@gmail.com)', '{\"first_name\":\"Test\",\"last_name\":\"#1\",\"middle_name\":\"ue\",\"email\":\"Test1@gmail.com\",\"phone\":\"000\",\"gender\":\"Female\"}', '{\"first_name\":\"Testd\",\"last_name\":\"#1\",\"middle_name\":\"ue\",\"email\":\"Test1@gmail.com\",\"phone\":\"000\",\"gender\":\"Female\"}', '127.0.0.1', '2026-02-01 15:59:40');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `classes`
+--
+
+CREATE TABLE `classes` (
+  `id` int(11) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `class_name` varchar(250) NOT NULL,
+  `ww_perc` int(11) NOT NULL,
+  `pt_perc` int(11) NOT NULL,
+  `qa_perce` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `classes`
+--
+
+INSERT INTO `classes` (`id`, `class_code`, `class_name`, `ww_perc`, `pt_perc`, `qa_perce`, `created_at`, `updated_at`) VALUES
+(1, 'CLASS-001', 'Effective Communication', 30, 50, 20, '2025-10-29 18:35:42', '2025-11-20 19:29:02'),
+(2, 'CLASS-002', 'General Mathematics', 30, 50, 20, '2025-10-29 18:36:52', '2025-11-20 19:29:15'),
+(3, 'CLASS-003', 'General Science', 30, 50, 20, '2025-10-29 18:37:03', '2025-11-20 19:29:24'),
+(4, 'CLASS-004', 'Life and Career Skills', 30, 50, 20, '2025-10-29 22:08:12', '2025-11-20 19:29:31'),
+(5, 'CLASS-005', 'Mabisang Komunikasyon', 30, 50, 20, '2025-10-29 22:09:23', '2025-11-20 19:29:39'),
+(6, 'CLASS-006', 'Pag-aaral ng Kasaysayan at Lipunang Pilipino', 30, 50, 20, '2025-11-11 04:51:34', '2025-11-20 19:29:46'),
+(9, 'CLASS-007', 'Applied Economicss', 40, 30, 30, '2025-11-20 19:28:40', '2026-02-01 12:54:47'),
+(10, 'CLASS-010', 'Oral Communicationsss', 20, 60, 20, '2025-11-27 14:13:12', '2026-02-01 15:36:57'),
+(11, 'CLASS-011', 'Physical Education', 20, 60, 20, '2025-11-28 06:28:39', '2025-11-28 06:28:39');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `gradebook_columns`
+--
+
+CREATE TABLE `gradebook_columns` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
+  `component_type` enum('WW','PT','QA') NOT NULL,
+  `column_name` varchar(50) NOT NULL,
+  `max_points` decimal(8,2) NOT NULL,
+  `order_number` int(11) DEFAULT 0,
+  `source_type` enum('manual','online','imported') DEFAULT 'manual',
+  `quiz_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `gradebook_columns`
+--
+
+INSERT INTO `gradebook_columns` (`id`, `class_code`, `quarter_id`, `component_type`, `column_name`, `max_points`, `order_number`, `source_type`, `quiz_id`, `is_active`, `created_at`, `updated_at`) VALUES
+(44, 'CLASS-002', 4, 'WW', 'WW1', 10.00, 1, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(45, 'CLASS-002', 4, 'WW', 'WW2', 10.00, 2, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(46, 'CLASS-002', 4, 'WW', 'WW3', 10.00, 3, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(47, 'CLASS-002', 4, 'WW', 'WW4', 10.00, 4, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(48, 'CLASS-002', 4, 'WW', 'WW5', 10.00, 5, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(49, 'CLASS-002', 4, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(50, 'CLASS-002', 4, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(51, 'CLASS-002', 4, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(52, 'CLASS-002', 4, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(53, 'CLASS-002', 4, 'WW', 'WW10', 10.00, 10, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(54, 'CLASS-002', 4, 'PT', 'PT1', 10.00, 1, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(55, 'CLASS-002', 4, 'PT', 'PT2', 10.00, 2, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(56, 'CLASS-002', 4, 'PT', 'PT3', 10.00, 3, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(57, 'CLASS-002', 4, 'PT', 'PT4', 10.00, 4, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(58, 'CLASS-002', 4, 'PT', 'PT5', 10.00, 5, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(59, 'CLASS-002', 4, 'PT', 'PT6', 10.00, 6, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(60, 'CLASS-002', 4, 'PT', 'PT7', 10.00, 7, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(61, 'CLASS-002', 4, 'PT', 'PT8', 10.00, 8, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(62, 'CLASS-002', 4, 'PT', 'PT9', 10.00, 9, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(63, 'CLASS-002', 4, 'PT', 'PT10', 10.00, 10, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(64, 'CLASS-002', 4, 'QA', 'QA', 50.00, 1, 'manual', NULL, 1, '2025-11-27 16:23:47', '2025-11-27 16:23:47'),
+(74, 'CLASS-002', 3, 'WW', 'WW1', 12.00, 1, 'online', 6, 1, '2025-11-27 17:44:26', '2025-12-01 14:07:22'),
+(75, 'CLASS-002', 3, 'WW', 'WW2', 10.00, 2, 'online', 7, 1, '2025-11-27 17:44:26', '2025-12-01 14:12:06'),
+(76, 'CLASS-002', 3, 'WW', 'WW3', 2.00, 3, 'online', 9, 1, '2025-11-27 17:44:26', '2025-12-01 14:12:12'),
+(77, 'CLASS-002', 3, 'WW', 'WW4', 8.00, 4, 'online', 8, 1, '2025-11-27 17:44:26', '2025-12-17 11:30:52'),
+(78, 'CLASS-002', 3, 'WW', 'WW5', 1.00, 5, 'online', 10, 1, '2025-11-27 17:44:26', '2025-12-17 11:31:15'),
+(79, 'CLASS-002', 3, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 1, '2025-11-27 17:44:26', '2026-01-24 07:29:20'),
+(80, 'CLASS-002', 3, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:24'),
+(81, 'CLASS-002', 3, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:36'),
+(82, 'CLASS-002', 3, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:43'),
+(83, 'CLASS-002', 3, 'WW', 'WW10', 10.00, 10, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:20:53'),
+(84, 'CLASS-002', 3, 'PT', 'PT1', 10.00, 1, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:05'),
+(85, 'CLASS-002', 3, 'PT', 'PT2', 10.00, 2, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:14'),
+(86, 'CLASS-002', 3, 'PT', 'PT3', 10.00, 3, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:19'),
+(87, 'CLASS-002', 3, 'PT', 'PT4', 10.00, 4, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:23'),
+(88, 'CLASS-002', 3, 'PT', 'PT5', 10.00, 5, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:28'),
+(89, 'CLASS-002', 3, 'PT', 'PT6', 10.00, 6, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:37'),
+(90, 'CLASS-002', 3, 'PT', 'PT7', 10.00, 7, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:43'),
+(91, 'CLASS-002', 3, 'PT', 'PT8', 10.00, 8, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:50'),
+(92, 'CLASS-002', 3, 'PT', 'PT9', 10.00, 9, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:54'),
+(93, 'CLASS-002', 3, 'PT', 'PT10', 10.00, 10, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:23:59'),
+(94, 'CLASS-002', 3, 'QA', 'QA', 50.00, 1, 'manual', NULL, 1, '2025-11-27 17:44:26', '2025-12-02 15:24:05'),
+(95, 'CLASS-004', 3, 'WW', 'WW1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(96, 'CLASS-004', 3, 'WW', 'WW2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(97, 'CLASS-004', 3, 'WW', 'WW3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(98, 'CLASS-004', 3, 'WW', 'WW4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(99, 'CLASS-004', 3, 'WW', 'WW5', 10.00, 5, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(100, 'CLASS-004', 3, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(101, 'CLASS-004', 3, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(102, 'CLASS-004', 3, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(103, 'CLASS-004', 3, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(104, 'CLASS-004', 3, 'WW', 'WW10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(105, 'CLASS-004', 3, 'PT', 'PT1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(106, 'CLASS-004', 3, 'PT', 'PT2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(107, 'CLASS-004', 3, 'PT', 'PT3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(108, 'CLASS-004', 3, 'PT', 'PT4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(109, 'CLASS-004', 3, 'PT', 'PT5', 10.00, 5, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(110, 'CLASS-004', 3, 'PT', 'PT6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(111, 'CLASS-004', 3, 'PT', 'PT7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(112, 'CLASS-004', 3, 'PT', 'PT8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(113, 'CLASS-004', 3, 'PT', 'PT9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(114, 'CLASS-004', 3, 'PT', 'PT10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(115, 'CLASS-004', 3, 'QA', 'QA', 50.00, 1, 'manual', NULL, 0, '2025-12-08 21:15:24', '2025-12-08 21:15:24'),
+(116, 'CLASS-004', 4, 'WW', 'WW1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(117, 'CLASS-004', 4, 'WW', 'WW2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(118, 'CLASS-004', 4, 'WW', 'WW3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(119, 'CLASS-004', 4, 'WW', 'WW4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(120, 'CLASS-004', 4, 'WW', 'WW5', 10.00, 5, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(121, 'CLASS-004', 4, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(122, 'CLASS-004', 4, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(123, 'CLASS-004', 4, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(124, 'CLASS-004', 4, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(125, 'CLASS-004', 4, 'WW', 'WW10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(126, 'CLASS-004', 4, 'PT', 'PT1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(127, 'CLASS-004', 4, 'PT', 'PT2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(128, 'CLASS-004', 4, 'PT', 'PT3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(129, 'CLASS-004', 4, 'PT', 'PT4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(130, 'CLASS-004', 4, 'PT', 'PT5', 10.00, 5, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(131, 'CLASS-004', 4, 'PT', 'PT6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(132, 'CLASS-004', 4, 'PT', 'PT7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(133, 'CLASS-004', 4, 'PT', 'PT8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(134, 'CLASS-004', 4, 'PT', 'PT9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(135, 'CLASS-004', 4, 'PT', 'PT10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(136, 'CLASS-004', 4, 'QA', 'QA', 50.00, 1, 'manual', NULL, 0, '2025-12-08 21:24:14', '2025-12-08 21:24:14'),
+(137, 'CLASS-003', 3, 'WW', 'WW1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(138, 'CLASS-003', 3, 'WW', 'WW2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(139, 'CLASS-003', 3, 'WW', 'WW3', 10.00, 3, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(140, 'CLASS-003', 3, 'WW', 'WW4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 22:18:18', '2026-01-22 07:44:47'),
+(141, 'CLASS-003', 3, 'WW', 'WW5', 10.00, 5, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-08 22:28:43'),
+(142, 'CLASS-003', 3, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-08 22:20:03'),
+(143, 'CLASS-003', 3, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(144, 'CLASS-003', 3, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-09 04:00:02'),
+(145, 'CLASS-003', 3, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-17 13:11:56'),
+(146, 'CLASS-003', 3, 'WW', 'WW10', 10.00, 10, 'manual', NULL, 1, '2025-12-08 22:18:18', '2026-01-22 07:43:03'),
+(147, 'CLASS-003', 3, 'PT', 'PT1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(148, 'CLASS-003', 3, 'PT', 'PT2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(149, 'CLASS-003', 3, 'PT', 'PT3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(150, 'CLASS-003', 3, 'PT', 'PT4', 10.00, 4, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-17 13:14:09'),
+(151, 'CLASS-003', 3, 'PT', 'PT5', 10.00, 5, 'manual', NULL, 1, '2025-12-08 22:18:18', '2025-12-08 22:59:03'),
+(152, 'CLASS-003', 3, 'PT', 'PT6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(153, 'CLASS-003', 3, 'PT', 'PT7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(154, 'CLASS-003', 3, 'PT', 'PT8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(155, 'CLASS-003', 3, 'PT', 'PT9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(156, 'CLASS-003', 3, 'PT', 'PT10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(157, 'CLASS-003', 3, 'QA', 'QA', 50.00, 1, 'manual', NULL, 0, '2025-12-08 22:18:18', '2025-12-08 22:18:18'),
+(158, 'CLASS-003', 4, 'WW', 'WW1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(159, 'CLASS-003', 4, 'WW', 'WW2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(160, 'CLASS-003', 4, 'WW', 'WW3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(161, 'CLASS-003', 4, 'WW', 'WW4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(162, 'CLASS-003', 4, 'WW', 'WW5', 10.00, 5, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(163, 'CLASS-003', 4, 'WW', 'WW6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(164, 'CLASS-003', 4, 'WW', 'WW7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(165, 'CLASS-003', 4, 'WW', 'WW8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(166, 'CLASS-003', 4, 'WW', 'WW9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(167, 'CLASS-003', 4, 'WW', 'WW10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(168, 'CLASS-003', 4, 'PT', 'PT1', 10.00, 1, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(169, 'CLASS-003', 4, 'PT', 'PT2', 10.00, 2, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(170, 'CLASS-003', 4, 'PT', 'PT3', 10.00, 3, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(171, 'CLASS-003', 4, 'PT', 'PT4', 10.00, 4, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(172, 'CLASS-003', 4, 'PT', 'PT5', 10.00, 5, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(173, 'CLASS-003', 4, 'PT', 'PT6', 10.00, 6, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(174, 'CLASS-003', 4, 'PT', 'PT7', 10.00, 7, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(175, 'CLASS-003', 4, 'PT', 'PT8', 10.00, 8, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(176, 'CLASS-003', 4, 'PT', 'PT9', 10.00, 9, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(177, 'CLASS-003', 4, 'PT', 'PT10', 10.00, 10, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15'),
+(178, 'CLASS-003', 4, 'QA', 'QA', 50.00, 1, 'manual', NULL, 0, '2025-12-08 22:45:15', '2025-12-08 22:45:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `gradebook_scores`
+--
+
+CREATE TABLE `gradebook_scores` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `column_id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(255) NOT NULL,
+  `score` decimal(8,2) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
+  `source` enum('manual','online','imported') DEFAULT 'manual',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `gradebook_scores`
+--
+
+INSERT INTO `gradebook_scores` (`id`, `column_id`, `student_number`, `score`, `remarks`, `source`, `created_at`, `updated_at`) VALUES
+(112, 79, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(113, 79, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(114, 79, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(115, 79, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(116, 79, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(117, 79, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(118, 79, '202500095', 10.00, NULL, 'manual', NULL, NULL),
+(119, 79, '202500104', 9.00, NULL, 'manual', NULL, NULL),
+(120, 79, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(121, 80, '202500082', 8.00, NULL, 'manual', NULL, NULL),
+(122, 80, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(123, 80, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(124, 80, '202500088', 9.00, NULL, 'manual', NULL, NULL),
+(125, 80, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(126, 80, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(127, 80, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(128, 80, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(129, 80, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(130, 81, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(131, 81, '202500084', 10.00, NULL, 'manual', NULL, NULL),
+(132, 81, '202500085', 7.00, NULL, 'manual', NULL, NULL),
+(133, 81, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(134, 81, '202500092', 8.00, NULL, 'manual', NULL, NULL),
+(135, 81, '202500094', 9.00, NULL, 'manual', NULL, NULL),
+(136, 81, '202500095', 10.00, NULL, 'manual', NULL, NULL),
+(137, 81, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(138, 81, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(139, 82, '202500082', 8.00, NULL, 'manual', NULL, NULL),
+(140, 82, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(141, 82, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(142, 82, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(143, 82, '202500092', 6.00, NULL, 'manual', NULL, NULL),
+(144, 82, '202500094', 7.00, NULL, 'manual', NULL, NULL),
+(145, 82, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(146, 82, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(147, 82, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(148, 83, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(149, 83, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(150, 83, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(151, 83, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(152, 83, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(153, 83, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(154, 83, '202500095', 10.00, NULL, 'manual', NULL, NULL),
+(155, 83, '202500104', 9.00, NULL, 'manual', NULL, NULL),
+(156, 83, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(157, 84, '202500082', 8.00, NULL, 'manual', NULL, NULL),
+(158, 84, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(159, 84, '202500085', 7.00, NULL, 'manual', NULL, NULL),
+(160, 84, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(161, 84, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(162, 84, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(163, 84, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(164, 84, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(165, 84, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(166, 85, '202500082', 8.00, NULL, 'manual', NULL, NULL),
+(167, 85, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(168, 85, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(169, 85, '202500088', 9.00, NULL, 'manual', NULL, NULL),
+(170, 85, '202500092', 6.00, NULL, 'manual', NULL, NULL),
+(171, 85, '202500094', 7.00, NULL, 'manual', NULL, NULL),
+(172, 85, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(173, 85, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(174, 85, '202500127', 8.00, NULL, 'manual', NULL, NULL),
+(175, 86, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(176, 86, '202500084', 10.00, NULL, 'manual', NULL, NULL),
+(177, 86, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(178, 86, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(179, 86, '202500092', 8.00, NULL, 'manual', NULL, NULL),
+(180, 86, '202500094', 9.00, NULL, 'manual', NULL, NULL),
+(181, 86, '202500095', 10.00, NULL, 'manual', NULL, NULL),
+(182, 86, '202500104', 9.00, NULL, 'manual', NULL, NULL),
+(183, 86, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(184, 87, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(185, 87, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(186, 87, '202500085', 7.00, NULL, 'manual', NULL, NULL),
+(187, 87, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(188, 87, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(189, 87, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(190, 87, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(191, 87, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(192, 87, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(193, 88, '202500082', 7.00, NULL, 'manual', NULL, NULL),
+(194, 88, '202500084', 8.00, NULL, 'manual', NULL, NULL),
+(195, 88, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(196, 88, '202500088', 9.00, NULL, 'manual', NULL, NULL),
+(197, 88, '202500092', 6.00, NULL, 'manual', NULL, NULL),
+(198, 88, '202500094', 7.00, NULL, 'manual', NULL, NULL),
+(199, 88, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(200, 88, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(201, 88, '202500127', 8.00, NULL, 'manual', NULL, NULL),
+(202, 89, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(203, 89, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(204, 89, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(205, 89, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(206, 89, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(207, 89, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(208, 89, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(209, 89, '202500104', 9.00, NULL, 'manual', NULL, NULL),
+(210, 89, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(211, 90, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(212, 90, '202500084', 10.00, NULL, 'manual', NULL, NULL),
+(213, 90, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(214, 90, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(215, 90, '202500092', 8.00, NULL, 'manual', NULL, NULL),
+(216, 90, '202500094', 9.00, NULL, 'manual', NULL, NULL),
+(217, 90, '202500095', 10.00, NULL, 'manual', NULL, NULL),
+(218, 90, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(219, 90, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(220, 91, '202500082', 8.00, NULL, 'manual', NULL, NULL),
+(221, 91, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(222, 91, '202500085', 7.00, NULL, 'manual', NULL, NULL),
+(223, 91, '202500088', 9.00, NULL, 'manual', NULL, NULL),
+(224, 91, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(225, 91, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(226, 91, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(227, 91, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(228, 91, '202500127', 8.00, NULL, 'manual', NULL, NULL),
+(229, 92, '202500082', 9.00, NULL, 'manual', NULL, NULL),
+(230, 92, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(231, 92, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(232, 92, '202500088', 10.00, NULL, 'manual', NULL, NULL),
+(233, 92, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(234, 92, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(235, 92, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(236, 92, '202500104', 9.00, NULL, 'manual', NULL, NULL),
+(237, 92, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(238, 93, '202500082', 8.00, NULL, 'manual', NULL, NULL),
+(239, 93, '202500084', 9.00, NULL, 'manual', NULL, NULL),
+(240, 93, '202500085', 8.00, NULL, 'manual', NULL, NULL),
+(241, 93, '202500088', 9.00, NULL, 'manual', NULL, NULL),
+(242, 93, '202500092', 7.00, NULL, 'manual', NULL, NULL),
+(243, 93, '202500094', 8.00, NULL, 'manual', NULL, NULL),
+(244, 93, '202500095', 9.00, NULL, 'manual', NULL, NULL),
+(245, 93, '202500104', 8.00, NULL, 'manual', NULL, NULL),
+(246, 93, '202500127', 9.00, NULL, 'manual', NULL, NULL),
+(247, 94, '202500082', 40.00, NULL, 'manual', NULL, NULL),
+(248, 94, '202500084', 45.00, NULL, 'manual', NULL, NULL),
+(249, 94, '202500085', 38.00, NULL, 'manual', NULL, NULL),
+(250, 94, '202500088', 48.00, NULL, 'manual', NULL, NULL),
+(251, 94, '202500092', 32.00, NULL, 'manual', NULL, NULL),
+(252, 94, '202500094', 38.00, NULL, 'manual', NULL, NULL),
+(253, 94, '202500095', 46.00, NULL, 'manual', NULL, NULL),
+(254, 94, '202500104', 40.00, NULL, 'manual', NULL, NULL),
+(255, 94, '202500127', 44.00, NULL, 'manual', NULL, NULL),
+(256, 74, '202500083', 11.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(257, 75, '202500083', 8.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(258, 76, '202500083', 3.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(259, 77, '202500083', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(260, 78, '202500083', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(261, 79, '202500083', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(262, 84, '202500083', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(263, 85, '202500083', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(264, 86, '202500083', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(265, 87, '202500083', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(266, 88, '202500083', 7.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(267, 94, '202500083', 42.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(268, 74, '202500086', 11.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(269, 75, '202500086', 9.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(270, 76, '202500086', 4.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(271, 77, '202500086', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(272, 78, '202500086', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(273, 79, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(274, 84, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(275, 85, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(276, 86, '202500086', 10.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(277, 87, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(278, 88, '202500086', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(279, 94, '202500086', 45.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(280, 74, '202500087', 9.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(281, 75, '202500087', 8.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(282, 76, '202500087', 3.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(283, 77, '202500087', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(284, 78, '202500087', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(285, 79, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(286, 84, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(287, 85, '202500087', 7.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(288, 86, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(289, 87, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(290, 88, '202500087', 7.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(291, 94, '202500087', 38.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(292, 74, '202500089', 10.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(293, 75, '202500089', 9.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(294, 76, '202500089', 3.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(295, 77, '202500089', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(296, 78, '202500089', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(297, 79, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(298, 84, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(299, 85, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(300, 86, '202500089', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(301, 87, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(302, 88, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(303, 94, '202500089', 43.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(304, 74, '202500091', 12.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(305, 75, '202500091', 10.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(306, 76, '202500091', 4.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(307, 77, '202500091', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(308, 78, '202500091', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(309, 79, '202500091', 10.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(310, 84, '202500091', 10.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(311, 85, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(312, 86, '202500091', 10.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(313, 87, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(314, 88, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(315, 94, '202500091', 47.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(316, 74, '202500100', 10.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(317, 75, '202500100', 8.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(318, 76, '202500100', 4.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(319, 77, '202500100', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(320, 78, '202500100', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(321, 79, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(322, 84, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(323, 85, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(324, 86, '202500100', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(325, 87, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(326, 88, '202500100', 7.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(327, 94, '202500100', 40.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(328, 74, '202500171', 11.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(329, 75, '202500171', 9.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(330, 76, '202500171', 3.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(331, 77, '202500171', 2.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(332, 78, '202500171', 1.00, NULL, 'online', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(333, 79, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(334, 84, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(335, 85, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(336, 86, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(337, 87, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(338, 88, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(339, 94, '202500171', 44.00, NULL, 'manual', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(340, 89, '202500083', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(341, 90, '202500083', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(342, 91, '202500083', 7.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(343, 92, '202500083', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(344, 93, '202500083', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(345, 89, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(346, 90, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(347, 91, '202500086', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(348, 92, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(349, 93, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(350, 89, '202500087', 7.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(351, 90, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(352, 91, '202500087', 7.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(353, 92, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(354, 93, '202500087', 7.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(355, 89, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(356, 90, '202500089', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(357, 91, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(358, 92, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(359, 93, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(360, 89, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(361, 90, '202500091', 10.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(362, 91, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(363, 92, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(364, 93, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(365, 89, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(366, 90, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(367, 91, '202500100', 7.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(368, 92, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(369, 93, '202500100', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(370, 89, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(371, 90, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(372, 91, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(373, 92, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(374, 93, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:44:30', '2025-12-02 15:44:30'),
+(375, 80, '202500002', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-08 21:40:08'),
+(376, 80, '202500083', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(377, 80, '202500086', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(378, 80, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(379, 80, '202500089', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(380, 80, '202500091', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(381, 80, '202500100', 7.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(382, 80, '202500171', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(383, 81, '202500002', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-08 21:40:08'),
+(384, 81, '202500083', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(385, 81, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(386, 81, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(387, 81, '202500089', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(388, 81, '202500091', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(389, 81, '202500100', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(390, 81, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(391, 82, '202500002', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-08 21:40:08'),
+(392, 82, '202500083', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(393, 82, '202500086', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(394, 82, '202500087', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(395, 82, '202500089', 7.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(396, 82, '202500091', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(397, 82, '202500100', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(398, 82, '202500171', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(399, 83, '202500002', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(400, 83, '202500083', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(401, 83, '202500086', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(402, 83, '202500087', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(403, 83, '202500089', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(404, 83, '202500091', 8.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(405, 83, '202500100', 9.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(406, 83, '202500171', 10.00, NULL, 'manual', '2025-12-02 15:49:54', '2025-12-02 15:49:54'),
+(407, 44, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(408, 44, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(409, 44, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(410, 44, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(411, 44, '202500092', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(412, 44, '202500094', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(413, 44, '202500095', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(414, 44, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(415, 44, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(416, 45, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(417, 45, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(418, 45, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(419, 45, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(420, 45, '202500092', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(421, 45, '202500094', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(422, 45, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(423, 45, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(424, 45, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(425, 46, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(426, 46, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(427, 46, '202500085', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(428, 46, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(429, 46, '202500092', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(430, 46, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(431, 46, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(432, 46, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(433, 46, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(434, 47, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(435, 47, '202500084', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(436, 47, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(437, 47, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(438, 47, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(439, 47, '202500094', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(440, 47, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(441, 47, '202500104', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(442, 47, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(443, 48, '202500082', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(444, 48, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(445, 48, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(446, 48, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(447, 48, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(448, 48, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(449, 48, '202500095', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(450, 48, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(451, 48, '202500127', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(452, 49, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(453, 49, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(454, 49, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(455, 49, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(456, 49, '202500092', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(457, 49, '202500094', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(458, 49, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(459, 49, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(460, 49, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(461, 50, '202500082', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(462, 50, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(463, 50, '202500085', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(464, 50, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(465, 50, '202500092', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(466, 50, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(467, 50, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(468, 50, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(469, 50, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(470, 51, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(471, 51, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(472, 51, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(473, 51, '202500088', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(474, 51, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(475, 51, '202500094', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(476, 51, '202500095', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(477, 51, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(478, 51, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(479, 52, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(480, 52, '202500084', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(481, 52, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(482, 52, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(483, 52, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(484, 52, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(485, 52, '202500095', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(486, 52, '202500104', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(487, 52, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(488, 53, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(489, 53, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(490, 53, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(491, 53, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(492, 53, '202500092', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(493, 53, '202500094', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(494, 53, '202500095', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(495, 53, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(496, 53, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(497, 54, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(498, 54, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(499, 54, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(500, 54, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(501, 54, '202500092', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(502, 54, '202500094', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(503, 54, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(504, 54, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(505, 54, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(506, 55, '202500082', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(507, 55, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(508, 55, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(509, 55, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(510, 55, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(511, 55, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(512, 55, '202500095', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(513, 55, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(514, 55, '202500127', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(515, 56, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(516, 56, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(517, 56, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(518, 56, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(519, 56, '202500092', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(520, 56, '202500094', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(521, 56, '202500095', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(522, 56, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(523, 56, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(524, 57, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(525, 57, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(526, 57, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(527, 57, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(528, 57, '202500092', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(529, 57, '202500094', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(530, 57, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(531, 57, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(532, 57, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(533, 58, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(534, 58, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(535, 58, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(536, 58, '202500088', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(537, 58, '202500092', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(538, 58, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(539, 58, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(540, 58, '202500104', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(541, 58, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(542, 59, '202500082', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(543, 59, '202500084', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(544, 59, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(545, 59, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(546, 59, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(547, 59, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(548, 59, '202500095', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(549, 59, '202500104', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(550, 59, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(551, 60, '202500082', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(552, 60, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(553, 60, '202500085', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(554, 60, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(555, 60, '202500092', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(556, 60, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(557, 60, '202500095', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(558, 60, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(559, 60, '202500127', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(560, 61, '202500082', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(561, 61, '202500084', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(562, 61, '202500085', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(563, 61, '202500088', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(564, 61, '202500092', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(565, 61, '202500094', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(566, 61, '202500095', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(567, 61, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(568, 61, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(569, 62, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(570, 62, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(571, 62, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(572, 62, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(573, 62, '202500092', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(574, 62, '202500094', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(575, 62, '202500095', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(576, 62, '202500104', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(577, 62, '202500127', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(578, 63, '202500082', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(579, 63, '202500084', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(580, 63, '202500085', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(581, 63, '202500088', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(582, 63, '202500092', 7.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(583, 63, '202500094', 10.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(584, 63, '202500095', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(585, 63, '202500104', 8.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(586, 63, '202500127', 9.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(587, 64, '202500082', 43.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(588, 64, '202500084', 45.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(589, 64, '202500085', 39.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(590, 64, '202500088', 41.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(591, 64, '202500092', 47.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(592, 64, '202500094', 40.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(593, 64, '202500095', 38.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(594, 64, '202500104', 44.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(595, 64, '202500127', 43.00, NULL, 'manual', '2025-12-02 15:55:38', '2025-12-02 15:55:38'),
+(596, 44, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(597, 44, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(598, 44, '202500086', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(599, 44, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(600, 44, '202500089', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(601, 44, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(602, 44, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(603, 44, '202500171', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(604, 45, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(605, 45, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(606, 45, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(607, 45, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(608, 45, '202500089', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(609, 45, '202500091', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(610, 45, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(611, 45, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(612, 46, '202500002', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(613, 46, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(614, 46, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(615, 46, '202500087', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(616, 46, '202500089', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(617, 46, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(618, 46, '202500100', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(619, 46, '202500171', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(620, 47, '202500002', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(621, 47, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(622, 47, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(623, 47, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(624, 47, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(625, 47, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(626, 47, '202500100', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(627, 47, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(628, 48, '202500002', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(629, 48, '202500083', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(630, 48, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(631, 48, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(632, 48, '202500089', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(633, 48, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(634, 48, '202500100', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(635, 48, '202500171', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(636, 49, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(637, 49, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(638, 49, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(639, 49, '202500087', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(640, 49, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(641, 49, '202500091', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(642, 49, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(643, 49, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(644, 50, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(645, 50, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(646, 50, '202500086', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(647, 50, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(648, 50, '202500089', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(649, 50, '202500091', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(650, 50, '202500100', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(651, 50, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(652, 51, '202500002', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(653, 51, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(654, 51, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(655, 51, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(656, 51, '202500089', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(657, 51, '202500091', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(658, 51, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(659, 51, '202500171', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(660, 52, '202500002', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(661, 52, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(662, 52, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(663, 52, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(664, 52, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(665, 52, '202500091', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(666, 52, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(667, 52, '202500171', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(668, 53, '202500002', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(669, 53, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(670, 53, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(671, 53, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(672, 53, '202500089', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(673, 53, '202500091', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(674, 53, '202500100', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(675, 53, '202500171', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(676, 54, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(677, 54, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(678, 54, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(679, 54, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(680, 54, '202500089', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(681, 54, '202500091', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(682, 54, '202500100', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(683, 54, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(684, 55, '202500002', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(685, 55, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(686, 55, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(687, 55, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(688, 55, '202500089', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(689, 55, '202500091', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(690, 55, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(691, 55, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(692, 56, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(693, 56, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(694, 56, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(695, 56, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(696, 56, '202500089', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(697, 56, '202500091', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(698, 56, '202500100', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(699, 56, '202500171', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(700, 57, '202500002', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(701, 57, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(702, 57, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(703, 57, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(704, 57, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(705, 57, '202500091', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(706, 57, '202500100', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(707, 57, '202500171', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(708, 58, '202500002', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(709, 58, '202500083', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(710, 58, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(711, 58, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(712, 58, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(713, 58, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(714, 58, '202500100', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(715, 58, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(716, 59, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(717, 59, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(718, 59, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09');
+INSERT INTO `gradebook_scores` (`id`, `column_id`, `student_number`, `score`, `remarks`, `source`, `created_at`, `updated_at`) VALUES
+(719, 59, '202500087', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(720, 59, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(721, 59, '202500091', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(722, 59, '202500100', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(723, 59, '202500171', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(724, 60, '202500002', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(725, 60, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(726, 60, '202500086', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(727, 60, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(728, 60, '202500089', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(729, 60, '202500091', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(730, 60, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(731, 60, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(732, 61, '202500002', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(733, 61, '202500083', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(734, 61, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(735, 61, '202500087', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(736, 61, '202500089', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(737, 61, '202500091', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(738, 61, '202500100', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(739, 61, '202500171', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(740, 62, '202500002', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(741, 62, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(742, 62, '202500086', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(743, 62, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(744, 62, '202500089', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(745, 62, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(746, 62, '202500100', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(747, 62, '202500171', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(748, 63, '202500002', 7.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(749, 63, '202500083', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(750, 63, '202500086', 10.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(751, 63, '202500087', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(752, 63, '202500089', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(753, 63, '202500091', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(754, 63, '202500100', 8.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(755, 63, '202500171', 9.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(756, 64, '202500002', 44.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(757, 64, '202500083', 42.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(758, 64, '202500086', 39.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(759, 64, '202500087', 44.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(760, 64, '202500089', 42.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(761, 64, '202500091', 46.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(762, 64, '202500100', 40.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(763, 64, '202500171', 46.00, NULL, 'manual', '2025-12-02 16:02:09', '2025-12-02 16:02:09'),
+(764, 79, '202500172', 6.00, NULL, 'manual', NULL, '2025-12-07 10:58:44'),
+(765, 79, '202500042', 10.00, NULL, 'manual', NULL, '2025-12-07 11:08:16'),
+(766, 80, '202500042', 10.00, NULL, 'manual', NULL, '2025-12-07 11:08:16'),
+(767, 81, '202500042', 10.00, NULL, 'manual', NULL, '2025-12-07 11:08:16'),
+(768, 82, '202500042', 10.00, NULL, 'manual', NULL, '2025-12-07 11:08:16'),
+(769, 83, '202500042', 10.00, NULL, 'manual', NULL, '2025-12-07 11:08:16'),
+(770, 79, '202500003', 10.00, NULL, 'manual', NULL, '2025-12-08 21:34:23'),
+(771, 80, '202500003', 10.00, NULL, 'manual', NULL, '2025-12-08 21:34:23'),
+(772, 81, '202500003', 10.00, NULL, 'manual', NULL, '2025-12-08 21:34:23'),
+(773, 82, '202500003', 10.00, NULL, 'manual', NULL, '2025-12-08 21:34:23'),
+(774, 83, '202500003', 10.00, NULL, 'manual', NULL, '2025-12-08 21:34:23'),
+(775, 79, '202500002', 10.00, NULL, 'manual', NULL, '2025-12-08 21:40:08'),
+(776, 84, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(777, 85, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(778, 86, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(779, 87, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(780, 88, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(781, 89, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(782, 91, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(783, 92, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(784, 93, '202500002', 8.00, NULL, 'manual', NULL, '2025-12-08 21:40:44'),
+(785, 94, '202500002', 45.00, NULL, 'manual', NULL, '2025-12-08 21:40:59'),
+(786, 139, '202500082', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:26'),
+(787, 139, '202500084', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:26'),
+(788, 139, '202500085', 1.00, NULL, 'imported', NULL, '2025-12-08 22:19:26'),
+(789, 139, '202500088', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(790, 139, '202500092', 1.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(791, 139, '202500094', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(792, 139, '202500095', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(793, 139, '202500104', 1.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(794, 139, '202500127', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(795, 139, '202500083', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(796, 139, '202500086', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(797, 139, '202500087', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(798, 139, '202500089', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(799, 139, '202500091', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(800, 139, '202500100', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(801, 139, '202500171', 2.00, NULL, 'imported', NULL, '2025-12-08 22:19:27'),
+(802, 143, '202500082', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(803, 143, '202500084', 9.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(804, 143, '202500085', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(805, 143, '202500088', 9.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(806, 143, '202500092', 7.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(807, 143, '202500094', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(808, 143, '202500095', 9.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(809, 143, '202500104', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(810, 143, '202500127', 9.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(811, 143, '202500083', 9.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(812, 143, '202500086', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(813, 143, '202500087', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(814, 143, '202500089', 10.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(815, 143, '202500091', 8.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(816, 143, '202500100', 7.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(817, 143, '202500171', 9.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(818, 143, '202500002', 10.00, NULL, 'imported', NULL, '2025-12-08 22:20:45'),
+(819, 142, '202500082', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(820, 142, '202500084', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(821, 142, '202500085', 8.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(822, 142, '202500088', 10.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(823, 142, '202500092', 7.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(824, 142, '202500172', 6.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(825, 142, '202500094', 8.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(826, 142, '202500095', 10.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(827, 142, '202500104', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(828, 142, '202500127', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(829, 142, '202500083', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(830, 142, '202500086', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(831, 142, '202500087', 8.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(832, 142, '202500089', 8.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(833, 142, '202500091', 10.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(834, 142, '202500100', 8.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(835, 142, '202500171', 9.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(836, 142, '202500002', 10.00, NULL, 'imported', NULL, '2025-12-08 22:22:22'),
+(837, 141, '202500082', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(838, 141, '202500084', 4.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(839, 141, '202500085', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(840, 141, '202500088', 4.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(841, 141, '202500092', 2.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(842, 141, '202500094', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(843, 141, '202500095', 4.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(844, 141, '202500104', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(845, 141, '202500127', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(846, 141, '202500083', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(847, 141, '202500086', 4.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(848, 141, '202500087', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(849, 141, '202500089', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(850, 141, '202500091', 4.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(851, 141, '202500100', 4.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(852, 141, '202500171', 3.00, NULL, 'imported', NULL, '2025-12-08 22:28:54'),
+(853, 140, '202500082', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(854, 140, '202500084', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(855, 140, '202500085', 0.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(856, 140, '202500088', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(857, 140, '202500092', 0.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(858, 140, '202500094', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(859, 140, '202500095', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(860, 140, '202500104', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(861, 140, '202500127', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(862, 140, '202500083', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(863, 140, '202500086', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(864, 140, '202500087', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(865, 140, '202500089', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(866, 140, '202500091', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(867, 140, '202500100', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(868, 140, '202500171', 1.00, NULL, 'imported', NULL, '2025-12-08 22:30:21'),
+(869, 151, '202500082', 8.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(870, 151, '202500084', 7.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(871, 151, '202500085', 6.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(872, 151, '202500088', 4.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(873, 151, '202500092', 7.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(874, 151, '202500172', 7.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(875, 151, '202500094', 8.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(876, 151, '202500095', 8.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(877, 151, '202500104', 8.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(878, 151, '202500127', 7.00, NULL, 'imported', NULL, '2025-12-08 22:59:07'),
+(879, 144, '202500082', 9.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(880, 144, '202500084', 10.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(881, 144, '202500085', 7.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(882, 144, '202500088', 10.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(883, 144, '202500092', 8.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(884, 144, '202500094', 9.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(885, 144, '202500095', 10.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(886, 144, '202500104', 8.00, NULL, 'imported', NULL, '2025-12-09 04:00:16'),
+(887, 144, '202500127', 9.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(888, 144, '202500083', 9.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(889, 144, '202500086', 9.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(890, 144, '202500087', 8.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(891, 144, '202500089', 8.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(892, 144, '202500091', 10.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(893, 144, '202500100', 9.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(894, 144, '202500171', 8.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(895, 144, '202500002', 10.00, NULL, 'imported', NULL, '2025-12-09 04:00:17'),
+(896, 139, '202500042', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(897, 139, '202500006', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(898, 139, '202500017', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(899, 139, '202500021', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(900, 139, '202500022', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(901, 139, '202500023', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(902, 139, '202500024', 10.00, NULL, 'manual', NULL, '2025-12-12 06:33:52'),
+(903, 145, '202500082', 8.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(904, 145, '202500084', 9.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(905, 145, '202500085', 8.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(906, 145, '202500088', 10.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(907, 145, '202500092', 6.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(908, 145, '202500094', 7.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(909, 145, '202500095', 9.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(910, 145, '202500104', 8.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(911, 145, '202500127', 9.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(912, 145, '202500083', 8.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(913, 145, '202500086', 10.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(914, 145, '202500087', 9.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(915, 145, '202500089', 7.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(916, 145, '202500091', 9.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(917, 145, '202500100', 9.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(918, 145, '202500171', 8.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(919, 145, '202500002', 10.00, NULL, 'imported', NULL, '2025-12-17 13:12:00'),
+(920, 150, '202500082', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(921, 150, '202500084', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(922, 150, '202500085', 7.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(923, 150, '202500088', 10.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(924, 150, '202500092', 7.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(925, 150, '202500094', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(926, 150, '202500095', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(927, 150, '202500104', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(928, 150, '202500127', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(929, 150, '202500083', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(930, 150, '202500086', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(931, 150, '202500087', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(932, 150, '202500089', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(933, 150, '202500091', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:12'),
+(934, 150, '202500100', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:13'),
+(935, 150, '202500171', 9.00, NULL, 'imported', NULL, '2025-12-17 13:14:13'),
+(936, 150, '202500002', 8.00, NULL, 'imported', NULL, '2025-12-17 13:14:13'),
+(937, 146, '202500082', 10.00, NULL, 'imported', NULL, '2026-01-22 07:43:06');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `grades_final`
+--
+
+CREATE TABLE `grades_final` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `q1_grade` decimal(5,2) DEFAULT NULL,
+  `q2_grade` decimal(5,2) DEFAULT NULL,
+  `final_grade` decimal(5,2) DEFAULT NULL COMMENT 'Average of Q1 and Q2',
+  `remarks` enum('PASSED','FAILED','INC','DRP','W') NOT NULL,
+  `computed_by` int(11) DEFAULT NULL,
+  `computed_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `grades_final`
+--
+
+INSERT INTO `grades_final` (`id`, `student_number`, `class_code`, `semester_id`, `q1_grade`, `q2_grade`, `final_grade`, `remarks`, `computed_by`, `computed_at`, `created_at`, `updated_at`) VALUES
+(59, '202500082', 'CLASS-003', 1, 53.00, 0.00, 27.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(60, '202500084', 'CLASS-003', 1, 50.00, 0.00, 25.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(61, '202500085', 'CLASS-003', 1, 42.00, 0.00, 21.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(62, '202500088', 'CLASS-003', 1, 36.00, 0.00, 18.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(63, '202500092', 'CLASS-003', 1, 45.00, 0.00, 23.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(64, '202500172', 'CLASS-003', 1, 39.00, 0.00, 20.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(65, '202500094', 'CLASS-003', 1, 53.00, 0.00, 27.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(66, '202500095', 'CLASS-003', 1, 55.00, 0.00, 28.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(67, '202500104', 'CLASS-003', 1, 53.00, 0.00, 27.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(68, '202500127', 'CLASS-003', 1, 49.00, 0.00, 25.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(69, '202500083', 'CLASS-003', 1, 14.00, 0.00, 7.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(70, '202500001', 'CLASS-003', 1, 0.00, 0.00, 0.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(71, '202500086', 'CLASS-003', 1, 13.00, 0.00, 7.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(72, '202500087', 'CLASS-003', 1, 12.00, 0.00, 6.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(73, '202500089', 'CLASS-003', 1, 14.00, 0.00, 7.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(74, '202500091', 'CLASS-003', 1, 15.00, 0.00, 8.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(75, '202500100', 'CLASS-003', 1, 12.00, 0.00, 6.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(76, '202500171', 'CLASS-003', 1, 14.00, 0.00, 7.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(77, '202500002', 'CLASS-003', 1, 12.00, 0.00, 6.00, 'FAILED', 6, '2025-12-09 00:07:53', '2025-12-09 00:07:53', '2025-12-09 00:07:53'),
+(78, '202500173', 'CLASS-003', 1, 45.00, 0.00, NULL, 'FAILED', 6, '2026-01-07 13:06:39', '2026-01-07 13:06:39', '2026-01-07 13:06:39'),
+(79, '202500174', 'CLASS-003', 1, 36.00, NULL, NULL, 'FAILED', 6, '2026-01-07 13:07:21', '2026-01-07 13:07:21', '2026-01-07 13:07:21'),
+(80, '202500082', 'CLASS-002', 1, 89.00, 91.00, 93.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(81, '202500084', 'CLASS-002', 1, 94.00, 92.00, 95.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(82, '202500085', 'CLASS-002', 1, 85.00, 90.00, 92.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(83, '202500088', 'CLASS-002', 1, 97.00, 90.00, 95.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(84, '202500092', 'CLASS-002', 1, 80.00, 92.00, 91.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(85, '202500172', 'CLASS-002', 1, 60.00, 60.00, 75.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(86, '202500094', 'CLASS-002', 1, 87.00, 91.00, 93.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(87, '202500095', 'CLASS-002', 1, 95.00, 89.00, 95.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(88, '202500104', 'CLASS-002', 1, 88.00, 91.00, 93.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(89, '202500173', 'CLASS-002', 1, 60.00, 60.00, 75.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(90, '202500127', 'CLASS-002', 1, 92.00, 92.00, 95.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(91, '202500083', 'CLASS-002', 1, 89.00, 91.00, 93.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(92, '202500001', 'CLASS-002', 1, 60.00, 60.00, 75.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(93, '202500086', 'CLASS-002', 1, 93.00, 90.00, 94.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(94, '202500087', 'CLASS-002', 1, 85.00, 91.00, 92.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(95, '202500089', 'CLASS-002', 1, 89.00, 91.00, 93.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(96, '202500091', 'CLASS-002', 1, 95.00, 92.00, 95.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(97, '202500100', 'CLASS-002', 1, 88.00, 90.00, 93.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(98, '202500171', 'CLASS-002', 1, 91.00, 91.00, 94.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(99, '202500002', 'CLASS-002', 1, 82.00, 87.00, 90.00, 'PASSED', 6, '2026-01-21 17:11:52', '2026-01-21 17:11:52', '2026-01-21 17:11:52'),
+(100, '202500005', 'CLASS-002', 1, 60.00, 60.00, 75.00, 'PASSED', 6, '2026-01-22 06:12:41', '2026-01-22 06:12:41', '2026-01-22 06:12:41');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `guardians`
+--
+
+CREATE TABLE `guardians` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `access_token` varchar(64) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `is_active` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `guardians`
+--
+
+INSERT INTO `guardians` (`id`, `email`, `first_name`, `last_name`, `access_token`, `created_at`, `updated_at`, `is_active`) VALUES
+(3, 'bersaminajohnkyle@gmail.com', 'GuardianSample', '1', 'LRtz33eqd1AzK1gpncu8VVfuxVHCctn25bTBm4ygPAPmhrc6rOnLJiU7szwqAHup', '2026-01-21 10:11:04', '2026-01-21 10:11:04', 1),
+(4, 'zmetricaltemp1@gmail.com', 'GuardianSample', '2', '0fYbMa6uNWvP4Vaa6vxElK9hljV3j3gs8gfJ5d9btqhiQLFgZ8Iypf2g6tr4UQTM', '2026-01-21 10:11:04', '2026-01-21 10:11:04', 1),
+(5, 'a@gmail.com', 'a', '', 'mBiFkRrjv3jPcsbhRw96Mh61SVVPWAqAbUz67trLRioSSTRbamuDQkw4Qut6dT6g', '2026-01-23 09:12:49', '2026-01-23 09:12:49', 1),
+(6, 'asd@gmail.com', 'asd', 'asd', 'D6fRjIY7bLWtbdTB1YkKZkZd9pU9Jo2Z7OIBp1tGPMajiFML1cFKKKySt3bLWMQq', '2026-02-01 13:19:28', '2026-02-01 13:19:28', 1),
+(7, 'zxc@gmail.com', 'zxc', 'zxc', 'kmdQO0XA05GgJ7fq3mnJAIcmHsItArO4jYsLi1CkTbup8qffKrQIZoyiWsUGiijp', '2026-02-01 13:31:26', '2026-02-01 13:31:26', 1),
+(8, 'asd123@gmail.com', 'asd', 'asd', 'Qi4ZnylVa0b8YPHCOArAXiHMoBd1Vc4VGw4oE3rPU2s13bS3oYbF9OIWm9c3OO5J', '2026-02-01 14:01:15', '2026-02-01 14:01:15', 1),
+(9, 'adsfg@gmail.com', 'ghj', 'ghj', 'lhYZYrxvigvKsgY8q4soxoNqOM391AaSLfPyZxmq9YkCLb0yJTcEiFWFRc8r9F01', '2026-02-01 14:05:03', '2026-02-01 14:05:03', 1),
+(10, 'ghj@gmail.com', 'hjk', 'hjk', 'UAT1MlQTAkEsqt7aStKvIYXAv576OvhPkQ3bDZVUMu2Ezn7yscsNTFXi8ywH8eRK', '2026-02-01 14:08:08', '2026-02-01 14:08:08', 1),
+(11, 'dfg@gmail.com', 'ghj', 'ghj', 'BfK2EfsZN6iaKyidrBuQM3cYCabQrR5nKShpbKwxc3UlpGWTiKN6sMlHHbPzDjyZ', '2026-02-01 14:19:50', '2026-02-01 14:19:50', 1),
+(12, 'asd1234@gmail.com', 'asd', 'asd', 'ocodoBMq9n8fP8GUhJDQk6k60kjFnOE0lj4fjI8sEX5BahMfSJ7NQSz2i6k79YOI', '2026-02-01 14:26:16', '2026-02-01 14:26:16', 1),
+(13, 'asddfg@gmail.com', 'fgh', 'fgh', 'hXt8KuEfogsH486suwi7lNF8z9fnBzYCOzIkvIIiONf64sRkHbd5TBMR3w9WsuYb', '2026-02-01 14:29:51', '2026-02-01 14:29:51', 1),
+(14, 'parentasd@gmail.com', 'GuardianSample', '1', 'eQsOyujXcKtGlUwQFI8wL8HZ9ity3TnjFIdOcBOVKGvwlSu5J1ARGgG41mVUqayH', '2026-02-01 14:41:25', '2026-02-01 14:41:25', 1),
+(15, 'parentzcx@gmail.com', 'GuardianSample', '1', 'R66CxzAQAUt3XZtKEmXqum2ZwaD4QsKYpUPPK5R5Ve1LCamwPPAdZWl8SeBFHZuM', '2026-02-01 14:47:15', '2026-02-01 14:47:15', 1),
+(16, 'parentxcvc@gmail.com', 'GuardianSample', '1', '5G1v2pucbtcK46r2reMmJB8zvwHL2BfFOPosIwtrM8ytS4TwwsqU6hGyWpAubJau', '2026-02-01 14:47:43', '2026-02-01 14:47:43', 1),
+(17, 'parentyt@gmail.com', 'GuardianSample', '1', 'rrYFtWrQHVAYbbtm2XlhjuBSX2QafFxu32eRyfgLCmJwqvhqBjapfMdIJEB5ic2J', '2026-02-01 15:08:53', '2026-02-01 15:08:53', 1),
+(18, 'parentasdc@gmail.com', 'GuardianSample', '1', 'qaudzJ6TkFXStOKqgmOLFijLEVGzpNT8Jv4VA679iqQJTe6OrKlZ3bt6iCqp2XXy', '2026-02-01 15:10:00', '2026-02-01 15:10:00', 1),
+(19, 'parentzxc@gmail.com', 'GuardianSample', '1', 'RxdaMGJlegGDZsMH2NV7bu48CYv7PUhGkpI7rAqvxo1FRxbBNCyKMS03k5ldAshV', '2026-02-01 15:13:05', '2026-02-01 15:13:05', 1),
+(20, 'parexcnt@gmail.com', 'GuardianSample', '1', 'rGkS5PqN8CXrhOLe0VMw8a7riaEDXbhFRCtjYMJafTDEF4c66r1u2rJidISqX2xw', '2026-02-01 15:19:51', '2026-02-01 15:19:51', 1),
+(21, 'parentasdads@gmail.com', 'GuardianSample', '1', '2rvHKYMZsEZIW9JsERvMXnad3euyS2R3dJvUYvYirN7L1Q0PFEa2pda0Fyt4gPCI', '2026-02-01 15:31:34', '2026-02-01 15:31:34', 1),
+(22, 'parentcvcv@gmail.com', 'GuardianSample', '1', 'TYiD1Jtpv4gBtJG1wesE1Bb24sbpg07mQLW8IbJ0eeyB7t9yDaLgVKL2sj7p7Dwl', '2026-02-01 15:36:21', '2026-02-01 15:36:21', 1),
+(23, 'parentxcxc@gmail.com', 'GuardianSample', '1', 'PkPlcoUrbybNrEpoGOSt0vroWxZEcBJmCb5JuKbfeCpdfMGWUVGsEVrfWfZy8Uvl', '2026-02-01 15:38:17', '2026-02-01 15:38:17', 1),
+(24, 'pacxvrent@gmail.com', 'GuardianSample', '1', 'YiBPs1zfOFRS9rJ94waN5pe6sYIanEEZx2nsJLAgvnO1KJ6Jd4M452I5aW4Dz7X4', '2026-02-01 15:41:44', '2026-02-01 15:41:44', 1),
+(25, 'xcvparent@gmail.com', 'GuardianSample', '1', 'MtWDkU2NLMUby2IaqQJ4oVbZ6oqQNzczRmcgFYEsqFQwuyhPmCVoDCtgWjAVk99t', '2026-02-01 15:51:21', '2026-02-01 15:51:21', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `guardian_students`
+--
+
+CREATE TABLE `guardian_students` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `guardian_id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `guardian_students`
+--
+
+INSERT INTO `guardian_students` (`id`, `guardian_id`, `student_number`, `created_at`, `updated_at`) VALUES
+(3, 3, '202500082', '2026-01-21 10:11:04', '2026-01-21 10:11:04'),
+(4, 4, '202600002', '2026-01-21 10:11:04', '2026-01-21 10:11:04'),
+(5, 5, '202600003', '2026-01-23 09:12:49', '2026-01-23 09:12:49'),
+(6, 4, '202600004', '2026-01-29 01:23:44', '2026-01-29 01:23:44'),
+(7, 6, '202600005', '2026-02-01 13:19:28', '2026-02-01 13:19:28'),
+(8, 7, '202600006', '2026-02-01 13:31:26', '2026-02-01 13:31:26'),
+(9, 8, '202600007', '2026-02-01 14:01:15', '2026-02-01 14:01:15'),
+(10, 9, '202600008', '2026-02-01 14:05:03', '2026-02-01 14:05:03'),
+(11, 10, '202600009', '2026-02-01 14:08:08', '2026-02-01 14:08:08'),
+(12, 11, '202600010', '2026-02-01 14:19:50', '2026-02-01 14:19:50'),
+(13, 12, '202600011', '2026-02-01 14:26:16', '2026-02-01 14:26:16'),
+(14, 13, '202600012', '2026-02-01 14:29:51', '2026-02-01 14:29:51'),
+(15, 14, '202600013', '2026-02-01 14:41:25', '2026-02-01 14:41:25'),
+(16, 15, '202600014', '2026-02-01 14:47:15', '2026-02-01 14:47:15'),
+(17, 16, '202600015', '2026-02-01 14:47:43', '2026-02-01 14:47:43'),
+(18, 17, '202600016', '2026-02-01 15:08:54', '2026-02-01 15:08:54'),
+(19, 18, '202600017', '2026-02-01 15:10:00', '2026-02-01 15:10:00'),
+(20, 19, '202600018', '2026-02-01 15:13:05', '2026-02-01 15:13:05'),
+(21, 20, '202600019', '2026-02-01 15:19:51', '2026-02-01 15:19:51'),
+(22, 21, '202600020', '2026-02-01 15:31:34', '2026-02-01 15:31:34'),
+(23, 22, '202600021', '2026-02-01 15:36:21', '2026-02-01 15:36:21'),
+(24, 23, '202600022', '2026-02-01 15:38:17', '2026-02-01 15:38:17'),
+(25, 24, '202600023', '2026-02-01 15:41:44', '2026-02-01 15:41:44'),
+(26, 25, '202600024', '2026-02-01 15:51:21', '2026-02-01 15:51:21');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lectures`
+--
+
+CREATE TABLE `lectures` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `lesson_id` bigint(20) UNSIGNED NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `content` longtext DEFAULT NULL,
+  `content_type` enum('text','image','pdf','file') NOT NULL DEFAULT 'text',
+  `file_path` varchar(500) DEFAULT NULL,
+  `order_number` int(11) NOT NULL DEFAULT 0,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lectures`
+--
+
+INSERT INTO `lectures` (`id`, `lesson_id`, `title`, `content`, `content_type`, `file_path`, `order_number`, `status`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Lecture 3 - PPT File', NULL, 'file', 'lectures/1764039630_Lecture3.pptx', 1, 1, '2025-11-09 07:16:50', '2025-11-25 03:00:30'),
+(2, 1, 'Lecture File', NULL, 'file', 'lectures/pxexRsiallOchyskpxEkf1oXdAXQhfqHo0aIUB0a', 0, 0, '2025-11-09 07:18:51', '2025-11-10 01:13:35'),
+(3, 1, 'Lecture 1 - PDF File', NULL, 'pdf', 'lectures/1764037315_Lecture1.pdf', 0, 1, '2025-11-09 07:20:13', '2025-11-25 02:21:54'),
+(4, 1, 'Lecture 2 - DOCX File', NULL, 'pdf', 'lectures/1764037333_Lecture1.docx', 0, 1, '2025-11-09 07:27:28', '2025-11-25 02:22:13'),
+(5, 1, 'Lecture 4 - Text Content', 'Text Content', 'text', NULL, 0, 1, '2025-11-25 02:26:47', '2025-11-25 02:27:16'),
+(6, 3, 'asd', 'asd', 'text', NULL, 0, 1, '2025-11-27 15:04:36', '2025-11-27 15:04:36'),
+(7, 4, 'Sample - Text Content', 'Text Content', 'text', NULL, 0, 1, '2025-11-27 16:20:19', '2025-12-17 10:58:26'),
+(8, 4, 'Sample - PDF', NULL, 'pdf', 'lectures/1764264365_LectureFile.pdf', 0, 1, '2025-11-27 17:26:05', '2025-12-17 10:58:38'),
+(9, 4, 'Sample - File', NULL, 'file', 'lectures/1764264390_LectureFile.docx', 0, 1, '2025-11-27 17:26:30', '2025-12-17 10:58:50'),
+(10, 7, 'Lecture 1 - Lesson 3', 'sample', 'text', NULL, 0, 1, '2025-11-28 06:34:28', '2025-12-17 11:20:02'),
+(11, 8, 'Research title page', NULL, 'file', 'lectures/1765228404_Titlepage.docx', 0, 1, '2025-12-08 21:13:24', '2025-12-08 21:13:24'),
+(12, 9, 'Plants - Word', NULL, 'file', 'lectures/1765968404_Plants.docx', 0, 1, '2025-12-17 10:46:44', '2025-12-17 10:52:18'),
+(13, 9, 'Fungi - Word', NULL, 'file', 'lectures/1765968558_Fungi.docx', 0, 1, '2025-12-17 10:49:18', '2025-12-17 10:52:27'),
+(14, 9, 'Fungi - PDF', NULL, 'pdf', 'lectures/1765968855_Fungi.pdf', 0, 1, '2025-12-17 10:54:15', '2025-12-17 10:54:57'),
+(15, 9, 'Plants - PDF', NULL, 'pdf', 'lectures/1765968873_Plants.pdf', 0, 1, '2025-12-17 10:54:33', '2025-12-17 10:55:05'),
+(16, 5, 'Lecture 1 - Lesson 2', 'sample', 'text', NULL, 0, 1, '2025-12-17 11:19:51', '2025-12-17 11:19:51'),
+(17, 6, 'Lecture 1 - 2nd Quarter', 'sample', 'text', NULL, 0, 1, '2025-12-17 11:21:14', '2025-12-17 11:21:14');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lessons`
+--
+
+CREATE TABLE `lessons` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `class_id` int(11) NOT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `order_number` int(11) NOT NULL DEFAULT 0,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lessons`
+--
+
+INSERT INTO `lessons` (`id`, `class_id`, `quarter_id`, `title`, `description`, `order_number`, `status`, `created_at`, `updated_at`) VALUES
+(4, 2, 3, 'Lesson 1', NULL, 1, 1, '2025-11-27 16:18:15', '2025-12-17 10:59:05'),
+(5, 2, 3, 'Lesson 2', NULL, 2, 1, '2025-11-27 16:18:58', '2025-12-17 10:59:02'),
+(6, 2, 4, 'Lesson 1', NULL, 1, 1, '2025-11-27 16:31:30', '2025-12-17 11:20:14'),
+(7, 2, 3, 'Lesson 3', NULL, 3, 1, '2025-11-28 06:34:04', '2025-11-28 06:34:04'),
+(8, 4, 3, 'Lesson 1', NULL, 1, 1, '2025-12-08 21:12:34', '2025-12-08 21:12:34'),
+(9, 3, 3, 'Lesson 1: Ecosystem', NULL, 1, 1, '2025-12-17 10:44:05', '2025-12-17 10:45:09'),
+(10, 3, 3, 'Lesson 2: Chemistry', NULL, 2, 1, '2025-12-17 10:51:00', '2025-12-17 10:51:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `levels`
+--
+
+CREATE TABLE `levels` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `levels`
+--
+
+INSERT INTO `levels` (`id`, `name`, `created_at`, `updated_at`) VALUES
+(1, 'Grade 11', '2025-10-19 09:29:32', '2025-10-19 09:29:32'),
+(2, 'Grade 12', '2025-10-19 09:29:32', '2025-10-19 09:29:32');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `migrations`
+--
+
+CREATE TABLE `migrations` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `migration` varchar(255) NOT NULL,
+  `batch` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `migrations`
+--
+
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
+(15, '2025_10_01_150739_create_students_table', 1),
+(16, '2025_10_01_151304_create_users_table', 1),
+(17, '2025_10_01_151841_create_teacher_table', 1),
+(18, '2025_10_01_154354_create_sessions_table', 1),
+(19, '2025_10_01_154615_create_strands_table', 1),
+(20, '2025_10_01_154626_create_sections_table', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `quarters`
+--
+
+CREATE TABLE `quarters` (
+  `id` int(11) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `order_number` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `quarters`
+--
+
+INSERT INTO `quarters` (`id`, `semester_id`, `name`, `code`, `order_number`, `created_at`, `updated_at`) VALUES
+(1, 3, '1st Quarter', '1ST', 1, '2025-11-27 15:14:59', '2025-11-27 15:14:59'),
+(2, 3, '2nd Quarter', '2ND', 2, '2025-11-27 15:14:59', '2025-11-27 15:14:59'),
+(3, 1, '1st Quarter', '1ST', 1, '2025-11-27 16:17:52', '2025-11-27 16:17:52'),
+(4, 1, '2nd Quarter', '2ND', 2, '2025-11-27 16:17:52', '2025-11-27 16:17:52');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `quarter_grades`
+--
+
+CREATE TABLE `quarter_grades` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `quarter_id` int(11) NOT NULL,
+  `ww_score` decimal(5,2) DEFAULT NULL,
+  `ww_ps` decimal(5,2) DEFAULT NULL,
+  `ww_ws` decimal(5,2) DEFAULT NULL,
+  `pt_score` decimal(5,2) DEFAULT NULL,
+  `pt_ps` decimal(5,2) DEFAULT NULL,
+  `pt_ws` decimal(5,2) DEFAULT NULL,
+  `qa_score` decimal(5,2) DEFAULT NULL,
+  `qa_ps` decimal(5,2) DEFAULT NULL,
+  `qa_ws` decimal(5,2) DEFAULT NULL,
+  `initial_grade` decimal(5,2) DEFAULT NULL,
+  `transmuted_grade` decimal(5,2) DEFAULT NULL,
+  `is_locked` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `quizzes`
+--
+
+CREATE TABLE `quizzes` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `lesson_id` bigint(20) UNSIGNED NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `time_limit` int(11) DEFAULT NULL COMMENT 'in minutes',
+  `available_from` datetime DEFAULT NULL,
+  `available_until` datetime DEFAULT NULL,
+  `passing_score` decimal(5,2) DEFAULT 60.00,
+  `max_attempts` int(11) DEFAULT 1,
+  `show_results` tinyint(1) NOT NULL DEFAULT 1,
+  `shuffle_questions` tinyint(1) NOT NULL DEFAULT 0,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `quizzes`
+--
+
+INSERT INTO `quizzes` (`id`, `lesson_id`, `semester_id`, `quarter_id`, `title`, `description`, `time_limit`, `available_from`, `available_until`, `passing_score`, `max_attempts`, `show_results`, `shuffle_questions`, `status`, `created_at`, `updated_at`) VALUES
+(6, 4, 1, 3, 'Sample 1 - Multiple Choice', NULL, 60, '2025-12-01 10:14:00', '2025-12-31 10:14:00', 75.00, 3, 1, 1, 1, '2025-11-27 16:21:37', '2025-12-18 02:26:36'),
+(7, 4, 1, 3, 'Sample 2 - True/False', NULL, 60, '2025-11-30 09:53:00', '2025-12-30 09:53:00', 75.00, 1, 1, 1, 1, '2025-11-27 17:00:38', '2025-12-17 11:12:36'),
+(8, 4, 1, 3, 'Sample 3 - Multiple Answer', NULL, 60, '2025-12-01 10:14:00', '2025-12-30 07:14:00', 75.00, 1, 1, 1, 1, '2025-11-27 17:23:01', '2025-12-17 11:13:56'),
+(9, 4, 1, 3, 'Sample 4 - Short Answer', NULL, 60, '2025-12-01 08:46:00', '2025-12-31 08:46:00', 75.00, 1, 1, 1, 1, '2025-11-27 17:23:42', '2025-12-17 11:14:24'),
+(10, 4, 1, 3, 'Sample 5 - Available', NULL, 60, '2025-12-01 12:00:00', '2025-12-31 12:00:00', 75.00, 1, 1, 1, 1, '2025-12-01 14:02:08', '2025-12-17 11:19:00'),
+(11, 6, 1, 4, 'Sample 1 - 2nd Quarter', NULL, 60, NULL, NULL, 75.00, 1, 1, 1, 1, '2025-12-01 14:02:52', '2025-12-17 11:20:31'),
+(12, 4, 1, 3, 'Sample 6 - Close', NULL, 60, '2025-11-30 16:00:00', '2025-12-01 16:00:00', 75.00, 1, 1, 1, 1, '2025-12-01 14:28:40', '2025-12-17 11:17:36'),
+(13, 6, 1, 4, 'Sample 2 - 2nd Quarter', NULL, 60, NULL, NULL, 75.00, 1, 1, 1, 1, '2025-12-01 14:29:11', '2025-12-17 11:20:49'),
+(14, 4, 1, 3, 'Sample 7 - Not Open', NULL, 60, '2027-01-01 04:00:00', '2027-01-02 04:00:00', 75.00, 1, 1, 1, 1, '2025-12-01 14:30:26', '2026-01-15 15:02:04');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `quiz_questions`
+--
+
+CREATE TABLE `quiz_questions` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `quiz_id` bigint(20) UNSIGNED NOT NULL,
+  `question_text` text NOT NULL,
+  `question_type` enum('multiple_choice','multiple_answer','true_false','short_answer','essay') DEFAULT NULL,
+  `points` decimal(5,2) NOT NULL DEFAULT 1.00,
+  `order_number` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `exact_match` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `quiz_questions`
+--
+
+INSERT INTO `quiz_questions` (`id`, `quiz_id`, `question_text`, `question_type`, `points`, `order_number`, `created_at`, `updated_at`, `exact_match`) VALUES
+(23, 1, '1', 'multiple_choice', 1.00, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(24, 1, '2', 'multiple_choice', 1.00, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(25, 1, '3', 'multiple_choice', 1.00, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(26, 1, '4', 'multiple_choice', 1.00, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(27, 1, '5', 'multiple_choice', 1.00, 5, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(28, 1, '6', 'multiple_choice', 1.00, 6, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(29, 1, '7', 'multiple_choice', 1.00, 7, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(30, 1, '8', 'multiple_choice', 1.00, 8, '2025-11-22 03:23:28', '2025-11-22 03:23:28', 1),
+(31, 2, 'True', 'true_false', 1.00, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(32, 2, 'False', 'true_false', 1.00, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(33, 2, 'True', 'true_false', 1.00, 3, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(34, 2, 'False', 'true_false', 1.00, 4, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(35, 2, 'True', 'true_false', 1.00, 5, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(36, 2, 'False', 'true_false', 1.00, 6, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(37, 2, 'True', 'true_false', 1.00, 7, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(38, 2, 'False', 'true_false', 1.00, 8, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(39, 2, 'True', 'true_false', 1.00, 9, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(40, 2, 'False', 'true_false', 1.00, 10, '2025-11-22 03:25:01', '2025-11-22 03:25:01', 1),
+(43, 3, 'Write an Essay', 'essay', 5.00, 1, '2025-11-22 03:25:53', '2025-11-22 03:25:53', 1),
+(44, 3, 'Write another Essay', 'essay', 5.00, 2, '2025-11-22 03:25:53', '2025-11-22 03:25:53', 1),
+(45, 4, 'a', 'multiple_answer', 1.00, 1, '2025-11-22 13:44:49', '2025-11-22 13:44:49', 1),
+(49, 5, 'A', 'short_answer', 1.00, 1, '2025-11-22 14:02:47', '2025-11-22 14:02:47', 1),
+(50, 5, 'C', 'short_answer', 1.00, 2, '2025-11-22 14:02:47', '2025-11-22 14:02:47', 0),
+(184, 7, 't1', 'true_false', 2.00, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(185, 7, 't2', 'true_false', 2.00, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(186, 7, 't3', 'true_false', 2.00, 3, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(187, 7, 'f1', 'true_false', 2.00, 4, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(188, 7, 'f2', 'true_false', 2.00, 5, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(189, 7, 'f3', 'true_false', 1.00, 6, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(190, 7, 't4', 'true_false', 1.00, 7, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(191, 7, 't5', 'true_false', 1.00, 8, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(192, 7, 'f4', 'true_false', 1.00, 9, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(193, 7, 'f5', 'true_false', 1.00, 10, '2025-12-17 11:12:36', '2025-12-17 11:12:36', 1),
+(194, 8, 'A', 'multiple_answer', 1.00, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(195, 8, 'B', 'multiple_answer', 1.00, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(196, 8, 'C', 'multiple_answer', 1.00, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(197, 8, 'D', 'multiple_answer', 1.00, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(198, 8, '1', 'multiple_answer', 1.00, 5, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(199, 8, '2', 'multiple_answer', 1.00, 6, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(200, 8, '3', 'multiple_answer', 1.00, 7, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(201, 8, '4', 'multiple_answer', 1.00, 8, '2025-12-17 11:13:56', '2025-12-17 11:13:56', 1),
+(202, 9, 'AA', 'short_answer', 1.00, 1, '2025-12-17 11:14:24', '2025-12-17 11:14:24', 1),
+(203, 9, 'BB', 'short_answer', 1.00, 2, '2025-12-17 11:14:24', '2025-12-17 11:14:24', 1),
+(209, 12, 'test', 'multiple_choice', 1.00, 1, '2025-12-17 11:17:36', '2025-12-17 11:17:36', 1),
+(212, 10, 'Test', 'multiple_choice', 1.00, 1, '2025-12-17 11:19:00', '2025-12-17 11:19:00', 1),
+(213, 11, 'test', 'multiple_choice', 1.00, 1, '2025-12-17 11:20:31', '2025-12-17 11:20:31', 1),
+(214, 13, 'test', 'multiple_choice', 1.00, 1, '2025-12-17 11:20:49', '2025-12-17 11:20:49', 1),
+(215, 6, 'a', 'multiple_choice', 1.00, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(216, 6, 'b', 'multiple_choice', 1.00, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(217, 6, 'c', 'multiple_choice', 1.00, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(218, 6, 'd', 'multiple_choice', 1.00, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(219, 6, '1', 'multiple_choice', 1.00, 5, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(220, 6, '2', 'multiple_choice', 1.00, 6, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(221, 6, '3', 'multiple_choice', 1.00, 7, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(222, 6, '4', 'multiple_choice', 1.00, 8, '2025-12-18 02:26:36', '2025-12-18 02:26:36', 1),
+(223, 14, 'a', 'multiple_choice', 1.00, 1, '2026-01-15 15:02:04', '2026-01-15 15:02:04', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `quiz_question_options`
+--
+
+CREATE TABLE `quiz_question_options` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `question_id` bigint(20) UNSIGNED NOT NULL,
+  `option_text` text NOT NULL,
+  `is_correct` tinyint(1) NOT NULL DEFAULT 0,
+  `order_number` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `quiz_question_options`
+--
+
+INSERT INTO `quiz_question_options` (`id`, `question_id`, `option_text`, `is_correct`, `order_number`, `created_at`, `updated_at`) VALUES
+(83, 23, '1', 1, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(84, 23, '2', 0, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(85, 23, '3', 0, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(86, 23, '4', 0, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(87, 24, '1', 0, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(88, 24, '2', 1, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(89, 24, '3', 0, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(90, 24, '4', 0, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(91, 25, '1', 0, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(92, 25, '2', 0, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(93, 25, '3', 1, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(94, 25, '4', 0, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(95, 26, '1', 0, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(96, 26, '2', 0, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(97, 26, '3', 0, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(98, 26, '4', 1, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(99, 27, '5', 1, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(100, 27, '6', 0, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(101, 27, '7', 0, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(102, 27, '8', 0, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(103, 28, '5', 0, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(104, 28, '6', 1, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(105, 28, '7', 0, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(106, 28, '8', 0, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(107, 29, '5', 0, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(108, 29, '6', 0, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(109, 29, '7', 1, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(110, 29, '8', 0, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(111, 30, '5', 0, 1, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(112, 30, '6', 0, 2, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(113, 30, '7', 0, 3, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(114, 30, '8', 1, 4, '2025-11-22 03:23:28', '2025-11-22 03:23:28'),
+(115, 31, 'True', 1, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(116, 31, 'False', 0, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(117, 32, 'True', 0, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(118, 32, 'False', 1, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(119, 33, 'True', 1, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(120, 33, 'False', 0, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(121, 34, 'True', 0, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(122, 34, 'False', 1, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(123, 35, 'True', 1, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(124, 35, 'False', 0, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(125, 36, 'True', 0, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(126, 36, 'False', 1, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(127, 37, 'True', 1, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(128, 37, 'False', 0, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(129, 38, 'True', 0, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(130, 38, 'False', 1, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(131, 39, 'True', 1, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(132, 39, 'False', 0, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(133, 40, 'True', 0, 1, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(134, 40, 'False', 1, 2, '2025-11-22 03:25:01', '2025-11-22 03:25:01'),
+(135, 45, 'a', 1, 1, '2025-11-22 13:44:49', '2025-11-22 13:44:49'),
+(136, 45, 'aa', 1, 2, '2025-11-22 13:44:49', '2025-11-22 13:44:49'),
+(137, 45, 'aaa', 1, 3, '2025-11-22 13:44:49', '2025-11-22 13:44:49'),
+(138, 45, 'b', 0, 4, '2025-11-22 13:44:49', '2025-11-22 13:44:49'),
+(547, 184, 'True', 1, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(548, 184, 'False', 0, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(549, 185, 'True', 1, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(550, 185, 'False', 0, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(551, 186, 'True', 1, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(552, 186, 'False', 0, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(553, 187, 'True', 0, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(554, 187, 'False', 1, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(555, 188, 'True', 0, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(556, 188, 'False', 1, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(557, 189, 'True', 0, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(558, 189, 'False', 1, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(559, 190, 'True', 1, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(560, 190, 'False', 0, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(561, 191, 'True', 1, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(562, 191, 'False', 0, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(563, 192, 'True', 1, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(564, 192, 'False', 0, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(565, 193, 'True', 0, 1, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(566, 193, 'False', 1, 2, '2025-12-17 11:12:36', '2025-12-17 11:12:36'),
+(567, 194, 'aa', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(568, 194, 'aaa', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(569, 194, 'aaaa', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(570, 194, 'b', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(571, 195, 'bb', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(572, 195, 'bbb', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(573, 195, 'bbbb', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(574, 195, 'a', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(575, 196, 'cc', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(576, 196, 'ccc', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(577, 196, 'cccc', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(578, 196, 'd', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(579, 197, 'dd', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(580, 197, 'ddd', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(581, 197, 'dddd', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(582, 197, 'c', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(583, 198, '1', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(584, 198, '11', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(585, 198, '111', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(586, 198, '2', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(587, 199, '2', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(588, 199, '22', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(589, 199, '222', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(590, 199, '1', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(591, 200, '3', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(592, 200, '33', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(593, 200, '333', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(594, 200, '4', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(595, 201, '4', 1, 1, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(596, 201, '44', 1, 2, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(597, 201, '444', 1, 3, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(598, 201, '3', 0, 4, '2025-12-17 11:13:56', '2025-12-17 11:13:56'),
+(619, 209, 'a', 1, 1, '2025-12-17 11:17:36', '2025-12-17 11:17:36'),
+(620, 209, 'b', 0, 2, '2025-12-17 11:17:36', '2025-12-17 11:17:36'),
+(621, 209, 'c', 0, 3, '2025-12-17 11:17:36', '2025-12-17 11:17:36'),
+(622, 209, 'd', 0, 4, '2025-12-17 11:17:36', '2025-12-17 11:17:36'),
+(631, 212, 'a', 1, 1, '2025-12-17 11:19:00', '2025-12-17 11:19:00'),
+(632, 212, 'b', 0, 2, '2025-12-17 11:19:00', '2025-12-17 11:19:00'),
+(633, 212, 'c', 0, 3, '2025-12-17 11:19:00', '2025-12-17 11:19:00'),
+(634, 212, 'd', 0, 4, '2025-12-17 11:19:00', '2025-12-17 11:19:00'),
+(635, 213, 'a', 1, 1, '2025-12-17 11:20:31', '2025-12-17 11:20:31'),
+(636, 213, 'b', 0, 2, '2025-12-17 11:20:31', '2025-12-17 11:20:31'),
+(637, 213, 'c', 0, 3, '2025-12-17 11:20:31', '2025-12-17 11:20:31'),
+(638, 213, 'd', 0, 4, '2025-12-17 11:20:31', '2025-12-17 11:20:31'),
+(639, 214, 'a', 1, 1, '2025-12-17 11:20:49', '2025-12-17 11:20:49'),
+(640, 214, 'b', 0, 2, '2025-12-17 11:20:49', '2025-12-17 11:20:49'),
+(641, 214, 'c', 0, 3, '2025-12-17 11:20:49', '2025-12-17 11:20:49'),
+(642, 214, 'd', 0, 4, '2025-12-17 11:20:49', '2025-12-17 11:20:49'),
+(643, 215, 'a', 1, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(644, 215, 'b', 0, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(645, 215, 'c', 0, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(646, 215, 'd', 0, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(647, 216, 'a', 0, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(648, 216, 'b', 1, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(649, 216, 'c', 0, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(650, 216, 'd', 0, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(651, 217, 'a', 0, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(652, 217, 'b', 0, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(653, 217, 'c', 1, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(654, 217, 'd', 0, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(655, 218, 'a', 0, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(656, 218, 'b', 0, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(657, 218, 'c', 0, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(658, 218, 'd', 1, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(659, 219, '1', 1, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(660, 219, '2', 0, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(661, 219, '3', 0, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(662, 219, '4', 0, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(663, 220, '1', 0, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(664, 220, '2', 1, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(665, 220, '3', 0, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(666, 220, '4', 0, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(667, 221, '1', 0, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(668, 221, '2', 0, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(669, 221, '3', 1, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(670, 221, '4', 0, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(671, 222, '1', 0, 1, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(672, 222, '2', 0, 2, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(673, 222, '3', 0, 3, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(674, 222, '4', 1, 4, '2025-12-18 02:26:36', '2025-12-18 02:26:36'),
+(675, 223, 'a', 1, 1, '2026-01-15 15:02:04', '2026-01-15 15:02:04'),
+(676, 223, 'b', 0, 2, '2026-01-15 15:02:04', '2026-01-15 15:02:04'),
+(677, 223, 'c', 0, 3, '2026-01-15 15:02:04', '2026-01-15 15:02:04'),
+(678, 223, 'd', 0, 4, '2026-01-15 15:02:04', '2026-01-15 15:02:04');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `quiz_short_answers`
+--
+
+CREATE TABLE `quiz_short_answers` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `question_id` bigint(20) UNSIGNED NOT NULL,
+  `answer_text` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `quiz_short_answers`
+--
+
+INSERT INTO `quiz_short_answers` (`id`, `question_id`, `answer_text`, `created_at`, `updated_at`) VALUES
+(4, 49, 'A', '2025-11-22 14:02:47', '2025-11-22 14:02:47'),
+(5, 50, 'C', '2025-11-22 14:02:47', '2025-11-22 14:02:47'),
+(12, 202, 'a', '2025-12-17 11:14:24', '2025-12-17 11:14:24'),
+(13, 203, 'b', '2025-12-17 11:14:24', '2025-12-17 11:14:24');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `school_years`
+--
+
+CREATE TABLE `school_years` (
+  `id` int(11) NOT NULL,
+  `year_start` year(4) NOT NULL,
+  `year_end` year(4) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `school_years`
+--
+
+INSERT INTO `school_years` (`id`, `year_start`, `year_end`, `code`, `status`, `created_at`, `updated_at`) VALUES
+(1, '2024', '2025', '2024-2025', 'active', '2025-11-17 00:23:31', '2026-01-24 07:10:25'),
+(4, '2025', '2026', '2025-2026', 'upcoming', '2025-11-27 15:14:25', '2025-11-27 15:14:25');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sections`
+--
+
+CREATE TABLE `sections` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `code` varchar(100) NOT NULL,
+  `capacity` int(11) NOT NULL DEFAULT 50,
+  `name` varchar(255) NOT NULL,
+  `strand_id` bigint(20) UNSIGNED NOT NULL,
+  `level_id` int(11) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sections`
+--
+
+INSERT INTO `sections` (`id`, `code`, `capacity`, `name`, `strand_id`, `level_id`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'ICT-11A', 50, 'Sagittarius', 1, 1, 1, '2025-10-19 09:17:04', '2026-01-23 13:30:58'),
+(2, 'ICT-11B', 50, 'Capricorn', 1, 1, 1, '2025-10-19 09:17:04', '2026-01-23 13:30:59'),
+(3, 'ABM-11A', 50, 'Virgo', 2, 1, 1, '2025-10-19 09:17:04', '2026-01-23 13:31:01'),
+(4, 'ABM-12A', 50, 'Aries', 2, 2, 1, '2025-10-19 09:17:04', '2026-01-23 13:31:02'),
+(5, 'HUMSS-12A', 50, 'Gemini', 3, 2, 1, '2025-10-19 09:17:04', '2026-01-26 10:00:52'),
+(6, 'HUMMS-12B', 50, 'Libra', 3, 2, 1, '2025-10-19 09:17:04', '2026-01-23 13:31:12'),
+(7, 'HUMMS-11A', 50, 'Pisces', 3, 1, 1, '2025-10-19 09:36:06', '2026-01-23 13:31:13'),
+(8, 'HUMMS-11B', 50, 'Aquarius', 3, 1, 1, '2025-10-19 09:36:06', '2026-01-23 13:31:14'),
+(9, 'GAS-11A', 50, 'Ophiuchus', 4, 1, 1, '2025-10-19 09:36:32', '2026-01-23 13:31:16'),
+(10, 'GAS-11B', 50, 'Leo', 4, 1, 1, '2025-10-19 09:36:32', '2026-01-23 13:31:17'),
+(11, 'HE-11A', 50, 'Taurus', 5, 1, 1, '2025-10-19 09:37:56', '2026-01-23 13:31:19'),
+(12, 'HE-11B', 50, 'Cancer', 5, 1, 1, '2025-10-19 09:37:56', '2026-01-23 13:31:25'),
+(13, 'HE-11C', 50, 'Scorpio', 5, 1, 1, '2025-10-19 09:37:56', '2026-01-23 13:31:27'),
+(21, 'HUMSS-11C', 50, 'SAMPLE', 3, 2, 1, '2025-11-27 14:15:51', '2026-01-23 13:31:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `section_adviser_matrix`
+--
+
+CREATE TABLE `section_adviser_matrix` (
+  `id` int(11) NOT NULL,
+  `section_id` int(11) NOT NULL,
+  `teacher_id` int(11) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `assigned_date` datetime NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `section_adviser_matrix`
+--
+
+INSERT INTO `section_adviser_matrix` (`id`, `section_id`, `teacher_id`, `semester_id`, `assigned_date`, `created_at`, `updated_at`) VALUES
+(1, 13, 11, 1, '2026-01-15 00:00:00', '2026-01-14 16:07:15', '2026-01-14 16:07:15'),
+(2, 1, 10, 1, '2026-01-15 00:00:00', '2026-01-14 16:07:39', '2026-01-14 16:07:39'),
+(4, 12, 6, 1, '2026-01-15 00:00:00', '2026-01-14 16:19:53', '2026-01-14 16:19:53'),
+(5, 4, 12, 1, '2026-01-29 00:00:00', '2026-01-29 02:52:22', '2026-01-29 02:52:22');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `section_class_matrix`
+--
+
+CREATE TABLE `section_class_matrix` (
+  `id` int(11) NOT NULL,
+  `section_id` int(11) NOT NULL,
+  `class_id` int(11) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `section_class_matrix`
+--
+
+INSERT INTO `section_class_matrix` (`id`, `section_id`, `class_id`, `semester_id`, `created_at`, `updated_at`) VALUES
+(1, 1, 2, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(2, 1, 3, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(3, 1, 4, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(4, 5, 3, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(5, 5, 1, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(6, 5, 5, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(7, 4, 3, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(8, 4, 4, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(9, 4, 2, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(10, 4, 1, 1, '2025-11-20 01:12:14', '2025-11-20 01:12:14'),
+(11, 1, 1, 1, '2025-11-19 17:12:26', '2025-11-19 17:12:26'),
+(12, 2, 1, 1, '2025-11-19 17:13:58', '2025-11-19 17:13:58'),
+(14, 12, 1, 1, '2025-11-21 14:46:48', '2025-11-21 14:46:48'),
+(15, 12, 4, 1, '2025-11-21 14:46:48', '2025-11-21 14:46:48'),
+(16, 12, 5, 1, '2025-11-21 14:46:48', '2025-11-21 14:46:48'),
+(18, 13, 1, 1, '2025-11-21 15:05:14', '2025-11-21 15:05:14'),
+(19, 21, 1, 1, '2025-11-27 14:16:56', '2025-11-27 14:16:56'),
+(20, 21, 9, 1, '2025-11-27 14:16:56', '2025-11-27 14:16:56'),
+(21, 21, 3, 1, '2025-11-27 14:16:56', '2025-11-27 14:16:56'),
+(22, 21, 2, 1, '2025-11-29 04:00:37', '2025-11-29 04:00:37'),
+(23, 21, 10, 1, '2025-11-29 04:00:37', '2025-11-29 04:00:37'),
+(24, 13, 9, 1, '2025-12-08 21:08:55', '2025-12-08 21:08:55'),
+(25, 5, 10, 1, '2025-12-12 06:31:35', '2025-12-12 06:31:35'),
+(26, 5, 2, 1, '2025-12-18 02:02:31', '2025-12-18 02:02:31'),
+(27, 12, 2, 1, '2026-01-08 12:53:56', '2026-01-08 12:53:56');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `semesters`
+--
+
+CREATE TABLE `semesters` (
+  `id` int(11) NOT NULL,
+  `school_year_id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `semesters`
+--
+
+INSERT INTO `semesters` (`id`, `school_year_id`, `name`, `code`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`) VALUES
+(1, 1, '1st Semester', 'SEM1', '2025-11-01', '2025-11-30', 'active', '2025-11-17 00:51:42', '2026-01-24 07:10:25'),
+(2, 1, '2nd Semester', 'SEM2', '2025-12-01', '2025-12-31', 'upcoming', '2025-11-17 01:02:50', '2026-01-24 07:10:25'),
+(3, 4, '1st Semester', 'SEM1', '2025-11-01', '2025-11-30', 'upcoming', '2025-11-27 15:14:59', '2025-11-27 15:54:51'),
+(4, 4, '2nd Semester', 'SEM2', '2025-12-01', '2025-12-31', 'upcoming', '2025-11-27 15:34:35', '2025-11-27 15:34:35');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sessions`
+--
+
+CREATE TABLE `sessions` (
+  `id` varchar(255) NOT NULL,
+  `user_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `payload` longtext NOT NULL,
+  `last_activity` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sessions`
+--
+
+INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
+('6PTSYmLLr3ecuzP4vowQL54BtAp68aR8vOwsb8wo', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'YTo5OntzOjY6Il90b2tlbiI7czo0MDoidm1mNWRMMHRvdzJRalJibnpRMGFvcVBqaFcwc2RkYURsd05PRlZTZiI7czoyMjoiUEhQREVCVUdCQVJfU1RBQ0tfREFUQSI7YTowOnt9czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mzk6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9wcm9maWxlL3RlYWNoZXIvOCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTI6ImxvZ2luX2FkbWluXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MjtzOjU0OiJsb2dpbl90ZWFjaGVyXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6NjtzOjU0OiJsb2dpbl9zdHVkZW50XzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO3M6OToiMjAyNTAwMDAyIjtzOjI0OiJzdHVkZW50X2NsYXNzZXNfMzFfc2VtXzEiO2E6NDp7aTowO086ODoic3RkQ2xhc3MiOjM6e3M6MjoiaWQiO2k6MTtzOjEwOiJjbGFzc19jb2RlIjtzOjk6IkNMQVNTLTAwMSI7czoxMDoiY2xhc3NfbmFtZSI7czoyMzoiRWZmZWN0aXZlIENvbW11bmljYXRpb24iO31pOjE7Tzo4OiJzdGRDbGFzcyI6Mzp7czoyOiJpZCI7aToyO3M6MTA6ImNsYXNzX2NvZGUiO3M6OToiQ0xBU1MtMDAyIjtzOjEwOiJjbGFzc19uYW1lIjtzOjE5OiJHZW5lcmFsIE1hdGhlbWF0aWNzIjt9aToyO086ODoic3RkQ2xhc3MiOjM6e3M6MjoiaWQiO2k6MztzOjEwOiJjbGFzc19jb2RlIjtzOjk6IkNMQVNTLTAwMyI7czoxMDoiY2xhc3NfbmFtZSI7czoxNToiR2VuZXJhbCBTY2llbmNlIjt9aTozO086ODoic3RkQ2xhc3MiOjM6e3M6MjoiaWQiO2k6NDtzOjEwOiJjbGFzc19jb2RlIjtzOjk6IkNMQVNTLTAwNCI7czoxMDoiY2xhc3NfbmFtZSI7czoyMjoiTGlmZSBhbmQgQ2FyZWVyIFNraWxscyI7fX1zOjI0OiJwZW5kaW5nX3F1aXp6ZXNfMzFfc2VtXzEiO2E6MTp7aToyO2k6MTt9fQ==', 1769961584);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `strands`
+--
+
+CREATE TABLE `strands` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `code` varchar(100) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `strands`
+--
+
+INSERT INTO `strands` (`id`, `code`, `name`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'ICT', 'Information and Communication Technology', 1, '2025-10-19 09:10:46', '2025-11-11 13:46:39'),
+(2, 'ABM', 'Accountancy, Business and Management', 1, '2025-10-19 09:10:46', '2025-11-27 14:15:04'),
+(3, 'HUMSS', 'Humanities and Social Sciences', 1, '2025-10-19 09:10:46', '2025-11-11 13:46:48'),
+(4, 'GAS', 'General Academic Strand', 1, '2025-10-19 09:10:46', '2025-11-11 13:46:51'),
+(5, 'HE', ' Home Economics', 1, '2025-10-19 09:37:05', '2025-11-11 13:46:55');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `students`
+--
+
+CREATE TABLE `students` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `student_password` varchar(100) NOT NULL,
+  `rememberToken` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `middle_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `gender` varchar(10) NOT NULL,
+  `profile_image` varchar(255) DEFAULT NULL,
+  `section_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `current_semester_id` int(11) DEFAULT NULL,
+  `student_type` enum('regular','irregular') NOT NULL,
+  `enrollment_date` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `students`
+--
+
+INSERT INTO `students` (`id`, `student_number`, `student_password`, `rememberToken`, `email`, `first_name`, `middle_name`, `last_name`, `gender`, `profile_image`, `section_id`, `current_semester_id`, `student_type`, `enrollment_date`, `created_at`, `updated_at`) VALUES
+(26, '202500001', '$2y$12$YZcRrDI0odM4BFNHplwX8u93AFhJcRiBtGNd8UHMpzSFOLkLzdzrS', '', 'student@gmail.com', 'Amanda', 'V', 'Aquino', 'Female', NULL, 1, NULL, 'regular', NULL, '2025-11-07 04:10:02', '2025-12-06 17:17:41'),
+(31, '202500002', '$2y$12$4b.5ExODaUTuKEShaztEdO5ziM6Ef3tvKEhWvhypMKKJ4dCWMyoiK', 'HtAmOg2yS5hjMIT4r6BuVlX2g4paF3LrDs32ognbGIT3glX1u6TCGMvkZbgs', '', 'Aaliyah	', 'A', 'Santos', 'Female', NULL, 1, NULL, 'regular', NULL, '2025-11-06 20:49:13', '2025-11-06 20:49:13'),
+(32, '202500003', '$2y$12$c5afSaPZQ74OX06ZqQYRUeHkhw4ZiGvpsF95XmrJQPt1EnHg44H2C', '', NULL, 'Aileens', 'A', 'Reyes', 'Male', NULL, 4, NULL, 'regular', NULL, '2025-11-08 06:03:01', '2025-11-20 23:10:57'),
+(33, '202500004', '$2y$12$oBU92qi4HBPD8wN1a9sDjeF/vXj0e3773lPWE6n8K/E55lCTKdIla', '', '', 'Alfred', 'J', 'Lopez', 'Male', NULL, 4, NULL, 'regular', NULL, '2025-11-08 06:03:01', '2025-11-08 06:03:01'),
+(371, '202500005', '$2y$12$Pt4gtibzOED8ZG6KH8EIZOgg4vUI7pe6vcotec7ze0fttLD9h.5/a', NULL, NULL, 'Beatrices', 'B', 'Agustin', 'Female', NULL, 5, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-12-06 18:58:57'),
+(372, '202500006', '$2y$12$3ajBk8D1GYT7wlzEqFy3j.aNG08Q7HmdvSzpvzRddpXYf5M/p.V9u', NULL, '', 'Denzel Given Jay', 'B', 'Amoguis', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(373, '202500007', '$2y$12$zv.UNIyn0D9bR0qUDMdn..86K09CkiwWmNDiJvjWXi1PAjmOnEyem', NULL, '', 'Erish Kate', 'A', 'Areola', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(374, '202500008', '$2y$12$RYcF/jpVXg7NJiGNrWc/T.hPPiTPQRqRR4McPzGPw7W53nmOCV7OC', NULL, '', 'Daisy Rey Mae', 'R', 'Bariring', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(375, '202500009', '$2y$12$y.1aFcQKiaMaLAuIpB0jMeRhVjBxb2FN8e9ePzzy.XNeR50pSuJCy', NULL, '', 'Krizzie', 'R', 'Basilan', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(376, '202500010', '$2y$12$IZHaJvrko3FRNEJmYzwjc.rJRcbCaRGCugpjSGmIseumraksyo/IW', NULL, '', 'Danica', 'A', 'Bautista', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(377, '202500011', '$2y$12$ZpKFkMDk2kZ1jLuzRs.x7.FvSBY4KhSZdt9Fkw2b7TMVD2O4Zxu9y', NULL, '', 'Kyla Mae', 'T', 'Borjal', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(378, '202500012', '$2y$12$BU0X0KCCHDWhfavYSKzZde1RRnNkGs.ScGfTHU5nXr91/qqrTXzrG', NULL, '', 'Hazel Anne', 'C', 'Bragado', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(379, '202500013', '$2y$12$SXAX58nnB5zSYB2JD0MLPO8GIRQ2dUP.J5K5CV2cwOGy0g6ogQa7y', NULL, '', 'Angel', 'C', 'Catabay', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(380, '202500014', '$2y$12$enDk9.9kgGTxF1FB248yi.6Yy9RQ1sbPvsrYO/YAC3dTrFFaPtgXG', NULL, '', 'Sandie May', 'C', 'Condes', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(381, '202500015', '$2y$12$DEQJWm/uhFNS10P0AwcEj.JoBvGtmW8r9C9ebl8mg6eqkkkl5pYoi', NULL, '', 'Denise', 'E', 'Cristobal', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(382, '202500016', '$2y$12$c1muUpe1jenCch7.UNYaUezT3NqY0uKWJe6Ij/QHbAmSN9halClgy', NULL, '', 'Francine', 'S', 'David', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(383, '202500017', '$2y$12$oDih1YvD1.lvHPUSoqWs6OWF/JKbOidpawX/6K7wZzRoN7/GQFrw.', NULL, '', 'Ariel', 'B', 'David Jr.', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(384, '202500018', '$2y$12$ZQ/y2whT6dy7UhvutMwnq.TcgQ.GqzrK27wWSPEjguBQaWnFOo4MS', NULL, '', 'Lorein Mae', 'T', 'Dela Cruz', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(385, '202500019', '$2y$12$Hg/KQHgonvBksO5RIMLTyOgDlzgKTTRyntFEa8lSyScLBUCrwII1i', NULL, '', 'Cheanbie', 'S', 'Dela Torre', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(386, '202500020', '$2y$12$hJZ1MIrb.6ISuTqWDUihR.od4vPCZe/NUzDiE4b1Wl6.i2pxn3Gm2', NULL, '', 'Loren Angela', 'O', 'Fabio', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(387, '202500021', '$2y$12$3qwvtwQYCwrQiSpxgIrjzetXPealUY38SkDLfwPsl5N3bZ9OXIAjm', NULL, '', 'Jiann Paulo', 'D', 'Grajo', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(388, '202500022', '$2y$12$dn/ydzIANF7BF1G2NST2PusTHL9zM7mEA/4MtnzeX/T5xZYuc7QRO', NULL, '', 'Aeron Paul', 'F', 'Gumafelix', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(389, '202500023', '$2y$12$TEhTjpE21GK/vpaMcprKl.kLj7iQ/WL1A5zlMOP11ChdzHEpuTB/i', NULL, '', 'John Bryan', 'B', 'Herrera', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(390, '202500024', '$2y$12$a1KI8cPYFLl5ug1TYPxVpOJfp8YT8HWCD81IbpFrAJ4YCaGteNIvG', NULL, '', 'Jhannasheen Luijay', 'L', 'Huerto', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(391, '202500025', '$2y$12$yvUj9IhkJxyHdyM.q.Xiou8xNIXlej6lxW1J.vMbFjIFr9OofhGz2', NULL, '', 'Adriana', 'G', 'Jamandron', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(392, '202500026', '$2y$12$rAhChGGHVuTc0cplRSwyWOH.tTZtreOltJcW5i/RlxQZNouvl4xfu', NULL, '', 'Madelyn', 'M', 'Lagman', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(393, '202500027', '$2y$12$AZswU/gyCDxzOHtf98Io0.k2GfUz/a5Fo9EAVrvtCm9m0rKVAIRF2', NULL, '', 'Nicole', 'G', 'Lagpao', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(395, '202500029', '$2y$12$wnJ17vNFlNvmO6o4DMn8cu3BI0NVWgYMeRFPRs4t8eeu.TKJ6uSpe', NULL, '', 'Rich Ann Alexa', 'Q', 'Lee', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:27', '2025-11-20 21:07:27'),
+(396, '202500030', '$2y$12$esci2Ly068pv8XiOHzZpCOqePk0NShyT9Z.bf30DMc/AWUMcOE1zK', NULL, '', 'Princes Liane', 'T', 'Manalaysay', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(397, '202500031', '$2y$12$w2.oC6HSe9yOaBAEHvacbuk1S3.729A9Fu2LPNe5b//dz2w0EMLc.', NULL, '', 'Melissa', 'Q', 'Mateo', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(398, '202500032', '$2y$12$zZpvjarxoilRStxO0Tun1.uPNwRsXtNlXC0rKeHvkWQ7KPE.4zcaq', NULL, '', 'Trisha Mae', 'M', 'Molino', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(399, '202500033', '$2y$12$4h8/NV96emyRsm8H5u6X8.R7mMCIiN8pIiorX7GNBQWPGlbx.quOK', NULL, '', 'Rachelle Mae', 'C', 'Navora', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(400, '202500034', '$2y$12$9To/EhgjOwX7mIIsJYUqoOOtbDHiiq79ISmkyegaKnHiZ7SfIWwuO', NULL, '', 'Shirley Mae', 'B', 'Nedia', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(401, '202500035', '$2y$12$ktULyMLP9iJ1TNlZUR.WruqMstgmPXAvOQI1vy.v0w7BiPVEHQrfS', NULL, '', 'Kent Joncel', 'T', 'Obligacion', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(402, '202500036', '$2y$12$DuvD7tPkm7y.sx36gPSDZuamvwsjLVThiUWl96RQD09Wp8TEy89zW', NULL, '', 'Nylenedyl', 'DJ', 'Pacle', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(403, '202500037', '$2y$12$ZN/qvwv.JyBS32zVl3ox7.gLA9qcgFyl4x/wyv6dqqSiF59ZGi6k.', NULL, '', 'Ashley', 'P', 'Pelayo', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(404, '202500038', '$2y$12$b.SY2QvGk/POLo/m.Q7wmOKjts5xjbitSKHtUy/PBCJqPCoYxwSka', NULL, '', 'Erwin', 'C', 'Penales', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(405, '202500039', '$2y$12$tliEHJaLxV9LSqdG0mOgm.QjVMqbEZsfYO9FcT29yiH8MZfKC.3cK', NULL, '', 'Gillane Ashley', 'A', 'Salvador', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(406, '202500040', '$2y$12$dmGngKzaGdAoPPqcritPX.gdczV6JZh.M5offYah.nMcDk7aUCnJO', NULL, '', 'Clent', 'G', 'Tuando', 'Male', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(407, '202500041', '$2y$12$.fh3.hb3t2HLStftqQgAXuhbAN5GkTey8NTkgbCtJCjs6AO5HmxvG', NULL, '', 'Jaine Rose', 'C', 'Verunque', 'Female', NULL, 4, NULL, 'regular', '2025-11-21', '2025-11-20 21:07:33', '2025-11-20 21:07:33'),
+(408, '202500042', '$2y$12$tFCUuOfLyUGKfjLkERacpuF1a2/9fWz8EN/lYvPnR2YTRrZA/w1/i', NULL, 'qwe1@gmail.com', 'Beatrice', 'B', 'Agustin', 'Male', NULL, 4, NULL, 'regular', '2025-11-27', '2025-11-27 14:02:15', '2025-12-06 19:02:27'),
+(409, '202500043', '$2y$12$zm6Q5uCCHHqrCSSXOAqGP.g//0Kvff1AnCeWpw1.yNRabTC4ni2Ee', NULL, 'student@gmail', 'John', 'M', 'Student', 'Male', NULL, 4, NULL, 'regular', '2025-11-27', '2025-11-27 14:05:37', '2025-12-06 18:57:35'),
+(410, '202500044', '$2y$12$LDzVI/ZO0mRFqQKsckT2kue5lS6l7tKLAgLa7EROTyZsUq5OKEdJK', NULL, 'sample1@gmail.com', 'sample', '1', 'humms', 'Male', NULL, 5, NULL, 'irregular', '2025-11-27', '2025-11-27 14:18:02', '2026-01-23 12:05:56'),
+(448, '202500082', '$2y$12$AB5ijJsVTsrn2Ppp1wEIXeSNUQTb/CcBN1pr8ZP9BDs0bwUTHmdmu', NULL, '', 'S', 'G', 'Angelo', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(449, '202500083', '$2y$12$O0jFRvsNl.Tz5TB3yWGmDeDul8CxuaHVaAfoqIVyLXM6SPxX594Re', NULL, '', 'J', 'M', 'Annika', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(450, '202500084', '$2y$12$fa2Nj7HKBP8M3caCUqNVLuMWPwp385nNuGMUudzl3yu1J64tQ/Fem', NULL, '', 'V', 'M', 'Anthony', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(451, '202500085', '$2y$12$KRU5DkTNkXsa8YZ/1Vtczu0WpN42tvBEMKuXA8NzV1nK3AFkTsAU2', NULL, '', 'C', 'T', 'Arden', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(452, '202500086', '$2y$12$XyDHX72mqpYXZCqebmvy7eab9UMVXz9GZ1hpFetqJKwSx/YrTJ9fi', NULL, '', 'L', 'T', 'Ariana', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(453, '202500087', '$2y$12$5rDuggEw.0CKwLWBYQxQj.1M1zhFzV9PfaGku3V3ws/p6ttrEfafW', NULL, '', 'F', 'S', 'Arlene', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(454, '202500088', '$2y$12$blvguWeatXeN0.cDhAAfZu596Etk62cNyazMB1pQ/EuwRV.5F4VAC', NULL, '', 'H', 'DL', 'Arvin', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(455, '202500089', '$2y$12$vLCnBD1ze8gwXrtoJDy7IuoDIZh6l6CyOoBgbavuzz9Z7GqQSgLlC', NULL, '', 'K', 'F', 'Ashley', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(457, '202500091', '$2y$12$JugZ4LLLbVGfRdq7TPV0.uGu15hyMiXiy1WyUc/XeZb9GkpbvAXFi', NULL, '', 'P', 'F', 'Beatrice', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(458, '202500092', '$2y$12$ZAIOPKMePWxCZQ4RRh.WwefsGGEfXFxWkkx8oUPAyrnRIctT/mcUi', NULL, '', 'M', 'C', 'Benjo', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(460, '202500094', '$2y$12$.H4/5nc9h9KyTT0fSxid3uwF/YfTOt0y3QJjYcBBaSkbUe79Y7EEG', NULL, '', 'A', 'A', 'Brent', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:14', '2025-11-28 03:57:14'),
+(461, '202500095', '$2y$12$gaRgtaEj98LBczrmqJqKj.dfPM2gJib1LPsxiJCq5PsTlOSo8n5V6', NULL, '', 'R', 'M', 'Bryan', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:23', '2025-11-28 03:57:23'),
+(466, '202500100', '$2y$12$yRduowIsGfIMBV/aWhKRMuxZ1MMGR4sJRxwc9T77OjRuvu2dkbIoa', NULL, '', 'G', 'P', 'Catherine', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:23', '2025-11-28 03:57:23'),
+(470, '202500104', '$2y$12$UeOXM62d0FREXBli1zR7mO9mcHNa05QtGY.zMchJnLZTbMxXAfABK', NULL, '', 'T', 'V', 'Christian', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:23', '2025-11-28 03:57:23'),
+(493, '202500127', '$2y$12$FKIFVS1SBAxVexNM80PKreO7oOFD388qqecn59eovN7JvTDaDESkS', NULL, '', 'D', 'M', 'Ernest', 'Male', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 03:57:34', '2025-11-28 03:57:34'),
+(537, '202500171', '$2y$12$Ib5luFZ9pdxDsFORNT6KseKwXr0DQPC0GOWEtE8Fa9vphgYlHptP2', NULL, 'cherri@gmail', 'Charrises', 'L', 'Roque', 'Female', NULL, 1, NULL, 'regular', '2025-11-28', '2025-11-28 06:25:30', '2025-11-28 06:25:57'),
+(538, '202500172', '$2y$12$QMSyjsVS9SlcekytpNshfOiq8n5Ogp6UScYiV7F4lSlAZPmcX385S', NULL, 'qwe11@gmail.com', 'John Loue', 'D', 'Bersamina', 'Male', NULL, 1, NULL, 'regular', '2025-12-07', '2025-12-06 18:33:53', '2025-12-06 18:33:53'),
+(539, '202500173', '$2y$12$EWxDMakGRgEl9NS.llIL2.xj3ML/eUSegsD0Q4cLT6Zd4uYK1RGfi', NULL, 'student@example.com', 'Juan', 'P', 'Dela Cruz', 'Male', NULL, 1, NULL, 'regular', '2025-12-12', '2025-12-12 06:24:45', '2025-12-12 06:24:45'),
+(546, '202600001', '$2y$12$swbm//ROmXVkCTArJpT52.sHIrzc2fxX19IztMDuVJzuqHDDS4AMO', NULL, 'student1@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
+(547, '202600002', '$2y$12$MeaitQ51bpXCwP2Ky.Kzve5/0oXi3FbTD8QfqhYD3PDfh6xIr8zD.', NULL, 'student@2gmail.com', 'Sample', 'A', '2', 'Female', NULL, 2, NULL, 'regular', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
+(548, '202600003', '$2y$12$RMDID5HtSVMaRTHOtlwGrunDJD2zOuJADxzvBM/i952b4k0YLLJWe', NULL, 'asd@gmail.com', 'a', 'A', 'a', 'Male', NULL, 2, NULL, 'regular', '2026-01-23', '2026-01-23 09:12:49', '2026-01-23 09:12:49'),
+(549, '202600004', '$2y$12$Ucz3aRN0koMZc59YAQTc5OX8VD.JrZqOWiC84n2BJkFti.qa8jkqy', NULL, 'bersaminajohnkyle@gmail.com', 'john', 'D', 'bersamina', 'Male', NULL, 2, NULL, 'regular', '2026-01-29', '2026-01-29 01:23:44', '2026-01-29 01:23:44'),
+(550, '202600005', '$2y$12$P/0Z6P9BJ6P49LSjVAjWj.d9CgxYbQasTOvn1Z4rCl4XEV8rLpUeK', NULL, 'asdew@gmail.com', 'asddsd', 'D', 'Agustin', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 13:19:28', '2026-02-01 13:26:07'),
+(551, '202600006', '$2y$12$9ijlKrkY0dPNP2NP9PQ/P.MgwDazcNynBdYs1Gks4DDHfJGPCVWrG', NULL, 'zxc@gmail.com', 'zxc', 'X', 'zxc', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 13:31:25', '2026-02-01 13:31:25'),
+(552, '202600007', '$2y$12$o8wiK/GNCVW9k.Gm/yitJeWj4cbUlfAsBsM0wE/1rsZH9YhYNODNm', NULL, 'asd123@gmail.com', 'asd', 'A', 'asd', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:01:14', '2026-02-01 14:01:14'),
+(553, '202600008', '$2y$12$UNJidogUopV4weNyGKioYuovM1BelMEE1hNQNHF3iFdfhXvxCanZm', NULL, 'adsfg@gmail.com', '123123', 'D', '123a', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:05:03', '2026-02-01 14:05:03'),
+(554, '202600009', '$2y$12$FWvP0t7TTHKM1HZ1/fDev.HmbCr3g.F8iEKUa4o4sJOstnuowPtnW', NULL, 'ghj@gmail.com', 'ghj', 'G', 'ghj', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:08:08', '2026-02-01 14:08:08'),
+(555, '202600010', '$2y$12$FtZZUPgAT1oUHYjGYzhh5eBcoJ2d/maTcjMlLc5PiBEa7YTndcRQK', NULL, 'dfg@gmail.com', 'dfg', 'D', 'dfg', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:19:49', '2026-02-01 14:19:49'),
+(556, '202600011', '$2y$12$ERpNFPgaafLc./C9RCBkTucF7Ef2LxrCf9QyDWgIxsFil8PtqkCS2', NULL, 'asd1234@gmail.com', 'asd', 'A', 'sad', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:26:16', '2026-02-01 14:26:16'),
+(557, '202600012', '$2y$12$NPfyVyKWiiOqO35qGukR8e5EfF1uSZXZeYMSb2R5AqJQeYWw91bLW', NULL, 'asddfg@gmail.com', 'asd', 'G', 'asd', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:29:51', '2026-02-01 14:29:51'),
+(558, '202600013', '$2y$12$akhezdRY3ySrJRvvomUtp.bjsuxjzXXHhWdi4wePVTNvaGK9kIQVK', NULL, 'studentasd@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:41:25', '2026-02-01 14:41:25'),
+(559, '202600014', '$2y$12$/c7QDy36VCMMTwNH/z9PTuLWdAArATteL8v5kE4kCODMgBszxFN2.', NULL, 'studentxz@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:47:15', '2026-02-01 14:47:15'),
+(560, '202600015', '$2y$12$TQ66XiGBTFoG77cnv2ErVOhIxk24M2tTYu2jmW2rL9HCyyXgXKaM.', NULL, 'studentcvxv@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 14:47:43', '2026-02-01 14:47:43'),
+(561, '202600016', '$2y$12$R57e2Nft6oVYN7HFaBeG3uA.6p5t5wCPuqONg3j74fxvg2OD1lDiq', NULL, 'studentyt@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:08:53', '2026-02-01 15:08:53'),
+(562, '202600017', '$2y$12$5Eq8NjDocKTkIh/O0jn5nedWqiZdPzAcic1VVoKveFuIdS5JKqPha', NULL, 'studentasdc@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:10:00', '2026-02-01 15:10:00'),
+(563, '202600018', '$2y$12$wcs6gKR9kX7K1CEPbv48CevLKsfQt1jdEcMJAhrVlON51OvzVNVz.', NULL, 'studentzxc@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:13:05', '2026-02-01 15:13:05'),
+(564, '202600019', '$2y$12$ZCFCKdTz74fALfXuQPeIFei52wOFK15o9TFl7yc4mjOZ0/ziR7oT2', NULL, 'studxcent@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:19:51', '2026-02-01 15:19:51'),
+(565, '202600020', '$2y$12$EJUo8/0HvNLZGOJrRv0be.JLSwBEZPD7NzMY.1o2yUBq8dMNFKtYa', NULL, 'studentzxasdc@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:31:34', '2026-02-01 15:31:34'),
+(566, '202600021', '$2y$12$gZeNLf4afqC6nnFW7s6jpOVHOLchHafCdOoiX83Loxe9816qw8.FK', NULL, 'studentcvc@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:36:21', '2026-02-01 15:36:21'),
+(567, '202600022', '$2y$12$QdZiiAhFSxR5Zx5gPaYXveicj8QMsSk4cToA3bnkP4XOW3hEOxM9O', NULL, 'studentxcx@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:38:17', '2026-02-01 15:38:17'),
+(568, '202600023', '$2y$12$V16tKw3WB3DeAgj8.f8X1.4GgQYBt8jkDp7KpMFmz/fWflZcFAVQC', NULL, 'studzxcent@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:41:44', '2026-02-01 15:41:44'),
+(569, '202600024', '$2y$12$HOPv4YHgY9lz.fyOrNzURevJuW0PHKpqKTcanm6OzpqzZgDmQMtxC', NULL, 'xcvstudent@gmail.com', 'Sample', 'A', '1', 'Male', NULL, 2, NULL, 'regular', '2026-02-01', '2026-02-01 15:51:21', '2026-02-01 15:51:21');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_class_matrix`
+--
+
+CREATE TABLE `student_class_matrix` (
+  `id` int(11) NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `class_code` varchar(100) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `enrollment_status` enum('enrolled','dropped','completed') DEFAULT 'enrolled',
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_class_matrix`
+--
+
+INSERT INTO `student_class_matrix` (`id`, `student_number`, `class_code`, `semester_id`, `enrollment_status`, `updated_at`) VALUES
+(5, '202500002', 'CLASS-004', 1, 'enrolled', '2025-11-21 03:56:05'),
+(8, '202500044', 'CLASS-001', 1, 'enrolled', '2025-12-06 18:47:04'),
+(9, '202500044', 'CLASS-002', 1, 'enrolled', '2025-12-06 18:47:04'),
+(10, '202500044', 'CLASS-003', 1, 'enrolled', '2025-12-06 18:47:04'),
+(13, '202500044', 'CLASS-004', 1, 'enrolled', '2026-01-08 12:12:18');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_lecture_progress`
+--
+
+CREATE TABLE `student_lecture_progress` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `lecture_id` bigint(20) UNSIGNED NOT NULL,
+  `lesson_id` bigint(20) UNSIGNED NOT NULL,
+  `class_id` int(11) NOT NULL,
+  `is_completed` tinyint(1) NOT NULL DEFAULT 0,
+  `completed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_lecture_progress`
+--
+
+INSERT INTO `student_lecture_progress` (`id`, `student_number`, `lecture_id`, `lesson_id`, `class_id`, `is_completed`, `completed_at`, `created_at`, `updated_at`) VALUES
+(13, '202500082', 7, 4, 2, 1, '2025-12-05 13:17:01', '2025-12-05 13:17:01', '2025-12-05 13:17:01'),
+(14, '202500006', 7, 4, 2, 1, '2025-12-06 02:11:45', '2025-12-06 02:11:45', '2025-12-06 02:11:45'),
+(15, '202500002', 7, 4, 2, 1, '2025-12-09 03:14:19', '2025-12-09 03:14:19', '2025-12-09 03:14:19'),
+(16, '202500002', 8, 4, 2, 1, '2025-12-11 00:54:49', '2025-12-11 00:54:49', '2025-12-11 00:54:49'),
+(17, '202500002', 9, 4, 2, 1, '2025-12-11 00:55:03', '2025-12-11 00:55:03', '2025-12-11 00:55:03'),
+(18, '202500002', 10, 7, 2, 1, '2025-12-11 00:55:12', '2025-12-11 00:55:12', '2025-12-11 00:55:12'),
+(19, '202500002', 14, 9, 3, 1, '2025-12-17 10:55:26', '2025-12-17 10:55:26', '2025-12-17 10:55:26');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_password_matrix`
+--
+
+CREATE TABLE `student_password_matrix` (
+  `id` int(11) NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `plain_password` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_password_matrix`
+--
+
+INSERT INTO `student_password_matrix` (`id`, `student_number`, `plain_password`) VALUES
+(1, '202500002', 'AsdAsd@2025'),
+(2, '202500003', 'Ar1@2025'),
+(3, '202500004', 'Ar2@2025'),
+(4, '202500005', 'Ar3@2025'),
+(341, '202500005', 'mTaJ37p8jS'),
+(342, '202500006', '0JOjSFrzw7'),
+(343, '202500007', 'UorIQsQvgW'),
+(344, '202500008', 'r2w20YwS9n'),
+(345, '202500009', 'xGcPnvuLxQ'),
+(346, '202500010', 'RsCl2wvuOh'),
+(347, '202500011', 'SlHeo0qrcE'),
+(348, '202500012', '2sO27AJNed'),
+(349, '202500013', 'D8MzEnLXxW'),
+(350, '202500014', 'XL5gHVYiEx'),
+(351, '202500015', 'ajCGUrQzCQ'),
+(352, '202500016', 'rD9D6Mb63c'),
+(353, '202500017', 'oGdfAIWl38'),
+(354, '202500018', 'wSIbz7Oqse'),
+(355, '202500019', 'GENqha3uc0'),
+(356, '202500020', 'PEaem6B5xM'),
+(357, '202500021', 'yZ3pNyTNkq'),
+(358, '202500022', 'YNKGPZRbY2'),
+(359, '202500023', 'QnKhzcnqzG'),
+(360, '202500024', 'TXQXLQsRYS'),
+(361, '202500025', '21W3s2QhPW'),
+(362, '202500026', 'L5EQYCC2U5'),
+(363, '202500027', 'KetmfWLEyF'),
+(364, '202500028', 'iLnozd9CAx'),
+(365, '202500029', 'wt6lcZXUzU'),
+(366, '202500030', 'sGwoRHSCgE'),
+(367, '202500031', 'Ie9acEhqk2'),
+(368, '202500032', '20gC7JOl7T'),
+(369, '202500033', 'Y7NJG0NwsP'),
+(370, '202500034', 'O77dfGIByG'),
+(371, '202500035', 'ZE1xi7pQoi'),
+(372, '202500036', 'iEA3A8YPzh'),
+(373, '202500037', 'Mqu67nzxG2'),
+(374, '202500038', 'p74h4yHliH'),
+(375, '202500039', 'T8U8SuUDNo'),
+(376, '202500040', '6garlUMdK1'),
+(377, '202500041', 'upsoxbNoF6'),
+(378, '202500042', '7ASFlYsDjW'),
+(379, '202500043', 'LaVJmG3lCP'),
+(380, '202500044', 'qt2OK536LW'),
+(381, '202500045', 'WKygQJXKNQ'),
+(382, '202500046', 'vuJEJLijM1'),
+(383, '202500047', 'xzckpv63xU'),
+(384, '202500048', 'XpXy89INyG'),
+(385, '202500049', 'bHtaYZ1JWg'),
+(386, '202500050', '1oAA6ZY4Kl'),
+(387, '202500051', 'KkUdhn660b'),
+(388, '202500052', 'iqIYDFrVVx'),
+(389, '202500053', 'Taodbl8Dpz'),
+(390, '202500054', 'bIneuUuqz5'),
+(391, '202500055', 'PRGHtNAAmu'),
+(392, '202500056', 'OArq7uyvEj'),
+(393, '202500057', '5crLB0VHuv'),
+(394, '202500058', 'JidosO09wH'),
+(395, '202500059', 'n5Veylenbr'),
+(396, '202500060', 'mD8YzaSwUc'),
+(397, '202500061', 'WU224AXj58'),
+(398, '202500062', '2qeMh2HQrU'),
+(399, '202500063', 'M8f2mPkTLD'),
+(400, '202500064', 'Vg2nBE7kiw'),
+(401, '202500065', 'F7RlMo6E4x'),
+(402, '202500066', 'ZKxb23a7xp'),
+(403, '202500067', 'sq6eu7hqrU'),
+(404, '202500068', '4v7b36ZZfH'),
+(405, '202500069', 'hIM7wuSdkk'),
+(406, '202500070', 'hLneV8kDU2'),
+(407, '202500071', 'KE9Vf2fyrq'),
+(408, '202500072', 'S1t66WdgEa'),
+(409, '202500073', 'sIWlLRfb5c'),
+(410, '202500074', 'uok5qKWTsa'),
+(411, '202500075', 'sSxs78Yn4Q'),
+(412, '202500076', 'R9jvBWZIgP'),
+(413, '202500077', '3wjFN92hDF'),
+(414, '202500078', 'cp5toCm8Qo'),
+(415, '202500079', 'zKP3UW02yB'),
+(416, '202500080', 'TvkCeZ7F2J'),
+(417, '202500081', '2kTCyu5Ss1'),
+(418, '202500082', 'qfcQN6kXvv'),
+(419, '202500083', 'qVdTHkHJ4g'),
+(420, '202500084', 'yudmKYyNJk'),
+(421, '202500085', 'EX4XmsNW0r'),
+(422, '202500086', 'q1fTnLVg97'),
+(423, '202500087', 'w19478mhwR'),
+(424, '202500088', '1CupcMFRxO'),
+(425, '202500089', 'sf4NubWaEQ'),
+(426, '202500090', 'xtLPAZR9Sp'),
+(427, '202500091', '38qMgfgxEV'),
+(428, '202500092', 'QjpxTYdegP'),
+(429, '202500093', 'caLHNTWpbj'),
+(430, '202500094', 'X4wpngLknt'),
+(431, '202500095', 'nzwO9GLPft'),
+(432, '202500096', 'TqsPOfd9Vr'),
+(433, '202500097', 'qxDes1qLsW'),
+(434, '202500098', 'OyU78XwKKh'),
+(435, '202500099', 'X5XgWlcfaz'),
+(436, '202500100', 'A8z5pRy4Rj'),
+(437, '202500101', 'OheuhTrMgM'),
+(438, '202500102', 'LcKeZ2Keiz'),
+(439, '202500103', 'J2d6Byo4LA'),
+(440, '202500104', 'mwabAGq6R7'),
+(441, '202500105', 'RPDRzzJCGD'),
+(442, '202500106', 'ODWq2vP05f'),
+(443, '202500107', 'TZMyhJgB0L'),
+(444, '202500108', 'W60unCv5iN'),
+(445, '202500109', 'iVTEdvrJCq'),
+(446, '202500110', 'hYmQy2jeZo'),
+(447, '202500111', 'Ipr7lKLAbP'),
+(448, '202500112', 'PKIzNHYXsf'),
+(449, '202500113', 'UheTnZHGud'),
+(450, '202500114', 'ydmxP6v1Pr'),
+(451, '202500115', 'PLB4gtv9Lw'),
+(452, '202500116', '4VxwCYL11V'),
+(453, '202500117', '5ohYYvLUhJ'),
+(454, '202500118', 'EdI4epXMH4'),
+(455, '202500119', 'RPbCDGWryY'),
+(456, '202500120', 's69taDsI7u'),
+(457, '202500121', 'L4NWqPxP7H'),
+(458, '202500122', 'acYdrW7HBS'),
+(459, '202500123', '5ljDLFDwf4'),
+(460, '202500124', 'zjmUVDAoe3'),
+(461, '202500125', 'csdfy3zeL4'),
+(462, '202500126', 'NVnYmvTYEl'),
+(463, '202500127', 'oVzXr7Vt12'),
+(464, '202500128', 'KhjDYl1wk0'),
+(465, '202500129', '9GGj7CKv5y'),
+(466, '202500130', 'paBQtCM50h'),
+(467, '202500131', 'p3SzW4L6id'),
+(468, '202500132', 'sqLmL3HWl7'),
+(469, '202500133', 'K31h6QIj45'),
+(470, '202500134', 'h1OLxy64yG'),
+(471, '202500135', 'Zwg8EZmHRA'),
+(472, '202500136', 'bsBPHJbbky'),
+(473, '202500137', 'Hk09CeUj1g'),
+(474, '202500138', 'NoJcHFLQGu'),
+(475, '202500139', 'RSlEYo3BlU'),
+(476, '202500140', '5HzoNtzaVu'),
+(477, '202500141', 'HlE1U2oz84'),
+(478, '202500142', 'LAmtKe7W9d'),
+(479, '202500143', 'GQtXigD3ZO'),
+(480, '202500144', 'WKC0fabcHN'),
+(481, '202500145', 'jpvqpj5zlk'),
+(482, '202500146', 'lRS0Oatm57'),
+(483, '202500147', '4N7r16twpM'),
+(484, '202500148', 'KjeHUMc1JB'),
+(485, '202500149', '7ALICqE4ZK'),
+(486, '202500150', 'J6AJXT9ch4'),
+(487, '202500151', 'NNjiHAfVaF'),
+(488, '202500152', 'OfnYR7baIi'),
+(489, '202500153', '30DKtAdEm8'),
+(490, '202500154', 'EGPtFBIwdN'),
+(491, '202500155', 'OF9hJBWhZA'),
+(492, '202500156', 'kzXZ7znetQ'),
+(493, '202500157', 'kB9uSSkBuK'),
+(494, '202500158', 'VngBKfLg4l'),
+(495, '202500159', 'dKKIh1MQRq'),
+(496, '202500160', 'debYIb2QId'),
+(497, '202500161', '16PEV3sseH'),
+(498, '202500162', '7ZQOe2k1xz'),
+(499, '202500163', 'amgnYZWOtd'),
+(500, '202500164', 'pvP4QYQBvw'),
+(501, '202500165', 'jqDKBWMfMQ'),
+(502, '202500166', '4QNSk736gV'),
+(503, '202500167', 'Z0a4o4GbAp'),
+(504, '202500168', 'F0WIlRbSlE'),
+(505, '202500169', 'm5tPyk9sVF'),
+(506, '202500170', 'WSPTG2DP3h'),
+(507, '202500171', 'SiAXhQau5q'),
+(508, '202500172', 'Td09sSVumX'),
+(509, '202500173', 'pDoab6PV1I'),
+(510, '202500174', 'lASXYSObwl'),
+(511, '202600001', 'txJgoa61Ne'),
+(512, '202600002', 'LlpRCkZCd8'),
+(513, '202600003', 'W1dZvPSp0P'),
+(514, '202600004', 'DY372LdsE8'),
+(515, '202600005', 'FSqs2PEGbL'),
+(516, '202600001', 'L2AGCoYx29'),
+(517, '202600002', 'FyJIztyDgO'),
+(518, '202600003', 'A1zzt9Zx2R'),
+(519, '202600004', 'UMeI1Qwg1l'),
+(520, '202600005', 'e1UAaoS8ov'),
+(521, '202600006', 'gt8HmJW2nr'),
+(522, '202600007', 'Hs75Jx07Zk'),
+(523, '202600008', 'WtWtayGh3b'),
+(524, '202600009', 'N1YEcWYfWu'),
+(525, '202600010', 'P3oDYQs2ft'),
+(526, '202600011', 'RctukSd7Np'),
+(527, '202600012', 'GpgfmzNAa5'),
+(528, '202600013', 'Z6Z39sOYZL'),
+(529, '202600014', 'y8cmw80SXa'),
+(530, '202600015', 'MW2chAP9wU'),
+(531, '202600016', '7THgXX2rlY'),
+(532, '202600017', 'L5kSqM5ZHe'),
+(533, '202600018', 'RRlbi2Ate6'),
+(534, '202600019', '9z7LfQvl8b'),
+(535, '202600020', 'sBZe3RdZRQ'),
+(536, '202600021', 'fdXQKRm5hb'),
+(537, '202600022', 'tnxocEI10h'),
+(538, '202600023', 'blptyOx1EQ'),
+(539, '202600024', 'W6Qd4suVLi');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_quiz_answers`
+--
+
+CREATE TABLE `student_quiz_answers` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `attempt_id` bigint(20) UNSIGNED NOT NULL,
+  `question_id` bigint(20) UNSIGNED NOT NULL,
+  `option_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'For multiple choice/true-false',
+  `answer_text` text DEFAULT NULL COMMENT 'For essay questions',
+  `is_correct` tinyint(1) DEFAULT NULL,
+  `points_earned` decimal(5,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_quiz_answers`
+--
+
+INSERT INTO `student_quiz_answers` (`id`, `attempt_id`, `question_id`, `option_id`, `answer_text`, `is_correct`, `points_earned`, `created_at`, `updated_at`) VALUES
+(265, 165, 70, 197, NULL, 1, 1.00, '2025-12-04 15:19:04', '2025-12-04 15:19:04'),
+(266, 166, 59, NULL, 'AA', 0, 0.00, '2025-12-04 15:22:51', '2025-12-04 15:22:51'),
+(267, 166, 60, NULL, 'BB', 0, 0.00, '2025-12-04 15:22:51', '2025-12-04 15:22:51'),
+(268, 167, 89, 263, NULL, 1, 10.00, '2025-12-04 16:12:03', '2025-12-04 16:12:03'),
+(269, 167, 90, 268, NULL, 1, 1.00, '2025-12-04 16:12:03', '2025-12-04 16:12:03'),
+(270, 167, 91, 273, NULL, 1, 1.00, '2025-12-04 16:12:03', '2025-12-04 16:12:03'),
+(271, 168, 70, 197, NULL, 1, 1.00, '2025-12-08 21:25:10', '2025-12-08 21:25:10'),
+(272, 169, 76, 221, NULL, 1, 1.00, '2025-12-08 21:26:19', '2025-12-08 21:26:19'),
+(273, 170, 70, 197, NULL, 1, 1.00, '2025-12-08 21:28:39', '2025-12-08 21:28:39'),
+(274, 171, 76, 222, NULL, 0, 0.00, '2025-12-08 21:31:08', '2025-12-08 21:31:08'),
+(275, 172, 75, 217, NULL, 1, 1.00, '2025-12-08 21:31:21', '2025-12-08 21:31:21'),
+(276, 173, 97, 287, NULL, 1, 10.00, '2025-12-08 21:33:40', '2025-12-08 21:33:40'),
+(277, 173, 98, 292, NULL, 1, 1.00, '2025-12-08 21:33:40', '2025-12-08 21:33:40'),
+(278, 173, 99, 297, NULL, 1, 1.00, '2025-12-08 21:33:40', '2025-12-08 21:33:40'),
+(279, 176, 75, 217, NULL, 1, 1.00, '2025-12-09 03:03:43', '2025-12-09 03:03:43'),
+(280, 178, 97, 287, NULL, 1, 10.00, '2025-12-09 03:17:22', '2025-12-09 03:17:22'),
+(281, 178, 99, 297, NULL, 1, 1.00, '2025-12-09 03:17:23', '2025-12-09 03:17:23'),
+(282, 179, 100, 299, NULL, 1, 2.00, '2025-12-09 03:33:48', '2025-12-09 03:33:48'),
+(283, 179, 101, 302, NULL, 0, 0.00, '2025-12-09 03:33:48', '2025-12-09 03:33:48'),
+(284, 179, 102, 304, NULL, 0, 0.00, '2025-12-09 03:33:48', '2025-12-09 03:33:48'),
+(285, 179, 103, 306, NULL, 1, 2.00, '2025-12-09 03:33:48', '2025-12-09 03:33:48'),
+(286, 179, 104, 307, NULL, 0, 0.00, '2025-12-09 03:33:48', '2025-12-09 03:33:48'),
+(287, 180, 70, 197, NULL, 1, 1.00, '2025-12-12 07:18:34', '2025-12-12 07:18:34'),
+(288, 181, 138, 423, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(289, 181, 139, 429, NULL, 0, 0.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(290, 181, 140, 433, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(291, 181, 141, 438, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(292, 181, 142, 439, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(293, 181, 143, 444, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(294, 181, 144, 449, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(295, 181, 145, 454, NULL, 1, 1.00, '2025-12-17 11:09:03', '2025-12-17 11:09:03'),
+(296, 182, 138, 423, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(297, 182, 139, 428, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(298, 182, 140, 433, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(299, 182, 141, 438, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(300, 182, 142, 439, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(301, 182, 143, 444, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(302, 182, 144, 449, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(303, 182, 145, 454, NULL, 1, 1.00, '2025-12-17 11:09:58', '2025-12-17 11:09:58'),
+(304, 190, 214, 642, NULL, 0, 0.00, '2026-01-22 10:24:53', '2026-01-22 10:24:53'),
+(305, 192, 214, 639, NULL, 1, 1.00, '2026-01-22 10:27:37', '2026-01-22 10:27:37');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_quiz_attempts`
+--
+
+CREATE TABLE `student_quiz_attempts` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(255) NOT NULL,
+  `quiz_id` bigint(20) UNSIGNED NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
+  `quarter_id` int(11) DEFAULT NULL,
+  `attempt_number` int(11) NOT NULL DEFAULT 1,
+  `score` decimal(5,2) DEFAULT NULL,
+  `total_points` decimal(5,2) NOT NULL,
+  `started_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `submitted_at` timestamp NULL DEFAULT NULL,
+  `status` enum('in_progress','submitted','graded') NOT NULL DEFAULT 'in_progress',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_quiz_attempts`
+--
+
+INSERT INTO `student_quiz_attempts` (`id`, `student_number`, `quiz_id`, `semester_id`, `quarter_id`, `attempt_number`, `score`, `total_points`, `started_at`, `submitted_at`, `status`, `created_at`, `updated_at`) VALUES
+(83, '202500082', 6, 1, 3, 1, 10.00, 12.00, '2025-12-02 02:15:00', '2025-12-02 02:45:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(84, '202500084', 6, 1, 3, 1, 11.00, 12.00, '2025-12-02 02:16:00', '2025-12-02 02:46:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(85, '202500085', 6, 1, 3, 1, 9.00, 12.00, '2025-12-02 02:17:00', '2025-12-02 02:47:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(86, '202500088', 6, 1, 3, 1, 12.00, 12.00, '2025-12-02 02:18:00', '2025-12-02 02:48:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(87, '202500092', 6, 1, 3, 1, 8.00, 12.00, '2025-12-02 02:19:00', '2025-12-02 02:49:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(88, '202500094', 6, 1, 3, 1, 10.00, 12.00, '2025-12-02 02:20:00', '2025-12-02 02:50:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(89, '202500095', 6, 1, 3, 1, 11.00, 12.00, '2025-12-02 02:21:00', '2025-12-02 02:51:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(90, '202500104', 6, 1, 3, 1, 9.00, 12.00, '2025-12-02 02:22:00', '2025-12-02 02:52:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(91, '202500127', 6, 1, 3, 1, 10.00, 12.00, '2025-12-02 02:23:00', '2025-12-02 02:53:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(92, '202500082', 7, 1, 3, 1, 8.00, 10.00, '2025-12-02 01:54:00', '2025-12-02 02:24:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(93, '202500084', 7, 1, 3, 1, 10.00, 10.00, '2025-12-02 01:55:00', '2025-12-02 02:25:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(94, '202500085', 7, 1, 3, 1, 8.00, 10.00, '2025-12-02 01:56:00', '2025-12-02 02:26:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(95, '202500088', 7, 1, 3, 1, 9.00, 10.00, '2025-12-02 01:57:00', '2025-12-02 02:27:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(96, '202500092', 7, 1, 3, 1, 7.00, 10.00, '2025-12-02 01:58:00', '2025-12-02 02:28:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(97, '202500094', 7, 1, 3, 1, 9.00, 10.00, '2025-12-02 01:59:00', '2025-12-02 02:29:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(98, '202500095', 7, 1, 3, 1, 10.00, 10.00, '2025-12-02 02:00:00', '2025-12-02 02:30:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(99, '202500104', 7, 1, 3, 1, 8.00, 10.00, '2025-12-02 02:01:00', '2025-12-02 02:31:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(100, '202500127', 7, 1, 3, 1, 9.00, 10.00, '2025-12-02 02:02:00', '2025-12-02 02:32:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(101, '202500082', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:15:00', '2025-12-01 02:45:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(102, '202500084', 8, 1, 3, 1, 4.00, 4.00, '2025-12-01 02:16:00', '2025-12-01 02:46:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(103, '202500085', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:17:00', '2025-12-01 02:47:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(104, '202500088', 8, 1, 3, 1, 4.00, 4.00, '2025-12-01 02:18:00', '2025-12-01 02:48:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(105, '202500092', 8, 1, 3, 1, 2.00, 4.00, '2025-12-01 02:19:00', '2025-12-01 02:49:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(106, '202500094', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:20:00', '2025-12-01 02:50:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(107, '202500095', 8, 1, 3, 1, 4.00, 4.00, '2025-12-01 02:21:00', '2025-12-01 02:51:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(108, '202500104', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:22:00', '2025-12-01 02:52:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(109, '202500127', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:23:00', '2025-12-01 02:53:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(110, '202500082', 9, 1, 3, 1, 2.00, 2.00, '2025-11-30 06:00:00', '2025-11-30 06:30:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(111, '202500084', 9, 1, 3, 1, 2.00, 2.00, '2025-11-30 06:01:00', '2025-11-30 06:31:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(112, '202500085', 9, 1, 3, 1, 1.00, 2.00, '2025-11-30 06:02:00', '2025-11-30 06:32:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(113, '202500088', 9, 1, 3, 1, 2.00, 2.00, '2025-11-30 06:03:00', '2025-11-30 06:33:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(114, '202500092', 9, 1, 3, 1, 1.00, 2.00, '2025-11-30 06:04:00', '2025-11-30 06:34:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(115, '202500094', 9, 1, 3, 1, 2.00, 2.00, '2025-11-30 06:05:00', '2025-11-30 06:35:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(116, '202500095', 9, 1, 3, 1, 2.00, 2.00, '2025-11-30 06:06:00', '2025-11-30 06:36:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(117, '202500104', 9, 1, 3, 1, 1.00, 2.00, '2025-11-30 06:07:00', '2025-11-30 06:37:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(118, '202500127', 9, 1, 3, 1, 2.00, 2.00, '2025-11-30 06:08:00', '2025-11-30 06:38:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(119, '202500082', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:00:00', '2025-11-29 07:20:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(120, '202500084', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:01:00', '2025-11-29 07:21:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(121, '202500085', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:02:00', '2025-11-29 07:22:00', 'graded', '2025-12-02 15:17:57', '2025-12-17 11:32:55'),
+(122, '202500088', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:03:00', '2025-11-29 07:23:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(123, '202500092', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:04:00', '2025-11-29 07:24:00', 'graded', '2025-12-02 15:17:57', '2025-12-17 11:32:53'),
+(124, '202500094', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:05:00', '2025-11-29 07:25:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(125, '202500095', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:06:00', '2025-11-29 07:26:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(126, '202500104', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:07:00', '2025-11-29 07:27:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(127, '202500127', 10, 1, 3, 1, 1.00, 1.00, '2025-11-29 07:08:00', '2025-11-29 07:28:00', 'graded', '2025-12-02 15:17:57', '2025-12-02 15:17:57'),
+(128, '202500083', 6, 1, 3, 1, 11.00, 12.00, '2025-12-02 02:20:00', '2025-12-02 02:45:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(129, '202500083', 7, 1, 3, 1, 8.00, 10.00, '2025-12-02 01:55:00', '2025-12-02 02:20:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(130, '202500083', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:20:00', '2025-12-01 02:40:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(131, '202500083', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:00:00', '2025-11-28 06:15:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(132, '202500083', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:10:00', '2025-12-01 06:25:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:32:51'),
+(133, '202500086', 6, 1, 3, 1, 11.00, 12.00, '2025-12-02 02:18:00', '2025-12-02 02:50:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(134, '202500086', 7, 1, 3, 1, 9.00, 10.00, '2025-12-02 01:58:00', '2025-12-02 02:25:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(135, '202500086', 8, 1, 3, 1, 4.00, 4.00, '2025-12-01 02:25:00', '2025-12-01 02:50:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(136, '202500086', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:05:00', '2025-11-28 06:20:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(137, '202500086', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:15:00', '2025-12-01 06:30:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:32:45'),
+(138, '202500087', 6, 1, 3, 1, 9.00, 12.00, '2025-12-02 02:22:00', '2025-12-02 02:55:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(139, '202500087', 7, 1, 3, 1, 8.00, 10.00, '2025-12-02 02:00:00', '2025-12-02 02:30:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(140, '202500087', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:30:00', '2025-12-01 02:55:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(141, '202500087', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:10:00', '2025-11-28 06:25:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(142, '202500087', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:20:00', '2025-12-01 06:35:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:32:43'),
+(143, '202500089', 6, 1, 3, 1, 10.00, 12.00, '2025-12-02 02:25:00', '2025-12-02 03:00:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(144, '202500089', 7, 1, 3, 1, 9.00, 10.00, '2025-12-02 02:05:00', '2025-12-02 02:35:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(145, '202500089', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:35:00', '2025-12-01 03:00:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(146, '202500089', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:15:00', '2025-11-28 06:30:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(147, '202500089', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:25:00', '2025-12-01 06:40:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(148, '202500091', 6, 1, 3, 1, 12.00, 12.00, '2025-12-02 02:15:00', '2025-12-02 02:40:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(149, '202500091', 7, 1, 3, 1, 10.00, 10.00, '2025-12-02 01:56:00', '2025-12-02 02:22:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(150, '202500091', 8, 1, 3, 1, 4.00, 4.00, '2025-12-01 02:18:00', '2025-12-01 02:45:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(151, '202500091', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:02:00', '2025-11-28 06:18:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(152, '202500091', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:05:00', '2025-12-01 06:20:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(153, '202500100', 6, 1, 3, 1, 10.00, 12.00, '2025-12-02 02:30:00', '2025-12-02 03:05:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(154, '202500100', 7, 1, 3, 1, 8.00, 10.00, '2025-12-02 02:10:00', '2025-12-02 02:40:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(155, '202500100', 8, 1, 3, 1, 4.00, 4.00, '2025-12-01 02:40:00', '2025-12-01 03:05:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(156, '202500100', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:20:00', '2025-11-28 06:35:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(157, '202500100', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:30:00', '2025-12-01 06:45:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:32:47'),
+(158, '202500171', 6, 1, 3, 1, 11.00, 12.00, '2025-12-02 02:28:00', '2025-12-02 03:02:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:35:14'),
+(159, '202500171', 7, 1, 3, 1, 9.00, 10.00, '2025-12-02 02:08:00', '2025-12-02 02:38:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(160, '202500171', 8, 1, 3, 1, 3.00, 4.00, '2025-12-01 02:38:00', '2025-12-01 03:03:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(161, '202500171', 9, 1, 3, 1, 2.00, 2.00, '2025-11-28 06:18:00', '2025-11-28 06:33:00', 'graded', '2025-12-02 15:40:30', '2025-12-02 15:40:30'),
+(162, '202500171', 10, 1, 3, 1, 1.00, 1.00, '2025-12-01 06:28:00', '2025-12-01 06:43:00', 'graded', '2025-12-02 15:40:30', '2025-12-17 11:32:48'),
+(206, '202500002', 11, 1, 4, 1, 0.00, 1.00, '2026-01-28 07:52:57', '2026-01-28 07:53:10', 'graded', '2026-01-28 07:52:57', '2026-01-28 07:53:10');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_semester_enrollment`
+--
+
+CREATE TABLE `student_semester_enrollment` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `student_number` varchar(100) NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `section_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `enrollment_status` enum('enrolled','dropped','completed') NOT NULL DEFAULT 'enrolled',
+  `enrollment_date` date DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_semester_enrollment`
+--
+
+INSERT INTO `student_semester_enrollment` (`id`, `student_number`, `semester_id`, `section_id`, `enrollment_status`, `enrollment_date`, `created_at`, `updated_at`) VALUES
+(1, '202500172', 1, 1, 'enrolled', '2025-12-07', '2025-12-06 18:33:53', '2025-12-06 18:33:53'),
+(2, '202500001', 1, 1, 'enrolled', '2025-11-07', '2025-11-06 20:10:02', '2025-12-06 09:17:41'),
+(3, '202500002', 1, 1, 'enrolled', '2025-11-06', '2025-11-06 12:49:13', '2025-11-06 12:49:13'),
+(4, '202500003', 1, 4, 'enrolled', '2025-11-08', '2025-11-07 22:03:01', '2025-11-20 15:10:57'),
+(5, '202500004', 1, 4, 'enrolled', '2025-11-08', '2025-11-07 22:03:01', '2025-11-07 22:03:01'),
+(7, '202500006', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(8, '202500007', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(9, '202500008', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(10, '202500009', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(11, '202500010', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(12, '202500011', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(13, '202500012', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(14, '202500013', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(15, '202500014', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(16, '202500015', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(17, '202500016', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(18, '202500017', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(19, '202500018', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(20, '202500019', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(21, '202500020', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(22, '202500021', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(23, '202500022', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(24, '202500023', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(25, '202500024', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(26, '202500025', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(27, '202500026', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(28, '202500027', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(29, '202500029', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:27', '2025-11-20 13:07:27'),
+(30, '202500030', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(31, '202500031', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(32, '202500032', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(33, '202500033', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(34, '202500034', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(35, '202500035', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(36, '202500036', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(37, '202500037', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(38, '202500038', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(39, '202500039', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(40, '202500040', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(41, '202500041', 1, 4, 'enrolled', '2025-11-21', '2025-11-20 13:07:33', '2025-11-20 13:07:33'),
+(42, '202500042', 1, 1, 'completed', '2025-11-27', '2025-11-27 06:02:15', '2025-12-06 19:02:27'),
+(43, '202500043', 1, 1, 'enrolled', '2025-11-27', '2025-11-27 06:05:37', '2025-11-27 06:06:57'),
+(44, '202500044', 1, 21, 'completed', '2025-11-27', '2025-11-27 06:18:02', '2026-01-23 12:05:56'),
+(45, '202500082', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(46, '202500083', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(47, '202500084', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(48, '202500085', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(49, '202500086', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(50, '202500087', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(51, '202500088', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(52, '202500089', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(53, '202500091', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(54, '202500092', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(55, '202500094', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:14', '2025-11-27 19:57:14'),
+(56, '202500095', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:23', '2025-11-27 19:57:23'),
+(57, '202500100', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:23', '2025-11-27 19:57:23'),
+(58, '202500104', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:23', '2025-11-27 19:57:23'),
+(59, '202500127', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 19:57:34', '2025-11-27 19:57:34'),
+(60, '202500171', 1, 1, 'enrolled', '2025-11-28', '2025-11-27 22:25:30', '2025-11-27 22:25:57'),
+(61, '202500043', 2, 4, 'enrolled', '2025-12-07', NULL, '2025-12-06 18:57:35'),
+(63, '202500042', 2, 4, 'enrolled', '2025-12-07', '2025-12-06 19:02:27', '2025-12-06 19:02:27'),
+(64, '202500173', 1, 1, 'enrolled', '2025-12-12', '2025-12-12 06:24:45', '2025-12-12 06:24:45'),
+(65, '202500174', 1, 1, 'enrolled', '2025-12-12', '2025-12-12 06:24:45', '2025-12-12 06:24:45'),
+(66, '202600001', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 09:02:33', '2026-01-21 09:02:33'),
+(67, '202600002', 1, 3, 'enrolled', '2026-01-21', '2026-01-21 09:52:08', '2026-01-21 09:52:08'),
+(68, '202600003', 1, 3, 'enrolled', '2026-01-21', '2026-01-21 09:52:08', '2026-01-21 09:52:08'),
+(69, '202600004', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 09:55:53', '2026-01-21 09:55:53'),
+(70, '202600005', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 09:55:53', '2026-01-21 09:55:53'),
+(71, '202600001', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
+(72, '202600002', 1, 2, 'enrolled', '2026-01-21', '2026-01-21 10:11:03', '2026-01-21 10:11:03'),
+(73, '202600003', 1, 2, 'enrolled', '2026-01-23', '2026-01-23 09:12:49', '2026-01-23 09:12:49'),
+(74, '202500044', 2, 5, 'enrolled', '2026-01-23', '2026-01-23 12:05:56', '2026-01-23 12:05:56'),
+(75, '202600004', 1, 2, 'enrolled', '2026-01-29', '2026-01-29 01:23:44', '2026-01-29 01:23:44'),
+(76, '202600005', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 13:19:28', '2026-02-01 13:19:28'),
+(77, '202600006', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 13:31:25', '2026-02-01 13:31:25'),
+(78, '202600007', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:01:14', '2026-02-01 14:01:14'),
+(79, '202600008', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:05:03', '2026-02-01 14:05:03'),
+(80, '202600009', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:08:08', '2026-02-01 14:08:08'),
+(81, '202600010', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:19:49', '2026-02-01 14:19:49'),
+(82, '202600011', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:26:16', '2026-02-01 14:26:16'),
+(83, '202600012', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:29:51', '2026-02-01 14:29:51'),
+(84, '202600013', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:41:25', '2026-02-01 14:41:25'),
+(85, '202600014', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:47:15', '2026-02-01 14:47:15'),
+(86, '202600015', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 14:47:43', '2026-02-01 14:47:43'),
+(87, '202600016', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:08:53', '2026-02-01 15:08:53'),
+(88, '202600017', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:10:00', '2026-02-01 15:10:00'),
+(89, '202600018', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:13:05', '2026-02-01 15:13:05'),
+(90, '202600019', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:19:51', '2026-02-01 15:19:51'),
+(91, '202600020', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:31:34', '2026-02-01 15:31:34'),
+(92, '202600021', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:36:21', '2026-02-01 15:36:21'),
+(93, '202600022', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:38:17', '2026-02-01 15:38:17'),
+(94, '202600023', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:41:44', '2026-02-01 15:41:44'),
+(95, '202600024', 1, 2, 'enrolled', '2026-02-01', '2026-02-01 15:51:21', '2026-02-01 15:51:21');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `teachers`
+--
+
+CREATE TABLE `teachers` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `first_name` varchar(255) NOT NULL,
+  `middle_name` varchar(255) NOT NULL,
+  `last_name` varchar(255) NOT NULL,
+  `gender` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(255) NOT NULL,
+  `user` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `passcode` varchar(255) DEFAULT NULL,
+  `profile_image` varchar(255) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `teachers`
+--
+
+INSERT INTO `teachers` (`id`, `first_name`, `middle_name`, `last_name`, `gender`, `email`, `phone`, `user`, `password`, `passcode`, `profile_image`, `status`, `created_at`, `updated_at`) VALUES
+(5, 'Quea', 'ue', 'Teacher', 'Male', 'qwe@gmail.com', 'wqe', 'Quea Teacher', '$2y$12$7w8dRQSVMpb4gSJczJczs.iPNHUiKmbH28ZcALziFjg1GPmYQcKq.', '', '', 1, '2025-10-23 16:49:49', '2025-11-10 23:42:58'),
+(6, 'John', 'a', 'Teacher', 'Female', 'johnteacher@gmail.com', '000', 'John Teacher', '$2y$12$nx8TBP5ctRGosv8mLZN9Je27/nlZawpRg2iKTPWGaXeQxDUAZGuue', '$2y$12$QqHepgDtYrVexAHClGYR2.Osp1feVNqQF6KaBiBE.m.pOrJ8GuWqa', '', 1, '2025-11-09 05:03:40', '2025-11-09 05:03:40'),
+(7, 'Johnny', 'M', 'Teacher', 'Female', 'john2teacher@gmail.com', '000', 'Johnny Teacher', '$2y$12$/ugQhNfHiomoqdoCtMiITeEZzUhwk1t0UCb01hjyFQROX0q7IzaNS', '', '', 1, '2025-11-27 14:08:05', '2025-11-27 14:08:28'),
+(8, 'Testd', 'ue', '#1', 'Female', 'Test1@gmail.com', '000', 'Testd #1', '$2y$12$rJUN8NlnL1sFS8zmpgqIme27kgqCmwkeVCaq9oTxNLhw3IdMMyg9q', '', '', 1, '2025-12-08 21:07:23', '2026-02-01 15:59:40'),
+(9, 'Yves', 'Y', 'Pablo', 'Male', 'yvescabrera@gmail.com', '0945343434', 'Yves Pablo', '$2y$12$ZDSdbPaMm/QAHQUN6LiJ1uCWKOXMLj/vmncrZtjki./TGIE5PGSzK', '', '', 1, '2025-12-12 06:28:21', '2025-12-12 06:29:00'),
+(10, 'Daphne', 'A', 'Manalasan', 'Female', 'daphne@gmail.com', '000', 'Daphne Manalasan', '$2y$12$RUUFC8WaBE603fUwDHpQ0eGCf.rRMnESl9yNG9.j5HRQYUA9ed3IC', NULL, '', 1, '2026-01-06 14:36:54', '2026-01-06 14:36:54'),
+(11, 'John Paul', 'A', 'Esguerra', 'Male', 'paul@gmail.com', '000', 'John Paul Esguerra', '$2y$12$yXMU1/dTPLemCCY9YH1TlOEXpLn6dIUwY5y05wAYKsVDrJDYu/qUK', '$2y$12$QqHepgDtYrVexAHClGYR2.Osp1feVNqQF6KaBiBE.m.pOrJ8GuWqq', '', 1, '2026-01-06 14:38:57', '2026-01-06 14:38:57'),
+(12, 'asdasd', 'asd', 'asd', 'Male', 'bersaminajohnkyle@gmail.com', 'asdas', 'asdasd asd', '$2y$12$UBLaR422Od0srxNAg87HVOMk7FPenS/Sjy6yJD.5dvGXTtiiJKWtC', '$2y$12$tWO/xf9mNxHIHbHfAxEy.e2MVrGiDQerJjrjNXxG4uPvS0dPBKMzG', '', 1, '2026-01-29 01:29:16', '2026-01-29 01:29:16'),
+(13, 'asdsad', 'd', 'asdasd', 'Female', 'daphneqwe@gmail.com', '000', 'asdsad asdasd', '$2y$12$Vy43N9jN9NiiLHvIKMpD2OE4KsEe/AXv9dbKS/Q/eb19b8E7H42sy', '$2y$12$RLE8ZNngz5KcpYn6IAJOA.uk4aIX61Liz/mbqloPu7cNpAvlT91nW', '', 1, '2026-02-01 13:29:32', '2026-02-01 13:29:32'),
+(14, 'asd', 'asdasd', 'asd', 'Female', 'asdqw@gmail.com', '00000', 'asd asd', '$2y$12$iMy1ztKBQFTeG9fwyGIFgunTlqOSRYjmf2sZKOoYG2LN1QptzPjSq', '$2y$12$e6D0.KhS0FvUwzhGADhFQ.LDNBsNAjOR32HIH847OCjEEo15iHlxC', '', 1, '2026-02-01 14:03:20', '2026-02-01 14:03:20'),
+(15, 'dfg', 'dfg', 'dfg', 'Female', 'dfg@gmail.com', 'dfg@gmail.com', 'dfg dfg', '$2y$12$KAn/LWNBDV0h5ftwFoBIHOnvEpWZhL3NSLc4s374OpWH.62dT6Qj.', '$2y$12$SckLPeZK.2uV7WhgWWOYG.beQ6Ifr9jnMz0yJiSXdtw/9goz5Sluy', '', 1, '2026-02-01 14:30:29', '2026-02-01 14:30:29'),
+(16, 'zxc', 'zc', 'zxc', 'Female', 'zxczxc@gmail.com', '123123', 'zxc zxc', '$2y$12$gpRVs5OA7tTDtL2OWDHiJuMAISBQwhhw2tGyIsG.bplvbs6grBq32', '$2y$12$IWA125MT5y3lYNeR0ayUbuVMxYQrdJkhXENftBhFBbuSyChuWyhh.', '', 1, '2026-02-01 15:53:22', '2026-02-01 15:53:22');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `teacher_class_matrix`
+--
+
+CREATE TABLE `teacher_class_matrix` (
+  `id` int(11) NOT NULL,
+  `teacher_id` int(11) NOT NULL,
+  `class_id` int(11) NOT NULL,
+  `semester_id` int(11) DEFAULT NULL,
+  `school_year_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `teacher_class_matrix`
+--
+
+INSERT INTO `teacher_class_matrix` (`id`, `teacher_id`, `class_id`, `semester_id`, `school_year_id`, `created_at`, `updated_at`) VALUES
+(4, 6, 3, 1, 1, '2026-01-08 13:56:23', '2026-01-08 13:57:06'),
+(5, 7, 1, 1, 1, '2026-01-08 13:56:23', '2026-01-08 13:57:07'),
+(7, 6, 2, 1, 1, '2026-01-08 13:56:23', '2026-01-08 13:57:08'),
+(8, 8, 4, 1, 1, '2026-01-08 13:56:23', '2026-01-08 13:57:09'),
+(9, 9, 10, 1, 1, '2026-01-08 13:56:23', '2026-01-08 13:57:11');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `teacher_password_matrix`
+--
+
+CREATE TABLE `teacher_password_matrix` (
+  `id` int(11) NOT NULL,
+  `teacher_id` int(11) NOT NULL,
+  `plain_password` varchar(100) NOT NULL,
+  `plain_passcode` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `teacher_password_matrix`
+--
+
+INSERT INTO `teacher_password_matrix` (`id`, `teacher_id`, `plain_password`, `plain_passcode`) VALUES
+(1, 6, 'Teacher@2025', 'AAA'),
+(2, 7, 'Teacher@2025', ''),
+(3, 8, 'Teacher@2025', ''),
+(4, 9, 'Teacher@2025', ''),
+(5, 10, 'Teacher@2026', 'DHPFO6'),
+(6, 11, 'Teacher@2026', 'OXDY3F'),
+(7, 12, 'Teacher@2026', 'IXHTGW'),
+(8, 13, 'Teacher@2026', 'BORUSK'),
+(9, 14, 'Teacher@2026', 'WM2UT8'),
+(10, 15, 'Teacher@2026', 'JZTJEA'),
+(11, 16, 'Teacher@2026', '2SMQ1N');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `first_name` varchar(255) NOT NULL,
+  `last_name` varchar(255) NOT NULL,
+  `user_name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role_id` int(11) NOT NULL DEFAULT 1,
+  `email_verified_at` timestamp NULL DEFAULT NULL,
+  `status` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `admins`
+--
+ALTER TABLE `admins`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `audit_login`
+--
+ALTER TABLE `audit_login`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `classes`
+--
+ALTER TABLE `classes`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `gradebook_columns`
+--
+ALTER TABLE `gradebook_columns`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `class_code` (`class_code`,`quarter_id`,`component_type`,`column_name`),
+  ADD KEY `quarter_id` (`quarter_id`);
+
+--
+-- Indexes for table `gradebook_scores`
+--
+ALTER TABLE `gradebook_scores`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `column_id` (`column_id`,`student_number`);
+
+--
+-- Indexes for table `grades_final`
+--
+ALTER TABLE `grades_final`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_final_grade` (`student_number`,`class_code`,`semester_id`);
+
+--
+-- Indexes for table `guardians`
+--
+ALTER TABLE `guardians`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `guardians_access_token_unique` (`access_token`);
+
+--
+-- Indexes for table `guardian_students`
+--
+ALTER TABLE `guardian_students`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `guardian_student_unique` (`guardian_id`,`student_number`);
+
+--
+-- Indexes for table `lectures`
+--
+ALTER TABLE `lectures`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_lesson_id` (`lesson_id`),
+  ADD KEY `idx_order` (`order_number`);
+
+--
+-- Indexes for table `lessons`
+--
+ALTER TABLE `lessons`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_class_id` (`class_id`),
+  ADD KEY `idx_order` (`order_number`);
+
+--
+-- Indexes for table `levels`
+--
+ALTER TABLE `levels`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `migrations`
+--
+ALTER TABLE `migrations`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `quarters`
+--
+ALTER TABLE `quarters`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `quarter_grades`
+--
+ALTER TABLE `quarter_grades`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_quarter_grade` (`student_number`,`class_code`,`quarter_id`);
+
+--
+-- Indexes for table `quizzes`
+--
+ALTER TABLE `quizzes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_lesson_id` (`lesson_id`);
+
+--
+-- Indexes for table `quiz_questions`
+--
+ALTER TABLE `quiz_questions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_quiz_id` (`quiz_id`),
+  ADD KEY `idx_order` (`order_number`);
+
+--
+-- Indexes for table `quiz_question_options`
+--
+ALTER TABLE `quiz_question_options`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_question_id` (`question_id`);
+
+--
+-- Indexes for table `quiz_short_answers`
+--
+ALTER TABLE `quiz_short_answers`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `school_years`
+--
+ALTER TABLE `school_years`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`);
+
+--
+-- Indexes for table `sections`
+--
+ALTER TABLE `sections`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `section_adviser_matrix`
+--
+ALTER TABLE `section_adviser_matrix`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `section_class_matrix`
+--
+ALTER TABLE `section_class_matrix`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_section_class_semester` (`section_id`,`class_id`,`semester_id`);
+
+--
+-- Indexes for table `semesters`
+--
+ALTER TABLE `semesters`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `school_year_id` (`school_year_id`);
+
+--
+-- Indexes for table `sessions`
+--
+ALTER TABLE `sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `sessions_user_id_index` (`user_id`),
+  ADD KEY `sessions_last_activity_index` (`last_activity`);
+
+--
+-- Indexes for table `strands`
+--
+ALTER TABLE `strands`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `students`
+--
+ALTER TABLE `students`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `students_student_number_unique` (`student_number`);
+
+--
+-- Indexes for table `student_class_matrix`
+--
+ALTER TABLE `student_class_matrix`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_student_class_semester` (`student_number`,`class_code`,`semester_id`);
+
+--
+-- Indexes for table `student_lecture_progress`
+--
+ALTER TABLE `student_lecture_progress`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `student_password_matrix`
+--
+ALTER TABLE `student_password_matrix`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `student_quiz_answers`
+--
+ALTER TABLE `student_quiz_answers`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_attempt_id` (`attempt_id`),
+  ADD KEY `idx_question_id` (`question_id`);
+
+--
+-- Indexes for table `student_quiz_attempts`
+--
+ALTER TABLE `student_quiz_attempts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_student_quiz` (`student_number`,`quiz_id`),
+  ADD KEY `idx_quiz_id` (`quiz_id`);
+
+--
+-- Indexes for table `student_semester_enrollment`
+--
+ALTER TABLE `student_semester_enrollment`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `teachers`
+--
+ALTER TABLE `teachers`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `teacher_class_matrix`
+--
+ALTER TABLE `teacher_class_matrix`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `teacher_password_matrix`
+--
+ALTER TABLE `teacher_password_matrix`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `users_email_unique` (`email`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `admins`
+--
+ALTER TABLE `admins`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `audit_login`
+--
+ALTER TABLE `audit_login`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `classes`
+--
+ALTER TABLE `classes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `gradebook_columns`
+--
+ALTER TABLE `gradebook_columns`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `gradebook_scores`
+--
+ALTER TABLE `gradebook_scores`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `grades_final`
+--
+ALTER TABLE `grades_final`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `guardians`
+--
+ALTER TABLE `guardians`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `guardian_students`
+--
+ALTER TABLE `guardian_students`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `lectures`
+--
+ALTER TABLE `lectures`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `lessons`
+--
+ALTER TABLE `lessons`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `levels`
+--
+ALTER TABLE `levels`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `migrations`
+--
+ALTER TABLE `migrations`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `quarters`
+--
+ALTER TABLE `quarters`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `quarter_grades`
+--
+ALTER TABLE `quarter_grades`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `quizzes`
+--
+ALTER TABLE `quizzes`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `quiz_questions`
+--
+ALTER TABLE `quiz_questions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `quiz_question_options`
+--
+ALTER TABLE `quiz_question_options`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `quiz_short_answers`
+--
+ALTER TABLE `quiz_short_answers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `school_years`
+--
+ALTER TABLE `school_years`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sections`
+--
+ALTER TABLE `sections`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `section_adviser_matrix`
+--
+ALTER TABLE `section_adviser_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `section_class_matrix`
+--
+ALTER TABLE `section_class_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `semesters`
+--
+ALTER TABLE `semesters`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `strands`
+--
+ALTER TABLE `strands`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `students`
+--
+ALTER TABLE `students`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_class_matrix`
+--
+ALTER TABLE `student_class_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_lecture_progress`
+--
+ALTER TABLE `student_lecture_progress`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_password_matrix`
+--
+ALTER TABLE `student_password_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_quiz_answers`
+--
+ALTER TABLE `student_quiz_answers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_quiz_attempts`
+--
+ALTER TABLE `student_quiz_attempts`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_semester_enrollment`
+--
+ALTER TABLE `student_semester_enrollment`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `teachers`
+--
+ALTER TABLE `teachers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `teacher_class_matrix`
+--
+ALTER TABLE `teacher_class_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `teacher_password_matrix`
+--
+ALTER TABLE `teacher_password_matrix`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `semesters`
+--
+ALTER TABLE `semesters`
+  ADD CONSTRAINT `semesters_ibfk_1` FOREIGN KEY (`school_year_id`) REFERENCES `school_years` (`id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

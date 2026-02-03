@@ -7,10 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\User_Management\Section;
 use App\Models\User_Management\Student;
+use App\Traits\AuditLogger;
 use Exception;
 
 class Section_Management extends MainController
 {
+    use AuditLogger;
+
     /**
      * Show the section assignment page
      */
@@ -525,6 +528,14 @@ class Section_Management extends MainController
             $semesterId = $request->semester_id;
             $assignedCount = 0;
             $errors = [];
+            $auditRecords = [];
+
+            // Get semester info for audit
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $semesterId)
+                ->select('semesters.name as semester_name', 'school_years.code as sy_code')
+                ->first();
 
             foreach ($request->students as $studentData) {
                 try {
@@ -539,6 +550,10 @@ class Section_Management extends MainController
                         continue;
                     }
 
+                    // Get section names for audit
+                    $oldSection = DB::table('sections')->where('id', $student->section_id)->first();
+                    $newSection = DB::table('sections')->where('id', $newSectionId)->first();
+
                     // Validate strand compatibility
                     $studentSection = DB::table('sections')->find($student->section_id);
                     $targetSection = DB::table('sections')->find($newSectionId);
@@ -547,6 +562,14 @@ class Section_Management extends MainController
                         $errors[] = "Student {$studentNumber} cannot be assigned to a different strand";
                         continue;
                     }
+
+                    // Store old values for audit
+                    $oldValues = [
+                        'section_id' => $student->section_id,
+                        'section_code' => $oldSection ? $oldSection->code : null,
+                        'section_name' => $oldSection ? $oldSection->name : null,
+                        'student_type' => $student->student_type,
+                    ];
 
                     // 1. Update student's section and type
                     $student->update([
@@ -644,6 +667,22 @@ class Section_Management extends MainController
                         }
                     }
 
+                    // Store audit record
+                    $auditRecords[] = [
+                        'student_number' => $studentNumber,
+                        'student_name' => trim($student->first_name . ' ' . $student->last_name),
+                        'old_values' => $oldValues,
+                        'new_values' => [
+                            'section_id' => $newSectionId,
+                            'section_code' => $newSection ? $newSection->code : null,
+                            'section_name' => $newSection ? $newSection->name : null,
+                            'student_type' => $studentType,
+                            'semester_id' => $semesterId,
+                            'semester_name' => $semester->semester_name ?? null,
+                            'school_year' => $semester->sy_code ?? null,
+                        ]
+                    ];
+
                     $assignedCount++;
 
                 } catch (Exception $e) {
@@ -652,6 +691,24 @@ class Section_Management extends MainController
                         'error' => $e->getMessage()
                     ]);
                 }
+            }
+
+            // Log audit for batch assignment
+            if (!empty($auditRecords)) {
+                $this->logAudit(
+                    'assigned',
+                    'students',
+                    null,
+                    "Bulk assigned {$assignedCount} student(s) to sections for {$semester->semester_name} {$semester->sy_code}",
+                    null,
+                    [
+                        'semester_id' => $semesterId,
+                        'semester_name' => $semester->semester_name ?? null,
+                        'school_year' => $semester->sy_code ?? null,
+                        'total_students' => $assignedCount,
+                        'assignments' => $auditRecords
+                    ]
+                );
             }
 
             DB::commit();

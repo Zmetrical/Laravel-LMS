@@ -10,10 +10,12 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\Class_Management\Classes;
+use App\Traits\AuditLogger;
 
 
 class Class_Management extends MainController
 {
+    use AuditLogger;
 
     /**
      * Generate unique class code
@@ -69,6 +71,22 @@ class Class_Management extends MainController
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // Audit log
+            $this->logAudit(
+                'created',
+                'classes',
+                (string)$class,
+                "Created class: {$request->class_name} ({$classCode})",
+                null,
+                [
+                    'class_code' => $classCode,
+                    'class_name' => $request->class_name,
+                    'ww_perc' => $request->ww_perc,
+                    'pt_perc' => $request->pt_perc,
+                    'qa_perce' => $request->qa_perce,
+                ]
+            );
 
             \Log::info('Class created successfully', [
                 'class_id' => $class,
@@ -132,6 +150,21 @@ class Class_Management extends MainController
 
             DB::beginTransaction();
 
+            // Store old values for audit
+            $oldValues = [
+                'class_name' => $class->class_name,
+                'ww_perc' => $class->ww_perc,
+                'pt_perc' => $class->pt_perc,
+                'qa_perce' => $class->qa_perce,
+            ];
+
+            $newValues = [
+                'class_name' => $request->class_name,
+                'ww_perc' => $request->ww_perc,
+                'pt_perc' => $request->pt_perc,
+                'qa_perce' => $request->qa_perce,
+            ];
+
             DB::table('classes')
                 ->where('id', $id)
                 ->update([
@@ -141,6 +174,16 @@ class Class_Management extends MainController
                     'qa_perce' => $request->qa_perce,
                     'updated_at' => now(),
                 ]);
+
+            // Audit log
+            $this->logAudit(
+                'updated',
+                'classes',
+                (string)$id,
+                "Updated class: {$request->class_name} ({$class->class_code})",
+                $oldValues,
+                $newValues
+            );
 
             \Log::info('Class updated successfully', [
                 'class_id' => $id,
@@ -301,6 +344,20 @@ class Class_Management extends MainController
                 'updated_at' => now(),
             ]);
 
+            // Audit log
+            $this->logAudit(
+                'created',
+                'strands',
+                (string)$strandId,
+                "Created strand: {$request->name} ({$request->code})",
+                null,
+                [
+                    'code' => strtoupper($request->code),
+                    'name' => $request->name,
+                    'status' => 1,
+                ]
+            );
+
             \Log::info('Strand created successfully', [
                 'strand_id' => $strandId,
                 'code' => $request->code,
@@ -348,6 +405,17 @@ class Class_Management extends MainController
 
             DB::beginTransaction();
 
+            // Store old values for audit
+            $oldValues = [
+                'code' => $strand->code,
+                'name' => $strand->name,
+            ];
+
+            $newValues = [
+                'code' => strtoupper($request->code),
+                'name' => $request->name,
+            ];
+
             DB::table('strands')
                 ->where('id', $id)
                 ->update([
@@ -355,6 +423,16 @@ class Class_Management extends MainController
                     'name' => $request->name,
                     'updated_at' => now(),
                 ]);
+
+            // Audit log
+            $this->logAudit(
+                'updated',
+                'strands',
+                (string)$id,
+                "Updated strand: {$request->name} ({$request->code})",
+                $oldValues,
+                $newValues
+            );
 
             \Log::info('Strand updated successfully', [
                 'strand_id' => $id,
@@ -595,6 +673,24 @@ class Class_Management extends MainController
                 'updated_at' => now(),
             ]);
 
+            // Audit log
+            $this->logAudit(
+                'created',
+                'sections',
+                (string)$sectionId,
+                "Created section: {$request->name} ({$code})",
+                null,
+                [
+                    'code' => $code,
+                    'name' => strtoupper($request->name),
+                    'strand_id' => $request->strand_id,
+                    'strand_name' => $strand->name,
+                    'level_id' => $request->level_id,
+                    'level_name' => $level->name,
+                    'status' => 1,
+                ]
+            );
+
             \Log::info('Section created successfully', [
                 'section_id' => $sectionId,
                 'code' => $code,
@@ -645,6 +741,10 @@ class Class_Management extends MainController
             $strand = DB::table('strands')->where('id', $request->strand_id)->first();
             $level = DB::table('levels')->where('id', $request->level_id)->first();
 
+            // Get old strand and level for audit
+            $oldStrand = DB::table('strands')->where('id', $section->strand_id)->first();
+            $oldLevel = DB::table('levels')->where('id', $section->level_id)->first();
+
             DB::beginTransaction();
 
             $strandChanged = $section->strand_id != $request->strand_id;
@@ -669,6 +769,25 @@ class Class_Management extends MainController
                 $code = $section->code;
             }
 
+            // Store old values for audit
+            $oldValues = [
+                'code' => $section->code,
+                'name' => $section->name,
+                'strand_id' => $section->strand_id,
+                'strand_name' => $oldStrand->name,
+                'level_id' => $section->level_id,
+                'level_name' => $oldLevel->name,
+            ];
+
+            $newValues = [
+                'code' => $code,
+                'name' => strtoupper($request->name),
+                'strand_id' => $request->strand_id,
+                'strand_name' => $strand->name,
+                'level_id' => $request->level_id,
+                'level_name' => $level->name,
+            ];
+
             DB::table('sections')
                 ->where('id', $id)
                 ->update([
@@ -678,6 +797,16 @@ class Class_Management extends MainController
                     'level_id' => $request->level_id,
                     'updated_at' => now(),
                 ]);
+
+            // Audit log
+            $this->logAudit(
+                'updated',
+                'sections',
+                (string)$id,
+                "Updated section: {$request->name} ({$code})",
+                $oldValues,
+                $newValues
+            );
 
             \Log::info('Section updated successfully', [
                 'section_id' => $id,
@@ -823,15 +952,44 @@ class Class_Management extends MainController
                 ], 422);
             }
 
+            // Get section, class, and semester details for audit
+            $section = DB::table('sections')->where('id', $request->section_id)->first();
+            $class = DB::table('classes')->where('id', $request->class_id)->first();
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $request->semester_id)
+                ->select('semesters.*', 'school_years.code as sy_code')
+                ->first();
+
             DB::beginTransaction();
 
-            DB::table('section_class_matrix')->insert([
+            $matrixId = DB::table('section_class_matrix')->insertGetId([
                 'section_id' => $request->section_id,
                 'class_id' => $request->class_id,
                 'semester_id' => $request->semester_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // Audit log
+            $this->logAudit(
+                'assigned',
+                'section_class_matrix',
+                (string)$matrixId,
+                "Assigned class '{$class->class_name}' to section '{$section->name}' for {$semester->name} {$semester->sy_code}",
+                null,
+                [
+                    'section_id' => $request->section_id,
+                    'section_code' => $section->code,
+                    'section_name' => $section->name,
+                    'class_id' => $request->class_id,
+                    'class_code' => $class->class_code,
+                    'class_name' => $class->class_name,
+                    'semester_id' => $request->semester_id,
+                    'semester_name' => $semester->name,
+                    'school_year' => $semester->sy_code,
+                ]
+            );
 
             \Log::info('Class assigned to section', [
                 'section_id' => $request->section_id,
@@ -875,9 +1033,41 @@ class Class_Management extends MainController
                 ], 404);
             }
 
+            // Get details for audit log
+            $section = DB::table('sections')->where('id', $matrix->section_id)->first();
+            $class = DB::table('classes')->where('id', $matrix->class_id)->first();
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $matrix->semester_id)
+                ->select('semesters.*', 'school_years.code as sy_code')
+                ->first();
+
             DB::beginTransaction();
 
+            // Store old values for audit
+            $oldValues = [
+                'section_id' => $matrix->section_id,
+                'section_code' => $section->code,
+                'section_name' => $section->name,
+                'class_id' => $matrix->class_id,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'semester_id' => $matrix->semester_id,
+                'semester_name' => $semester->name,
+                'school_year' => $semester->sy_code,
+            ];
+
             DB::table('section_class_matrix')->where('id', $matrixId)->delete();
+
+            // Audit log
+            $this->logAudit(
+                'unassigned',
+                'section_class_matrix',
+                (string)$matrixId,
+                "Removed class '{$class->class_name}' from section '{$section->name}' for {$semester->name} {$semester->sy_code}",
+                $oldValues,
+                null
+            );
 
             \Log::info('Class removed from section', [
                 'matrix_id' => $matrixId,

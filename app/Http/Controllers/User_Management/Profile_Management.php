@@ -11,10 +11,13 @@ use App\Models\User_Management\Teacher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use App\Traits\AuditLogger;
 
 use Exception;
 class Profile_Management extends MainController
 {
+    use AuditLogger;
+
 // View only
 public function show_student($id)
 {
@@ -178,6 +181,14 @@ public function edit_student($id)
         try {
             $student = Student::findOrFail($id);
 
+            // Store old values for audit
+            $oldValues = [
+                'first_name' => $student->first_name,
+                'middle_name' => $student->middle_name,
+                'last_name' => $student->last_name,
+                'email' => $student->email,
+            ];
+
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'middle_name' => 'nullable|string|max:255',
@@ -196,10 +207,34 @@ public function edit_student($id)
                 $imageName = 'student_' . $id . '_' . time() . '.' . $image->extension();
                 $imagePath = $image->storeAs('students', $imageName, 'public');
                 $validated['profile_image'] = $imagePath;
+                
+                $oldValues['profile_image'] = $student->profile_image;
             }
 
             // === Update DB  ===
             $student->update($validated);
+
+            // Prepare new values for audit
+            $newValues = [
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'] ?? '',
+            ];
+
+            if (isset($validated['profile_image'])) {
+                $newValues['profile_image'] = $validated['profile_image'];
+            }
+
+            // Audit log
+            $this->logAudit(
+                'updated',
+                'students',
+                $student->student_number,
+                "Updated student profile: {$student->first_name} {$student->last_name} ({$student->student_number})",
+                $this->formatAuditValues($oldValues),
+                $this->formatAuditValues($newValues)
+            );
 
             // === Return Response  ===
             if ($request->ajax() || $request->wantsJson()) {
@@ -356,6 +391,16 @@ public function edit_student($id)
                 ], 404);
             }
 
+            // Store old values for audit
+            $oldValues = [
+                'first_name' => $teacher->first_name,
+                'last_name' => $teacher->last_name,
+                'middle_name' => $teacher->middle_name,
+                'email' => $teacher->email,
+                'phone' => $teacher->phone,
+                'gender' => $teacher->gender,
+            ];
+
             if ($request->hasFile('profile_image')) {
                 if ($teacher->profile_image) {
                     Storage::disk('public')->delete($teacher->profile_image);
@@ -364,6 +409,8 @@ public function edit_student($id)
                 $imageName = 'teacher_' . $id . '_' . time() . '.' . $image->extension();
                 $imagePath = $image->storeAs('teachers', $imageName, 'public');
                 $validated['profile_image'] = $imagePath;
+                
+                $oldValues['profile_image'] = $teacher->profile_image;
             }
 
             $teacher->update([
@@ -377,6 +424,30 @@ public function edit_student($id)
                 'profile_image' => $validated['profile_image'] ?? $teacher->profile_image,
                 'updated_at' => now(),
             ]);
+
+            // Prepare new values for audit
+            $newValues = [
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'gender' => $validated['gender'] ?? $teacher->gender,
+            ];
+
+            if (isset($validated['profile_image'])) {
+                $newValues['profile_image'] = $validated['profile_image'];
+            }
+
+            // Audit log
+            $this->logAudit(
+                'updated',
+                'teachers',
+                (string)$teacher->id,
+                "Updated teacher profile: {$teacher->first_name} {$teacher->last_name} ({$teacher->email})",
+                $this->formatAuditValues($oldValues),
+                $this->formatAuditValues($newValues)
+            );
 
             DB::commit();
 
@@ -446,6 +517,16 @@ public function getCredentials(Request $request, $id)
             $credential = $passwordMatrix ? $passwordMatrix->plain_passcode : 'Not set';
         }
 
+        // Audit log for viewing credentials
+        $this->logAudit(
+            'viewed',
+            'teachers',
+            (string)$id,
+            "Viewed teacher {$type}: {$teacher->first_name} {$teacher->last_name} ({$teacher->email})",
+            null,
+            ['credential_type' => $type]
+        );
+
         return response()->json([
             'success' => true,
             'credential' => $credential
@@ -484,10 +565,28 @@ public function getCredentials(Request $request, $id)
                 ], 422);
             }
 
+            // Update password
             $teacher->update([
                 'password' => Hash::make($validated['new_password']),
                 'updated_at' => now(),
             ]);
+
+            // Update password matrix
+            DB::table('teacher_password_matrix')
+                ->updateOrInsert(
+                    ['teacher_id' => $id],
+                    ['plain_password' => $validated['new_password']]
+                );
+
+            // Audit log - password change (don't log actual passwords)
+            $this->logAudit(
+                'updated',
+                'teachers',
+                (string)$teacher->id,
+                "Changed password: {$teacher->first_name} {$teacher->last_name} ({$teacher->email})",
+                ['password' => '[REDACTED]'],
+                ['password' => '[REDACTED]']
+            );
 
             DB::commit();
 
