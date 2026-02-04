@@ -17,6 +17,8 @@ trait AuditLogger
      * @param string|null $description - Human readable description
      * @param array|null $oldValues - Previous values for updates
      * @param array|null $newValues - New values for creates/updates
+     * @param string|null $userType - Optional: explicit user type (admin, teacher, student, guardian, system)
+     * @param string|null $userIdentifier - Optional: explicit user identifier
      * @return void
      */
     protected function logAudit(
@@ -25,42 +27,58 @@ trait AuditLogger
         ?string $recordId = null,
         ?string $description = null,
         ?array $oldValues = null,
-        ?array $newValues = null
+        ?array $newValues = null,
+        ?string $userType = null,
+        ?string $userIdentifier = null
     ) {
         try {
-            // Determine user type and identifier
-            $userType = 'system';
-            $userIdentifier = 'system';
+            // Use explicit parameters if provided, otherwise auto-detect
+            if ($userType && $userIdentifier) {
+                $finalUserType = $userType;
+                $finalUserIdentifier = $userIdentifier;
+            } else {
+                // Auto-detect from Laravel Auth guards
+                $finalUserType = 'system';
+                $finalUserIdentifier = 'system';
 
-            // Check Laravel Auth guards FIRST (this is what you're actually using)
-            if (Auth::guard('admin')->check()) {
-                $userType = 'admin';
-                $admin = Auth::guard('admin')->user();
-                $userIdentifier = $admin->email ?? $admin->admin_name ?? 'admin_' . ($admin->id ?? 'unknown');
-            } 
-            // Check teacher guard
-            elseif (Auth::guard('teacher')->check()) {
-                $userType = 'teacher';
-                $teacher = Auth::guard('teacher')->user();
-                $userIdentifier = $teacher->email ?? 'teacher_' . ($teacher->id ?? 'unknown');
-            } 
-            // Check student guard
-            elseif (Auth::guard('student')->check()) {
-                $userType = 'student';
-                $student = Auth::guard('student')->user();
-                $userIdentifier = $student->student_number ?? 'student_' . ($student->id ?? 'unknown');
+                // Check Laravel Auth guards in order
+                if (Auth::guard('teacher')->check()) {
+                    $finalUserType = 'teacher';
+                    $teacher = Auth::guard('teacher')->user();
+                    $finalUserIdentifier = $teacher->email ?? 'teacher_' . ($teacher->id ?? 'unknown');
+                } 
+                elseif (Auth::guard('admin')->check()) {
+                    $finalUserType = 'admin';
+                    $admin = Auth::guard('admin')->user();
+                    $finalUserIdentifier = $admin->email ?? $admin->admin_name ?? 'admin_' . ($admin->id ?? 'unknown');
+                } 
+                elseif (Auth::guard('student')->check()) {
+                    $finalUserType = 'student';
+                    $student = Auth::guard('student')->user();
+                    $finalUserIdentifier = $student->student_number ?? 'student_' . ($student->id ?? 'unknown');
+                }
+                elseif (Auth::check()) {
+                    $finalUserType = 'admin';
+                    $user = Auth::user();
+                    $finalUserIdentifier = $user->email ?? $user->user_name ?? 'user_' . ($user->id ?? 'unknown');
+                }
             }
-            // Check default guard (fallback)
-            elseif (Auth::check()) {
-                $userType = 'admin';
-                $user = Auth::user();
-                $userIdentifier = $user->email ?? $user->user_name ?? 'user_' . ($user->id ?? 'unknown');
+
+            // Validate user type
+            $validUserTypes = ['admin', 'teacher', 'student', 'guardian', 'system'];
+            if (!in_array($finalUserType, $validUserTypes)) {
+                Log::warning('Invalid user type provided to audit log', [
+                    'provided_type' => $finalUserType,
+                    'action' => $action,
+                    'module' => $module
+                ]);
+                $finalUserType = 'system';
             }
 
             // Prepare data for insertion
             $auditData = [
-                'user_type' => $userType,
-                'user_identifier' => $userIdentifier,
+                'user_type' => $finalUserType,
+                'user_identifier' => $finalUserIdentifier,
                 'action' => $action,
                 'module' => $module,
                 'record_id' => $recordId,
@@ -88,7 +106,7 @@ trait AuditLogger
     }
 
     /**
-     * Format values for audit logging (remove sensitive data)
+     * Format values for audit logging 
      *
      * @param array $values
      * @param array $sensitiveFields
@@ -106,7 +124,7 @@ trait AuditLogger
     }
 
     /**
-     * Log guardian action (for token-based access, not authentication)
+     * Log guardian action 
      * 
      * @param string $guardianEmail
      * @param string $action
@@ -124,26 +142,16 @@ trait AuditLogger
         ?string $description = null,
         ?array $newValues = null
     ) {
-        try {
-            DB::table('audit_logs')->insert([
-                'user_type' => 'guardian',
-                'user_identifier' => $guardianEmail ?: 'guardian_unknown',
-                'action' => $action,
-                'module' => $module,
-                'record_id' => $recordId,
-                'description' => $description,
-                'old_values' => null,
-                'new_values' => $newValues ? json_encode($newValues) : null,
-                'ip_address' => request()->ip(),
-                'created_at' => now(),
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Guardian action logging failed', [
-                'error' => $e->getMessage(),
-                'guardian' => $guardianEmail,
-                'action' => $action
-            ]);
-        }
+        // Use the main logAudit method with explicit guardian type
+        $this->logAudit(
+            $action,
+            $module,
+            $recordId,
+            $description,
+            null,
+            $newValues,
+            'guardian',
+            $guardianEmail ?: 'guardian_unknown'
+        );
     }
 }

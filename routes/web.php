@@ -20,6 +20,7 @@ use App\Http\Controllers\Class_Management\Quiz_Submit;
 use App\Http\Controllers\Grade_Management\Grade_Management;
 
 use App\Http\Controllers\Audit\AuditLogController;
+use App\Http\Controllers\Audit\TeacherAuditController;
 
 
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
@@ -393,6 +394,9 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
 
 
+        Route::get('/audit/my-logs',        [TeacherAuditController::class, 'index']         )->name('audit.my_logs');
+        Route::get('/audit/my-logs/data',   [TeacherAuditController::class, 'getMyLogs']     )->name('audit.my_logs.data');
+        Route::get('/audit/my-logs/{id}',   [TeacherAuditController::class, 'getMyLogDetail'])->name('audit.my_logs.detail');
 
 
         // Class Pages

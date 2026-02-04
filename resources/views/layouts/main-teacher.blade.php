@@ -215,11 +215,19 @@
                                 </a>
                             </li>
 
-                                <li class="nav-item">
+                            <li class="nav-item">
                                 <a href="{{ route('teacher.adviser.grade.cards') }}"
                                     class="nav-link {{ Request::routeIs('teacher.adviser.grade.cards') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-th-list"></i>      
                                     <p>My Students</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('teacher.audit.my_logs') }}"
+                                    class="nav-link {{ Request::routeIs('teacher.audit.my_logs') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-th-list"></i>
+                                    <p>My Logs</p>
                                 </a>
                             </li>
                         </ul>

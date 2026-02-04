@@ -7,9 +7,12 @@ use App\Http\Controllers\MainController;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\AuditLogger;
 
 class GradebookEditController extends MainController
 {
+    use AuditLogger;
+
     /**
      * Verify passcode before allowing edit access
      */
@@ -25,7 +28,7 @@ class GradebookEditController extends MainController
             ->where('teacher_id', $teacher->id)
             ->value('plain_passcode');
 
-        if ($request->passcode === $plainPasscode) {
+        if ($request->input('passcode') === $plainPasscode) {
             session([
                 'gradebook_passcode_verified_' . $classId => true,
                 'gradebook_passcode_time_' . $classId => now()
@@ -90,6 +93,22 @@ class GradebookEditController extends MainController
             ->select('sec.id', 'sec.name', 'sec.code')
             ->get();
 
+        // Audit log — viewed
+        $this->logAudit(
+            'viewed',
+            'gradebook_edit',
+            (string)$classId,
+            "Accessed gradebook edit page for class '{$class->class_code} - {$class->class_name}'",
+            null,
+            [
+                'class_id'   => $classId,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+            ],
+            'teacher',
+            $teacher->email
+        );
+
         $data = [
             'scripts' => ['gradebook/edit_gradebook.js'],
             'classId' => $classId,
@@ -107,6 +126,8 @@ class GradebookEditController extends MainController
     public function toggleColumn(Request $request, $classId, $columnId)
     {
         try {
+            $teacher = Auth::guard('teacher')->user();
+
             $validated = $request->validate([
                 'is_active' => 'required|boolean',
                 'max_points' => 'nullable|integer|min:1',
@@ -118,6 +139,14 @@ class GradebookEditController extends MainController
             if (!$column) {
                 return response()->json(['success' => false, 'message' => 'Column not found'], 404);
             }
+
+            // Capture old values for audit
+            $oldValues = [
+                'is_active'   => (bool)$column->is_active,
+                'max_points'  => $column->max_points,
+                'quiz_id'     => $column->quiz_id,
+                'source_type' => $column->source_type,
+            ];
 
             $updateData = [
                 'is_active' => $validated['is_active'],
@@ -142,6 +171,26 @@ class GradebookEditController extends MainController
                 ->where('id', $columnId)
                 ->update($updateData);
 
+            // Audit log — enabled / disabled
+            $action = $validated['is_active'] ? 'enabled' : 'disabled';
+
+            $this->logAudit(
+                $action,
+                'gradebook_columns',
+                (string)$columnId,
+                "{$action} column '{$column->column_name}' ({$column->component_type}) in class ID {$classId}",
+                $oldValues,
+                [
+                    'is_active'   => (bool)$validated['is_active'],
+                    'max_points'  => $updateData['max_points']  ?? $column->max_points,
+                    'quiz_id'     => $updateData['quiz_id']     ?? $column->quiz_id,
+                    'source_type' => $updateData['source_type'] ?? $column->source_type,
+                    'class_id'    => $classId,
+                ],
+                'teacher',
+                $teacher->email
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => $validated['is_active'] ? 'Column enabled successfully' : 'Column disabled successfully'
@@ -161,12 +210,21 @@ class GradebookEditController extends MainController
     public function updateColumn(Request $request, $classId, $columnId)
     {
         try {
+            $teacher = Auth::guard('teacher')->user();
+
             $validated = $request->validate([
                 'max_points' => 'required|integer|min:1',
                 'quiz_id' => 'nullable|exists:quizzes,id'
             ]);
 
             $column = DB::table('gradebook_columns')->where('id', $columnId)->first();
+
+            // Capture old values for audit
+            $oldValues = [
+                'max_points'  => $column->max_points,
+                'quiz_id'     => $column->quiz_id,
+                'source_type' => $column->source_type,
+            ];
 
             $updateData = [
                 'max_points' => $validated['max_points'],
@@ -184,6 +242,23 @@ class GradebookEditController extends MainController
             DB::table('gradebook_columns')
                 ->where('id', $columnId)
                 ->update($updateData);
+
+            // Audit log — updated
+            $this->logAudit(
+                'updated',
+                'gradebook_columns',
+                (string)$columnId,
+                "Updated column '{$column->column_name}' ({$column->component_type}) in class ID {$classId}",
+                $oldValues,
+                [
+                    'max_points'  => $updateData['max_points'],
+                    'quiz_id'     => $updateData['quiz_id'],
+                    'source_type' => $updateData['source_type'],
+                    'class_id'    => $classId,
+                ],
+                'teacher',
+                $teacher->email
+            );
 
             return response()->json([
                 'success' => true,
@@ -204,12 +279,31 @@ class GradebookEditController extends MainController
     public function batchUpdateScores(Request $request, $classId)
     {
         try {
+            $teacher = Auth::guard('teacher')->user();
+
             $validated = $request->validate([
                 'scores' => 'required|array',
                 'scores.*.column_id' => 'required|exists:gradebook_columns,id',
                 'scores.*.student_number' => 'required|exists:students,student_number',
                 'scores.*.score' => 'nullable|numeric|min:0'
             ]);
+
+            $class = DB::table('classes')->where('id', $classId)->first();
+
+            // Collect old scores for audit before overwriting
+            $oldScoresMap = [];
+            foreach ($validated['scores'] as $scoreData) {
+                $existing = DB::table('gradebook_scores')
+                    ->where('column_id', $scoreData['column_id'])
+                    ->where('student_number', $scoreData['student_number'])
+                    ->first();
+
+                $oldScoresMap[] = [
+                    'column_id'      => $scoreData['column_id'],
+                    'student_number' => $scoreData['student_number'],
+                    'score'          => $existing ? $existing->score : null,
+                ];
+            }
 
             DB::beginTransaction();
 
@@ -228,6 +322,24 @@ class GradebookEditController extends MainController
             }
 
             DB::commit();
+
+            // Audit log — updated scores
+            $this->logAudit(
+                'updated',
+                'gradebook_scores',
+                (string)$classId,
+                "Batch updated " . count($validated['scores']) . " score(s) for class '{$class->class_code} - {$class->class_name}'",
+                $oldScoresMap,
+                [
+                    'class_id'    => $classId,
+                    'class_code'  => $class->class_code,
+                    'class_name'  => $class->class_name,
+                    'scores'      => $validated['scores'],
+                    'total_count' => count($validated['scores']),
+                ],
+                'teacher',
+                $teacher->email
+            );
 
             return response()->json([
                 'success' => true,
@@ -323,6 +435,24 @@ class GradebookEditController extends MainController
             }
 
             DB::commit();
+
+            // Audit log — final grades submitted
+            $this->logAudit(
+                'submitted',
+                'grades_final',
+                (string)$classId,
+                "Submitted final grades for class '{$class->class_code} - {$class->class_name}', section ID {$validated['section_id']}",
+                null,
+                [
+                    'class_id'    => $classId,
+                    'class_code'  => $class->class_code,
+                    'semester_id' => $semesterId,
+                    'section_id'  => $validated['section_id'],
+                    'total_count' => count($validated['grades']),
+                ],
+                'teacher',
+                $teacher->email
+            );
 
             return response()->json([
                 'success' => true,
