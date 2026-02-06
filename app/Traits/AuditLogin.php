@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Request;
 
 trait AuditLogin
 {
@@ -23,8 +22,7 @@ trait AuditLogin
         return DB::table('audit_login')->insertGetId([
             'user_type' => $userType,
             'user_identifier' => $userIdentifier,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
+            'ip_address' => request()->ip(),
             'session_id' => $sessionId,
             'created_at' => now()
         ]);
@@ -35,7 +33,7 @@ trait AuditLogin
      *
      * @param int $loginId
      */
-    protected function logLogout(int $loginId)
+    protected function logLogout(int $loginId): void
     {
         DB::table('audit_login')
             ->where('id', $loginId)
@@ -49,7 +47,7 @@ trait AuditLogin
      *
      * @param string $sessionId
      */
-    protected function logLogoutBySession(string $sessionId)
+    protected function logLogoutBySession(string $sessionId): void
     {
         DB::table('audit_login')
             ->where('session_id', $sessionId)

@@ -83,6 +83,32 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
         });
 
+        // Semester Management Routes
+        Route::prefix('semesters')->group(function () {
+            Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
+            Route::get('/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
+            Route::post('/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
+            Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
+            Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
+            Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
+            Route::get('/{id}/quarters', [Year_Management::class, 'getQuarters'])
+                ->name('semesters.quarters');
+            Route::get('/{semesterId}/quarters', [Year_Management::class, 'getQuartersData'])->name('quarters.list');
+            Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
+
+            Route::get(
+                '/semesters/{id}/sections',
+                [Year_Management::class, 'getSemesterSections']
+            )
+                ->name('semesters.sections');
+
+            Route::get(
+                '/semesters/{semesterId}/sections/{sectionId}/enrollment',
+                [Year_Management::class, 'getSectionEnrollment']
+            )
+                ->name('sections.enrollment');
+        });
+
         Route::prefix('audit')->name('audit.')->group(function () {
             // Admin Audit Logs
             Route::get('/admin', [AuditLogController::class, 'adminIndex'])->name('admin.index');
@@ -152,19 +178,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('sections.class-grades');
 
 
-        // Semester Management Routes
-        Route::prefix('semesters')->group(function () {
-            Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
-            Route::get('/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
-            Route::post('/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
-            Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
-            Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
-            Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
-            Route::get('/{id}/quarters', [Year_Management::class, 'getQuarters'])
-                ->name('semesters.quarters');
-            Route::get('/{semesterId}/quarters', [Year_Management::class, 'getQuartersData'])->name('quarters.list');
-            Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
-        });
+
 
         Route::prefix('grades')->name('grades.')->group(function () {
             Route::get('/list', [Grade_Management::class, 'list_grades'])->name('list');
@@ -392,10 +406,10 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::get('/profile', [TeacherController::class, 'show_profile'])->name('profile');
 
 
-        Route::get('/audit/my-logs',        [TeacherAuditController::class, 'index']         )->name('audit.my_logs');
-        Route::get('/audit/my-logs/data',   [TeacherAuditController::class, 'getMyLogs']     )->name('audit.my_logs.data');
+        Route::get('/audit/my-logs',        [TeacherAuditController::class, 'index'])->name('audit.my_logs');
+        Route::get('/audit/my-logs/data',   [TeacherAuditController::class, 'getMyLogs'])->name('audit.my_logs.data');
         Route::get('/audit/my-logs/{id}',   [TeacherAuditController::class, 'getMyLogDetail'])->name('audit.my_logs.detail');
-    
+
         Route::prefix('audit/student-logs')->name('audit.student_logs.')->group(function () {
             Route::get('/', [StudentAuditController::class, 'index'])->name('index');
             Route::get('/data', [StudentAuditController::class, 'getStudentLogs'])->name('data');

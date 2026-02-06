@@ -3,13 +3,14 @@ $(document).ready(function () {
     let semesters = [];
     let quarters = [];
     let selectedSemesterId = null;
+    let selectedSectionId = null;
+    let selectedSectionName = null;
     let selectedClassCode = null;
-    let selectedClassName = null;
     let selectedQuarter = 'final';
     let allStudents = [];
-    let allSections = [];
+    let allClasses = [];
+    let filteredStudents = [];
 
-    // Check if school year ID is provided
     if (!SCHOOL_YEAR_ID) {
         Swal.fire({
             icon: 'error',
@@ -22,11 +23,9 @@ $(document).ready(function () {
         return;
     }
 
-    // Initialize
     loadSchoolYear();
     loadSemesters();
 
-    // Load School Year
     function loadSchoolYear() {
         $('#schoolYearLoading').show();
         $('#schoolYearInfo').hide();
@@ -62,10 +61,8 @@ $(document).ready(function () {
         });
     }
 
-    // Display School Year
     function displaySchoolYear() {
         $('#syDisplay').text(`SY ${currentSchoolYear.year_start}-${currentSchoolYear.year_end}`);
-        $('#codeDisplay').text(currentSchoolYear.code);
         
         const badgeClass = getStatusBadgeClass(currentSchoolYear.status);
         $('#statusBadge').attr('class', `badge badge-lg ${badgeClass}`)
@@ -75,7 +72,6 @@ $(document).ready(function () {
         $('#schoolYearInfo').show();
     }
 
-    // Load Semesters
     function loadSemesters() {
         $('#semestersLoading').show();
         $('#semestersList').hide();
@@ -93,7 +89,6 @@ $(document).ready(function () {
                     displaySemesters();
                     $('#semestersList').show();
                     
-                    // Auto-select active semester or first
                     const activeSem = semesters.find(s => s.status === 'active');
                     if (activeSem) {
                         selectSemester(activeSem.id);
@@ -112,7 +107,6 @@ $(document).ready(function () {
         });
     }
 
-    // Display Semesters
     function displaySemesters() {
         const container = $('#semestersList');
         container.empty();
@@ -145,7 +139,6 @@ $(document).ready(function () {
             container.append(item);
         });
 
-        // Click handlers
         container.find('.semester-item').click(function (e) {
             e.preventDefault();
             const semesterId = $(this).data('semester-id');
@@ -153,119 +146,158 @@ $(document).ready(function () {
         });
     }
 
-    // Select Semester
     function selectSemester(semesterId) {
         selectedSemesterId = semesterId;
         const semester = semesters.find(s => s.id === semesterId);
         
         if (!semester) return;
 
-        // Update selection in list
         $('.semester-item').removeClass('active');
         $(`.semester-item[data-semester-id="${semesterId}"]`).addClass('active');
 
-        // Reset selected class and quarter
+        selectedSectionId = null;
+        selectedSectionName = null;
         selectedClassCode = null;
-        selectedClassName = null;
-        selectedQuarter = 'final';
         allStudents = [];
-        allSections = [];
+        allClasses = [];
+        filteredStudents = [];
         quarters = [];
 
-        // Hide filters and quarter tabs
         $('#filtersSection').hide();
-        $('#quarterTabsSection').hide();
         resetFilters();
-        resetQuarterTabs();
 
-        // Show classes card and hide students
-        $('#classesCard').show();
+        $('#sectionsCard').show();
         $('#emptyState').show();
         $('#studentsContent').hide();
         $('#noStudents').hide();
         $('#studentsLoading').hide();
 
-        // Load classes for this semester
-        loadSemesterClasses(semesterId);
+        loadSemesterSections(semesterId);
     }
 
-    // Load Semester Classes
-    function loadSemesterClasses(semesterId) {
-        $('#classesLoading').show();
-        $('#classesTable').hide();
-        $('#noClasses').hide();
+    function loadSemesterSections(semesterId) {
+        $('#sectionsLoading').show();
+        $('#sectionsList').hide();
+        $('#noSections').hide();
+        $('#sectionFiltersContainer').hide();
 
-        const url = API_ROUTES.getSemesterClasses.replace(':id', semesterId);
+        const url = API_ROUTES.getSemesterSections.replace(':id', semesterId);
 
         $.ajax({
             url: url,
             method: 'GET',
             success: function (response) {
-                $('#classesLoading').hide();
+                $('#sectionsLoading').hide();
                 
                 if (response.success && response.data.length > 0) {
-                    displayClasses(response.data);
-                    $('#classesTable').show();
+                    populateSectionFilters(response.data);
+                    displaySections(response.data);
+                    $('#sectionFiltersContainer').show();
+                    $('#sectionsList').show();
                 } else {
-                    $('#noClasses').show();
+                    $('#noSections').show();
                 }
             },
             error: function () {
-                $('#classesLoading').hide();
-                $('#noClasses').show();
+                $('#sectionsLoading').hide();
+                $('#noSections').show();
             }
         });
     }
 
-    // Display Classes
-    function displayClasses(classes) {
-        const tbody = $('#classesTableBody');
-        tbody.empty();
-
-        classes.forEach(cls => {
-            const isSelected = cls.class_code === selectedClassCode ? 'table-primary' : '';
-            const teacherDisplay = cls.teachers || '<em class="text-muted">No teacher assigned</em>';
-            
-            const row = `
-                <tr class="class-row ${isSelected}" style="cursor: pointer;" 
-                    data-class-code="${cls.class_code}" 
-                    data-class-name="${cls.class_name}">
-                    <td>
-                        <strong>${cls.class_name}</strong>
-                    </td>
-                    <td>
-                        <small class="text-muted">
-                            <i class="fas fa-chalkboard-teacher"></i> ${teacherDisplay}
-                        </small>
-                    </td>
-
-                    <td class="text-center">
-                        <span class="badge badge-primary">${cls.student_count || 0}</span>
-                    </td>
-                </tr>
-            `;
-            tbody.append(row);
+    function populateSectionFilters(sections) {
+        const levels = [...new Set(sections.map(s => s.level_name))].sort();
+        const levelSelect = $('#sectionLevelFilter');
+        levelSelect.html('<option value="">All Levels</option>');
+        levels.forEach(level => {
+            levelSelect.append(`<option value="${level}">${level}</option>`);
         });
 
-        // Click handler for class rows
-        tbody.find('.class-row').click(function () {
-            const classCode = $(this).data('class-code');
-            const className = $(this).data('class-name');
-            selectClass(classCode, className);
+        const strands = [...new Set(sections.map(s => s.strand_code))].sort();
+        const strandSelect = $('#sectionStrandFilter');
+        strandSelect.html('<option value="">All Strands</option>');
+        strands.forEach(strand => {
+            strandSelect.append(`<option value="${strand}">${strand}</option>`);
         });
     }
 
-    // Select Class
-    function selectClass(classCode, className) {
-        selectedClassCode = classCode;
-        selectedClassName = className;
+    function displaySections(sections) {
+        window.allSections = sections;
+        renderFilteredSections();
+    }
+
+    function renderFilteredSections() {
+        const container = $('#sectionsListContainer');
+        const searchTerm = $('#sectionSearch').val().toLowerCase();
+        const levelFilter = $('#sectionLevelFilter').val();
+        const strandFilter = $('#sectionStrandFilter').val();
+
+        let filtered = window.allSections.filter(sec => {
+            const matchSearch = !searchTerm ||
+                sec.section_name.toLowerCase().includes(searchTerm) ||
+                sec.section_code.toLowerCase().includes(searchTerm);
+            const matchLevel = !levelFilter || sec.level_name === levelFilter;
+            const matchStrand = !strandFilter || sec.strand_code === strandFilter;
+            
+            return matchSearch && matchLevel && matchStrand;
+        });
+
+        container.empty();
+
+        if (filtered.length === 0) {
+            container.html(`
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p class="mb-0 small">No sections found</p>
+                </div>
+            `);
+            return;
+        }
+
+        filtered.forEach(sec => {
+            const isSelected = sec.id === selectedSectionId ? 'active' : '';
+            const sectionDisplay = `${sec.level_name} - ${sec.strand_code}`;
+            
+            const item = `
+                <a href="#" class="list-group-item list-group-item-action section-item ${isSelected}" 
+                   data-section-id="${sec.id}" 
+                   data-section-name="${sec.section_name}">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <h6 class="mb-1"><strong>${sec.section_name}</strong></h6>
+                            <p class="mb-1 text-muted small">${sectionDisplay}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-user-graduate"></i> ${sec.regular_student_count || 0} students
+                            </small>
+                        </div>
+                        <span class="badge badge-light badge-pill ml-2">${sec.class_count || 0}</span>
+                    </div>
+                </a>
+            `;
+            container.append(item);
+        });
+
+        container.find('.section-item').click(function (e) {
+            e.preventDefault();
+            const sectionId = $(this).data('section-id');
+            const sectionName = $(this).data('section-name');
+            selectSection(sectionId, sectionName);
+        });
+    }
+
+    $('#sectionSearch, #sectionLevelFilter, #sectionStrandFilter').on('input change', function() {
+        renderFilteredSections();
+    });
+
+    function selectSection(sectionId, sectionName) {
+        selectedSectionId = sectionId;
+        selectedSectionName = sectionName;
+        selectedClassCode = null;
         selectedQuarter = 'final';
 
-        // Update class selection highlight
-        $('.class-row').removeClass('table-primary');
-        $(`.class-row[data-class-code="${classCode}"]`).addClass('table-primary');
+        $('.section-item').removeClass('active');
+        $(`.section-item[data-section-id="${sectionId}"]`).addClass('active');
 
-        // Show loading and load students
         $('#emptyState').hide();
         $('#studentsContent').hide();
         $('#noStudents').hide();
@@ -274,14 +306,13 @@ $(document).ready(function () {
         $('#quarterTabsSection').hide();
         resetQuarterTabs();
 
-        loadEnrollmentHistory(classCode);
+        loadSectionEnrollment(sectionId);
     }
 
-    // Load Enrollment History
-    function loadEnrollmentHistory(classCode) {
-        const url = API_ROUTES.getEnrollmentHistory
+    function loadSectionEnrollment(sectionId) {
+        const url = API_ROUTES.getSectionEnrollment
             .replace(':semesterId', selectedSemesterId)
-            .replace(':classCode', classCode);
+            .replace(':sectionId', sectionId);
 
         $.ajax({
             url: url,
@@ -289,22 +320,18 @@ $(document).ready(function () {
             success: function (response) {
                 $('#studentsLoading').hide();
                 
-                if (response.success && response.data.length > 0) {
-                    allStudents = response.data;
+                if (response.success && response.students.length > 0) {
+                    allStudents = response.students;
+                    allClasses = response.classes || [];
                     quarters = response.quarters || [];
                     
-                    // Extract unique sections
-                    allSections = [...new Set(allStudents.map(s => s.section_name).filter(Boolean))];
-                    populateSectionFilter(allSections);
-                    
-                    // Build quarter tabs dynamically
+                    populateClassDropdown(allClasses);
                     buildQuarterTabs(quarters);
                     
-                    displayEnrollmentHistory(allStudents, selectedQuarter);
+                    applyFilters();
                     $('#studentsContent').show();
                     $('#filtersSection').show();
                     $('#quarterTabsSection').show();
-                    updateStudentCount(allStudents);
                 } else {
                     $('#noStudents').show();
                     $('#studentCount').text('0 Students');
@@ -318,12 +345,24 @@ $(document).ready(function () {
         });
     }
 
-    // Build Quarter Tabs
+    function populateClassDropdown(classes) {
+        const dropdown = $('#classDropdownList');
+        dropdown.empty();
+        
+        dropdown.append('<li><a class="dropdown-item class-option" data-id="">All Classes (Overview)</a></li>');
+        
+        if (classes.length > 0) {
+            dropdown.append('<li><hr class="dropdown-divider"></li>');
+            classes.forEach(cls => {
+                dropdown.append(`<li><a class="dropdown-item class-option" data-id="${cls.class_code}">${cls.class_name}</a></li>`);
+            });
+        }
+    }
+
     function buildQuarterTabs(quartersData) {
         const tabsContainer = $('#quarterTabsSection .quarter-tabs');
         tabsContainer.empty();
 
-        // Final Grade Tab (Always first)
         tabsContainer.append(`
             <li class="nav-item">
                 <a class="nav-link active" href="#" data-quarter="final">
@@ -332,7 +371,6 @@ $(document).ready(function () {
             </li>
         `);
 
-        // Dynamic Quarter Tabs
         quartersData.forEach(quarter => {
             const icon = quarter.code === '1ST' ? 'fa-calendar-day' : 
                         quarter.code === '2ND' ? 'fa-calendar-week' : 'fa-calendar';
@@ -347,25 +385,20 @@ $(document).ready(function () {
         });
     }
 
-    // Populate Section Filter
-    function populateSectionFilter(sections) {
-        const select = $('#sectionFilter');
-        select.find('option:not(:first)').remove();
-        
-        sections.forEach(section => {
-            select.append(`<option value="${section}">${section}</option>`);
-        });
-    }
-
-    // Display Enrollment History
-    function displayEnrollmentHistory(students, quarter) {
+    function displaySectionEnrollment(students, filterClassCode, quarter) {
         const tbody = $('#studentsTableBody');
+        const thead = $('#studentsTableHead');
         tbody.empty();
+        thead.empty();
+
+        $('.classes-detail-row').remove();
+        $('.expand-btn').removeClass('expanded');
 
         if (students.length === 0) {
+            thead.html('<tr><th>No Data</th></tr>');
             tbody.html(`
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="10" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No students found</p>
                     </td>
@@ -374,136 +407,281 @@ $(document).ready(function () {
             return;
         }
 
-        students.forEach(student => {
-            const statusBadge = student.student_type === 'regular' ? 'badge-primary' :
-                              student.student_type === 'irregular' ? 'badge-secondary' : 'badge-secondary';
-            
-            let displayGrade = '-';
-            let displayRemarks = '-';
-            
-            // Determine which grade to display based on selected quarter
-            if (quarter === 'final') {
-                displayGrade = student.final_grade || '-';
-                displayRemarks = student.remarks || '-';
-            } else if (quarter === '1ST') {
-                displayGrade = student.q1_transmuted || student.q1_grade || '-';
-                displayRemarks = displayGrade !== '-' && displayGrade >= 75 ? 'PASSED' : 
-                                displayGrade !== '-' ? 'FAILED' : '-';
-            } else if (quarter === '2ND') {
-                displayGrade = student.q2_transmuted || student.q2_grade || '-';
-                displayRemarks = displayGrade !== '-' && displayGrade >= 75 ? 'PASSED' : 
-                                displayGrade !== '-' ? 'FAILED' : '-';
-            }
-            
-            const remarksBadge = displayRemarks === 'PASSED' ? 'text-success' :
-                               displayRemarks === 'FAILED' ? 'text-danger' : 
-                               displayRemarks === 'INC' ? 'text-secondary' : 'text-secondary';
+        let headerHtml = '<tr>';
 
-            const row = `
-                <tr>
-                    <td><strong>${student.student_number}</strong></td>
-                    <td>${student.first_name} ${student.last_name}</td>
-                    <td>${student.section_name || 'N/A'}</td>
-                    <td>
-                        <span class="badge ${statusBadge}">${student.student_type}</span>
-                    </td>
-                    <td class="text-center">
-                        ${displayGrade !== '-' ? `<strong>${displayGrade}</strong>` : '-'}
-                    </td>
-                    <td>
-                        ${displayRemarks !== '-' ? `<span class="${remarksBadge}">${displayRemarks}</span>` : '-'}
-                    </td>
-                </tr>
-            `;
-            tbody.append(row);
+        if (!filterClassCode) {
+            headerHtml += '<th width="40"></th>';
+        }
+
+        headerHtml += `
+            <th width="150">Student Number</th>
+            <th>Name</th>
+        `;
+
+        if (filterClassCode) {
+            headerHtml += `<th width="200">Class</th>`;
+            
+            if (quarter === 'final') {
+                headerHtml += `
+                    <th width="100" class="text-center">Q1</th>
+                    <th width="100" class="text-center">Q2</th>
+                    <th width="100" class="text-center">Final Grade</th>
+                    <th width="100">Remarks</th>
+                `;
+            } else {
+                headerHtml += `<th width="100" class="text-center">${quarter === '1ST' ? '1st Quarter' : '2nd Quarter'} Grade</th>`;
+            }
+        } else {
+            headerHtml += `<th width="100" class="text-center">Classes</th>`;
+        }
+
+        headerHtml += `</tr>`;
+        thead.html(headerHtml);
+
+        students.forEach(student => {
+            if (filterClassCode) {
+                const classGrade = student.class_grades.find(g => g.class_code === filterClassCode);
+                const selectedClass = allClasses.find(c => c.class_code === filterClassCode);
+                
+                let row = `
+                    <tr data-student-id="${student.student_number}">
+                        <td><strong>${student.student_number}</strong></td>
+                        <td>${student.full_name}</td>
+                        <td>${selectedClass ? selectedClass.class_name : '-'}</td>
+                `;
+
+                if (classGrade) {
+                    if (quarter === 'final') {
+                        const q1 = classGrade.q1 || '-';
+                        const q2 = classGrade.q2 || '-';
+                        const final = classGrade.final_grade || '-';
+                        const remarks = classGrade.remarks || '-';
+                        const remarksClass = classGrade.remarks === 'PASSED' ? 'text-success' :
+                                           classGrade.remarks === 'FAILED' ? 'text-danger' : 'text-secondary';
+                        
+                        row += `
+                            <td class="text-center">${q1}</td>
+                            <td class="text-center">${q2}</td>
+                            <td class="text-center"><strong>${final}</strong></td>
+                            <td><span class="${remarksClass}">${remarks}</span></td>
+                        `;
+                    } else if (quarter === '1ST') {
+                        row += `<td class="text-center"><strong>${classGrade.q1 || '-'}</strong></td>`;
+                    } else if (quarter === '2ND') {
+                        row += `<td class="text-center"><strong>${classGrade.q2 || '-'}</strong></td>`;
+                    }
+                } else {
+                    if (quarter === 'final') {
+                        row += `<td class="text-center">-</td><td class="text-center">-</td><td class="text-center">-</td><td>-</td>`;
+                    } else {
+                        row += `<td class="text-center">-</td>`;
+                    }
+                }
+
+                row += `</tr>`;
+                tbody.append(row);
+            } else {
+                const classCount = student.class_grades.length;
+                
+                let row = `
+                    <tr data-student-id="${student.student_number}" data-classes='${JSON.stringify(student.class_grades)}'>
+                        <td class="text-center">
+                            <button class="expand-btn" data-student-id="${student.student_number}" title="Show Classes">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </td>
+                        <td><strong>${student.student_number}</strong></td>
+                        <td>${student.full_name}</td>
+                        <td class="text-center">
+                            <span class="badge badge-primary">${classCount}</span>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            }
         });
     }
 
-    // Update Student Count
+    $(document).on('click', '.expand-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const studentId = $(this).data('student-id');
+        const mainRow = $(this).closest('tr');
+        const existingDetailRow = mainRow.next('.classes-detail-row');
+        const isExpanded = $(this).hasClass('expanded');
+        
+        if (isExpanded) {
+            $(this).removeClass('expanded');
+            existingDetailRow.remove();
+        } else {
+            $('.expand-btn').removeClass('expanded');
+            $('.classes-detail-row').remove();
+            
+            $(this).addClass('expanded');
+            
+            const classesData = JSON.parse(mainRow.attr('data-classes'));
+            
+            let classesHtml = '';
+            if (classesData && classesData.length > 0) {
+                classesData.forEach(function(classGrade) {
+                    const cls = allClasses.find(c => c.class_code === classGrade.class_code);
+                    const className = cls ? cls.class_name : classGrade.class_code;
+                    
+                    // ONLY SHOW GRADE FOR SELECTED QUARTER
+                    let gradeDisplay = '';
+                    let gradeBadgeClass = 'badge-light';
+                    
+                    if (selectedQuarter === 'final') {
+                        const final = classGrade.final_grade || '-';
+                        gradeDisplay = `Final: ${final}`;
+                        gradeBadgeClass = final !== '-' && parseFloat(final) >= 75 ? 'badge-success' : 
+                                         final !== '-' ? 'badge-danger' : 'badge-light';
+                    } else if (selectedQuarter === '1ST') {
+                        const q1 = classGrade.q1 || '-';
+                        gradeDisplay = `Q1: ${q1}`;
+                        gradeBadgeClass = q1 !== '-' && parseFloat(q1) >= 75 ? 'badge-success' : 
+                                         q1 !== '-' ? 'badge-danger' : 'badge-light';
+                    } else if (selectedQuarter === '2ND') {
+                        const q2 = classGrade.q2 || '-';
+                        gradeDisplay = `Q2: ${q2}`;
+                        gradeBadgeClass = q2 !== '-' && parseFloat(q2) >= 75 ? 'badge-success' : 
+                                         q2 !== '-' ? 'badge-danger' : 'badge-light';
+                    }
+                    
+                    const remarks = classGrade.remarks || '-';
+                    const remarksClass = classGrade.remarks === 'PASSED' ? 'badge-success' :
+                                       classGrade.remarks === 'FAILED' ? 'badge-danger' : 'badge-secondary';
+                    
+                    classesHtml += `
+                        <div class="class-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="class-name">${className}</div>
+                                <div class="grade-badges">
+                                    <span class="badge ${gradeBadgeClass}">${gradeDisplay}</span>
+                                    ${selectedQuarter === 'final' ? `<span class="badge ${remarksClass}">${remarks}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                classesHtml = `
+                    <div class="no-classes">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No classes enrolled</p>
+                    </div>
+                `;
+            }
+            
+            const colSpan = 4;
+            const detailRow = $(`
+                <tr class="classes-detail-row">
+                    <td colspan="${colSpan}" class="classes-detail-cell">
+                        <div class="classes-container">
+                            ${classesHtml}
+                        </div>
+                    </td>
+                </tr>
+            `);
+            
+            mainRow.after(detailRow);
+        }
+    });
+
     function updateStudentCount(students) {
         const count = students.length;
         $('#studentCount').text(`${count} Student${count !== 1 ? 's' : ''}`);
     }
 
-    // Apply Filters
     function applyFilters() {
         const searchTerm = $('#studentSearch').val().toLowerCase();
-        const sectionFilter = $('#sectionFilter').val();
         const remarksFilter = $('#remarksFilter').val();
 
-        const filtered = allStudents.filter(student => {
+        filteredStudents = allStudents.filter(student => {
             const matchSearch = !searchTerm || 
                 student.student_number.toLowerCase().includes(searchTerm) ||
                 student.first_name.toLowerCase().includes(searchTerm) ||
-                student.last_name.toLowerCase().includes(searchTerm);
+                student.last_name.toLowerCase().includes(searchTerm) ||
+                student.full_name.toLowerCase().includes(searchTerm);
             
-            const matchSection = !sectionFilter || student.section_name === sectionFilter;
-            
-            // Adjust remarks filter based on selected quarter
-            let studentRemarks = '-';
-            if (selectedQuarter === 'final') {
-                studentRemarks = student.remarks || '-';
-            } else if (selectedQuarter === '1ST') {
-                const grade = student.q1_transmuted || student.q1_grade;
-                studentRemarks = grade && grade >= 75 ? 'PASSED' : grade ? 'FAILED' : '-';
-            } else if (selectedQuarter === '2ND') {
-                const grade = student.q2_transmuted || student.q2_grade;
-                studentRemarks = grade && grade >= 75 ? 'PASSED' : grade ? 'FAILED' : '-';
+            let matchRemarks = true;
+            if (remarksFilter && selectedClassCode) {
+                const classGrade = student.class_grades.find(g => g.class_code === selectedClassCode);
+                matchRemarks = classGrade?.remarks === remarksFilter;
             }
-            
-            const matchRemarks = !remarksFilter || studentRemarks === remarksFilter;
 
-            return matchSearch && matchSection && matchRemarks;
+            return matchSearch && matchRemarks;
         });
 
-        displayEnrollmentHistory(filtered, selectedQuarter);
-        updateStudentCount(filtered);
+        displaySectionEnrollment(filteredStudents, selectedClassCode, selectedQuarter);
+        updateStudentCount(filteredStudents);
     }
 
-    // Reset Filters
     function resetFilters() {
         $('#studentSearch').val('');
-        $('#sectionFilter').val('');
+        $('#classSearchInput').val('').removeData('selected-class').attr('placeholder', 'All Classes (Overview)');
         $('#remarksFilter').val('');
+        selectedClassCode = null;
         
         if (allStudents.length > 0) {
-            displayEnrollmentHistory(allStudents, selectedQuarter);
-            updateStudentCount(allStudents);
+            applyFilters();
         }
     }
 
-    // Reset Quarter Tabs
     function resetQuarterTabs() {
         $('#quarterTabsSection .nav-link').removeClass('active');
         $('#quarterTabsSection .nav-link[data-quarter="final"]').addClass('active');
         selectedQuarter = 'final';
     }
 
-    // Quarter Tab Click Handler
+    $('#classSearchInput').on('click', function() {
+        $(this).dropdown('toggle');
+    });
+
+    $(document).on('click', '.class-option', function (e) {
+        e.preventDefault();
+
+        const classCode = $(this).data('id');
+        const className = $(this).text().trim();
+
+        $('#classSearchInput').val(className).data('selected-class', classCode);
+
+        $('#classDropdownList').removeClass('show');
+        $('#classDropdownList').parent().removeClass('show');
+
+        selectedClassCode = classCode || null;
+
+        applyFilters();
+    });
+
+    $(document).on('click', function (e) {
+        const target = $(e.target);
+        if (!target.is('#classSearchInput') && target.closest('#classDropdownList').length === 0) {
+            $('#classDropdownList').removeClass('show');
+            $('#classDropdownList').parent().removeClass('show');
+        }
+    });
+
     $('#quarterTabsSection').on('click', '.nav-link', function(e) {
         e.preventDefault();
+        
+        // Collapse all expanded rows when changing quarter
+        $('.expand-btn').removeClass('expanded');
+        $('.classes-detail-row').remove();
         
         $('#quarterTabsSection .nav-link').removeClass('active');
         $(this).addClass('active');
         
         selectedQuarter = $(this).data('quarter');
         
-        // Re-display students with selected quarter
         applyFilters();
-        
-        // Update column header based on quarter
-        const gradeHeader = selectedQuarter === 'final' ? 'Final Grade' :
-                           selectedQuarter === '1ST' ? '1st Quarter' :
-                           selectedQuarter === '2ND' ? '2nd Quarter' : 'Grade';
-        
-        $('#studentsTableBody').closest('table').find('thead th:eq(4)').text(gradeHeader);
     });
 
-    // Filter Event Handlers
-    $('#studentSearch, #sectionFilter, #remarksFilter').on('input change', applyFilters);
+    $('#studentSearch').on('input', applyFilters);
+    $('#remarksFilter').on('change', applyFilters);
     $('#resetFiltersBtn').click(resetFilters);
 
-    // Get Status Badge Class
     function getStatusBadgeClass(status) {
         const badges = {
             'active': 'badge-primary',

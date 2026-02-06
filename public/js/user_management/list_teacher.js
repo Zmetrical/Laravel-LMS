@@ -3,8 +3,6 @@ console.log("Teacher List");
 let dataTable;
 
 $(document).ready(function () {
-    // NOTE: Select2 initialization removed for class filter (we're using Bootstrap dropdown)
-    // Update teacher count badge
     function updateTeacherCount() {
         if (dataTable && dataTable.rows) {
             const count = dataTable.rows({ filter: 'applied' }).count();

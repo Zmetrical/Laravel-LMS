@@ -46,7 +46,7 @@ class AuditLogController extends Controller
     public function getAdminLogs(Request $request)
     {
         $query = DB::table('audit_logs')
-            ->where('   ', 'admin')
+            ->where('user_type', 'admin')
             ->select('*');
 
         // Apply filters
