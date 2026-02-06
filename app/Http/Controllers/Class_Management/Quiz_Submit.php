@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Class_Management;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainController;
+use App\Traits\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -11,12 +12,15 @@ use Carbon\Carbon;
 
 class Quiz_Submit extends MainController
 {
+    use AuditLogger;
+
     /**
      * Submit quiz attempt
      */
     public function submitQuiz(Request $request, $classId, $lessonId, $quizId)
     {
-        $studentNumber = Auth::guard('student')->user()->student_number;
+        $student = Auth::guard('student')->user();
+        $studentNumber = $student->student_number;
         
         DB::beginTransaction();
         try {
@@ -229,7 +233,6 @@ class Quiz_Submit extends MainController
                 ]);
 
             // **INVALIDATE CACHE** - Force sidebar badge to update
-            $student = Auth::guard('student')->user();
             $activeSemester = DB::table('semesters')
                 ->where('status', 'active')
                 ->first();
@@ -238,6 +241,52 @@ class Quiz_Submit extends MainController
                 $quizzesSessionKey = 'pending_quizzes_' . $student->id . '_sem_' . $activeSemester->id;
                 Session::forget($quizzesSessionKey);
             }
+
+            // Get related data for audit log
+            $class = DB::table('classes')->where('id', $classId)->first();
+            $lesson = DB::table('lessons')->where('id', $lessonId)->first();
+            $semester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.id', $semesterId)
+                ->select('semesters.*', 'school_years.code as sy_code')
+                ->first();
+            $quarter = DB::table('quarters')->where('id', $quarterId)->first();
+
+            $percentage = $attempt->total_points > 0 ? round(($score / $attempt->total_points) * 100, 2) : 0;
+
+            // Audit Log - EXPLICITLY pass student user type
+            $this->logAudit(
+                'submitted',
+                'quizzes',
+                (string)$quizId,
+                "Submitted quiz '{$quiz->title}' for lesson '{$lesson->title}' in class '{$class->class_name}' - {$quarter->name} {$semester->name} {$semester->sy_code}",
+                null,
+                [
+                    'attempt_id' => $attempt->id,
+                    'quiz_id' => $quizId,
+                    'quiz_title' => $quiz->title,
+                    'lesson_id' => $lessonId,
+                    'lesson_title' => $lesson->title,
+                    'class_id' => $classId,
+                    'class_code' => $class->class_code,
+                    'class_name' => $class->class_name,
+                    'semester_id' => $semesterId,
+                    'semester_name' => $semester->name,
+                    'quarter_id' => $quarterId,
+                    'quarter_name' => $quarter->name,
+                    'school_year' => $semester->sy_code,
+                    'attempt_number' => $attempt->attempt_number,
+                    'score' => $score,
+                    'total_points' => $attempt->total_points,
+                    'percentage' => $percentage,
+                    'status' => $hasEssay ? 'submitted' : 'graded',
+                    'has_essay' => $hasEssay,
+                    'total_answers' => count($answers),
+                    'submitted_at' => now()->toDateTimeString()
+                ],
+                'student',  // EXPLICIT user type
+                $studentNumber  // EXPLICIT user identifier
+            );
 
             DB::commit();
 
@@ -250,7 +299,7 @@ class Quiz_Submit extends MainController
                     'attempt_id' => $attempt->id,
                     'score' => $score,
                     'total_points' => $attempt->total_points,
-                    'percentage' => $attempt->total_points > 0 ? round(($score / $attempt->total_points) * 100, 2) : 0,
+                    'percentage' => $percentage,
                     'has_essay' => $hasEssay
                 ]
             ]);

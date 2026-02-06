@@ -210,7 +210,7 @@
                             <li class="nav-item">
                                 <a href="{{ route('teacher.list_class') }}"
                                     class="nav-link {{ Request::routeIs('teacher.list_class') ? 'active' : '' }}">
-                                <i class="nav-icon fas fa-th-list"></i>                                    
+                                <i class="nav-icon fas fa-chalkboard-teacher"></i>                                    
                                 <p>My Classes</p>
                                 </a>
                             </li>
@@ -218,16 +218,28 @@
                             <li class="nav-item">
                                 <a href="{{ route('teacher.adviser.grade.cards') }}"
                                     class="nav-link {{ Request::routeIs('teacher.adviser.grade.cards') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-th-list"></i>      
+                                    <i class="nav-icon fas fa-users"></i>      
                                     <p>My Students</p>
                                 </a>
                             </li>
 
+                            <!-- Activity Logs Section -->
+                            <div class="nav-divider"></div>
+                            <div class="nav-section-title">Activity Logs</div>
+
                             <li class="nav-item">
                                 <a href="{{ route('teacher.audit.my_logs') }}"
                                     class="nav-link {{ Request::routeIs('teacher.audit.my_logs') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-th-list"></i>
+                                    <i class="nav-icon fas fa-clipboard-list"></i>
                                     <p>My Logs</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('teacher.audit.student_logs.index') }}"
+                                    class="nav-link {{ Request::routeIs('teacher.audit.student_logs.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-user-graduate"></i>
+                                    <p>Student Logs</p>
                                 </a>
                             </li>
                         </ul>

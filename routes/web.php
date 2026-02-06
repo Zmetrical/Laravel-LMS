@@ -6,7 +6,7 @@ use App\Http\Controllers\TestDevController;
 use App\Http\Controllers\Auth\Data_Controller;
 use App\Http\Controllers\Auth\Login_Controller;
 use App\Http\Controllers\Class_Management\Class_List;
-use App\Http\Controllers\Class_Management\Adviser_List;
+use App\Http\Controllers\Class_Management\Teacher_Card_List;
 
 use App\Http\Controllers\Class_Management\Class_Management;
 use App\Http\Controllers\Class_Management\Page_Grade;
@@ -21,6 +21,7 @@ use App\Http\Controllers\Grade_Management\Grade_Management;
 
 use App\Http\Controllers\Audit\AuditLogController;
 use App\Http\Controllers\Audit\TeacherAuditController;
+use App\Http\Controllers\Audit\StudentAuditController;
 
 
 use App\Http\Controllers\Grade_Management\GradeBook_Management;
@@ -389,19 +390,21 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::post('/logout', [Login_Controller::class, 'logout_teacher'])->name('logout');
 
         Route::get('/profile', [TeacherController::class, 'show_profile'])->name('profile');
-        Route::get('/profile/edit', [TeacherController::class, 'edit_profile'])->name('profile.edit');
-        Route::post('/profile/update', [TeacherController::class, 'update_profile'])->name('profile.update');
-
 
 
         Route::get('/audit/my-logs',        [TeacherAuditController::class, 'index']         )->name('audit.my_logs');
         Route::get('/audit/my-logs/data',   [TeacherAuditController::class, 'getMyLogs']     )->name('audit.my_logs.data');
         Route::get('/audit/my-logs/{id}',   [TeacherAuditController::class, 'getMyLogDetail'])->name('audit.my_logs.detail');
-
+    
+        Route::prefix('audit/student-logs')->name('audit.student_logs.')->group(function () {
+            Route::get('/', [StudentAuditController::class, 'index'])->name('index');
+            Route::get('/data', [StudentAuditController::class, 'getStudentLogs'])->name('data');
+            Route::get('/{id}/detail', [StudentAuditController::class, 'getStudentLogDetail'])->name('detail');
+        });
 
         // Class Pages
         Route::get('/class_list', [Class_List::class, 'teacher_class_list'])->name('list_class');
-        Route::get('/adviser/grade-cards', [Adviser_List::class, 'index'])
+        Route::get('/adviser/grade-cards', [Teacher_Card_List::class, 'index'])
             ->name('adviser.grade.cards');
 
         Route::get('adviser/grades/cards', [Grade_Card::class, 'teacherCardGrades'])->name('grades.cards');

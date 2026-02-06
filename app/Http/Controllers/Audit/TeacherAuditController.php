@@ -95,6 +95,8 @@ class TeacherAuditController extends Controller
      */
     public function getMyLogDetail(int $id)
     {
+        $teacher = Auth::guard('teacher')->user();
+        
         $log = DB::table('audit_logs')
             ->where('id', $id)
             ->where('user_type', 'teacher')

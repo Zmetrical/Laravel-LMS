@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
-class Adviser_List extends MainController
+class Teacher_Card_List extends MainController
 {
     public function index()
     {
@@ -129,12 +129,12 @@ class Adviser_List extends MainController
             ->get();
 
         $data = [
-            'scripts' => ['teacher/adviser_list.js'],
+            'scripts' => ['teacher/teacher_card_list.js'],
             'sections' => $sections,
             'gradeCards' => $gradeCards,
             'activeSemester' => $activeSemester
         ];
 
-        return view('teacher.adviser_list', $data);
+        return view('teacher.teacher_card_list', $data);
     }
 }

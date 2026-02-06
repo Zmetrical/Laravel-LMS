@@ -114,16 +114,6 @@
 
 @section('content')
 <div class="container-fluid">
-    <!-- Info Alert -->
-    <div class="alert alert-primary">
-        <i class="fas fa-info-circle"></i> 
-        <strong>Current Semester:</strong> 
-        @if($activeSemester)
-            {{ $activeSemester->display_name }}
-        @else
-            No Active Semester
-        @endif
-    </div>
 
     @if(isset($message))
         <div class="alert alert-warning">
