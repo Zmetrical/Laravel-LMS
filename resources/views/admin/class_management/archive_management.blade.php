@@ -147,6 +147,7 @@
             getSemesters: "{{ route('admin.semesters.list') }}",
             archiveSchoolYear: "{{ route('admin.archive.school-year', ['id' => ':id']) }}",
             archiveSemester: "{{ route('admin.archive.semester', ['id' => ':id']) }}",
+            activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
             csrfToken: "{{ csrf_token() }}"
         };
     </script>

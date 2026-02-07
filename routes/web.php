@@ -86,14 +86,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
         });
 
+        // ---------------------------------------------------------------------------
+        // ARCHIVE MANAGEMENT 
+        // ---------------------------------------------------------------------------
         Route::get('/archive-management', [Archive_Management::class, 'archivePage'])
-        ->name('archive.index');
-        Route::match(['get', 'post'], '/archive/verify', [Archive_Management::class, 'verifyAdminAccess'])
+            ->name('archive.index');
+        Route::post('/archive/verify', [Archive_Management::class, 'verifyAdminAccess'])
             ->name('archive.verify');
         Route::post('/archive/school-year/{id}', [Archive_Management::class, 'archiveSchoolYear'])
             ->name('archive.school-year');
         Route::post('/archive/semester/{id}', [Archive_Management::class, 'archiveSemester'])
             ->name('archive.semester');
+
+
 
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {

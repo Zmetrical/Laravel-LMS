@@ -143,7 +143,7 @@ $(document).ready(function () {
             success: function (response) {
                 if (response.success) {
                     semesters = response.data.filter(sem => 
-                        sem.status === 'upcoming' || sem.status === 'completed'
+                        sem.status === 'upcoming' || sem.status === 'completed' || sem.status === 'active'
                     );
                     displaySemesters();
                 }
@@ -168,8 +168,10 @@ $(document).ready(function () {
         tbody.empty();
 
         semesters.forEach(sem => {
-            const statusBadge = sem.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
+            const statusBadge = sem.status === 'upcoming' ? 'badge-secondary' : 
+                              sem.status === 'active' ? 'badge-primary' : 'badge-dark';
             const canArchive = sem.status === 'upcoming';
+            const canActivate = sem.status === 'upcoming';
 
             const row = `
                 <tr>
@@ -177,6 +179,15 @@ $(document).ready(function () {
                     <td>SY ${sem.year_start}-${sem.year_end}</td>
                     <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
                     <td>
+                        ${canActivate ? `
+                        <button class="btn btn-sm btn-primary activate-sem-btn" 
+                                data-id="${sem.id}"
+                                data-name="${sem.name}"
+                                data-sy="SY ${sem.year_start}-${sem.year_end}"
+                                title="Set Active">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        ` : ''}
                         ${canArchive ? `
                         <button class="btn btn-sm btn-secondary archive-sem-btn" 
                                 data-id="${sem.id}"
@@ -185,9 +196,10 @@ $(document).ready(function () {
                                 title="Archive">
                             <i class="fas fa-archive"></i>
                         </button>
-                        ` : `
+                        ` : ''}
+                        ${!canArchive && !canActivate ? `
                         <span class="text-muted"><small>Archived</small></span>
-                        `}
+                        ` : ''}
                     </td>
                 </tr>
             `;
@@ -195,6 +207,14 @@ $(document).ready(function () {
         });
 
         $('#semTableContainer').show();
+
+        // Activate button handler
+        $('.activate-sem-btn').click(function () {
+            const id = $(this).data('id');
+            const name = $(this).data('name');
+            const sy = $(this).data('sy');
+            activateSemester(id, name, sy);
+        });
 
         // Archive button handler
         $('.archive-sem-btn').click(function () {
@@ -241,6 +261,49 @@ $(document).ready(function () {
                             icon: 'error',
                             title: 'Error',
                             text: xhr.responseJSON?.message || 'Failed to archive school year'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // Activate Semester
+    function activateSemester(id, name, sy) {
+        Swal.fire({
+            title: 'Activate Semester?',
+            html: `Set <strong>${name}</strong> for <strong>${sy}</strong> as active?<br><small class="text-muted">This will deactivate all other semesters</small>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const url = API_ROUTES.activateSemester.replace(':id', id);
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
+                    success: function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Activated',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            loadSemesters();
+                        }
+                    },
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Failed to activate semester'
                         });
                     }
                 });
