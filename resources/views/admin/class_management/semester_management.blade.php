@@ -2,80 +2,165 @@
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        .info-card {
-            border-left: 4px solid #007bff;
+        .semester-status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table th {
             background: #f8f9fa;
-        }
-        .semester-card {
-            transition: all 0.2s;
-        }
-        .semester-card:hover {
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
         }
         
-        .section-item-archive {
-            padding: 0.75rem;
+        .data-table tbody tr {
+            transition: background-color 0.15s;
+        }
+        
+        .data-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .section-row {
+            cursor: pointer;
+        }
+        
+        .section-row.expanded {
+            background-color: #e7f3ff;
+        }
+        
+        .student-details-row {
+            background-color: #f8f9fa;
+        }
+        
+        .collapse-icon {
+            transition: transform 0.2s;
+        }
+        
+        .section-row.expanded .collapse-icon {
+            transform: rotate(90deg);
+        }
+        
+        .quick-actions {
+            position: sticky;
+            top: 0;
             background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-            margin-bottom: 0.5rem;
-            transition: all 0.2s;
-        }
-        .section-item-archive:hover {
-            background: #f8f9fa;
-        }
-        .section-item-archive.expanded {
-            background: #e7f3ff;
-            border-color: #007bff;
-        }
-        
-        .teacher-item {
-            padding: 0.5rem 0.75rem;
-            background: white;
-            border-left: 3px solid #007bff;
-            border-radius: 0.25rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .class-tag {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            background: #e7f3ff;
-            border-radius: 0.25rem;
-            font-size: 0.875rem;
-            margin-right: 0.25rem;
-            margin-bottom: 0.25rem;
-        }
-        
-        .student-list {
-            max-height: 300px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-        }
-        .student-item {
-            padding: 0.5rem;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .student-item:last-child {
-            border-bottom: none;
-        }
-        
-        .tab-content-area {
+            z-index: 10;
+            border-bottom: 2px solid #dee2e6;
             padding: 1rem;
+            margin: -1rem -1rem 1rem -1rem;
+        }
+        
+        .enrollment-preview {
             background: #f8f9fa;
+            border: 1px solid #dee2e6;
             border-radius: 0.25rem;
-            margin-top: 0.5rem;
+            padding: 1rem;
         }
-
-        .view-students-link {
-            text-decoration: none;
+        
+        .student-checkbox {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
         }
-        .view-students-link:hover {
-            text-decoration: underline;
+        
+        .section-select-card {
+            border: 2px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .section-select-card:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        
+        .section-select-card.selected {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        
+        .capacity-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .capacity-fill {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s;
+        }
+        
+        .capacity-fill.warning {
+            background: #ffc107;
+        }
+        
+        .capacity-fill.danger {
+            background: #dc3545;
+        }
+        
+        .filter-pills {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-pill {
+            padding: 0.25rem 0.75rem;
+            background: #e9ecef;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-pill:hover {
+            background: #007bff;
+            color: white;
+        }
+        
+        .filter-pill.active {
+            background: #007bff;
+            color: white;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            border-bottom: 3px solid #dee2e6;
+            color: #6c757d;
+        }
+        
+        .step.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+            font-weight: 600;
+        }
+        
+        .step.completed {
+            border-bottom-color: #007bff;
+            color: #007bff;
         }
     </style>
 @endsection
@@ -84,38 +169,232 @@
     <ol class="breadcrumb breadcrumb-custom">
         <li class="breadcrumb-item"><a href="{{ route('admin.home') }}">Home</a></li>
         <li class="breadcrumb-item"><a href="{{ route('admin.schoolyears.index') }}">School Years</a></li>
-        <li class="breadcrumb-item active">Archive Management</li>
+        <li class="breadcrumb-item active">Semester Management</li>
     </ol>
 @endsection
 
 @section('content')
-<br>
 <div class="container-fluid">
-    <!-- Access Verification Card -->
+    <!-- Quick Enrollment Modal -->
+    <div class="modal fade" id="quickEnrollModal" data-backdrop="static">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Bulk Student Enrollment</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Step Indicator -->
+                    <div class="step-indicator mb-4">
+                        <div class="step active" data-step="1">
+                            <i class="fas fa-search"></i>
+                            <div class="small">Source</div>
+                        </div>
+                        <div class="step" data-step="2">
+                            <i class="fas fa-users"></i>
+                            <div class="small">Students</div>
+                        </div>
+                        <div class="step" data-step="3">
+                            <i class="fas fa-bullseye"></i>
+                            <div class="small">Target</div>
+                        </div>
+                        <div class="step" data-step="4">
+                            <i class="fas fa-check"></i>
+                            <div class="small">Confirm</div>
+                        </div>
+                    </div>
+
+<!-- Step 1: Source Selection -->
+<div class="enrollment-step" id="step1">
+    <h6 class="mb-3"><i class="fas fa-graduation-cap"></i> Select Source</h6>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label>Previous Semester </label>
+                <select class="form-control" id="qe_source_semester">
+                    <option value="">All Students in Section</option>
+                    @foreach($source_semesters as $semester)
+                        <option value="{{ $semester->id }}">
+                            {{ $semester->year_code }} - {{ $semester->semester_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label>Target Semester</label>
+                <div class="form-control bg-light" id="targetSemesterDisplay" style="cursor: not-allowed;">
+                    <span class="text-muted">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                <label>Source Section <span class="text-danger">*</span></label>
+                <select class="form-control select2" id="qe_source_section" style="width: 100%;">
+                    <option value="">Type to search section...</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-right mt-3">
+        <button type="button" class="btn btn-primary" id="btnStep1Next" disabled>
+            Next <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+</div>
+
+                    <!-- Step 2: Student Selection -->
+                    <div class="enrollment-step" id="step2" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0"><i class="fas fa-users"></i> Select Students</h6>
+                            <div class="filter-pills">
+                                <span class="filter-pill active" data-filter="all">All</span>
+                                <span class="filter-pill" data-filter="male">Male</span>
+                                <span class="filter-pill" data-filter="female">Female</span>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-actions">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-default" id="qe_selectAll">
+                                        <i class="fas fa-check-square"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-default" id="qe_deselectAll">
+                                        <i class="fas fa-square"></i> Deselect All
+                                    </button>
+                                    <span class="ml-3 badge badge-primary" id="qe_studentCount">0 selected</span>
+                                </div>
+                                <div>
+                                    <input type="text" class="form-control form-control-sm" id="studentSearch" 
+                                           placeholder="Search student..." style="width: 250px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover data-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAllCheckbox" class="student-checkbox">
+                                        </th>
+                                        <th>Student Number</th>
+                                        <th>Name</th>
+                                        <th>Gender</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qe_studentList">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4">
+                                            <i class="fas fa-arrow-left text-muted fa-2x mb-2"></i>
+                                            <p class="text-muted">Select source section</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" class="btn btn-default" id="btnStep2Back">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btnStep2Next" disabled>
+                                Next <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Target Selection -->
+                    <div class="enrollment-step" id="step3" style="display: none;">
+                        <h6 class="mb-3"><i class="fas fa-bullseye"></i> Select Target Section</h6>
+                        
+                        <div id="qe_targetSections">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p class="mt-2">Loading available sections...</p>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" class="btn btn-default" id="btnStep3Back">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btnStep3Next" disabled>
+                                Next <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Confirmation -->
+                    <div class="enrollment-step" id="step4" style="display: none;">
+                        <h6 class="mb-3"><i class="fas fa-check"></i> Review and Confirm</h6>
+                        
+                        <div class="enrollment-preview">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Students</h6>
+                                    <h4 id="confirm_studentCount">-</h4>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Target Section</h6>
+                                    <h4 id="confirm_targetSection">-</h4>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Capacity After</h6>
+                                    <h4 id="confirm_capacity">-</h4>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div id="confirm_studentList" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Student list will be populated here -->
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" class="btn btn-default" id="btnStep4Back">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btnEnrollConfirm">
+                                <i class="fas fa-check"></i> Enroll Students
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Access Verification -->
     <div class="card card-primary card-outline" id="verificationCard">
         <div class="card-header">
-            <h3 class="card-title">
-                <i class="fas fa-lock"></i> Verify Access
-            </h3>
+            <h3 class="card-title"><i class="fas fa-lock"></i> Verify Access</h3>
         </div>
         <div class="card-body">
             <div class="row justify-content-center">
                 <div class="col-md-6">
                     <div class="text-center mb-4">
                         <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
-                        <h5>Archive Management</h5>
-                        <p class="text-muted">Please verify your admin password to access archive operations</p>
+                        <h5>Semester Management</h5>
+                        <p class="text-muted">Enter your admin password to continue</p>
                     </div>
                     <form id="verificationForm">
                         <div class="form-group">
-                            <label for="adminPassword">Admin Password <span class="text-danger">*</span></label>
-                            <input type="password" 
-                                   class="form-control" 
-                                   id="adminPassword" 
-                                   name="admin_password" 
-                                   placeholder="Enter your admin password"
-                                   autocomplete="off"
-                                   required>
+                            <label>Admin Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="adminPassword" 
+                                   name="admin_password" autocomplete="off" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">
                             <i class="fas fa-check"></i> Verify Access
@@ -126,51 +405,51 @@
         </div>
     </div>
 
-    <!-- Archive Management Content (Hidden until verified) -->
+    <!-- Main Content -->
     <div id="archiveContent" style="display: none;">
-        <!-- Loading State -->
         <div id="contentLoading" class="text-center py-5">
             <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
-            <p class="mt-3">Loading archive information...</p>
+            <p class="mt-3">Loading semester information...</p>
         </div>
 
-        <!-- Main Content -->
         <div id="mainContent" style="display: none;">
-            <!-- School Year Info -->
+            <!-- School Year Header -->
             <div class="card card-dark mb-3">
                 <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
                             <h5 class="mb-0">
                                 <i class="fas fa-calendar-alt"></i>
                                 <span id="syDisplay">-</span>
                             </h5>
                         </div>
-                        <div>
-                            <span class="badge badge-lg mr-2" id="syStatusBadge"></span>
-                            <button class="btn btn-sm btn-secondary" id="archiveSYBtn" style="display: none;">
-                                <i class="fas fa-archive"></i> Archive School Year
+                        <div class="col-md-6 text-right">
+                            <span class="semester-status-badge mr-2" id="syStatusBadge"></span>
+                            <button class="btn btn-primary" id="quickEnrollBtn">
+                                <i class="fas fa-user-plus"></i> Bulk Enrollment
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Warning Box (if applicable) -->
-            <div class="alert alert-warning" id="warningBox" style="display: none;">
-                <h5><i class="fas fa-exclamation-triangle"></i> Important</h5>
-                <p class="mb-0" id="warningText"></p>
+            <!-- Semesters Tabs -->
+            <div class="card">
+                <div class="card-header p-0">
+                    <ul class="nav nav-tabs" id="semesterTabs" role="tablist">
+                        <!-- Tabs will be populated here -->
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="semesterTabContent">
+                        <!-- Tab content will be populated here -->
+                    </div>
+                </div>
             </div>
 
-            <!-- Semesters -->
-            <div class="row" id="semestersContainer">
-                <!-- Semesters will be populated here -->
-            </div>
-
-            <!-- Empty State -->
             <div id="noSemesters" class="text-center py-5" style="display: none;">
                 <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                <p class="text-muted">No semesters found for this school year</p>
+                <p class="text-muted">No semesters found</p>
             </div>
         </div>
     </div>
@@ -179,20 +458,27 @@
 
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-    <script>
-        const API_ROUTES = {
-            verifyAccess: "{{ route('admin.archive.verify') }}",
-            getArchiveInfo: "{{ route('admin.archive.info', ['id' => ':id']) }}",
-            getSemesterDetails: "{{ route('admin.archive.semester-details', ['id' => ':id']) }}",
-            getSectionStudents: "{{ route('admin.archive.section-students', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
-            archiveSchoolYear: "{{ route('admin.archive.school-year', ['id' => ':id']) }}",
-            archiveSemester: "{{ route('admin.archive.semester', ['id' => ':id']) }}",
-            activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
-            csrfToken: "{{ csrf_token() }}"
-        };
+    <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
+<script>
+    const API_ROUTES = {
+        verifyAccess: "{{ route('admin.archive.verify') }}",
+        getArchiveInfo: "{{ route('admin.archive.info', ['id' => ':id']) }}",
+        getSemesterDetails: "{{ route('admin.archive.semester-details', ['id' => ':id']) }}",
+        getSectionStudents: "{{ route('admin.archive.section-students', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
+        archiveSemester: "{{ route('admin.archive.semester', ['id' => ':id']) }}",
+        activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
+        searchSections: "{{ route('admin.archive.search-sections') }}",
+        loadStudents: "{{ route('admin.archive.load-students') }}",
+        getSectionDetails: "{{ route('admin.archive.get-section-details') }}",
+        getTargetSections: "{{ route('admin.archive.get-target-sections') }}",
+        enrollStudents: "{{ route('admin.archive.enroll-students') }}",
+        csrfToken: "{{ csrf_token() }}"
+    };
 
-        const SCHOOL_YEAR_ID = {{ $school_year_id }};
-    </script>
+    const SCHOOL_YEAR_ID = {{ $school_year_id }};
+    const TARGET_SEMESTER = @json($target_semester);
+</script>
+
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>
