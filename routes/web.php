@@ -106,6 +106,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/archive/semester/{id}', [Archive_Management::class, 'archiveSemester'])
         ->name('archive.semester');
 
+Route::get('archive/section-students/{semesterId}/{sectionId}', [Archive_Management::class, 'getSectionStudents'])->name('archive.section-students');
+Route::get('archive/teacher-classes/{semesterId}/{teacherId}', [Archive_Management::class, 'getTeacherClasses'])->name('archive.teacher-classes');
 
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {

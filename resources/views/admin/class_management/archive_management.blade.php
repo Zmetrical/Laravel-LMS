@@ -2,25 +2,105 @@
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        .semester-item {
-            cursor: pointer;
+        .info-card {
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+        }
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        .semester-card {
             transition: all 0.2s;
         }
-        .semester-item:hover {
-            background-color: #f8f9fa;
+        .semester-card:hover {
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
         }
-        .semester-item.active {
-            background-color: #007bff;
-            color: white !important;
+        
+        /* Expandable Details */
+        .expand-details-btn {
+            cursor: pointer;
+            transition: transform 0.2s;
         }
-        .semester-item.active .text-muted,
-        .semester-item.active small {
-            color: rgba(255, 255, 255, 0.8) !important;
+        .expand-details-btn.expanded i {
+            transform: rotate(180deg);
         }
-        .semester-item.active .badge {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-            color: white !important;
+        .expand-details-btn i {
+            transition: transform 0.2s;
+        }
+        
+        .details-section {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px dashed #dee2e6;
+        }
+        
+        .section-item-archive {
+            padding: 0.75rem;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .section-item-archive:hover {
+            background: #f8f9fa;
+        }
+        .section-item-archive.expanded {
+            background: #e7f3ff;
+            border-color: #007bff;
+        }
+        
+        .teacher-item {
+            padding: 0.5rem 0.75rem;
+            background: white;
+            border-left: 3px solid #007bff;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .class-tag {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #e7f3ff;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .student-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .student-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .student-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tab-content-area {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
         }
     </style>
 @endsection
@@ -36,7 +116,7 @@
 @section('content')
 <br>
 <div class="container-fluid">
-    <!-- Verification Card -->
+    <!-- Access Verification Card -->
     <div class="card card-primary card-outline" id="verificationCard">
         <div class="card-header">
             <h3 class="card-title">
@@ -49,15 +129,21 @@
                     <div class="text-center mb-4">
                         <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
                         <h5>Archive Management</h5>
-                        <p class="text-muted">Enter your admin password to continue</p>
+                        <p class="text-muted">Please verify your admin password to access archive operations</p>
                     </div>
                     <form id="verificationForm">
                         <div class="form-group">
-                            <label>Admin Password</label>
-                            <input type="password" class="form-control" id="adminPassword" required>
+                            <label for="adminPassword">Admin Password <span class="text-danger">*</span></label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="adminPassword" 
+                                   name="admin_password" 
+                                   placeholder="Enter your admin password"
+                                   autocomplete="off"
+                                   required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-check"></i> Verify
+                            <i class="fas fa-check"></i> Verify Access
                         </button>
                     </form>
                 </div>
@@ -65,24 +151,26 @@
         </div>
     </div>
 
-    <!-- Main Content -->
+    <!-- Archive Management Content (Hidden until verified) -->
     <div id="archiveContent" style="display: none;">
-        <!-- Loading -->
+        <!-- Loading State -->
         <div id="contentLoading" class="text-center py-5">
             <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
-            <p class="mt-3">Loading...</p>
+            <p class="mt-3">Loading archive information...</p>
         </div>
 
-        <!-- Content -->
+        <!-- Main Content -->
         <div id="mainContent" style="display: none;">
-            <!-- School Year Header -->
+            <!-- School Year Info -->
             <div class="card card-dark mb-3">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span id="syDisplay">-</span>
-                        </h5>
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span id="syDisplay">-</span>
+                            </h5>
+                        </div>
                         <div>
                             <span class="badge badge-lg mr-2" id="syStatusBadge"></span>
                             <button class="btn btn-sm btn-secondary" id="archiveSYBtn" style="display: none;">
@@ -93,131 +181,21 @@
                 </div>
             </div>
 
-            <div class="row">
-                <!-- Left: Semesters -->
-                <div class="col-md-4">
-                    <div class="card card-primary card-outline">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-calendar"></i> Semesters
-                            </h3>
-                        </div>
-                        <div class="card-body p-0">
-                            <div id="semestersLoading" class="text-center py-4">
-                                <i class="fas fa-spinner fa-spin"></i>
-                            </div>
-                            <div id="semestersList" class="list-group list-group-flush" style="display: none;">
-                            </div>
-                            <div id="noSemesters" class="text-center py-4" style="display: none;">
-                                <p class="text-muted mb-0">No semesters</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Warning Box (if applicable) -->
+            <div class="alert alert-warning" id="warningBox" style="display: none;">
+                <h5><i class="fas fa-exclamation-triangle"></i> Important</h5>
+                <p class="mb-0" id="warningText"></p>
+            </div>
 
-                <!-- Right: Details -->
-                <div class="col-md-8">
-                    <div class="card card-primary card-outline">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-info-circle"></i> Details
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            <!-- Empty State -->
-                            <div id="emptyState" class="text-center py-5">
-                                <i class="fas fa-arrow-left fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">Select a semester</p>
-                            </div>
+            <!-- Semesters -->
+            <div class="row" id="semestersContainer">
+                <!-- Semesters will be populated here -->
+            </div>
 
-                            <!-- Loading -->
-                            <div id="detailsLoading" class="text-center py-5" style="display: none;">
-                                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                            </div>
-
-                            <!-- Content -->
-                            <div id="detailsContent" style="display: none;">
-                                <div class="row mb-4">
-                                    <div class="col-md-3">
-                                        <div class="text-center p-3 bg-light rounded">
-                                            <h4 class="mb-0 text-primary" id="studentsCount">0</h4>
-                                            <small class="text-muted">Students</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="text-center p-3 bg-light rounded">
-                                            <h4 class="mb-0 text-primary" id="sectionsCount">0</h4>
-                                            <small class="text-muted">Sections</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="text-center p-3 bg-light rounded">
-                                            <h4 class="mb-0 text-primary" id="teachersCount">0</h4>
-                                            <small class="text-muted">Teachers</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="text-center p-3 bg-light rounded">
-                                            <h4 class="mb-0 text-primary" id="gradesCount">0</h4>
-                                            <small class="text-muted">Grades</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Tables -->
-                                <ul class="nav nav-tabs mb-3">
-                                    <li class="nav-item">
-                                        <a class="nav-link active" data-toggle="tab" href="#sectionsTab">Sections</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-toggle="tab" href="#teachersTab">Teachers</a>
-                                    </li>
-                                </ul>
-
-                                <div class="tab-content">
-                                    <!-- Sections Tab -->
-                                    <div class="tab-pane fade show active" id="sectionsTab">
-                                        <div class="table-responsive">
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Section</th>
-                                                        <th>Level</th>
-                                                        <th>Strand</th>
-                                                        <th class="text-right">Students</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="sectionsTableBody">
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    <!-- Teachers Tab -->
-                                    <div class="tab-pane fade" id="teachersTab">
-                                        <div class="table-responsive">
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Teacher</th>
-                                                        <th>Classes</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="teachersTableBody">
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <hr>
-                                <div class="text-right" id="actionButtons">
-                                    <!-- Buttons will be added here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Empty State -->
+            <div id="noSemesters" class="text-center py-5" style="display: none;">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No semesters found for this school year</p>
             </div>
         </div>
     </div>
@@ -231,11 +209,13 @@
             verifyAccess: "{{ route('admin.archive.verify') }}",
             getArchiveInfo: "{{ route('admin.archive.info', ['id' => ':id']) }}",
             getSemesterDetails: "{{ route('admin.archive.semester-details', ['id' => ':id']) }}",
+            getSectionStudents: "{{ route('admin.archive.section-students', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
             archiveSchoolYear: "{{ route('admin.archive.school-year', ['id' => ':id']) }}",
             archiveSemester: "{{ route('admin.archive.semester', ['id' => ':id']) }}",
             activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
             csrfToken: "{{ csrf_token() }}"
         };
+
         const SCHOOL_YEAR_ID = {{ $school_year_id }};
     </script>
     @if(isset($scripts))
