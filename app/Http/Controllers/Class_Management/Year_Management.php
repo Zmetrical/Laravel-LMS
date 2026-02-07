@@ -66,8 +66,8 @@ class Year_Management extends MainController
     public function createSchoolYear(Request $request)
     {
         $validated = $request->validate([
-            'year_start' => 'required|integer|min:2000|max:2100',
-            'year_end' => 'required|integer|min:2000|max:2100|gt:year_start',
+            'year_start' => 'required|integer|min:2000|max:3000',
+            'year_end' => 'required|integer|min:2000|max:3000|gt:year_start',
         ]);
 
         try {
@@ -143,8 +143,8 @@ class Year_Management extends MainController
     public function updateSchoolYear(Request $request, $id)
     {
         $validated = $request->validate([
-            'year_start' => 'required|integer|min:2000|max:2100',
-            'year_end' => 'required|integer|min:2000|max:2100|gt:year_start',
+            'year_start' => 'required|integer|min:2000|max:3000',
+            'year_end' => 'required|integer|min:2000|max:3000|gt:year_start',
             'status' => 'required|in:active,completed,upcoming',
         ]);
 

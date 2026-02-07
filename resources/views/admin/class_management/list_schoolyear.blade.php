@@ -83,8 +83,6 @@
 
                     <!-- Details Content -->
                     <div id="detailsContent" style="display: none;">
-                        <!-- Action Buttons -->
-
                         <hr>
 
                         <!-- Semesters Section -->
@@ -135,14 +133,11 @@
                 </div>
 
                 <div class="card-footer">
-                        <div class="mb-4 d-flex justify-content-center" id="actionButtons">
-                            <button class="btn btn-primary " id="activateBtn" style="display: none;">
-                                <i class="fas fa-check-circle"></i> Set as Active
-                            </button>
-                            <button class="btn btn-primary" id="archiveBtn" style="display: none;">
-                                <i class="fas fa-archive"></i> Archive
-                            </button>
-                        </div>
+                    <div class="mb-4 d-flex justify-content-center" id="actionButtons">
+                        <button class="btn btn-primary" id="activateBtn" style="display: none;">
+                            <i class="fas fa-check-circle"></i> Set as Active
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -166,14 +161,29 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="yearStart">Start Year <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="yearStart" 
-                               min="2000" max="2100" placeholder="e.g., 2024" required>
+                        <input type="text" 
+                               class="form-control" 
+                               id="yearStart" 
+                               inputmode="numeric"
+                               pattern="[0-9]{4}"
+                               maxlength="4"
+                               oninput="this.value = this.value.replace(/\D/g, '').substring(0, 4)"
+                               placeholder="e.g., 2024" 
+                               required>
                     </div>
                     <div class="form-group">
                         <label for="yearEnd">End Year <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="yearEnd" 
-                               min="2000" max="2100" placeholder="e.g., 2025" required>
+                        <input type="text" 
+                               class="form-control" 
+                               id="yearEnd" 
+                               inputmode="numeric"
+                               pattern="[0-9]{4}"
+                               maxlength="4"
+                               oninput="this.value = this.value.replace(/\D/g, '').substring(0, 4)"
+                               placeholder="e.g., 2025" 
+                               required>
                     </div>
+
                     <div class="form-group" id="statusGroup" style="display: none;">
                         <label for="status">Status <span class="text-danger">*</span></label>
                         <select class="form-control" id="status">
@@ -243,7 +253,6 @@
         </div>
     </div>
 </div>
-
 
 @endsection
 

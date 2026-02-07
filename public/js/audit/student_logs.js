@@ -67,12 +67,7 @@ $(document).ready(function () {
             { 
                 data: 'user_type',
                 render: function(data) {
-                    const badges = {
-                        'student': 'badge-primary',
-                        'guardian': 'badge-secondary'
-                    };
-                    const badgeClass = badges[data] || 'badge-secondary';
-                    return `<span class="badge ${badgeClass}">${data.toUpperCase()}</span>`;
+                    return `<span class="badge badge-secondary">${data.toUpperCase()}</span>`;
                 }
             },
             { 
@@ -84,14 +79,7 @@ $(document).ready(function () {
             { 
                 data: 'action',
                 render: function(data) {
-                    const badges = {
-                        'viewed': 'badge-info',
-                        'submitted': 'badge-success',
-                        'completed': 'badge-primary',
-                        'accessed': 'badge-secondary'
-                    };
-                    const badgeClass = badges[data] || 'badge-secondary';
-                    return `<span class="badge ${badgeClass}">${data.toUpperCase()}</span>`;
+                    return `<span class="badge badge-secondary">${data.toUpperCase()}</span>`;
                 }
             },
             { data: 'module' },
@@ -153,9 +141,10 @@ $(document).ready(function () {
     // View details
     $('#auditTable').on('click', '.view-details', function() {
         const logId = $(this).data('id');
+        const detailUrl = API_ROUTES.getLogDetails.replace(':id', logId);
         
         $.ajax({
-            url: API_ROUTES.getLogs + '/' + logId,
+            url: detailUrl,
             type: 'GET',
             success: function(data) {
                 $('#detail-timestamp').text(formatDateLong(data.created_at));
@@ -165,13 +154,16 @@ $(document).ready(function () {
                 $('#detail-module').text(data.module);
                 $('#detail-record').text(data.record_id || 'N/A');
                 $('#detail-description').text(data.description || 'No description');
-                $('#detail-ip').text(data.ip_address);
-                $('#detail-agent').text(data.user_agent || 'N/A');
+                $('#detail-ip').text(data.ip_address || 'N/A');
                 
                 // Show values if available
                 if (data.new_values) {
                     $('#values-section').show();
-                    $('#detail-values').text(JSON.stringify(JSON.parse(data.new_values), null, 2));
+                    try {
+                        $('#detail-values').text(JSON.stringify(JSON.parse(data.new_values), null, 2));
+                    } catch(e) {
+                        $('#detail-values').text(data.new_values);
+                    }
                 } else {
                     $('#values-section').hide();
                 }

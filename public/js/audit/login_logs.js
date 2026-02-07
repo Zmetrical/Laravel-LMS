@@ -39,48 +39,20 @@ $(document).ready(function () {
         }
     }
 
-    function calculateDuration(loginTime, logoutTime) {
-        if (!logoutTime) return 'Active';
+    function formatDuration(seconds) {
+        if (!seconds || seconds <= 0) return 'N/A';
         
-        const login = new Date(loginTime);
-        const logout = new Date(logoutTime);
-        const diffMs = logout - login;
-        
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
         
         if (hours > 0) {
             return `${hours}h ${minutes}m`;
         } else if (minutes > 0) {
-            return `${minutes}m ${seconds}s`;
+            return `${minutes}m ${secs}s`;
         } else {
-            return `${seconds}s`;
+            return `${secs}s`;
         }
-    }
-
-    function parseBrowser(userAgent) {
-        if (!userAgent) return 'Unknown';
-        
-        if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) return 'Chrome';
-        if (userAgent.includes('Firefox')) return 'Firefox';
-        if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
-        if (userAgent.includes('Edg')) return 'Edge';
-        if (userAgent.includes('Opera') || userAgent.includes('OPR')) return 'Opera';
-        
-        return 'Other';
-    }
-
-    function parsePlatform(userAgent) {
-        if (!userAgent) return 'Unknown';
-        
-        if (userAgent.includes('Windows')) return 'Windows';
-        if (userAgent.includes('Mac')) return 'macOS';
-        if (userAgent.includes('Linux')) return 'Linux';
-        if (userAgent.includes('Android')) return 'Android';
-        if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
-        
-        return 'Other';
     }
 
     dataTable = $('#loginTable').DataTable({
@@ -110,14 +82,7 @@ $(document).ready(function () {
             { 
                 data: 'user_type',
                 render: function(data) {
-                    const badges = {
-                        'admin': 'badge-danger',
-                        'teacher': 'badge-primary',
-                        'student': 'badge-secondary',
-                        'guardian': 'badge-info'
-                    };
-                    const badgeClass = badges[data] || 'badge-secondary';
-                    return `<span class="badge ${badgeClass}">${data.toUpperCase()}</span>`;
+                    return `<span class="badge badge-secondary">${data.toUpperCase()}</span>`;
                 }
             },
             { 
@@ -128,9 +93,12 @@ $(document).ready(function () {
             },
             { data: 'ip_address' },
             { 
-                data: null,
+                data: 'duration_seconds',
                 render: function(data, type, row) {
-                    return calculateDuration(row.created_at, row.logout_at);
+                    if (row.status === 'active') {
+                        return '<span class="badge badge-secondary">Active</span>';
+                    }
+                    return formatDuration(data);
                 }
             },
             { 
@@ -140,13 +108,14 @@ $(document).ready(function () {
                 }
             },
             { 
-                data: 'logout_at',
+                data: 'status',
                 render: function(data) {
-                    if (data) {
-                        return '<span class="badge badge-logout">Logged Out</span>';
-                    } else {
-                        return '<span class="badge badge-active">Active</span>';
-                    }
+                    const badges = {
+                        'active': '<span class="badge badge-secondary">Active</span>',
+                        'logged_out': '<span class="badge badge-secondary">Logged Out</span>',
+                        'expired': '<span class="badge badge-secondary">Expired</span>'
+                    };
+                    return badges[data] || '<span class="badge badge-secondary">Unknown</span>';
                 }
             },
             {
@@ -198,21 +167,27 @@ $(document).ready(function () {
     // View details
     $('#loginTable').on('click', '.view-details', function() {
         const logId = $(this).data('id');
+        const detailUrl = API_ROUTES.getLogDetails.replace(':id', logId);
         
         $.ajax({
-            url: API_ROUTES.getLogs + '/' + logId,
+            url: detailUrl,
             type: 'GET',
             success: function(data) {
                 $('#detail-usertype').html(`<span class="badge badge-secondary">${data.user_type.toUpperCase()}</span>`);
                 $('#detail-user').text(data.user_identifier || 'Unknown');
                 $('#detail-login').text(formatDateLong(data.created_at));
                 $('#detail-logout').text(data.logout_at ? formatDateLong(data.logout_at) : 'Still Active');
-                $('#detail-duration').text(calculateDuration(data.created_at, data.logout_at));
-                $('#detail-ip').text(data.ip_address);
+                $('#detail-duration').text(data.duration_seconds ? formatDuration(data.duration_seconds) : 'N/A');
+                $('#detail-ip').text(data.ip_address || 'N/A');
                 $('#detail-session').text(data.session_id || 'N/A');
-                $('#detail-agent').text(data.user_agent || 'N/A');
-                $('#detail-browser').text(parseBrowser(data.user_agent));
-                $('#detail-platform').text(parsePlatform(data.user_agent));
+                
+                // Set status badge
+                const statusBadges = {
+                    'active': '<span class="badge badge-secondary">Active</span>',
+                    'logged_out': '<span class="badge badge-secondary">Logged Out</span>',
+                    'expired': '<span class="badge badge-secondary">Expired</span>'
+                };
+                $('#detail-status').html(statusBadges[data.status] || 'Unknown');
                 
                 $('#detailsModal').modal('show');
             },

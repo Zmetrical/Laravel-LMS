@@ -42,7 +42,7 @@ $(document).ready(function() {
 
                 if (sections.length === 0) {
                     $('#sectionCapacityContainer').html(`
-                        <div class="alert alert-warning mb-0">
+                        <div class="alert alert-primary mb-0">
                             <i class="fas fa-exclamation-triangle"></i> No sections found for selected strand and level
                         </div>
                     `);
@@ -134,19 +134,19 @@ $(document).ready(function() {
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
-                                        <label>M.I.</label>
+                                        <label>M.I. <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" 
                                                name="students[${rowCounter}][middleInitial]" 
-                                               placeholder="M.I." maxlength="3">
+                                               placeholder="M.I." maxlength="3" required>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label>Email</label>
+                                <label>Email <span class="text-danger">*</span></label>
                                 <input type="email" class="form-control" 
                                        name="students[${rowCounter}][email]" 
-                                       placeholder="student@email.com (optional)">
+                                       placeholder="student@email.com" required>
                             </div>
 
                             <div class="row">
@@ -156,7 +156,7 @@ $(document).ready(function() {
                                         <button type="button" class="btn btn-secondary btn-block gender-toggle" data-gender="Male">
                                             <i class="fas fa-mars"></i> Male
                                         </button>
-                                        <input type="hidden" name="students[${rowCounter}][gender]" value="Male" class="gender-input">
+                                        <input type="hidden" name="students[${rowCounter}][gender]" value="Male" class="gender-input" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -165,7 +165,7 @@ $(document).ready(function() {
                                         <button type="button" class="btn btn-secondary btn-block type-toggle" data-type="regular">
                                             <i class="fas fa-user-check"></i> Regular
                                         </button>
-                                        <input type="hidden" name="students[${rowCounter}][studentType]" value="regular" class="type-input">
+                                        <input type="hidden" name="students[${rowCounter}][studentType]" value="regular" class="type-input" required>
                                     </div>
                                 </div>
                             </div>
@@ -176,24 +176,24 @@ $(document).ready(function() {
                             <h6 class="text-primary mb-3"><i class="fas fa-user-friends mr-2"></i>Parent/Guardian Information</h6>
                             
                             <div class="form-group">
-                                <label>Parent Last Name</label>
+                                <label>Parent Last Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" 
                                        name="students[${rowCounter}][parentLastName]" 
-                                       placeholder="Parent/Guardian Last Name">
+                                       placeholder="Parent/Guardian Last Name" required>
                             </div>
 
                             <div class="form-group">
-                                <label>Parent First Name</label>
+                                <label>Parent First Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" 
                                        name="students[${rowCounter}][parentFirstName]" 
-                                       placeholder="Parent/Guardian First Name">
+                                       placeholder="Parent/Guardian First Name" required>
                             </div>
 
                             <div class="form-group">
-                                <label>Parent Email</label>
+                                <label>Parent Email <span class="text-danger">*</span></label>
                                 <input type="email" class="form-control" 
                                        name="students[${rowCounter}][parentEmail]" 
-                                       placeholder="parent@email.com">
+                                       placeholder="parent@email.com" required>
                             </div>
                         </div>
                     </div>
@@ -347,8 +347,14 @@ $(document).ready(function() {
             const $card = $(this);
             const firstName = $card.find('input[name*="[firstName]"]').val().trim();
             const lastName = $card.find('input[name*="[lastName]"]').val().trim();
+            const middleInitial = $card.find('input[name*="[middleInitial]"]').val().trim();
+            const email = $card.find('input[name*="[email]"]').val().trim();
+            const parentFirstName = $card.find('input[name*="[parentFirstName]"]').val().trim();
+            const parentLastName = $card.find('input[name*="[parentLastName]"]').val().trim();
+            const parentEmail = $card.find('input[name*="[parentEmail]"]').val().trim();
 
-            if (!firstName || !lastName) {
+            // Validate all required fields
+            if (!firstName || !lastName || !middleInitial || !email || !parentFirstName || !parentLastName || !parentEmail) {
                 hasErrors = true;
                 $card.addClass('border-danger');
                 return;
@@ -357,15 +363,15 @@ $(document).ready(function() {
             $card.removeClass('border-danger');
 
             students.push({
-                email: $card.find('input[name*="[email]"]').val().trim(),
+                email: email,
                 firstName: firstName,
                 lastName: lastName,
-                middleInitial: $card.find('input[name*="[middleInitial]"]').val().trim(),
+                middleInitial: middleInitial,
                 gender: $card.find('.gender-input').val(),
                 studentType: $card.find('.type-input').val(),
-                parentLastName: $card.find('input[name*="[parentLastName]"]').val().trim(),
-                parentFirstName: $card.find('input[name*="[parentFirstName]"]').val().trim(),
-                parentEmail: $card.find('input[name*="[parentEmail]"]').val().trim(),
+                parentLastName: parentLastName,
+                parentFirstName: parentFirstName,
+                parentEmail: parentEmail,
             });
         });
 
@@ -437,7 +443,7 @@ $(document).ready(function() {
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
-                // window.location.href = API_ROUTES.redirectAfterSubmit;
+                window.location.href = API_ROUTES.redirectAfterSubmit;
             });
             return;
         }
@@ -531,17 +537,19 @@ $(document).ready(function() {
 
                 worksheet.eachRow(function(row, rowNumber) {
                     if (rowNumber > 1) {
-                        const email = row.getCell(1).value || '';
+                        const email = row.getCell(1).value;
                         const lastName = row.getCell(2).value;
                         const firstName = row.getCell(3).value;
-                        const middleInitial = row.getCell(4).value || '';
-                        let genderRaw = row.getCell(5).value || 'Male';
-                        const studentTypeRaw = row.getCell(6).value || 'regular';
-                        const parentLastName = row.getCell(7).value || '';
-                        const parentFirstName = row.getCell(8).value || '';
-                        const parentEmail = row.getCell(9).value || '';
+                        const middleInitial = row.getCell(4).value;
+                        let genderRaw = row.getCell(5).value;
+                        const studentTypeRaw = row.getCell(6).value;
+                        const parentLastName = row.getCell(7).value;
+                        const parentFirstName = row.getCell(8).value;
+                        const parentEmail = row.getCell(9).value;
 
-                        if (!lastName || !firstName) {
+                        // Validate all required fields are present
+                        if (!lastName || !firstName || !middleInitial || !email || !parentLastName || !parentFirstName || !parentEmail) {
+                            console.warn(`Skipping row ${rowNumber}: Missing required fields`);
                             return;
                         }
 
@@ -553,10 +561,18 @@ $(document).ready(function() {
                             }
                         }
 
-                        const studentType = String(studentTypeRaw).toLowerCase().trim() === 'irregular' ? 'irregular' : 'regular';
+                        const studentType = String(studentTypeRaw || 'regular').toLowerCase().trim() === 'irregular' ? 'irregular' : 'regular';
+                        
                         tempStudents.push({
-                            email, lastName, firstName, middleInitial, gender, studentType,
-                            parentLastName, parentFirstName, parentEmail
+                            email: String(email).trim(), 
+                            lastName: String(lastName).trim(), 
+                            firstName: String(firstName).trim(), 
+                            middleInitial: String(middleInitial).trim(), 
+                            gender, 
+                            studentType,
+                            parentLastName: String(parentLastName).trim(), 
+                            parentFirstName: String(parentFirstName).trim(), 
+                            parentEmail: String(parentEmail).trim()
                         });
                         importedCount++;
                     }
@@ -630,15 +646,15 @@ $(document).ready(function() {
         const worksheet = workbook.addWorksheet('Student Template');
 
         worksheet.columns = [
-            { header: 'Email', key: 'email', width: 30 },
-            { header: 'Last Name', key: 'lastName', width: 20 },
-            { header: 'First Name', key: 'firstName', width: 20 },
-            { header: 'Middle Initial', key: 'middleInitial', width: 15 },
-            { header: 'Gender (M/F)', key: 'gender', width: 15 },
-            { header: 'Student Type', key: 'studentType', width: 15 },
-            { header: 'Parent Last Name', key: 'parentLastName', width: 20 },
-            { header: 'Parent First Name', key: 'parentFirstName', width: 20 },
-            { header: 'Parent Email', key: 'parentEmail', width: 30 }
+            { header: 'Email*', key: 'email', width: 30 },
+            { header: 'Last Name*', key: 'lastName', width: 20 },
+            { header: 'First Name*', key: 'firstName', width: 20 },
+            { header: 'Middle Initial*', key: 'middleInitial', width: 15 },
+            { header: 'Gender (M/F)*', key: 'gender', width: 15 },
+            { header: 'Student Type*', key: 'studentType', width: 15 },
+            { header: 'Parent Last Name*', key: 'parentLastName', width: 20 },
+            { header: 'Parent First Name*', key: 'parentFirstName', width: 20 },
+            { header: 'Parent Email*', key: 'parentEmail', width: 30 }
         ];
 
         worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -649,27 +665,27 @@ $(document).ready(function() {
         };
 
         worksheet.addRow({
-            email: 'student@gmail.com',
-            lastName: '1',
-            firstName: 'Sample',
+            email: 'student1@gmail.com',
+            lastName: 'Dela Cruz',
+            firstName: 'Juan',
             middleInitial: 'A',
             gender: 'M',
             studentType: 'regular',
-            parentLastName: '1',
-            parentFirstName: 'GuardianSample',
-            parentEmail: 'parent@gmail.com'
+            parentLastName: 'Dela Cruz',
+            parentFirstName: 'Pedro',
+            parentEmail: 'parent1@gmail.com'
         });
 
         worksheet.addRow({
-            email: 'student@gmail.com',
-            lastName: '2',
-            firstName: 'Sample',
-            middleInitial: 'A',
+            email: 'student2@gmail.com',
+            lastName: 'Santos',
+            firstName: 'Maria',
+            middleInitial: 'B',
             gender: 'F',
             studentType: 'regular',
-            parentLastName: '2',
-            parentFirstName: 'GuardianSample',
-            parentEmail: 'parent@gmail.com'
+            parentLastName: 'Santos',
+            parentFirstName: 'Ana',
+            parentEmail: 'parent2@gmail.com'
         });
 
         workbook.xlsx.writeBuffer().then(function(buffer) {

@@ -253,15 +253,15 @@ class User_Management extends MainController
             'strand_id' => 'required|exists:strands,id',
             'level_id' => 'required|exists:levels,id',
             'students' => 'required|array|min:1|max:100',
-            'students.*.email' => 'nullable|email|distinct',
+            'students.*.email' => 'required|email|distinct',
             'students.*.firstName' => 'required|string|max:255',
             'students.*.lastName' => 'required|string|max:255',
-            'students.*.middleInitial' => 'nullable|string|max:50',
+            'students.*.middleInitial' => 'required|string|max:50',
             'students.*.gender' => 'required|in:Male,Female,M,F',
             'students.*.studentType' => 'required|in:regular,irregular',
-            'students.*.parentEmail' => 'nullable|email',
-            'students.*.parentFirstName' => 'nullable|string|max:255',
-            'students.*.parentLastName' => 'nullable|string|max:255',
+            'students.*.parentEmail' => 'required|email',
+            'students.*.parentFirstName' => 'required|string|max:255',
+            'students.*.parentLastName' => 'required|string|max:255',
         ]);
 
         try {
@@ -371,15 +371,12 @@ class User_Management extends MainController
                 if ($gender === 'M') $gender = 'Male';
                 elseif ($gender === 'F') $gender = 'Female';
 
-                $middleInitial = null;
-                if (!empty($studentData['middleInitial'])) {
-                    $middleInitial = $this->processMiddleInitial($studentData['middleInitial']);
-                }
+                $middleInitial = $this->processMiddleInitial($studentData['middleInitial']);
 
                 $studentsData[] = [
                     'student_number' => $studentNumber,
                     'student_password' => Hash::make($password),
-                    'email' => $studentData['email'] ?? '',
+                    'email' => $studentData['email'],
                     'first_name' => $studentData['firstName'],
                     'middle_name' => $middleInitial,
                     'last_name' => $studentData['lastName'],
@@ -406,15 +403,13 @@ class User_Management extends MainController
                     'updated_at' => $now
                 ];
 
-                // Store guardian data for processing
-                if (!empty($studentData['parentEmail']) || !empty($studentData['parentFirstName']) || !empty($studentData['parentLastName'])) {
-                    $guardianLinks[] = [
-                        'student_number' => $studentNumber,
-                        'email' => $studentData['parentEmail'] ?? '',
-                        'firstName' => $studentData['parentFirstName'] ?? '',
-                        'lastName' => $studentData['parentLastName'] ?? ''
-                    ];
-                }
+                // Store guardian data for processing (all fields now required)
+                $guardianLinks[] = [
+                    'student_number' => $studentNumber,
+                    'email' => $studentData['parentEmail'],
+                    'firstName' => $studentData['parentFirstName'],
+                    'lastName' => $studentData['parentLastName']
+                ];
 
                 // Prepare audit entry for each student
                 $auditEntries[] = [
@@ -422,13 +417,16 @@ class User_Management extends MainController
                     'first_name' => $studentData['firstName'],
                     'middle_name' => $middleInitial,
                     'last_name' => $studentData['lastName'],
-                    'email' => $studentData['email'] ?? '',
+                    'email' => $studentData['email'],
                     'gender' => $gender,
                     'section_id' => $currentSectionId,
                     'section_name' => $currentSectionName,
                     'strand' => $strand->code,
                     'level' => $level->name,
                     'student_type' => $studentData['studentType'],
+                    'parent_email' => $studentData['parentEmail'],
+                    'parent_first_name' => $studentData['parentFirstName'],
+                    'parent_last_name' => $studentData['parentLastName'],
                 ];
 
                 $currentSectionSlots--;
@@ -497,25 +495,19 @@ class User_Management extends MainController
 
     private function createOrLinkGuardian($guardianData, $studentNumber)
     {
-        if (empty($guardianData['email']) && empty($guardianData['firstName']) && empty($guardianData['lastName'])) {
-            return null; // No guardian info provided
-        }
-
         $guardian = null;
         
         // Check if guardian exists by email
-        if (!empty($guardianData['email'])) {
-            $guardian = DB::table('guardians')->where('email', $guardianData['email'])->first();
-        }
+        $guardian = DB::table('guardians')->where('email', $guardianData['email'])->first();
 
         // If guardian doesn't exist, create new one
         if (!$guardian) {
             $accessToken = Str::random(64);
             
             $guardianId = DB::table('guardians')->insertGetId([
-                'email' => $guardianData['email'] ?? '',
-                'first_name' => $guardianData['firstName'] ?? '',
-                'last_name' => $guardianData['lastName'] ?? '',
+                'email' => $guardianData['email'],
+                'first_name' => $guardianData['firstName'],
+                'last_name' => $guardianData['lastName'],
                 'access_token' => $accessToken,
                 'is_active' => 1,
                 'created_at' => now(),
@@ -530,9 +522,9 @@ class User_Management extends MainController
                 "Created guardian: {$guardianData['firstName']} {$guardianData['lastName']} ({$guardianData['email']}) linked to student {$studentNumber}",
                 null,
                 [
-                    'email' => $guardianData['email'] ?? '',
-                    'first_name' => $guardianData['firstName'] ?? '',
-                    'last_name' => $guardianData['lastName'] ?? '',
+                    'email' => $guardianData['email'],
+                    'first_name' => $guardianData['firstName'],
+                    'last_name' => $guardianData['lastName'],
                     'student_number' => $studentNumber,
                 ]
             );

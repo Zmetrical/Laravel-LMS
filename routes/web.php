@@ -111,10 +111,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::prefix('audit')->name('audit.')->group(function () {
             // Admin Audit Logs
-            Route::get('/admin', [AuditLogController::class, 'adminIndex'])->name('admin.index');
-            Route::get('/admin/data', [AuditLogController::class, 'getAdminLogs'])->name('logs.data');
-            Route::get('/admin/{id}', [AuditLogController::class, 'getLogDetails'])->name('logs.details');
-
+    Route::get('/admin', [AuditLogController::class, 'adminIndex'])->name('admin.index');
+    Route::get('/admin/data', [AuditLogController::class, 'getAdminLogs'])->name('admin.data');
+    Route::get('/admin/details/{id}', [AuditLogController::class, 'getLogDetails'])->name('admin.details');
+    
             // Teacher Audit Logs
             Route::get('/teachers', [AuditLogController::class, 'teacherIndex'])->name('teachers.index');
             Route::get('/teachers/data', [AuditLogController::class, 'getTeacherLogs'])->name('teachers.data');

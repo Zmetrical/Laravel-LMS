@@ -419,8 +419,6 @@ $(document).ready(function () {
         `;
 
         if (filterClassCode) {
-            headerHtml += `<th width="200">Class</th>`;
-            
             if (quarter === 'final') {
                 headerHtml += `
                     <th width="100" class="text-center">Q1</th>
@@ -432,7 +430,7 @@ $(document).ready(function () {
                 headerHtml += `<th width="100" class="text-center">${quarter === '1ST' ? '1st Quarter' : '2nd Quarter'} Grade</th>`;
             }
         } else {
-            headerHtml += `<th width="100" class="text-center">Classes</th>`;
+            headerHtml += `<th width="80" class="text-center">Action</th>`;
         }
 
         headerHtml += `</tr>`;
@@ -441,13 +439,11 @@ $(document).ready(function () {
         students.forEach(student => {
             if (filterClassCode) {
                 const classGrade = student.class_grades.find(g => g.class_code === filterClassCode);
-                const selectedClass = allClasses.find(c => c.class_code === filterClassCode);
                 
                 let row = `
                     <tr data-student-id="${student.student_number}">
                         <td><strong>${student.student_number}</strong></td>
                         <td>${student.full_name}</td>
-                        <td>${selectedClass ? selectedClass.class_name : '-'}</td>
                 `;
 
                 if (classGrade) {
@@ -456,14 +452,14 @@ $(document).ready(function () {
                         const q2 = classGrade.q2 || '-';
                         const final = classGrade.final_grade || '-';
                         const remarks = classGrade.remarks || '-';
-                        const remarksClass = classGrade.remarks === 'PASSED' ? 'text-success' :
-                                           classGrade.remarks === 'FAILED' ? 'text-danger' : 'text-secondary';
+                        const remarksColor = classGrade.remarks === 'PASSED' ? '#28a745' :
+                                           classGrade.remarks === 'FAILED' ? '#dc3545' : '#6c757d';
                         
                         row += `
                             <td class="text-center">${q1}</td>
                             <td class="text-center">${q2}</td>
                             <td class="text-center"><strong>${final}</strong></td>
-                            <td><span class="${remarksClass}">${remarks}</span></td>
+                            <td class="text-center"><span style="color: ${remarksColor}; font-weight: 600;">${remarks}</span></td>
                         `;
                     } else if (quarter === '1ST') {
                         row += `<td class="text-center"><strong>${classGrade.q1 || '-'}</strong></td>`;
@@ -472,7 +468,7 @@ $(document).ready(function () {
                     }
                 } else {
                     if (quarter === 'final') {
-                        row += `<td class="text-center">-</td><td class="text-center">-</td><td class="text-center">-</td><td>-</td>`;
+                        row += `<td class="text-center">-</td><td class="text-center">-</td><td class="text-center">-</td><td class="text-center">-</td>`;
                     } else {
                         row += `<td class="text-center">-</td>`;
                     }
@@ -481,7 +477,9 @@ $(document).ready(function () {
                 row += `</tr>`;
                 tbody.append(row);
             } else {
-                const classCount = student.class_grades.length;
+                const viewCardUrl = API_ROUTES.viewGradeCard
+                    .replace(':student_number', student.student_number)
+                    .replace(':semester_id', selectedSemesterId);
                 
                 let row = `
                     <tr data-student-id="${student.student_number}" data-classes='${JSON.stringify(student.class_grades)}'>
@@ -493,7 +491,9 @@ $(document).ready(function () {
                         <td><strong>${student.student_number}</strong></td>
                         <td>${student.full_name}</td>
                         <td class="text-center">
-                            <span class="badge badge-primary">${classCount}</span>
+                            <a href="${viewCardUrl}" class="btn btn-sm btn-primary" title="View Grade Card">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
                         </td>
                     </tr>
                 `;
@@ -530,36 +530,36 @@ $(document).ready(function () {
                     
                     // ONLY SHOW GRADE FOR SELECTED QUARTER
                     let gradeDisplay = '';
-                    let gradeBadgeClass = 'badge-light';
+                    let gradeColor = '#6c757d';
                     
                     if (selectedQuarter === 'final') {
                         const final = classGrade.final_grade || '-';
-                        gradeDisplay = `Final: ${final}`;
-                        gradeBadgeClass = final !== '-' && parseFloat(final) >= 75 ? 'badge-success' : 
-                                         final !== '-' ? 'badge-danger' : 'badge-light';
+                        gradeDisplay = final;
+                        gradeColor = final !== '-' && parseFloat(final) >= 75 ? '#28a745' : 
+                                    final !== '-' ? '#dc3545' : '#6c757d';
                     } else if (selectedQuarter === '1ST') {
                         const q1 = classGrade.q1 || '-';
-                        gradeDisplay = `Q1: ${q1}`;
-                        gradeBadgeClass = q1 !== '-' && parseFloat(q1) >= 75 ? 'badge-success' : 
-                                         q1 !== '-' ? 'badge-danger' : 'badge-light';
+                        gradeDisplay = q1;
+                        gradeColor = q1 !== '-' && parseFloat(q1) >= 75 ? '#28a745' : 
+                                    q1 !== '-' ? '#dc3545' : '#6c757d';
                     } else if (selectedQuarter === '2ND') {
                         const q2 = classGrade.q2 || '-';
-                        gradeDisplay = `Q2: ${q2}`;
-                        gradeBadgeClass = q2 !== '-' && parseFloat(q2) >= 75 ? 'badge-success' : 
-                                         q2 !== '-' ? 'badge-danger' : 'badge-light';
+                        gradeDisplay = q2;
+                        gradeColor = q2 !== '-' && parseFloat(q2) >= 75 ? '#28a745' : 
+                                    q2 !== '-' ? '#dc3545' : '#6c757d';
                     }
                     
                     const remarks = classGrade.remarks || '-';
-                    const remarksClass = classGrade.remarks === 'PASSED' ? 'badge-success' :
-                                       classGrade.remarks === 'FAILED' ? 'badge-danger' : 'badge-secondary';
+                    const remarksColor = classGrade.remarks === 'PASSED' ? '#28a745' :
+                                       classGrade.remarks === 'FAILED' ? '#dc3545' : '#6c757d';
                     
                     classesHtml += `
                         <div class="class-item">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="class-name">${className}</div>
-                                <div class="grade-badges">
-                                    <span class="badge ${gradeBadgeClass}">${gradeDisplay}</span>
-                                    ${selectedQuarter === 'final' ? `<span class="badge ${remarksClass}">${remarks}</span>` : ''}
+                                <div>
+                                    <span style="color: ${gradeColor}; font-weight: 600; font-size: 1.1rem; margin-right: 1rem;">${gradeDisplay}</span>
+                                    ${selectedQuarter === 'final' ? `<span style="color: ${remarksColor}; font-weight: 600;">${remarks}</span>` : ''}
                                 </div>
                             </div>
                         </div>

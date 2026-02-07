@@ -15,15 +15,25 @@ $(document).ready(function () {
     });
 
     // Add School Year Button
-    $('#addSchoolYearBtn').click(function () {
-        isEditMode = false;
-        $('#syModalTitle').text('Add School Year');
-        $('#schoolYearId').val('');
+$('#addSchoolYearBtn').click(function () {
+    isEditMode = false;
+    $('#syModalTitle').text('Add School Year');
+    $('#schoolYearId').val('');
+    
+    // Set default values from latest school year
+    const latestYear = getLatestSchoolYear();
+    if (latestYear) {
+        const startYear = parseInt(latestYear.year_end, 10); 
+        $('#yearStart').val(startYear);
+        $('#yearEnd').val(startYear + 1);
+    } else {
         $('#yearStart').val('');
         $('#yearEnd').val('');
-        $('#statusGroup').hide();
-        $('#schoolYearModal').modal('show');
-    });
+    }
+    
+    $('#statusGroup').hide();
+    $('#schoolYearModal').modal('show');
+});
 
     // Edit Year Button
     $('#editYearBtn').click(function () {
@@ -32,21 +42,133 @@ $(document).ready(function () {
         }
     });
 
-    // Auto-fill end year
-    $('#yearStart').on('input', function () {
-        const startYear = parseInt($(this).val());
-        if (!isNaN(startYear)) {
-            $('#yearEnd').val(startYear + 1);
+    // CRITICAL: Enforce 4-digit limit - This runs AFTER oninput but provides extra protection
+    $('#yearStart, #yearEnd').on('input keyup paste', function() {
+        let value = $(this).val();
+        // Remove non-numeric characters
+        value = value.replace(/\D/g, '');
+        // Force limit to 4 characters
+        if (value.length > 4) {
+            value = value.substring(0, 4);
+        }
+        // Only update if different to avoid infinite loop
+        if ($(this).val() !== value) {
+            $(this).val(value);
         }
     });
+
+    // Prevent typing more than 4 digits with keypress
+    $('#yearStart, #yearEnd').on('keypress', function(e) {
+        const char = String.fromCharCode(e.which);
+        
+        // Allow only digits
+        if (!/[0-9]/.test(char)) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Check if already 4 digits
+        const currentValue = $(this).val();
+        const selectionStart = this.selectionStart;
+        const selectionEnd = this.selectionEnd;
+        
+        // If text is selected, allow typing (it will replace)
+        if (selectionStart !== selectionEnd) {
+            return true;
+        }
+        
+        // If already 4 digits and no selection, prevent
+        if (currentValue.length >= 4) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+$('#yearStart').on('blur', function () {
+    let value = $(this).val().trim();
+    
+    if (value.length > 4) {
+        value = value.substring(0, 4);
+        $(this).val(value);
+    }
+    
+    if (value.length === 4) {
+        const startYear = parseInt(value, 10);
+        if (!isNaN(startYear) && startYear >= 2000 && startYear <= 3000) {
+            let endYear = startYear + 1;
+            if (endYear > 3000) {
+                endYear = 3000;
+            }
+            $('#yearEnd').val(endYear.toString());
+        } else if (startYear < 2000) {
+            $(this).val('2000');
+            $('#yearEnd').val('2001');
+        } else if (startYear > 3000) {
+            $(this).val('3000');
+            $('#yearEnd').val('3000');
+        }
+    }
+});
+
+    // Auto-update start year when end year changes
+$('#yearEnd').on('blur', function () {
+    let value = $(this).val().trim();
+    
+    // Force exactly 4 digits
+    if (value.length > 4) {
+        value = value.substring(0, 4);
+        $(this).val(value);
+    }
+    
+    if (value.length === 4) {
+        const endYear = parseInt(value, 10);  // Use radix 10
+        if (!isNaN(endYear) && endYear >= 2000 && endYear <= 3000) {
+            let startYear = endYear - 1;
+            if (startYear < 2000) {
+                startYear = 2000;
+            }
+            $('#yearStart').val(startYear.toString());
+        } else if (endYear < 2000) {
+            $(this).val('2000');
+            $('#yearStart').val('2000');
+        } else if (endYear > 3000) {
+            $(this).val('3000');
+            $('#yearStart').val('2999');
+        }
+    }
+});
 
     // School Year Form Submit
     $('#schoolYearForm').submit(function (e) {
         e.preventDefault();
 
-        const yearStart = parseInt($('#yearStart').val());
-        const yearEnd = parseInt($('#yearEnd').val());
+        const yearStartStr = $('#yearStart').val();
+        const yearEndStr = $('#yearEnd').val();
 
+        // Validate year format (4 digits)
+        if (yearStartStr.length !== 4 || yearEndStr.length !== 4) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Year Format',
+                text: 'Year must be exactly 4 digits'
+            });
+            return;
+        }
+
+        const yearStart = parseInt(yearStartStr);
+        const yearEnd = parseInt(yearEndStr);
+
+        // Validate year range
+        if (yearStart < 2000 || yearStart > 3000 || yearEnd < 2000 || yearEnd > 3000) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Year Range',
+                text: 'Year must be between 2000 and 3000'
+            });
+            return;
+        }
+
+        // Validate consecutive years
         if (yearEnd - yearStart !== 1) {
             Swal.fire({
                 icon: 'error',
@@ -76,12 +198,6 @@ $(document).ready(function () {
         }
     });
 
-    // Archive Button
-    $('#archiveBtn').click(function () {
-        if (selectedYearId) {
-            archiveSchoolYear(selectedYearId);
-        }
-    });
 
     // Add Semester Button
     $('#addSemesterBtn').click(function () {
@@ -134,6 +250,16 @@ $(document).ready(function () {
             createSemester(formData);
         }
     });
+
+    // Get Latest School Year (by year_end value, not created date)
+    function getLatestSchoolYear() {
+        if (schoolYears.length === 0) return null;
+        
+        return schoolYears.reduce((latest, current) => {
+            if (!latest) return current;
+            return current.year_end > latest.year_end ? current : latest;
+        }, null);
+    }
 
     // Load School Years
     function loadSchoolYears() {
@@ -498,7 +624,7 @@ $(document).ready(function () {
             html: `Set <strong>SY ${year.year_start}-${year.year_end}</strong> as active?<br><small class="text-muted">This will deactivate all other school years</small>`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#28a745',
+            confirmButtonColor: '#007bff',
             cancelButtonColor: '#6c757d',
             confirmButtonText: '<i class="fas fa-check"></i> Yes, activate',
             cancelButtonText: 'Cancel'
@@ -543,7 +669,7 @@ $(document).ready(function () {
             html: `Archive <strong>SY ${year.year_start}-${year.year_end}</strong>?<br><small class="text-muted">This will mark it as completed</small>`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ffc107',
+            confirmButtonColor: '#6c757d',
             cancelButtonColor: '#6c757d',
             confirmButtonText: '<i class="fas fa-archive"></i> Yes, archive',
             cancelButtonText: 'Cancel'

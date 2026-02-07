@@ -199,10 +199,11 @@
     <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
     <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    <script>
-        const API_ROUTES = {
-            getLogs: "{{ route('admin.audit.logs.data') }}"
-        };
-    </script>
+<script>
+    const API_ROUTES = {
+        getLogs: "{{ route('admin.audit.admin.data') }}",
+        getLogDetails: "{{ route('admin.audit.admin.details', ':id') }}"
+    };
+</script>
     <script src="{{ asset('js/audit/admin_logs.js') }}"></script>
 @endsection

@@ -19,12 +19,6 @@
             text-transform: uppercase;
             margin-bottom: 0.25rem;
         }
-        .badge-active {
-            background-color: #28a745;
-        }
-        .badge-logout {
-            background-color: #6c757d;
-        }
     </style>
 @endsection
 
@@ -183,7 +177,8 @@
     <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
     <script>
         const API_ROUTES = {
-            getLogs: "{{ route('admin.audit.login.data') }}"
+            getLogs: "{{ route('admin.audit.login.data') }}",
+            getLogDetails: "{{ route('admin.audit.login.details', ':id') }}"
         };
     </script>
     <script src="{{ asset('js/audit/login_logs.js') }}"></script>

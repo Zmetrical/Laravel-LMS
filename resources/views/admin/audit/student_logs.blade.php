@@ -188,7 +188,8 @@
     <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
     <script>
         const API_ROUTES = {
-            getLogs: "{{ route('admin.audit.students.data') }}"
+            getLogs: "{{ route('admin.audit.students.data') }}",
+            getLogDetails: "{{ route('admin.audit.students.details', ':id') }}"
         };
     </script>
     <script src="{{ asset('js/audit/student_logs.js') }}"></script>

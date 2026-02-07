@@ -326,18 +326,19 @@
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
-    <script>
-        const API_ROUTES = {
-            getSchoolYear: "{{ route('admin.schoolyears.list') }}",
-            getSemesters: "{{ route('admin.semesters.list') }}",
-            getSemesterSections: "{{ route('admin.semesters.sections', ['id' => ':id']) }}",
-            getSectionEnrollment: "{{ route('admin.sections.enrollment', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
-            csrfToken: "{{ csrf_token() }}"
-        };
+<script>
+    const API_ROUTES = {
+        getSchoolYear: "{{ route('admin.schoolyears.list') }}",
+        getSemesters: "{{ route('admin.semesters.list') }}",
+        getSemesterSections: "{{ route('admin.semesters.sections', ['id' => ':id']) }}",
+        getSectionEnrollment: "{{ route('admin.sections.enrollment', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
+        viewGradeCard: "{{ route('admin.grades.card.view.page', ['student_number' => ':student_number', 'semester_id' => ':semester_id']) }}",
+        csrfToken: "{{ csrf_token() }}"
+    };
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const SCHOOL_YEAR_ID = urlParams.get('sy');
-    </script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const SCHOOL_YEAR_ID = urlParams.get('sy');
+</script>
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>

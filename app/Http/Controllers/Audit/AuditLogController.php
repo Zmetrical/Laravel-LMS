@@ -242,72 +242,95 @@ class AuditLogController extends Controller
         ]);
     }
 
-    /**
-     * Get login audit logs data (AJAX)
-     */
-    public function getLoginLogs(Request $request)
-    {
-        $query = DB::table('audit_login')
-            ->select('*');
-
-        // Apply filters
-        if ($request->filled('user_type')) {
-            $query->where('user_type', $request->user_type);
-        }
-
-        if ($request->filled('search_value')) {
-            $search = $request->search_value;
-            $query->where(function($q) use ($search) {
-                $q->where('user_identifier', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('status')) {
-            if ($request->status === 'active') {
-                $query->whereNull('logout_at');
-            } else if ($request->status === 'logout') {
-                $query->whereNotNull('logout_at');
-            }
-        }
-
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Get total records before pagination
-        $totalRecords = $query->count();
-
-        // Apply ordering
-        $orderColumnIndex = $request->input('order.0.column', 0);
-        $orderDirection = $request->input('order.0.dir', 'desc');
-        
-        $columns = ['created_at', 'user_type', 'user_identifier', 'ip_address', 'created_at', 'logout_at', 'logout_at'];
-        $orderColumn = $columns[$orderColumnIndex] ?? 'created_at';
-        
-        $query->orderBy($orderColumn, $orderDirection);
-
-        // Apply pagination
-        $start = $request->input('start', 0);
-        $length = $request->input('length', 25);
-        
-        if ($length != -1) {
-            $query->skip($start)->take($length);
-        }
-
-        $logs = $query->get();
-
-        return response()->json([
-            'draw' => intval($request->input('draw')),
-            'recordsTotal' => DB::table('audit_login')->count(),
-            'recordsFiltered' => $totalRecords,
-            'data' => $logs
+/**
+ * Get login audit logs data (AJAX)
+ */
+public function getLoginLogs(Request $request)
+{
+    $sessionLifetime = config('session.lifetime', 120);
+    
+    $query = DB::table('audit_login')
+        ->select([
+            '*',
+            DB::raw("CASE 
+                WHEN logout_at IS NULL THEN
+                    CASE 
+                        WHEN TIMESTAMPDIFF(MINUTE, created_at, NOW()) < {$sessionLifetime} 
+                        THEN 'active'
+                        ELSE 'expired'
+                    END
+                ELSE 'logged_out'
+            END as status"),
+            DB::raw("CASE 
+                WHEN logout_at IS NOT NULL 
+                THEN TIMESTAMPDIFF(SECOND, created_at, logout_at)
+                WHEN TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= {$sessionLifetime}
+                THEN {$sessionLifetime} * 60
+                ELSE TIMESTAMPDIFF(SECOND, created_at, NOW())
+            END as duration_seconds")
         ]);
+
+    // Apply filters
+    if ($request->filled('user_type')) {
+        $query->where('user_type', $request->user_type);
     }
+
+    if ($request->filled('search_value')) {
+        $search = $request->search_value;
+        $query->where(function($q) use ($search) {
+            $q->where('user_identifier', 'like', "%{$search}%")
+              ->orWhere('ip_address', 'like', "%{$search}%");
+        });
+    }
+
+    if ($request->filled('status')) {
+        if ($request->status === 'active') {
+            $query->whereNull('logout_at')
+                  ->whereRaw("TIMESTAMPDIFF(MINUTE, created_at, NOW()) < {$sessionLifetime}");
+        } else if ($request->status === 'logged_out') {
+            $query->whereNotNull('logout_at');
+        } else if ($request->status === 'expired') {
+            $query->whereNull('logout_at')
+                  ->whereRaw("TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= {$sessionLifetime}");
+        }
+    }
+
+    if ($request->filled('date_from')) {
+        $query->whereDate('created_at', '>=', $request->date_from);
+    }
+
+    if ($request->filled('date_to')) {
+        $query->whereDate('created_at', '<=', $request->date_to);
+    }
+
+    $totalRecords = $query->count();
+
+    // Apply ordering
+    $orderColumnIndex = $request->input('order.0.column', 0);
+    $orderDirection = $request->input('order.0.dir', 'desc');
+    
+    $columns = ['created_at', 'user_type', 'user_identifier', 'ip_address', 'duration_seconds', 'logout_at', 'status'];
+    $orderColumn = $columns[$orderColumnIndex] ?? 'created_at';
+    
+    $query->orderBy($orderColumn, $orderDirection);
+
+    // Apply pagination
+    $start = $request->input('start', 0);
+    $length = $request->input('length', 25);
+    
+    if ($length != -1) {
+        $query->skip($start)->take($length);
+    }
+
+    $logs = $query->get();
+
+    return response()->json([
+        'draw' => intval($request->input('draw')),
+        'recordsTotal' => DB::table('audit_login')->count(),
+        'recordsFiltered' => $totalRecords,
+        'data' => $logs
+    ]);
+}
 
     /**
      * Get single audit log details

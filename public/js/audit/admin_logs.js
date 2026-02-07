@@ -72,15 +72,7 @@ $(document).ready(function () {
             { 
                 data: 'action',
                 render: function(data) {
-                    const badges = {
-                        'created': 'badge-primary',
-                        'updated': 'badge-secondary',
-                        'deleted': 'badge-danger',
-                        'viewed': 'badge-info',
-                        'exported': 'badge-success'
-                    };
-                    const badgeClass = badges[data] || 'badge-secondary';
-                    return `<span class="badge ${badgeClass}">${data.toUpperCase()}</span>`;
+                    return `<span class="badge badge-secondary">${data.toUpperCase()}</span>`;
                 }
             },
             { data: 'module' },
@@ -147,9 +139,10 @@ $(document).ready(function () {
     // View details
     $('#auditTable').on('click', '.view-details', function() {
         const logId = $(this).data('id');
+        const detailUrl = API_ROUTES.getLogDetails.replace(':id', logId);
         
         $.ajax({
-            url: API_ROUTES.getLogs + '/' + logId,
+            url: detailUrl,
             type: 'GET',
             success: function(data) {
                 $('#detail-timestamp').text(formatDateLong(data.created_at));
@@ -158,14 +151,18 @@ $(document).ready(function () {
                 $('#detail-module').text(data.module);
                 $('#detail-record').text(data.record_id || 'N/A');
                 $('#detail-description').text(data.description || 'No description');
-                $('#detail-ip').text(data.ip_address);
-                $('#detail-agent').text(data.user_agent || 'N/A');
+                $('#detail-ip').text(data.ip_address || 'N/A');
                 
                 // Show changes if available
                 if (data.old_values || data.new_values) {
                     $('#changes-section').show();
-                    $('#detail-old').text(data.old_values ? JSON.stringify(JSON.parse(data.old_values), null, 2) : 'N/A');
-                    $('#detail-new').text(data.new_values ? JSON.stringify(JSON.parse(data.new_values), null, 2) : 'N/A');
+                    try {
+                        $('#detail-old').text(data.old_values ? JSON.stringify(JSON.parse(data.old_values), null, 2) : 'N/A');
+                        $('#detail-new').text(data.new_values ? JSON.stringify(JSON.parse(data.new_values), null, 2) : 'N/A');
+                    } catch(e) {
+                        $('#detail-old').text(data.old_values || 'N/A');
+                        $('#detail-new').text(data.new_values || 'N/A');
+                    }
                 } else {
                     $('#changes-section').hide();
                 }
