@@ -24,11 +24,11 @@ class Archive_Management extends MainController
         }
 
         $data = [
-            'scripts' => ['class_management/archive_management.js'],
+            'scripts' => ['class_management/semester_management.js'],
             'school_year_id' => $schoolYearId
         ];
 
-        return view('admin.class_management.archive_management', $data);
+        return view('admin.class_management.semester_management', $data);
     }
 
     public function verifyAdminAccess(Request $request)

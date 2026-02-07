@@ -142,51 +142,8 @@ $(document).ready(function () {
                             <small class="text-muted">${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small>
                         </div>
                         <div class="card-body">
-                            <!-- Stats Grid -->
-                            <div class="row">
-                                <div class="col-4 mb-3">
-                                    <div class="stat-box">
-                                        <div class="stat-number">${sem.enrolled_students}</div>
-                                        <div class="stat-label">Students</div>
-                                    </div>
-                                </div>
-                                <div class="col-4 mb-3">
-                                    <div class="stat-box">
-                                        <div class="stat-number">${sem.sections_count}</div>
-                                        <div class="stat-label">Sections</div>
-                                    </div>
-                                </div>
-                                <div class="col-4 mb-3">
-                                    <div class="stat-box">
-                                        <div class="stat-number">${sem.teachers_count}</div>
-                                        <div class="stat-label">Teachers</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="stat-box">
-                                        <div class="stat-number">${sem.quarter_grades}</div>
-                                        <div class="stat-label">Quarter Grades</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="stat-box">
-                                        <div class="stat-number">${sem.final_grades}</div>
-                                        <div class="stat-label">Final Grades</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <hr>
-
-                            <!-- View Details Button -->
-                            <div class="text-center mb-2">
-                                <button class="btn btn-sm btn-secondary expand-details-btn" data-semester-id="${sem.id}">
-                                    <i class="fas fa-chevron-down"></i> View Details
-                                </button>
-                            </div>
-
-                            <!-- Expandable Details Section -->
-                            <div class="details-section" id="${semId}-details">
+                            <!-- Details Section -->
+                            <div id="${semId}-details">
                                 <div class="text-center py-3">
                                     <i class="fas fa-spinner fa-spin"></i> Loading details...
                                 </div>
@@ -218,12 +175,12 @@ $(document).ready(function () {
             container.append(card);
         });
 
-        // Attach event handlers
-        $('.expand-details-btn').click(function () {
-            const semesterId = $(this).data('semester-id');
-            toggleDetails(semesterId, $(this));
+        // Auto-load details for each semester
+        semestersData.forEach(sem => {
+            loadSemesterDetails(sem.id);
         });
 
+        // Attach event handlers
         $('.activate-sem-btn').click(function () {
             const id = $(this).data('id');
             const name = $(this).data('name');
@@ -235,26 +192,6 @@ $(document).ready(function () {
             const name = $(this).data('name');
             archiveSemester(id, name);
         });
-    }
-
-    // Toggle Details
-    function toggleDetails(semesterId, btnElement) {
-        const detailsDiv = $(`#sem-${semesterId}-details`);
-        const isVisible = detailsDiv.is(':visible');
-
-        if (isVisible) {
-            detailsDiv.slideUp(300);
-            btnElement.removeClass('expanded');
-            btnElement.html('<i class="fas fa-chevron-down"></i> View Details');
-        } else {
-            detailsDiv.slideDown(300);
-            btnElement.addClass('expanded');
-            btnElement.html('<i class="fas fa-chevron-up"></i> Hide Details');
-            
-            if (!semesterDetailsCache[semesterId]) {
-                loadSemesterDetails(semesterId);
-            }
-        }
     }
 
     // Load Semester Details
@@ -309,21 +246,22 @@ $(document).ready(function () {
         if (data.sections.length > 0) {
             data.sections.forEach(section => {
                 html += `
-                    <div class="section-item-archive" data-section-id="${section.id}" data-semester-id="${semesterId}">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                    <div class="section-item-archive">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
                                 <strong>${section.section_name}</strong>
                                 <br>
                                 <small class="text-muted">${section.level_name} - ${section.strand_code}</small>
                             </div>
-                            <div class="text-right">
-                                <span class="badge badge-primary">${section.student_count} students</span>
-                                <button class="btn btn-sm btn-secondary ml-2 view-students-btn" 
-                                        data-section-id="${section.id}" 
-                                        data-semester-id="${semesterId}"
-                                        data-section-name="${section.section_name}">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <div class="text-right ml-3">
+                                <span class="badge badge-primary mb-2">${section.student_count} student${section.student_count !== 1 ? 's' : ''}</span>
+                                <br>
+                                <a href="#" class="text-secondary view-students-link" 
+                                   data-section-id="${section.id}" 
+                                   data-semester-id="${semesterId}"
+                                   data-section-name="${section.section_name}">
+                                    <small><i class="fas fa-list"></i> View list</small>
+                                </a>
                             </div>
                         </div>
                         <div class="student-list mt-2" id="students-${semesterId}-${section.id}" style="display: none;">
@@ -382,8 +320,8 @@ $(document).ready(function () {
         detailsDiv.html(html);
 
         // Attach student view handlers
-        $('.view-students-btn').click(function (e) {
-            e.stopPropagation();
+        $('.view-students-link').click(function (e) {
+            e.preventDefault();
             const sectionId = $(this).data('section-id');
             const semesterId = $(this).data('semester-id');
             const sectionName = $(this).data('section-name');
@@ -392,23 +330,23 @@ $(document).ready(function () {
     }
 
     // Toggle Student List
-    function toggleStudentList(semesterId, sectionId, sectionName, btnElement) {
+    function toggleStudentList(semesterId, sectionId, sectionName, linkElement) {
         const studentListDiv = $(`#students-${semesterId}-${sectionId}`);
         const isVisible = studentListDiv.is(':visible');
 
         if (isVisible) {
             studentListDiv.slideUp(300);
-            btnElement.html('<i class="fas fa-eye"></i>');
-            btnElement.closest('.section-item-archive').removeClass('expanded');
+            linkElement.html('<small><i class="fas fa-list"></i> View list</small>');
+            linkElement.closest('.section-item-archive').removeClass('expanded');
         } else {
-            // Hide all other student lists
-            $('.student-list').slideUp(300);
-            $('.view-students-btn').html('<i class="fas fa-eye"></i>');
-            $('.section-item-archive').removeClass('expanded');
+            // Hide all other student lists in this semester
+            $(`#sem-${semesterId}-sections .student-list`).slideUp(300);
+            $(`#sem-${semesterId}-sections .view-students-link`).html('<small><i class="fas fa-list"></i> View list</small>');
+            $(`#sem-${semesterId}-sections .section-item-archive`).removeClass('expanded');
 
             studentListDiv.slideDown(300);
-            btnElement.html('<i class="fas fa-eye-slash"></i>');
-            btnElement.closest('.section-item-archive').addClass('expanded');
+            linkElement.html('<small><i class="fas fa-list-ul"></i> Hide list</small>');
+            linkElement.closest('.section-item-archive').addClass('expanded');
 
             if (studentListDiv.find('.student-item').length === 0) {
                 loadSectionStudents(semesterId, sectionId);
@@ -451,7 +389,7 @@ $(document).ready(function () {
             return;
         }
 
-        let html = '';
+        let html = '<div class="p-2">';
         students.forEach((student, index) => {
             const genderIcon = student.gender === 'Male' ? 'fa-mars text-primary' : 'fa-venus text-danger';
             html += `
@@ -461,6 +399,7 @@ $(document).ready(function () {
                 </div>
             `;
         });
+        html += '</div>';
 
         container.html(html);
     }

@@ -8,47 +8,11 @@
             border-left: 4px solid #007bff;
             background: #f8f9fa;
         }
-        .stat-box {
-            text-align: center;
-            padding: 1rem;
-            background: white;
-            border-radius: 0.25rem;
-            border: 1px solid #dee2e6;
-        }
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 0.875rem;
-            color: #6c757d;
-            margin-top: 0.25rem;
-        }
         .semester-card {
             transition: all 0.2s;
         }
         .semester-card:hover {
             box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-        }
-        
-        /* Expandable Details */
-        .expand-details-btn {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .expand-details-btn.expanded i {
-            transform: rotate(180deg);
-        }
-        .expand-details-btn i {
-            transition: transform 0.2s;
-        }
-        
-        .details-section {
-            display: none;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 2px dashed #dee2e6;
         }
         
         .section-item-archive {
@@ -57,6 +21,7 @@
             border: 1px solid #dee2e6;
             border-radius: 0.25rem;
             margin-bottom: 0.5rem;
+            transition: all 0.2s;
         }
         .section-item-archive:hover {
             background: #f8f9fa;
@@ -87,6 +52,9 @@
         .student-list {
             max-height: 300px;
             overflow-y: auto;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
         }
         .student-item {
             padding: 0.5rem;
@@ -101,6 +69,13 @@
             background: #f8f9fa;
             border-radius: 0.25rem;
             margin-top: 0.5rem;
+        }
+
+        .view-students-link {
+            text-decoration: none;
+        }
+        .view-students-link:hover {
+            text-decoration: underline;
         }
     </style>
 @endsection
