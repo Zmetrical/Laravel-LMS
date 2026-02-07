@@ -1,6 +1,6 @@
 $(document).ready(function () {
-    let schoolYears = [];
-    let semesters = [];
+    let schoolYearData = null;
+    let semestersData = [];
 
     // Verification Form Submit
     $('#verificationForm').submit(function (e) {
@@ -31,7 +31,7 @@ $(document).ready(function () {
                 if (response.success) {
                     $('#verificationCard').fadeOut(300, function () {
                         $('#archiveContent').fadeIn(300);
-                        loadData();
+                        loadArchiveInfo();
                     });
 
                     Swal.fire({
@@ -54,191 +54,189 @@ $(document).ready(function () {
         });
     }
 
-    // Load Data
-    function loadData() {
-        loadSchoolYears();
-        loadSemesters();
-    }
+    // Load Archive Information
+    function loadArchiveInfo() {
+        $('#contentLoading').show();
+        $('#mainContent').hide();
 
-    // Load School Years
-    function loadSchoolYears() {
-        $('#syLoading').show();
-        $('#syTableContainer').hide();
-        $('#syEmpty').hide();
+        const url = API_ROUTES.getArchiveInfo.replace(':id', SCHOOL_YEAR_ID);
 
         $.ajax({
-            url: API_ROUTES.getSchoolYears,
+            url: url,
             method: 'GET',
             success: function (response) {
                 if (response.success) {
-                    schoolYears = response.data.filter(sy => 
-                        sy.status === 'upcoming' || sy.status === 'completed'
-                    );
-                    displaySchoolYears();
+                    schoolYearData = response.data.school_year;
+                    semestersData = response.data.semesters;
+                    displayArchiveInfo();
                 }
             },
-            error: function () {
-                $('#syLoading').hide();
-                $('#syEmpty').show();
+            error: function (xhr) {
+                $('#contentLoading').hide();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load archive information'
+                });
             }
         });
     }
 
-    // Display School Years
-    function displaySchoolYears() {
-        $('#syLoading').hide();
+    // Display Archive Information
+    function displayArchiveInfo() {
+        $('#contentLoading').hide();
 
-        if (schoolYears.length === 0) {
-            $('#syEmpty').show();
-            return;
+        // Display School Year
+        $('#syDisplay').text(`SY ${schoolYearData.year_start}-${schoolYearData.year_end}`);
+        
+        const statusBadge = getStatusBadgeClass(schoolYearData.status);
+        $('#syStatusBadge').attr('class', `badge badge-lg ${statusBadge}`)
+            .text(schoolYearData.status.toUpperCase());
+
+        // Show archive button only for upcoming school years
+        if (schoolYearData.status === 'upcoming') {
+            $('#archiveSYBtn').show();
         }
 
-        const tbody = $('#syTableBody');
-        tbody.empty();
+        // Display Semesters
+        if (semestersData.length > 0) {
+            displaySemesters();
+            $('#semestersContainer').show();
+            $('#noSemesters').hide();
+        } else {
+            $('#semestersContainer').hide();
+            $('#noSemesters').show();
+        }
 
-        schoolYears.forEach(sy => {
-            const statusBadge = sy.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
-            const canArchive = sy.status === 'upcoming';
-
-            const row = `
-                <tr>
-                    <td><strong>SY ${sy.year_start}-${sy.year_end}</strong></td>
-                    <td><span class="badge ${statusBadge}">${sy.status.toUpperCase()}</span></td>
-                    <td>
-                        ${canArchive ? `
-                        <button class="btn btn-sm btn-secondary archive-sy-btn" 
-                                data-id="${sy.id}"
-                                data-code="SY ${sy.year_start}-${sy.year_end}"
-                                title="Archive">
-                            <i class="fas fa-archive"></i>
-                        </button>
-                        ` : `
-                        <span class="text-muted"><small>Archived</small></span>
-                        `}
-                    </td>
-                </tr>
-            `;
-            tbody.append(row);
-        });
-
-        $('#syTableContainer').show();
-
-        // Archive button handler
-        $('.archive-sy-btn').click(function () {
-            const id = $(this).data('id');
-            const code = $(this).data('code');
-            archiveSchoolYear(id, code);
-        });
-    }
-
-    // Load Semesters
-    function loadSemesters() {
-        $('#semLoading').show();
-        $('#semTableContainer').hide();
-        $('#semEmpty').hide();
-
-        $.ajax({
-            url: API_ROUTES.getSemesters,
-            method: 'GET',
-            success: function (response) {
-                if (response.success) {
-                    semesters = response.data.filter(sem => 
-                        sem.status === 'upcoming' || sem.status === 'completed' || sem.status === 'active'
-                    );
-                    displaySemesters();
-                }
-            },
-            error: function () {
-                $('#semLoading').hide();
-                $('#semEmpty').show();
-            }
-        });
+        $('#mainContent').show();
     }
 
     // Display Semesters
     function displaySemesters() {
-        $('#semLoading').hide();
+        const container = $('#semestersContainer');
+        container.empty();
 
-        if (semesters.length === 0) {
-            $('#semEmpty').show();
-            return;
-        }
-
-        const tbody = $('#semTableBody');
-        tbody.empty();
-
-        semesters.forEach(sem => {
-            const statusBadge = sem.status === 'upcoming' ? 'badge-secondary' : 
-                              sem.status === 'active' ? 'badge-primary' : 'badge-dark';
+        semestersData.forEach(sem => {
+            const statusBadge = getStatusBadgeClass(sem.status);
             const canArchive = sem.status === 'upcoming';
             const canActivate = sem.status === 'upcoming';
 
-            const row = `
-                <tr>
-                    <td><strong>${sem.name}</strong></td>
-                    <td>SY ${sem.year_start}-${sem.year_end}</td>
-                    <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
-                    <td>
-                        ${canActivate ? `
-                        <button class="btn btn-sm btn-primary activate-sem-btn" 
-                                data-id="${sem.id}"
-                                data-name="${sem.name}"
-                                data-sy="SY ${sem.year_start}-${sem.year_end}"
-                                title="Set Active">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        ` : ''}
-                        ${canArchive ? `
-                        <button class="btn btn-sm btn-secondary archive-sem-btn" 
-                                data-id="${sem.id}"
-                                data-name="${sem.name}"
-                                data-sy="SY ${sem.year_start}-${sem.year_end}"
-                                title="Archive">
-                            <i class="fas fa-archive"></i>
-                        </button>
-                        ` : ''}
-                        ${!canArchive && !canActivate ? `
-                        <span class="text-muted"><small>Archived</small></span>
-                        ` : ''}
-                    </td>
-                </tr>
+            const card = `
+                <div class="col-md-6 mb-3">
+                    <div class="card semester-card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-calendar"></i> ${sem.name}
+                                </h5>
+                                <span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span>
+                            </div>
+                            <small class="text-muted">${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <div class="stat-box">
+                                        <div class="stat-number">${sem.enrolled_students}</div>
+                                        <div class="stat-label">Enrolled Students</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <div class="stat-box">
+                                        <div class="stat-number">${sem.sections_count}</div>
+                                        <div class="stat-label">Active Sections</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-box">
+                                        <div class="stat-number">${sem.quarter_grades}</div>
+                                        <div class="stat-label">Quarter Grades</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-box">
+                                        <div class="stat-number">${sem.final_grades}</div>
+                                        <div class="stat-label">Final Grades</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${canActivate || canArchive ? `
+                                <hr>
+                                <div class="text-right">
+                                    ${canActivate ? `
+                                        <button class="btn btn-sm btn-primary activate-sem-btn" 
+                                                data-id="${sem.id}"
+                                                data-name="${sem.name}">
+                                            <i class="fas fa-check"></i> Set Active
+                                        </button>
+                                    ` : ''}
+                                    ${canArchive ? `
+                                        <button class="btn btn-sm btn-secondary archive-sem-btn" 
+                                                data-id="${sem.id}"
+                                                data-name="${sem.name}">
+                                            <i class="fas fa-archive"></i> Archive
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
             `;
-            tbody.append(row);
+            container.append(card);
         });
 
-        $('#semTableContainer').show();
-
-        // Activate button handler
+        // Attach event handlers
         $('.activate-sem-btn').click(function () {
             const id = $(this).data('id');
             const name = $(this).data('name');
-            const sy = $(this).data('sy');
-            activateSemester(id, name, sy);
+            activateSemester(id, name);
         });
 
-        // Archive button handler
         $('.archive-sem-btn').click(function () {
             const id = $(this).data('id');
             const name = $(this).data('name');
-            const sy = $(this).data('sy');
-            archiveSemester(id, name, sy);
+            archiveSemester(id, name);
         });
     }
 
+    // Archive School Year Button
+    $('#archiveSYBtn').click(function () {
+        archiveSchoolYear();
+    });
+
     // Archive School Year
-    function archiveSchoolYear(id, code) {
+    function archiveSchoolYear() {
+        const totalStudents = semestersData.reduce((sum, sem) => sum + sem.enrolled_students, 0);
+        const totalGrades = semestersData.reduce((sum, sem) => sum + sem.final_grades, 0);
+
+        let impactHtml = `
+            <div class="text-left">
+                <p><strong>This will archive:</strong></p>
+                <ul>
+                    <li>School Year ${schoolYearData.year_start}-${schoolYearData.year_end}</li>
+                    <li>All ${semestersData.length} semester(s)</li>
+                    <li>Data for ${totalStudents} student(s)</li>
+                    <li>${totalGrades} final grade record(s)</li>
+                </ul>
+                <p class="mb-0"><small class="text-muted">Archived data will be preserved but marked as completed.</small></p>
+            </div>
+        `;
+
         Swal.fire({
             title: 'Archive School Year?',
-            html: `Archive <strong>${code}</strong>?<br><small class="text-muted">This will mark it as completed</small>`,
+            html: impactHtml,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#6c757d',
             cancelButtonColor: '#6c757d',
             confirmButtonText: '<i class="fas fa-archive"></i> Yes, archive',
-            cancelButtonText: 'Cancel'
+            cancelButtonText: 'Cancel',
+            width: '500px'
         }).then((result) => {
             if (result.isConfirmed) {
-                const url = API_ROUTES.archiveSchoolYear.replace(':id', id);
+                const url = API_ROUTES.archiveSchoolYear.replace(':id', SCHOOL_YEAR_ID);
 
                 $.ajax({
                     url: url,
@@ -252,8 +250,9 @@ $(document).ready(function () {
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
+                            }).then(() => {
+                                window.location.href = '/admin/schoolyears';
                             });
-                            loadSchoolYears();
                         }
                     },
                     error: function (xhr) {
@@ -269,16 +268,33 @@ $(document).ready(function () {
     }
 
     // Activate Semester
-    function activateSemester(id, name, sy) {
+    function activateSemester(id, name) {
+        const semester = semestersData.find(s => s.id === id);
+
+        let impactHtml = `
+            <div class="text-left">
+                <p>Set <strong>${name}</strong> as the active semester?</p>
+                <div class="info-card p-3 mb-3">
+                    <p class="mb-2"><strong>Current Data:</strong></p>
+                    <ul class="mb-0">
+                        <li>${semester.enrolled_students} enrolled student(s)</li>
+                        <li>${semester.sections_count} active section(s)</li>
+                    </ul>
+                </div>
+                <p class="mb-0"><small class="text-muted">This will deactivate all other semesters.</small></p>
+            </div>
+        `;
+
         Swal.fire({
             title: 'Activate Semester?',
-            html: `Set <strong>${name}</strong> for <strong>${sy}</strong> as active?<br><small class="text-muted">This will deactivate all other semesters</small>`,
+            html: impactHtml,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#007bff',
             cancelButtonColor: '#6c757d',
             confirmButtonText: '<i class="fas fa-check"></i> Yes, activate',
-            cancelButtonText: 'Cancel'
+            cancelButtonText: 'Cancel',
+            width: '500px'
         }).then((result) => {
             if (result.isConfirmed) {
                 const url = API_ROUTES.activateSemester.replace(':id', id);
@@ -296,7 +312,7 @@ $(document).ready(function () {
                                 timer: 2000,
                                 showConfirmButton: false
                             });
-                            loadSemesters();
+                            loadArchiveInfo();
                         }
                     },
                     error: function (xhr) {
@@ -312,16 +328,34 @@ $(document).ready(function () {
     }
 
     // Archive Semester
-    function archiveSemester(id, name, sy) {
+    function archiveSemester(id, name) {
+        const semester = semestersData.find(s => s.id === id);
+
+        let impactHtml = `
+            <div class="text-left">
+                <p>Archive <strong>${name}</strong>?</p>
+                <div class="info-card p-3 mb-3">
+                    <p class="mb-2"><strong>Data to be archived:</strong></p>
+                    <ul class="mb-0">
+                        <li>${semester.enrolled_students} student enrollment(s)</li>
+                        <li>${semester.quarter_grades} quarter grade(s)</li>
+                        <li>${semester.final_grades} final grade(s)</li>
+                    </ul>
+                </div>
+                <p class="mb-0"><small class="text-muted">Archived data will be preserved but marked as completed.</small></p>
+            </div>
+        `;
+
         Swal.fire({
             title: 'Archive Semester?',
-            html: `Archive <strong>${name}</strong> for <strong>${sy}</strong>?<br><small class="text-muted">This will mark it as completed</small>`,
+            html: impactHtml,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#6c757d',
             cancelButtonColor: '#6c757d',
             confirmButtonText: '<i class="fas fa-archive"></i> Yes, archive',
-            cancelButtonText: 'Cancel'
+            cancelButtonText: 'Cancel',
+            width: '500px'
         }).then((result) => {
             if (result.isConfirmed) {
                 const url = API_ROUTES.archiveSemester.replace(':id', id);
@@ -339,7 +373,7 @@ $(document).ready(function () {
                                 timer: 2000,
                                 showConfirmButton: false
                             });
-                            loadSemesters();
+                            loadArchiveInfo();
                         }
                     },
                     error: function (xhr) {
@@ -352,5 +386,19 @@ $(document).ready(function () {
                 });
             }
         });
+    }
+
+    // Helper Functions
+    function getStatusBadgeClass(status) {
+        return {
+            'active': 'badge-primary',
+            'completed': 'badge-dark',
+            'upcoming': 'badge-secondary'
+        }[status] || 'badge-light';
+    }
+
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 });

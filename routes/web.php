@@ -97,7 +97,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('archive.school-year');
         Route::post('/archive/semester/{id}', [Archive_Management::class, 'archiveSemester'])
             ->name('archive.semester');
-
+        Route::get('/info/{id}', [Archive_Management::class, 'getArchiveInfo'])
+            ->name('archive.info');
 
 
         // Semester Management Routes

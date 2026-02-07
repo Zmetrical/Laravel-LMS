@@ -182,9 +182,17 @@ $(document).ready(function () {
         }
     });
 
-    // Archive Management Button - Just redirect to archive page
+// Archive Management Button - Pass school year ID
     $('#archiveManagementBtn').click(function () {
-        window.location.href = API_ROUTES.archiveManagementPage;
+        if (selectedYearId) {
+            window.location.href = API_ROUTES.archiveManagementPage + '?sy=' + selectedYearId;
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Selection',
+                text: 'Please select a school year first'
+            });
+        }
     });
 
     // Add Semester Button
