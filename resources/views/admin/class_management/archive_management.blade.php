@@ -2,34 +2,25 @@
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        .info-card {
-            border-left: 4px solid #007bff;
-            background: #f8f9fa;
-        }
-        .stat-box {
-            text-align: center;
-            padding: 1rem;
-            background: white;
-            border-radius: 0.25rem;
-            border: 1px solid #dee2e6;
-        }
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 0.875rem;
-            color: #6c757d;
-            margin-top: 0.25rem;
-        }
-        .semester-card {
+        .semester-item {
+            cursor: pointer;
             transition: all 0.2s;
         }
-        .semester-card:hover {
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        .semester-item:hover {
+            background-color: #f8f9fa;
+        }
+        .semester-item.active {
+            background-color: #007bff;
+            color: white !important;
+        }
+        .semester-item.active .text-muted,
+        .semester-item.active small {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+        .semester-item.active .badge {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
         }
     </style>
 @endsection
@@ -45,7 +36,7 @@
 @section('content')
 <br>
 <div class="container-fluid">
-    <!-- Access Verification Card -->
+    <!-- Verification Card -->
     <div class="card card-primary card-outline" id="verificationCard">
         <div class="card-header">
             <h3 class="card-title">
@@ -58,21 +49,15 @@
                     <div class="text-center mb-4">
                         <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
                         <h5>Archive Management</h5>
-                        <p class="text-muted">Please verify your admin password to access archive operations</p>
+                        <p class="text-muted">Enter your admin password to continue</p>
                     </div>
                     <form id="verificationForm">
                         <div class="form-group">
-                            <label for="adminPassword">Admin Password <span class="text-danger">*</span></label>
-                            <input type="password" 
-                                   class="form-control" 
-                                   id="adminPassword" 
-                                   name="admin_password" 
-                                   placeholder="Enter your admin password"
-                                   autocomplete="off"
-                                   required>
+                            <label>Admin Password</label>
+                            <input type="password" class="form-control" id="adminPassword" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-check"></i> Verify Access
+                            <i class="fas fa-check"></i> Verify
                         </button>
                     </form>
                 </div>
@@ -80,26 +65,24 @@
         </div>
     </div>
 
-    <!-- Archive Management Content (Hidden until verified) -->
+    <!-- Main Content -->
     <div id="archiveContent" style="display: none;">
-        <!-- Loading State -->
+        <!-- Loading -->
         <div id="contentLoading" class="text-center py-5">
             <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
-            <p class="mt-3">Loading archive information...</p>
+            <p class="mt-3">Loading...</p>
         </div>
 
-        <!-- Main Content -->
+        <!-- Content -->
         <div id="mainContent" style="display: none;">
-            <!-- School Year Info -->
+            <!-- School Year Header -->
             <div class="card card-dark mb-3">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-0">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span id="syDisplay">-</span>
-                            </h5>
-                        </div>
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span id="syDisplay">-</span>
+                        </h5>
                         <div>
                             <span class="badge badge-lg mr-2" id="syStatusBadge"></span>
                             <button class="btn btn-sm btn-secondary" id="archiveSYBtn" style="display: none;">
@@ -110,16 +93,131 @@
                 </div>
             </div>
 
+            <div class="row">
+                <!-- Left: Semesters -->
+                <div class="col-md-4">
+                    <div class="card card-primary card-outline">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-calendar"></i> Semesters
+                            </h3>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="semestersLoading" class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                            <div id="semestersList" class="list-group list-group-flush" style="display: none;">
+                            </div>
+                            <div id="noSemesters" class="text-center py-4" style="display: none;">
+                                <p class="text-muted mb-0">No semesters</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Semesters -->
-            <div class="row" id="semestersContainer">
-                <!-- Semesters will be populated here -->
-            </div>
+                <!-- Right: Details -->
+                <div class="col-md-8">
+                    <div class="card card-primary card-outline">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Details
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <!-- Empty State -->
+                            <div id="emptyState" class="text-center py-5">
+                                <i class="fas fa-arrow-left fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Select a semester</p>
+                            </div>
 
-            <!-- Empty State -->
-            <div id="noSemesters" class="text-center py-5" style="display: none;">
-                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                <p class="text-muted">No semesters found for this school year</p>
+                            <!-- Loading -->
+                            <div id="detailsLoading" class="text-center py-5" style="display: none;">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            </div>
+
+                            <!-- Content -->
+                            <div id="detailsContent" style="display: none;">
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="mb-0 text-primary" id="studentsCount">0</h4>
+                                            <small class="text-muted">Students</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="mb-0 text-primary" id="sectionsCount">0</h4>
+                                            <small class="text-muted">Sections</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="mb-0 text-primary" id="teachersCount">0</h4>
+                                            <small class="text-muted">Teachers</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="mb-0 text-primary" id="gradesCount">0</h4>
+                                            <small class="text-muted">Grades</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tables -->
+                                <ul class="nav nav-tabs mb-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-toggle="tab" href="#sectionsTab">Sections</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-toggle="tab" href="#teachersTab">Teachers</a>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content">
+                                    <!-- Sections Tab -->
+                                    <div class="tab-pane fade show active" id="sectionsTab">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Section</th>
+                                                        <th>Level</th>
+                                                        <th>Strand</th>
+                                                        <th class="text-right">Students</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="sectionsTableBody">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Teachers Tab -->
+                                    <div class="tab-pane fade" id="teachersTab">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Teacher</th>
+                                                        <th>Classes</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="teachersTableBody">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr>
+                                <div class="text-right" id="actionButtons">
+                                    <!-- Buttons will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -132,12 +230,12 @@
         const API_ROUTES = {
             verifyAccess: "{{ route('admin.archive.verify') }}",
             getArchiveInfo: "{{ route('admin.archive.info', ['id' => ':id']) }}",
+            getSemesterDetails: "{{ route('admin.archive.semester-details', ['id' => ':id']) }}",
             archiveSchoolYear: "{{ route('admin.archive.school-year', ['id' => ':id']) }}",
             archiveSemester: "{{ route('admin.archive.semester', ['id' => ':id']) }}",
             activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
             csrfToken: "{{ csrf_token() }}"
         };
-
         const SCHOOL_YEAR_ID = {{ $school_year_id }};
     </script>
     @if(isset($scripts))

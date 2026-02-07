@@ -89,16 +89,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // ---------------------------------------------------------------------------
         // ARCHIVE MANAGEMENT 
         // ---------------------------------------------------------------------------
-        Route::get('/archive-management', [Archive_Management::class, 'archivePage'])
-            ->name('archive.index');
-        Route::post('/archive/verify', [Archive_Management::class, 'verifyAdminAccess'])
-            ->name('archive.verify');
-        Route::post('/archive/school-year/{id}', [Archive_Management::class, 'archiveSchoolYear'])
-            ->name('archive.school-year');
-        Route::post('/archive/semester/{id}', [Archive_Management::class, 'archiveSemester'])
-            ->name('archive.semester');
-        Route::get('/info/{id}', [Archive_Management::class, 'getArchiveInfo'])
-            ->name('archive.info');
+
+    // Archive management
+    Route::get('/archive', [Archive_Management::class, 'archivePage'])
+        ->name('archive.index');
+    Route::post('/archive/verify', [Archive_Management::class, 'verifyAdminAccess'])
+        ->name('archive.verify');
+    Route::get('/archive/info/{id}', [Archive_Management::class, 'getArchiveInfo'])
+        ->name('archive.info');
+    Route::get('/archive/semester/{id}/details', [Archive_Management::class, 'getSemesterDetails'])
+        ->name('archive.semester-details');
+    Route::get('/semester/{semesterId}/section/{sectionId}/students', [Archive_Management::class, 'getSectionStudents'])
+        ->name('archive.section-students');
+    Route::post('/archive/school-year/{id}', [Archive_Management::class, 'archiveSchoolYear'])
+        ->name('archive.school-year');
+    Route::post('/archive/semester/{id}', [Archive_Management::class, 'archiveSemester'])
+        ->name('archive.semester');
 
 
         // Semester Management Routes
