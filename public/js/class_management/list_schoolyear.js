@@ -1,3 +1,5 @@
+
+
 $(document).ready(function () {
     let schoolYears = [];
     let selectedYearId = null;
@@ -15,25 +17,24 @@ $(document).ready(function () {
     });
 
     // Add School Year Button
-$('#addSchoolYearBtn').click(function () {
-    isEditMode = false;
-    $('#syModalTitle').text('Add School Year');
-    $('#schoolYearId').val('');
-    
-    // Set default values from latest school year
-    const latestYear = getLatestSchoolYear();
-    if (latestYear) {
-        const startYear = parseInt(latestYear.year_end, 10); 
-        $('#yearStart').val(startYear);
-        $('#yearEnd').val(startYear + 1);
-    } else {
-        $('#yearStart').val('');
-        $('#yearEnd').val('');
-    }
-    
-    $('#statusGroup').hide();
-    $('#schoolYearModal').modal('show');
-});
+    $('#addSchoolYearBtn').click(function () {
+        isEditMode = false;
+        $('#syModalTitle').text('Add School Year');
+        $('#schoolYearId').val('');
+        
+        // Set default values from latest school year
+        const latestYear = getLatestSchoolYear();
+        if (latestYear) {
+            const startYear = parseInt(latestYear.year_end, 10); 
+            $('#yearStart').val(startYear);
+            $('#yearEnd').val(startYear + 1);
+        } else {
+            $('#yearStart').val('');
+            $('#yearEnd').val('');
+        }
+        
+        $('#schoolYearModal').modal('show');
+    });
 
     // Edit Year Button
     $('#editYearBtn').click(function () {
@@ -42,101 +43,94 @@ $('#addSchoolYearBtn').click(function () {
         }
     });
 
-    // CRITICAL: Enforce 4-digit limit - This runs AFTER oninput but provides extra protection
+    // CRITICAL: Enforce 4-digit limit
     $('#yearStart, #yearEnd').on('input keyup paste', function() {
         let value = $(this).val();
-        // Remove non-numeric characters
         value = value.replace(/\D/g, '');
-        // Force limit to 4 characters
         if (value.length > 4) {
             value = value.substring(0, 4);
         }
-        // Only update if different to avoid infinite loop
         if ($(this).val() !== value) {
             $(this).val(value);
         }
     });
 
-    // Prevent typing more than 4 digits with keypress
+    // Prevent typing more than 4 digits
     $('#yearStart, #yearEnd').on('keypress', function(e) {
         const char = String.fromCharCode(e.which);
         
-        // Allow only digits
         if (!/[0-9]/.test(char)) {
             e.preventDefault();
             return false;
         }
         
-        // Check if already 4 digits
         const currentValue = $(this).val();
         const selectionStart = this.selectionStart;
         const selectionEnd = this.selectionEnd;
         
-        // If text is selected, allow typing (it will replace)
         if (selectionStart !== selectionEnd) {
             return true;
         }
         
-        // If already 4 digits and no selection, prevent
         if (currentValue.length >= 4) {
             e.preventDefault();
             return false;
         }
     });
 
-$('#yearStart').on('blur', function () {
-    let value = $(this).val().trim();
-    
-    if (value.length > 4) {
-        value = value.substring(0, 4);
-        $(this).val(value);
-    }
-    
-    if (value.length === 4) {
-        const startYear = parseInt(value, 10);
-        if (!isNaN(startYear) && startYear >= 2000 && startYear <= 3000) {
-            let endYear = startYear + 1;
-            if (endYear > 3000) {
-                endYear = 3000;
-            }
-            $('#yearEnd').val(endYear.toString());
-        } else if (startYear < 2000) {
-            $(this).val('2000');
-            $('#yearEnd').val('2001');
-        } else if (startYear > 3000) {
-            $(this).val('3000');
-            $('#yearEnd').val('3000');
+    // Auto-update end year when start year changes
+    $('#yearStart').on('blur', function () {
+        let value = $(this).val().trim();
+        
+        if (value.length > 4) {
+            value = value.substring(0, 4);
+            $(this).val(value);
         }
-    }
-});
+        
+        if (value.length === 4) {
+            const startYear = parseInt(value, 10);
+            if (!isNaN(startYear) && startYear >= 2000 && startYear <= 3000) {
+                let endYear = startYear + 1;
+                if (endYear > 3000) {
+                    endYear = 3000;
+                }
+                $('#yearEnd').val(endYear.toString());
+            } else if (startYear < 2000) {
+                $(this).val('2000');
+                $('#yearEnd').val('2001');
+            } else if (startYear > 3000) {
+                $(this).val('3000');
+                $('#yearEnd').val('3000');
+            }
+        }
+    });
 
     // Auto-update start year when end year changes
-$('#yearEnd').on('blur', function () {
-    let value = $(this).val().trim();
-    
-    // Force exactly 4 digits
-    if (value.length > 4) {
-        value = value.substring(0, 4);
-        $(this).val(value);
-    }
-    
-    if (value.length === 4) {
-        const endYear = parseInt(value, 10);  // Use radix 10
-        if (!isNaN(endYear) && endYear >= 2000 && endYear <= 3000) {
-            let startYear = endYear - 1;
-            if (startYear < 2000) {
-                startYear = 2000;
-            }
-            $('#yearStart').val(startYear.toString());
-        } else if (endYear < 2000) {
-            $(this).val('2000');
-            $('#yearStart').val('2000');
-        } else if (endYear > 3000) {
-            $(this).val('3000');
-            $('#yearStart').val('2999');
+    $('#yearEnd').on('blur', function () {
+        let value = $(this).val().trim();
+        
+        if (value.length > 4) {
+            value = value.substring(0, 4);
+            $(this).val(value);
         }
-    }
-});
+        
+        if (value.length === 4) {
+            const endYear = parseInt(value, 10);
+            if (!isNaN(endYear) && endYear >= 2000 && endYear <= 3000) {
+                let startYear = endYear - 1;
+                if (startYear < 2000) {
+                    startYear = 2000;
+                }
+                $('#yearStart').val(startYear.toString());
+            } else if (endYear < 2000) {
+                $(this).val('2000');
+                $('#yearStart').val('2000');
+            } else if (endYear > 3000) {
+                $(this).val('3000');
+                $('#yearStart').val('2999');
+            }
+        }
+    });
 
     // School Year Form Submit
     $('#schoolYearForm').submit(function (e) {
@@ -145,7 +139,6 @@ $('#yearEnd').on('blur', function () {
         const yearStartStr = $('#yearStart').val();
         const yearEndStr = $('#yearEnd').val();
 
-        // Validate year format (4 digits)
         if (yearStartStr.length !== 4 || yearEndStr.length !== 4) {
             Swal.fire({
                 icon: 'error',
@@ -158,7 +151,6 @@ $('#yearEnd').on('blur', function () {
         const yearStart = parseInt(yearStartStr);
         const yearEnd = parseInt(yearEndStr);
 
-        // Validate year range
         if (yearStart < 2000 || yearStart > 3000 || yearEnd < 2000 || yearEnd > 3000) {
             Swal.fire({
                 icon: 'error',
@@ -168,7 +160,6 @@ $('#yearEnd').on('blur', function () {
             return;
         }
 
-        // Validate consecutive years
         if (yearEnd - yearStart !== 1) {
             Swal.fire({
                 icon: 'error',
@@ -184,7 +175,6 @@ $('#yearEnd').on('blur', function () {
         };
 
         if (isEditMode) {
-            formData.status = $('#status').val();
             updateSchoolYear(formData);
         } else {
             createSchoolYear(formData);
@@ -198,12 +188,75 @@ $('#yearEnd').on('blur', function () {
         }
     });
 
+    // Archive Management Button
+    $('#archiveManagementBtn').click(function () {
+        $('#archiveAdminPassword').val('');
+        $('#archivePasswordModal').modal('show');
+    });
+
+    // Archive Password Form Submit
+    $('#archivePasswordForm').submit(function (e) {
+        e.preventDefault();
+
+        const password = $('#archiveAdminPassword').val();
+
+        if (!password) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Required',
+                text: 'Please enter your admin password'
+            });
+            return;
+        }
+
+        verifyArchiveAccess(password);
+    });
+
+    // Verify Archive Access
+    function verifyArchiveAccess(password) {
+        const $btn = $('#verifyArchiveAccessBtn');
+        const originalHtml = $btn.html();
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+
+        $.ajax({
+            url: API_ROUTES.verifyArchiveAccess,
+            method: 'POST',
+            data: { admin_password: password },
+            headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
+            success: function (response) {
+                if (response.success) {
+                    $('#archivePasswordModal').modal('hide');
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Access Granted',
+                        text: 'Redirecting to Archive Management...',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = API_ROUTES.archiveManagementPage;
+                    });
+                }
+            },
+            error: function (xhr) {
+                $btn.prop('disabled', false).html(originalHtml);
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: xhr.responseJSON?.message || 'Invalid password'
+                });
+                
+                $('#archiveAdminPassword').val('').focus();
+            }
+        });
+    }
 
     // Add Semester Button
     $('#addSemesterBtn').click(function () {
         if (!selectedYearId) return;
         
-        // Check if max semesters reached
         if (currentSemesters.length >= MAX_SEMESTERS) {
             Swal.fire({
                 icon: 'warning',
@@ -251,7 +304,7 @@ $('#yearEnd').on('blur', function () {
         }
     });
 
-    // Get Latest School Year (by year_end value, not created date)
+    // Get Latest School Year
     function getLatestSchoolYear() {
         if (schoolYears.length === 0) return null;
         
@@ -331,14 +384,12 @@ $('#yearEnd').on('blur', function () {
         $('#schoolYearsContainer').show();
         $('#emptyYears').hide();
 
-        // Click handler
         container.find('.year-item').click(function (e) {
             e.preventDefault();
             const yearId = $(this).data('year-id');
             selectYear(yearId);
         });
 
-        // Auto-select active year if exists and no selection
         if (!selectedYearId) {
             const activeYear = filteredYears.find(sy => sy.status === 'active');
             if (activeYear) {
@@ -354,29 +405,21 @@ $('#yearEnd').on('blur', function () {
         
         if (!year) return;
 
-        // Update selection in lists
         $('.year-item').removeClass('active');
         $(`.year-item[data-year-id="${yearId}"]`).addClass('active');
 
-        // Show details
         $('#emptyState').hide();
         $('#detailsContent').show();
         $('#detailsTools').show();
 
-        // Update details
         $('#detailsTitle').text(`School Year ${year.year_start}-${year.year_end}`);
         
-        // Show/hide action buttons
         $('#activateBtn').hide();
-        $('#archiveBtn').hide();
         
         if (year.status === 'upcoming') {
             $('#activateBtn').show();
-        } else if (year.status === 'active') {
-            $('#archiveBtn').show();
         }
 
-        // Load semesters
         loadSemesters(yearId);
     }
 
@@ -398,7 +441,6 @@ $('#yearEnd').on('blur', function () {
                     displaySemesters(response.data);
                     $('#semestersTableContainer').show();
                     
-                    // Update Add button state
                     if (currentSemesters.length >= MAX_SEMESTERS) {
                         $('#addSemesterBtn').prop('disabled', true)
                             .attr('title', `Maximum of ${MAX_SEMESTERS} semesters reached`);
@@ -449,7 +491,6 @@ $('#yearEnd').on('blur', function () {
             tbody.append(row);
         });
 
-        // Action handlers
         $('.edit-semester-btn').click(function () {
             const semId = $(this).data('semester-id');
             editSemester(semId);
@@ -576,8 +617,6 @@ $('#yearEnd').on('blur', function () {
             $('#schoolYearId').val(sy.id);
             $('#yearStart').val(sy.year_start);
             $('#yearEnd').val(sy.year_end);
-            $('#status').val(sy.status);
-            $('#statusGroup').show();
             $('#schoolYearModal').modal('show');
         }
     }
@@ -653,56 +692,6 @@ $('#yearEnd').on('blur', function () {
                             icon: 'error',
                             title: 'Error',
                             text: 'Failed to activate school year'
-                        });
-                    }
-                });
-            }
-        });
-    }
-
-    // Archive School Year
-    function archiveSchoolYear(id) {
-        const year = schoolYears.find(sy => sy.id === id);
-        
-        Swal.fire({
-            title: 'Archive School Year?',
-            html: `Archive <strong>SY ${year.year_start}-${year.year_end}</strong>?<br><small class="text-muted">This will mark it as completed</small>`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#6c757d',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-archive"></i> Yes, archive',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const url = API_ROUTES.updateSchoolYear.replace(':id', id);
-
-                $.ajax({
-                    url: url,
-                    method: 'PUT',
-                    data: {
-                        year_start: year.year_start,
-                        year_end: year.year_end,
-                        status: 'completed'
-                    },
-                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
-                    success: function (response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Archived',
-                                text: 'School year archived successfully',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            loadSchoolYears();
-                        }
-                    },
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Failed to archive school year'
                         });
                     }
                 });

@@ -140,111 +140,100 @@ class Year_Management extends MainController
         }
     }
 
-    public function updateSchoolYear(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'year_start' => 'required|integer|min:2000|max:3000',
-            'year_end' => 'required|integer|min:2000|max:3000|gt:year_start',
-            'status' => 'required|in:active,completed,upcoming',
-        ]);
+public function updateSchoolYear(Request $request, $id)
+{
+    $validated = $request->validate([
+        'year_start' => 'required|integer|min:2000|max:3000',
+        'year_end' => 'required|integer|min:2000|max:3000|gt:year_start',
+    ]);
 
-        try {
-            $schoolYear = DB::table('school_years')->where('id', $id)->first();
+    try {
+        $schoolYear = DB::table('school_years')->where('id', $id)->first();
 
-            if (!$schoolYear) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'School year not found.'
-                ], 404);
-            }
-
-            if ($request->year_end - $request->year_start != 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'School year must span exactly one year.'
-                ], 422);
-            }
-
-            $code = $request->year_start . '-' . $request->year_end;
-
-            $exists = DB::table('school_years')
-                ->where('code', $code)
-                ->where('id', '!=', $id)
-                ->exists();
-
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'School year already exists.'
-                ], 422);
-            }
-
-            if ($request->status === 'active') {
-                DB::table('school_years')
-                    ->where('id', '!=', $id)
-                    ->where('status', 'active')
-                    ->update(['status' => 'upcoming']);
-            }
-
-            $oldValues = [
-                'year_start' => $schoolYear->year_start,
-                'year_end' => $schoolYear->year_end,
-                'code' => $schoolYear->code,
-                'status' => $schoolYear->status,
-            ];
-
-            DB::beginTransaction();
-
-            DB::table('school_years')
-                ->where('id', $id)
-                ->update([
-                    'year_start' => $request->year_start,
-                    'year_end' => $request->year_end,
-                    'code' => $code,
-                    'status' => $request->status,
-                    'updated_at' => now(),
-                ]);
-
-            $this->logAudit(
-                'updated',
-                'school_years',
-                (string)$id,
-                "Updated school year from '{$schoolYear->code}' to '{$code}'",
-                $oldValues,
-                [
-                    'year_start' => $request->year_start,
-                    'year_end' => $request->year_end,
-                    'code' => $code,
-                    'status' => $request->status,
-                ]
-            );
-
-            \Log::info('School year updated successfully', [
-                'school_year_id' => $id,
-                'code' => $code,
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'School year updated successfully!'
-            ]);
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            \Log::error('Failed to update school year', [
-                'school_year_id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
+        if (!$schoolYear) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update school year: ' . $e->getMessage()
-            ], 500);
+                'message' => 'School year not found.'
+            ], 404);
         }
+
+        if ($request->year_end - $request->year_start != 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'School year must span exactly one year.'
+            ], 422);
+        }
+
+        $code = $request->year_start . '-' . $request->year_end;
+
+        $exists = DB::table('school_years')
+            ->where('code', $code)
+            ->where('id', '!=', $id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'School year already exists.'
+            ], 422);
+        }
+
+        $oldValues = [
+            'year_start' => $schoolYear->year_start,
+            'year_end' => $schoolYear->year_end,
+            'code' => $schoolYear->code,
+        ];
+
+        DB::beginTransaction();
+
+        DB::table('school_years')
+            ->where('id', $id)
+            ->update([
+                'year_start' => $request->year_start,
+                'year_end' => $request->year_end,
+                'code' => $code,
+                'updated_at' => now(),
+            ]);
+
+        $this->logAudit(
+            'updated',
+            'school_years',
+            (string)$id,
+            "Updated school year from '{$schoolYear->code}' to '{$code}'",
+            $oldValues,
+            [
+                'year_start' => $request->year_start,
+                'year_end' => $request->year_end,
+                'code' => $code,
+            ]
+        );
+
+        \Log::info('School year updated successfully', [
+            'school_year_id' => $id,
+            'code' => $code,
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'School year updated successfully!'
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to update school year', [
+            'school_year_id' => $id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update school year: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function setActiveSchoolYear($id)
     {

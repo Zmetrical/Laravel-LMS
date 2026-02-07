@@ -14,10 +14,13 @@ use App\Http\Controllers\Class_Management\Page_Lecture;
 use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
-use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Class_Management\Quiz_Attempt;
 use App\Http\Controllers\Class_Management\Quiz_Submit;
 use App\Http\Controllers\Grade_Management\Grade_Management;
+
+use App\Http\Controllers\Class_Management\Year_Management;
+use App\Http\Controllers\Class_Management\Archive_Management;
+
 
 use App\Http\Controllers\Audit\AuditLogController;
 use App\Http\Controllers\Audit\TeacherAuditController;
@@ -83,6 +86,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
         });
 
+        Route::get('/archive-management', [Archive_Management::class, 'archivePage'])
+        ->name('archive.index');
+        Route::match(['get', 'post'], '/archive/verify', [Archive_Management::class, 'verifyAdminAccess'])
+            ->name('archive.verify');
+        Route::post('/archive/school-year/{id}', [Archive_Management::class, 'archiveSchoolYear'])
+            ->name('archive.school-year');
+        Route::post('/archive/semester/{id}', [Archive_Management::class, 'archiveSemester'])
+            ->name('archive.semester');
+
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {
             Route::get('/', [Year_Management::class, 'list_semester'])->name('semesters.index');
@@ -114,7 +126,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/admin', [AuditLogController::class, 'adminIndex'])->name('admin.index');
     Route::get('/admin/data', [AuditLogController::class, 'getAdminLogs'])->name('admin.data');
     Route::get('/admin/details/{id}', [AuditLogController::class, 'getLogDetails'])->name('admin.details');
-    
+
             // Teacher Audit Logs
             Route::get('/teachers', [AuditLogController::class, 'teacherIndex'])->name('teachers.index');
             Route::get('/teachers/data', [AuditLogController::class, 'getTeacherLogs'])->name('teachers.data');

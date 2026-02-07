@@ -64,16 +64,20 @@
         <!-- Right Panel: Details & Semesters -->
         <div class="col-md-8">
             <div class="card card-primary">
-                <div class="card-header">
-                    <h3 class="card-title" id="detailsTitle">
-                        <i class="fas fa-info-circle"></i> School Year Details
-                    </h3>
-                    <div class="card-tools" id="detailsTools" style="display: none;">
-                        <button class="btn btn-tool text-white" id="editYearBtn" title="Edit School Year">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                </div>
+        <div class="card-header">
+            <h3 class="card-title" id="detailsTitle">
+                <i class="fas fa-info-circle"></i> School Year Details
+            </h3>
+            <div class="card-tools" id="detailsTools" style="display: none;">
+                <button class="btn btn-tool text-white" id="editYearBtn" title="Edit School Year">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-tool text-white" id="archiveManagementBtn" title="Archive Management">
+                    <i class="fas fa-archive"></i>
+                </button>
+            </div>
+        </div>
+
                 <div class="card-body">
                     <!-- Empty State -->
                     <div id="emptyState" class="text-center py-5">
@@ -131,14 +135,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="card-footer">
-                    <div class="mb-4 d-flex justify-content-center" id="actionButtons">
-                        <button class="btn btn-primary" id="activateBtn" style="display: none;">
-                            <i class="fas fa-check-circle"></i> Set as Active
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -182,15 +178,6 @@
                                oninput="this.value = this.value.replace(/\D/g, '').substring(0, 4)"
                                placeholder="e.g., 2025" 
                                required>
-                    </div>
-
-                    <div class="form-group" id="statusGroup" style="display: none;">
-                        <label for="status">Status <span class="text-danger">*</span></label>
-                        <select class="form-control" id="status">
-                            <option value="upcoming">Upcoming</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -254,6 +241,45 @@
     </div>
 </div>
 
+<!-- Admin Password Verification Modal -->
+<div class="modal fade" id="archivePasswordModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary">
+                <h5 class="modal-title">
+                    <i class="fas fa-lock"></i> Verify Admin Access
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="archivePasswordForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="archiveAdminPassword">Admin Password <span class="text-danger">*</span></label>
+                        <input type="password" 
+                               class="form-control" 
+                               id="archiveAdminPassword" 
+                               name="admin_password" 
+                               placeholder="Enter your admin password"
+                               autocomplete="off"
+                               required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="verifyArchiveAccessBtn">
+                        <i class="fas fa-check"></i> Confirm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @endsection
 
 @section('scripts')
@@ -269,6 +295,8 @@
             updateSemester: "{{ route('admin.semesters.update', ['id' => ':id']) }}",
             setActiveSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
             semestersPage: "{{ route('admin.semesters.index') }}",
+            verifyArchiveAccess: "{{ route('admin.archive.verify') }}",
+            archiveManagementPage: "{{ route('admin.archive.index') }}",
             csrfToken: "{{ csrf_token() }}"
         };
         
