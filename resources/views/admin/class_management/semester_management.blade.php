@@ -189,120 +189,122 @@
                     <!-- Step Indicator -->
                     <div class="step-indicator mb-4">
                         <div class="step active" data-step="1">
-                            <i class="fas fa-search"></i>
-                            <div class="small">Source</div>
-                        </div>
-                        <div class="step" data-step="2">
                             <i class="fas fa-users"></i>
                             <div class="small">Students</div>
                         </div>
-                        <div class="step" data-step="3">
+                        <div class="step" data-step="2">
                             <i class="fas fa-bullseye"></i>
                             <div class="small">Target</div>
                         </div>
-                        <div class="step" data-step="4">
+                        <div class="step" data-step="3">
                             <i class="fas fa-check"></i>
                             <div class="small">Confirm</div>
                         </div>
                     </div>
 
-<!-- Step 1: Source Selection -->
-<div class="enrollment-step" id="step1">
-    <h6 class="mb-3"><i class="fas fa-graduation-cap"></i> Select Source</h6>
-    
-    <div class="row">
-        <div class="col-md-6">
-            <div class="form-group">
-                <label>Previous Semester </label>
-                <select class="form-control" id="qe_source_semester">
-                    <option value="">All Students in Section</option>
-                    @foreach($source_semesters as $semester)
-                        <option value="{{ $semester->id }}">
-                            {{ $semester->year_code }} - {{ $semester->semester_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="form-group">
-                <label>Target Semester</label>
-                <div class="form-control bg-light" id="targetSemesterDisplay" style="cursor: not-allowed;">
-                    <span class="text-muted">Loading...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-12">
-            <div class="form-group">
-                <label>Source Section <span class="text-danger">*</span></label>
-                <select class="form-control select2" id="qe_source_section" style="width: 100%;">
-                    <option value="">Type to search section...</option>
-                </select>
-            </div>
-        </div>
-    </div>
-    
-    <div class="text-right mt-3">
-        <button type="button" class="btn btn-primary" id="btnStep1Next" disabled>
-            Next <i class="fas fa-arrow-right"></i>
-        </button>
-    </div>
-</div>
-
-                    <!-- Step 2: Student Selection -->
-                    <div class="enrollment-step" id="step2" style="display: none;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0"><i class="fas fa-users"></i> Select Students</h6>
-                            <div class="filter-pills">
-                                <span class="filter-pill active" data-filter="all">All</span>
-                                <span class="filter-pill" data-filter="male">Male</span>
-                                <span class="filter-pill" data-filter="female">Female</span>
+                    <!-- Step 1: Section & Student Selection -->
+                    <div class="enrollment-step" id="step1">
+                        <h6 class="mb-3"><i class="fas fa-users"></i> Select Students</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Source Semester</label>
+                                    <div class="form-control bg-light" id="sourceSemesterDisplay" style="cursor: not-allowed;">
+                                        <span class="text-muted">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Target Semester</label>
+                                    <div class="form-control bg-light" id="targetSemesterDisplay" style="cursor: not-allowed;">
+                                        <span class="text-muted">Loading...</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="quick-actions">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <button type="button" class="btn btn-sm btn-default" id="qe_selectAll">
-                                        <i class="fas fa-check-square"></i> Select All
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-default" id="qe_deselectAll">
-                                        <i class="fas fa-square"></i> Deselect All
-                                    </button>
-                                    <span class="ml-3 badge badge-primary" id="qe_studentCount">0 selected</span>
-                                </div>
-                                <div>
-                                    <input type="text" class="form-control form-control-sm" id="studentSearch" 
-                                           placeholder="Search student..." style="width: 250px;">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Select Section <span class="text-danger">*</span></label>
+                                    <select class="form-control select2" id="qe_source_section" style="width: 100%;">
+                                        <option value="">Type to search section...</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-hover data-table mb-0">
-                                <thead>
-                                    <tr>
-                                        <th width="40">
-                                            <input type="checkbox" id="selectAllCheckbox" class="student-checkbox">
-                                        </th>
-                                        <th>Student Number</th>
-                                        <th>Name</th>
-                                        <th>Gender</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="qe_studentList">
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4">
-                                            <i class="fas fa-arrow-left text-muted fa-2x mb-2"></i>
-                                            <p class="text-muted">Select source section</p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div id="studentSelectionArea" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-list"></i> Students in Section</h6>
+                                <div class="filter-pills">
+                                    <span class="filter-pill active" data-filter="all">All</span>
+                                    <span class="filter-pill" data-filter="male">Male</span>
+                                    <span class="filter-pill" data-filter="female">Female</span>
+                                </div>
+                            </div>
+                            
+                            <div class="quick-actions">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-default" id="qe_selectAll">
+                                            <i class="fas fa-check-square"></i> Select All
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-default" id="qe_deselectAll">
+                                            <i class="fas fa-square"></i> Deselect All
+                                        </button>
+                                        <span class="ml-3 badge badge-primary" id="qe_studentCount">0 selected</span>
+                                    </div>
+                                    <div>
+                                        <input type="text" class="form-control form-control-sm" id="studentSearch" 
+                                               placeholder="Search student..." style="width: 250px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-hover data-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th width="40">
+                                                <input type="checkbox" id="selectAllCheckbox" class="student-checkbox">
+                                            </th>
+                                            <th>Student Number</th>
+                                            <th>Name</th>
+                                            <th>Gender</th>
+                                            <th>Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="qe_studentList">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <i class="fas fa-arrow-up text-muted fa-2x mb-2"></i>
+                                                <p class="text-muted">Select a section to load students</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="text-right mt-3">
+                                <button type="button" class="btn btn-primary" id="btnStep1Next" disabled>
+                                    Next <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Target Selection -->
+                    <div class="enrollment-step" id="step2" style="display: none;">
+                        <h6 class="mb-3"><i class="fas fa-bullseye"></i> Select Target Section</h6>
+                        
+                        <div id="qe_targetSections">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p class="mt-2">Loading available sections...</p>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between mt-3">
@@ -315,29 +317,8 @@
                         </div>
                     </div>
 
-                    <!-- Step 3: Target Selection -->
+                    <!-- Step 3: Confirmation -->
                     <div class="enrollment-step" id="step3" style="display: none;">
-                        <h6 class="mb-3"><i class="fas fa-bullseye"></i> Select Target Section</h6>
-                        
-                        <div id="qe_targetSections">
-                            <div class="text-center py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                                <p class="mt-2">Loading available sections...</p>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between mt-3">
-                            <button type="button" class="btn btn-default" id="btnStep3Back">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            <button type="button" class="btn btn-primary" id="btnStep3Next" disabled>
-                                Next <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Confirmation -->
-                    <div class="enrollment-step" id="step4" style="display: none;">
                         <h6 class="mb-3"><i class="fas fa-check"></i> Review and Confirm</h6>
                         
                         <div class="enrollment-preview">
@@ -364,7 +345,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between mt-3">
-                            <button type="button" class="btn btn-default" id="btnStep4Back">
+                            <button type="button" class="btn btn-default" id="btnStep3Back">
                                 <i class="fas fa-arrow-left"></i> Back
                             </button>
                             <button type="button" class="btn btn-primary" id="btnEnrollConfirm">
@@ -476,6 +457,7 @@
     };
 
     const SCHOOL_YEAR_ID = {{ $school_year_id }};
+    const SOURCE_SEMESTER = @json($source_semester);
     const TARGET_SEMESTER = @json($target_semester);
 </script>
 

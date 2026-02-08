@@ -14,74 +14,84 @@ class Semester_Management extends MainController
 {
     use AuditLogger;
 
-public function archivePage(Request $request)
-{
-    $schoolYearId = $request->query('sy');
-    
-    if (!$schoolYearId) {
-        return redirect()->route('admin.schoolyears.index')
-            ->with('error', 'Please select a school year first');
+    public function archivePage(Request $request)
+    {
+        $schoolYearId = $request->query('sy');
+        
+        if (!$schoolYearId) {
+            return redirect()->route('admin.schoolyears.index')
+                ->with('error', 'Please select a school year first');
+        }
+
+        // Get current school year
+        $currentSchoolYear = DB::table('school_years')->where('id', $schoolYearId)->first();
+        
+        // Get SOURCE semester (active or most recent completed)
+        $sourceSemester = DB::table('semesters as s')
+            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+            ->select(
+                's.id',
+                's.name as semester_name',
+                'sy.code as year_code',
+                's.status',
+                's.code as semester_code',
+                's.school_year_id'
+            )
+            ->where(function($query) use ($currentSchoolYear) {
+                // Current school year's active semester
+                $query->where(function($q) use ($currentSchoolYear) {
+                    $q->where('s.school_year_id', $currentSchoolYear->id)
+                      ->where('s.status', 'active');
+                });
+                
+                // If no active, get most recent completed
+                $query->orWhere(function($q) use ($currentSchoolYear) {
+                    $q->where('s.school_year_id', $currentSchoolYear->id)
+                      ->where('s.status', 'completed')
+                      ->orderBy('s.code', 'desc');
+                });
+
+                // Previous school year's 2nd semester
+                $query->orWhere(function($q) use ($currentSchoolYear) {
+                    $q->where('sy.year_start', $currentSchoolYear->year_start - 1)
+                      ->where('s.code', '2nd')
+                      ->where('s.status', 'completed');
+                });
+            })
+            ->orderByRaw("FIELD(s.status, 'active', 'completed')")
+            ->orderBy('sy.year_start', 'desc')
+            ->orderBy('s.code', 'desc')
+            ->first();
+
+        // Get target semester (upcoming or next active)
+        $targetSemester = DB::table('semesters as s')
+            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+            ->select(
+                's.id',
+                's.name as semester_name',
+                'sy.code as year_code',
+                's.status',
+                's.code as semester_code'
+            )
+            ->where('s.school_year_id', $schoolYearId)
+            ->where(function($query) {
+                $query->where('s.status', 'upcoming')
+                      ->orWhere('s.status', 'active');
+            })
+            ->orderByRaw("FIELD(s.status, 'upcoming', 'active')")
+            ->orderBy('s.code')
+            ->first();
+
+        $data = [
+            'scripts' => ['class_management/semester_management.js'],
+            'school_year_id' => $schoolYearId,
+            'source_semester' => $sourceSemester,
+            'target_semester' => $targetSemester
+        ];
+
+        return view('admin.class_management.semester_management', $data);
     }
 
-    // Get current school year
-    $currentSchoolYear = DB::table('school_years')->where('id', $schoolYearId)->first();
-    
-    // Get available semesters for SOURCE (completed and active semesters)
-    $sourceSemesters = DB::table('semesters as s')
-        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-        ->select(
-            's.id',
-            's.name as semester_name',
-            'sy.code as year_code',
-            's.status',
-            's.code as semester_code',
-            's.school_year_id'
-        )
-        ->where(function($query) use ($currentSchoolYear) {
-            // Current school year's completed/active semesters
-            $query->where(function($q) use ($currentSchoolYear) {
-                $q->where('s.school_year_id', $currentSchoolYear->id)
-                  ->whereIn('s.status', ['active', 'completed']);
-            });
-            
-            // Previous school year's 2nd semester
-            $query->orWhere(function($q) use ($currentSchoolYear) {
-                $q->where('sy.year_start', $currentSchoolYear->year_start - 1)
-                  ->where('s.code', '2nd');
-            });
-        })
-        ->orderBy('sy.year_start', 'desc')
-        ->orderBy('s.code', 'desc')
-        ->get();
-
-    // Get target semester (upcoming or next active)
-    $targetSemester = DB::table('semesters as s')
-        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-        ->select(
-            's.id',
-            's.name as semester_name',
-            'sy.code as year_code',
-            's.status',
-            's.code as semester_code'
-        )
-        ->where('s.school_year_id', $schoolYearId)
-        ->where(function($query) {
-            $query->where('s.status', 'upcoming')
-                  ->orWhere('s.status', 'active');
-        })
-        ->orderByRaw("FIELD(s.status, 'upcoming', 'active')")
-        ->orderBy('s.code')
-        ->first();
-
-    $data = [
-        'scripts' => ['class_management/semester_management.js'],
-        'school_year_id' => $schoolYearId,
-        'source_semesters' => $sourceSemesters,
-        'target_semester' => $targetSemester
-    ];
-
-    return view('admin.class_management.semester_management', $data);
-}
     public function verifyAdminAccess(Request $request)
     {
         $validated = $request->validate([
@@ -433,41 +443,23 @@ public function archivePage(Request $request)
             $sourceSectionId = $request->input('source_section_id');
             $sourceSemesterId = $request->input('source_semester_id');
 
-            if (!$sourceSemesterId) {
-                // Load all students from section
-                $students = DB::table('students as s')
-                    ->where('s.section_id', $sourceSectionId)
-                    ->where('s.student_type', 'regular')
-                    ->select(
-                        's.student_number',
-                        's.first_name',
-                        's.middle_name',
-                        's.last_name',
-                        's.gender',
-                        's.student_type'
-                    )
-                    ->orderBy('s.last_name')
-                    ->orderBy('s.first_name')
-                    ->get();
-            } else {
-                // Load students enrolled in specific semester
-                $students = DB::table('students as s')
-                    ->join('student_semester_enrollment as sse', 's.student_number', '=', 'sse.student_number')
-                    ->where('sse.section_id', $sourceSectionId)
-                    ->where('sse.semester_id', $sourceSemesterId)
-                    ->where('sse.enrollment_status', 'enrolled')
-                    ->select(
-                        's.student_number',
-                        's.first_name',
-                        's.middle_name',
-                        's.last_name',
-                        's.gender',
-                        's.student_type'
-                    )
-                    ->orderBy('s.last_name')
-                    ->orderBy('s.first_name')
-                    ->get();
-            }
+            // Always load students enrolled in the source semester
+            $students = DB::table('students as s')
+                ->join('student_semester_enrollment as sse', 's.student_number', '=', 'sse.student_number')
+                ->where('sse.section_id', $sourceSectionId)
+                ->where('sse.semester_id', $sourceSemesterId)
+                ->where('sse.enrollment_status', 'enrolled')
+                ->select(
+                    's.student_number',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.gender',
+                    's.student_type'
+                )
+                ->orderBy('s.last_name')
+                ->orderBy('s.first_name')
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -516,155 +508,115 @@ public function archivePage(Request $request)
         }
     }
 
-public function getTargetSections(Request $request)
-{
-    try {
-        $strandId = $request->input('strand_id');
-        $currentLevelId = $request->input('current_level_id');
-        $targetSemesterId = $request->input('semester_id');
-        $sourceSemesterId = $request->input('source_semester_id');
+    public function getTargetSections(Request $request)
+    {
+        try {
+            $strandId = $request->input('strand_id');
+            $currentLevelId = $request->input('current_level_id');
+            $targetSemesterId = $request->input('semester_id');
+            $sourceSemesterId = $request->input('source_semester_id');
 
-        \Log::info('Getting target sections', [
-            'strand_id' => $strandId,
-            'current_level_id' => $currentLevelId,
-            'target_semester_id' => $targetSemesterId,
-            'source_semester_id' => $sourceSemesterId
-        ]);
-
-        // Get target semester details
-        $targetSemester = DB::table('semesters as s')
-            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-            ->where('s.id', $targetSemesterId)
-            ->select('s.*', 'sy.year_start', 'sy.year_end', 'sy.code as sy_code')
-            ->first();
-        
-        if (!$targetSemester) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Target semester not found.'
-            ], 404);
-        }
-
-        \Log::info('Target semester', [
-            'semester' => $targetSemester,
-            'status' => $targetSemester->status
-        ]);
-
-        // Determine target level
-        $isPromotion = false;
-        $targetLevelId = $currentLevelId;
-
-        if ($sourceSemesterId) {
-            $sourceSemester = DB::table('semesters as s')
+            // Get target semester details
+            $targetSemester = DB::table('semesters as s')
                 ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-                ->where('s.id', $sourceSemesterId)
-                ->select('s.*', 'sy.year_start', 'sy.year_end')
+                ->where('s.id', $targetSemesterId)
+                ->select('s.*', 'sy.year_start', 'sy.year_end', 'sy.code as sy_code')
                 ->first();
+            
+            if (!$targetSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target semester not found.'
+                ], 404);
+            }
 
-            if ($sourceSemester) {
-                // Check if source was the LAST semester of its school year
-                $lastSemesterOfYear = DB::table('semesters')
-                    ->where('school_year_id', $sourceSemester->school_year_id)
-                    ->orderBy('code', 'desc')
+            // Determine target level
+            $isPromotion = false;
+            $targetLevelId = $currentLevelId;
+
+            if ($sourceSemesterId) {
+                $sourceSemester = DB::table('semesters as s')
+                    ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+                    ->where('s.id', $sourceSemesterId)
+                    ->select('s.*', 'sy.year_start', 'sy.year_end')
                     ->first();
 
-                $isLastSemester = $lastSemesterOfYear->id == $sourceSemesterId;
-
-                // If last semester of school year AND moving to different school year
-                if ($isLastSemester && $sourceSemester->school_year_id != $targetSemester->school_year_id) {
-                    $isPromotion = true;
-                    
-                    $nextLevel = DB::table('levels')
-                        ->where('id', '>', $currentLevelId)
-                        ->orderBy('id')
+                if ($sourceSemester) {
+                    // Check if source was the LAST semester of its school year
+                    $lastSemesterOfYear = DB::table('semesters')
+                        ->where('school_year_id', $sourceSemester->school_year_id)
+                        ->orderBy('code', 'desc')
                         ->first();
-                    
-                    if ($nextLevel) {
-                        $targetLevelId = $nextLevel->id;
+
+                    $isLastSemester = $lastSemesterOfYear->id == $sourceSemesterId;
+
+                    // If last semester of school year AND moving to different school year
+                    if ($isLastSemester && $sourceSemester->school_year_id != $targetSemester->school_year_id) {
+                        $isPromotion = true;
+                        
+                        $nextLevel = DB::table('levels')
+                            ->where('id', '>', $currentLevelId)
+                            ->orderBy('id')
+                            ->first();
+                        
+                        if ($nextLevel) {
+                            $targetLevelId = $nextLevel->id;
+                        }
                     }
                 }
-
-                \Log::info('Promotion check', [
-                    'is_last_semester' => $isLastSemester,
-                    'is_promotion' => $isPromotion,
-                    'target_level_id' => $targetLevelId
-                ]);
             }
-        }
 
-        // Get sections for target level and strand
-        $sections = DB::table('sections as s')
-            ->join('levels as l', 's.level_id', '=', 'l.id')
-            ->where('s.strand_id', $strandId)
-            ->where('s.level_id', $targetLevelId)
-            ->where('s.status', 1)
-            ->select(
-                's.id',
-                's.name',
-                's.code',
-                's.capacity',
-                'l.name as level_name'
-            )
-            ->orderBy('s.name')
-            ->get();
+            // Get sections for target level and strand
+            $sections = DB::table('sections as s')
+                ->join('levels as l', 's.level_id', '=', 'l.id')
+                ->where('s.strand_id', $strandId)
+                ->where('s.level_id', $targetLevelId)
+                ->where('s.status', 1)
+                ->select(
+                    's.id',
+                    's.name',
+                    's.code',
+                    's.capacity',
+                    'l.name as level_name'
+                )
+                ->orderBy('s.name')
+                ->get();
 
-        // Get current enrollment in target semester
-        foreach ($sections as $section) {
-            $enrolledCount = DB::table('student_semester_enrollment')
-                ->where('section_id', $section->id)
-                ->where('semester_id', $targetSemesterId)
-                ->where('enrollment_status', 'enrolled')
-                ->count();
-
-            $section->enrolled_count = $enrolledCount;
-
-            \Log::info('Section enrollment', [
-                'section_id' => $section->id,
-                'section_name' => $section->name,
-                'target_semester_id' => $targetSemesterId,
-                'enrolled_count' => $enrolledCount
-            ]);
-
-            // DEBUG: Show who's enrolled
-            if ($enrolledCount > 0) {
-                $enrolledStudents = DB::table('student_semester_enrollment')
+            // Get current enrollment in target semester
+            foreach ($sections as $section) {
+                $enrolledCount = DB::table('student_semester_enrollment')
                     ->where('section_id', $section->id)
                     ->where('semester_id', $targetSemesterId)
                     ->where('enrollment_status', 'enrolled')
-                    ->get(['student_number', 'enrollment_date', 'created_at']);
+                    ->count();
 
-                \Log::warning('Students already enrolled in NEW semester!', [
-                    'section' => $section->name,
-                    'semester_id' => $targetSemesterId,
-                    'students' => $enrolledStudents
-                ]);
+                $section->enrolled_count = $enrolledCount;
             }
+
+            return response()->json([
+                'success' => true,
+                'sections' => $sections,
+                'target_level_id' => $targetLevelId,
+                'is_promotion' => $isPromotion,
+                'target_semester_info' => [
+                    'id' => $targetSemester->id,
+                    'name' => $targetSemester->name,
+                    'status' => $targetSemester->status,
+                    'school_year' => $targetSemester->sy_code
+                ]
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to get target sections', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load target sections.'
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'sections' => $sections,
-            'target_level_id' => $targetLevelId,
-            'is_promotion' => $isPromotion,
-            'target_semester_info' => [
-                'id' => $targetSemester->id,
-                'name' => $targetSemester->name,
-                'status' => $targetSemester->status,
-                'school_year' => $targetSemester->sy_code
-            ]
-        ]);
-    } catch (Exception $e) {
-        \Log::error('Failed to get target sections', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load target sections.'
-        ], 500);
     }
-}
 
     public function enrollStudents(Request $request)
     {

@@ -2,18 +2,21 @@ $(document).ready(function () {
     let schoolYearData = null;
     let semestersData = [];
     let semesterDetailsCache = {};
+    let sourceSemesterData = SOURCE_SEMESTER; // From blade - active semester
     let targetSemesterData = TARGET_SEMESTER; // From blade
 
     // Enrollment wizard state
     let wizard = {
         currentStep: 1,
         sourceSection: null,
-        sourceSemester: null,
+        sourceSemesterId: sourceSemesterData?.id || null,
         students: [],
         selectedStudents: [],
         targetSection: null,
         targetSectionData: null,
-        targetSemesterId: targetSemesterData?.id || null
+        targetSemesterId: targetSemesterData?.id || null,
+        sourceStrandId: null,
+        sourceLevelId: null
     };
 
     // =========================================================================
@@ -384,6 +387,10 @@ $(document).ready(function () {
             showToast('warning', 'No target semester available for enrollment');
             return;
         }
+        if (!wizard.sourceSemesterId) {
+            showToast('warning', 'No active semester found as source');
+            return;
+        }
         resetWizard();
         $('#quickEnrollModal').modal('show');
     });
@@ -392,12 +399,14 @@ $(document).ready(function () {
         wizard = {
             currentStep: 1,
             sourceSection: null,
-            sourceSemester: null,
+            sourceSemesterId: sourceSemesterData?.id || null,
             students: [],
             selectedStudents: [],
             targetSection: null,
             targetSectionData: null,
-            targetSemesterId: targetSemesterData?.id || null
+            targetSemesterId: targetSemesterData?.id || null,
+            sourceStrandId: null,
+            sourceLevelId: null
         };
 
         $('.enrollment-step').hide();
@@ -405,10 +414,11 @@ $(document).ready(function () {
         updateStepIndicator(1);
         
         $('#qe_source_section').val(null).trigger('change');
-        $('#qe_source_semester').val('');
+        $('#studentSelectionArea').hide();
         $('#btnStep1Next').prop('disabled', true);
         
-        // Show target semester info
+        // Display semester info
+        displaySourceSemesterInfo();
         displayTargetSemesterInfo();
     }
 
@@ -421,23 +431,39 @@ $(document).ready(function () {
         $(`.step[data-step="${step}"]`).addClass('active');
     }
 
-function displayTargetSemesterInfo() {
-    if (!targetSemesterData) {
-        $('#targetSemesterDisplay').html(`
-            <span class="text-muted"><i class="fas fa-exclamation-circle"></i> No target semester available</span>
+    function displaySourceSemesterInfo() {
+        if (!sourceSemesterData) {
+            $('#sourceSemesterDisplay').html(`
+                <span class="text-muted"><i class="fas fa-exclamation-circle"></i> No active semester found</span>
+            `);
+            return;
+        }
+        
+        const semesterDisplay = `${sourceSemesterData.year_code} - ${sourceSemesterData.semester_name}`;
+        const statusBadge = sourceSemesterData.status === 'active' ? 'badge-primary' : 'badge-dark';
+        
+        $('#sourceSemesterDisplay').html(`
+            ${semesterDisplay} <span class="badge ${statusBadge} ml-2">${sourceSemesterData.status.toUpperCase()}</span>
         `);
-        return;
     }
-    
-    const semesterDisplay = `${targetSemesterData.year_code} - ${targetSemesterData.semester_name}`;
-    const statusBadge = targetSemesterData.status === 'active' ? 'badge-primary' : 'badge-secondary';
-    
-    $('#targetSemesterDisplay').html(`
-        ${semesterDisplay} <span class="badge ${statusBadge} ml-2">${targetSemesterData.status.toUpperCase()}</span>
-    `);
-}
 
-    // Step 1: Source
+    function displayTargetSemesterInfo() {
+        if (!targetSemesterData) {
+            $('#targetSemesterDisplay').html(`
+                <span class="text-muted"><i class="fas fa-exclamation-circle"></i> No target semester available</span>
+            `);
+            return;
+        }
+        
+        const semesterDisplay = `${targetSemesterData.year_code} - ${targetSemesterData.semester_name}`;
+        const statusBadge = targetSemesterData.status === 'active' ? 'badge-primary' : 'badge-secondary';
+        
+        $('#targetSemesterDisplay').html(`
+            ${semesterDisplay} <span class="badge ${statusBadge} ml-2">${targetSemesterData.status.toUpperCase()}</span>
+        `);
+    }
+
+    // Step 1: Section & Student Selection
     $('#qe_source_section').select2({
         theme: 'bootstrap4',
         placeholder: 'Type to search...',
@@ -461,22 +487,15 @@ function displayTargetSemesterInfo() {
         }
     }).on('select2:select', function(e) {
         wizard.sourceSection = e.params.data.id;
-        $('#btnStep1Next').prop('disabled', false);
+        loadWizardStudents();
     }).on('select2:clear', function() {
         wizard.sourceSection = null;
+        $('#studentSelectionArea').hide();
         $('#btnStep1Next').prop('disabled', true);
     });
 
-    $('#btnStep1Next').click(function() {
-        wizard.sourceSemester = $('#qe_source_semester').val();
-        loadWizardStudents();
-    });
-
     function loadWizardStudents() {
-        $('.enrollment-step').hide();
-        $('#step2').show();
-        updateStepIndicator(2);
-
+        $('#studentSelectionArea').show();
         $('#qe_studentList').html(`
             <tr>
                 <td colspan="5" class="text-center py-4">
@@ -492,7 +511,7 @@ function displayTargetSemesterInfo() {
             data: {
                 _token: API_ROUTES.csrfToken,
                 source_section_id: wizard.sourceSection,
-                source_semester_id: wizard.sourceSemester
+                source_semester_id: wizard.sourceSemesterId
             },
             success: function(response) {
                 if (response.success) {
@@ -504,6 +523,7 @@ function displayTargetSemesterInfo() {
             },
             error: function() {
                 showToast('error', 'Failed to load students');
+                $('#studentSelectionArea').hide();
             }
         });
     }
@@ -530,7 +550,7 @@ function displayTargetSemesterInfo() {
             $('#qe_studentList').html(`
                 <tr><td colspan="5" class="text-center text-muted py-4">No students found</td></tr>
             `);
-            $('#btnStep2Next').prop('disabled', true);
+            $('#btnStep1Next').prop('disabled', true);
             return;
         }
 
@@ -540,7 +560,7 @@ function displayTargetSemesterInfo() {
             const genderIcon = s.gender === 'Male' ? 'fa-mars' : 'fa-venus';
             
             html += `
-                <tr class="student-row" data-index="${i}">
+                <tr class="student-row" data-index="${i}" data-gender="${s.gender.toLowerCase()}">
                     <td>
                         <input type="checkbox" class="student-checkbox" ${s.selected ? 'checked' : ''}>
                     </td>
@@ -554,7 +574,7 @@ function displayTargetSemesterInfo() {
 
         $('#qe_studentList').html(html);
         updateStudentCount();
-        $('#btnStep2Next').prop('disabled', false);
+        $('#btnStep1Next').prop('disabled', false);
     }
 
     $(document).on('change', '.student-checkbox', function() {
@@ -566,13 +586,19 @@ function displayTargetSemesterInfo() {
     $('#selectAllCheckbox').change(function() {
         const checked = $(this).is(':checked');
         $('.student-checkbox:visible').prop('checked', checked);
-        wizard.students.forEach(s => s.selected = checked);
+        $('.student-row:visible').each(function() {
+            const index = $(this).data('index');
+            wizard.students[index].selected = checked;
+        });
         updateSelectedStudents();
     });
 
     $('#qe_selectAll').click(function() {
         $('.student-checkbox:visible').prop('checked', true);
-        wizard.students.forEach(s => s.selected = true);
+        $('.student-row:visible').each(function() {
+            const index = $(this).data('index');
+            wizard.students[index].selected = true;
+        });
         updateSelectedStudents();
     });
 
@@ -589,6 +615,8 @@ function displayTargetSemesterInfo() {
             const text = $(this).text().toLowerCase();
             $(this).toggle(text.includes(search));
         });
+
+        updateSelectAllCheckbox();
     });
 
     $('.filter-pill').click(function() {
@@ -601,16 +629,25 @@ function displayTargetSemesterInfo() {
             $('.student-row').show();
         } else {
             $('.student-row').each(function() {
-                const gender = $(this).find('td:eq(3)').text().toLowerCase();
-                $(this).toggle(gender.includes(filter));
+                const gender = $(this).data('gender');
+                $(this).toggle(gender === filter);
             });
         }
+
+        updateSelectAllCheckbox();
     });
+
+    function updateSelectAllCheckbox() {
+        const visibleCheckboxes = $('.student-checkbox:visible');
+        const checkedCheckboxes = $('.student-checkbox:visible:checked');
+        $('#selectAllCheckbox').prop('checked', visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedCheckboxes.length);
+    }
 
     function updateSelectedStudents() {
         wizard.selectedStudents = wizard.students.filter(s => s.selected);
         updateStudentCount();
-        $('#btnStep2Next').prop('disabled', wizard.selectedStudents.length === 0);
+        updateSelectAllCheckbox();
+        $('#btnStep1Next').prop('disabled', wizard.selectedStudents.length === 0);
     }
 
     function updateStudentCount() {
@@ -619,20 +656,14 @@ function displayTargetSemesterInfo() {
         $('#qe_studentCount').text(`${count} / ${total} selected`);
     }
 
-    $('#btnStep2Back').click(function() {
-        $('.enrollment-step').hide();
-        $('#step1').show();
-        updateStepIndicator(1);
-    });
-
-    $('#btnStep2Next').click(function() {
+    $('#btnStep1Next').click(function() {
         loadTargetSectionsForWizard();
     });
 
     function loadTargetSectionsForWizard() {
         $('.enrollment-step').hide();
-        $('#step3').show();
-        updateStepIndicator(3);
+        $('#step2').show();
+        updateStepIndicator(2);
 
         $.ajax({
             url: API_ROUTES.getTargetSections,
@@ -642,18 +673,20 @@ function displayTargetSemesterInfo() {
                 strand_id: wizard.sourceStrandId,
                 current_level_id: wizard.sourceLevelId,
                 semester_id: wizard.targetSemesterId,
-                source_semester_id: wizard.sourceSemester || null
+                source_semester_id: wizard.sourceSemesterId
             },
             success: function(response) {
                 if (response.success) {
                     // Show promotion message if applicable
                     if (response.is_promotion) {
-                        $('#qe_targetSections').prepend(`
+                        $('#qe_targetSections').html(`
                             <div class="alert alert-default-secondary mb-3">
                                 <i class="fas fa-level-up-alt"></i>
                                 <strong>Promotion:</strong> Students will be promoted to the next level
                             </div>
                         `);
+                    } else {
+                        $('#qe_targetSections').html('');
                     }
                     
                     displayTargetSections(response.sections);
@@ -669,7 +702,7 @@ function displayTargetSemesterInfo() {
 
     function displayTargetSections(sections) {
         if (sections.length === 0) {
-            $('#qe_targetSections').html(`
+            $('#qe_targetSections').append(`
                 <p class="text-muted text-center py-4">No available sections</p>
             `);
             return;
@@ -698,6 +731,7 @@ function displayTargetSemesterInfo() {
             html += `
                 <div class="section-select-card ${willExceed ? 'border-primary' : ''}" 
                      data-section-id="${section.id}" 
+                     data-section-name="${section.name}"
                      data-capacity="${section.capacity}" 
                      data-enrolled="${currentEnrolled}">
                     ${warningText}
@@ -729,7 +763,7 @@ function displayTargetSemesterInfo() {
             `;
         });
 
-        $('#qe_targetSections').html(html);
+        $('#qe_targetSections').append(html);
 
         $('.section-select-card').click(function() {
             $('.section-select-card').removeClass('selected');
@@ -737,37 +771,36 @@ function displayTargetSemesterInfo() {
             
             wizard.targetSection = $(this).data('section-id');
             wizard.targetSectionData = {
+                name: $(this).data('section-name'),
                 capacity: $(this).data('capacity'),
                 enrolled: $(this).data('enrolled')
             };
             
-            $('#btnStep3Next').prop('disabled', false);
+            $('#btnStep2Next').prop('disabled', false);
         });
 
-        $('#btnStep3Next').prop('disabled', true);
+        $('#btnStep2Next').prop('disabled', true);
     }
 
-    $('#btnStep3Back').click(function() {
+    $('#btnStep2Back').click(function() {
         $('.enrollment-step').hide();
-        $('#step2').show();
-        updateStepIndicator(2);
+        $('#step1').show();
+        updateStepIndicator(1);
     });
 
-    $('#btnStep3Next').click(function() {
+    $('#btnStep2Next').click(function() {
         showConfirmationStep();
     });
 
     function showConfirmationStep() {
         $('.enrollment-step').hide();
-        $('#step4').show();
-        updateStepIndicator(4);
+        $('#step3').show();
+        updateStepIndicator(3);
 
-        const selectedSection = $(`.section-select-card[data-section-id="${wizard.targetSection}"]`);
-        const sectionName = selectedSection.find('h6').text();
         const afterEnroll = wizard.targetSectionData.enrolled + wizard.selectedStudents.length;
 
         $('#confirm_studentCount').text(wizard.selectedStudents.length);
-        $('#confirm_targetSection').text(sectionName);
+        $('#confirm_targetSection').text(wizard.targetSectionData.name);
         $('#confirm_capacity').text(`${afterEnroll} / ${wizard.targetSectionData.capacity}`);
 
         let studentListHtml = '<div class="row">';
@@ -789,10 +822,10 @@ function displayTargetSemesterInfo() {
         $('#confirm_studentList').html(studentListHtml);
     }
 
-    $('#btnStep4Back').click(function() {
+    $('#btnStep3Back').click(function() {
         $('.enrollment-step').hide();
-        $('#step3').show();
-        updateStepIndicator(3);
+        $('#step2').show();
+        updateStepIndicator(2);
     });
 
     $('#btnEnrollConfirm').click(function() {
