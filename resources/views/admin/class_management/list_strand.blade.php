@@ -140,7 +140,7 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title text-center" id="sectionsModalTitle">
+                <h5 class="modal-title" id="sectionsModalTitle">
                     <i class="fas fa-list"></i> Sections
                 </h5>
                 <button type="button" class="close" data-dismiss="modal">
@@ -179,6 +179,7 @@
 
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+    
     <script>
     const API_ROUTES = {
         getStrands: "{{ route('admin.strands.data') }}",

@@ -1017,7 +1017,17 @@ class Class_Management extends MainController
             ], 500);
         }
     }
+    public function getClassesList()
+{
+    $classes = DB::table('classes')
+        ->select('id', 'class_code', 'class_name', 'ww_perc', 'pt_perc', 'qa_perce')
+        ->orderBy('class_name', 'asc')
+        ->get();
 
+    return response()->json([
+        'data' => $classes
+    ]);
+}
     /**
      * Remove class from section
      */

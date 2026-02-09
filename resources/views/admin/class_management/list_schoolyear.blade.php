@@ -87,13 +87,6 @@
 
                     <!-- Details Content -->
                     <div id="detailsContent" style="display: none;">
-                        <div class="mb-3">
-                            <button class="btn btn-primary btn-sm" id="activateBtn" style="display: none;">
-                                <i class="fas fa-check"></i> Set as Active
-                            </button>
-                        </div>
-
-                        <hr>
 
                         <!-- Semesters Section -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -213,27 +206,13 @@
                 <input type="hidden" id="semesterId">
                 <input type="hidden" id="semesterSchoolYearId">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="startDate">Start Date <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="startDate" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="endDate">End Date <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="endDate" required>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="startDate">Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="startDate" required>
                     </div>
-                    <div class="form-group" id="semStatusGroup" style="display: none;">
-                        <label for="semStatus">Status <span class="text-danger">*</span></label>
-                        <select class="form-control" id="semStatus">
-                            <option value="upcoming">Upcoming</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                        </select>
+                    <div class="form-group">
+                        <label for="endDate">End Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="endDate" required>
                     </div>
                 </div>
                 <div class="modal-footer">

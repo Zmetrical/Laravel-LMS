@@ -62,7 +62,7 @@
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-book mr-2"></i>Class List</h3>
             <div class="card-tools">
-                <span class="badge badge-primary" id="classCount">{{ count($classes) }} Classes</span>
+                <span class="badge badge-primary" id="classCount">0 Classes</span>
             </div>
         </div>
         <div class="card-body">
@@ -78,23 +78,7 @@
                         </tr>
                     </thead>
                     <tbody id="classTableBody">
-                        @forelse ($classes as $class)
-                            <tr data-id="{{ $class->id }}">
-                                <td>{{ $class->class_name }}</td>
-                                <td><span class="badge badge-secondary">{{ $class->ww_perc }}%</span></td>
-                                <td><span class="badge badge-secondary">{{ $class->pt_perc }}%</span></td>
-                                <td><span class="badge badge-secondary">{{ $class->qa_perce }}%</span></td>
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-primary btn-edit" data-id="{{ $class->id }}" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">No classes found</td>
-                        </tr>
-                        @endforelse
+                        <!-- DataTables will populate this via AJAX -->
                     </tbody>
                 </table>
             </div>
@@ -194,7 +178,8 @@
         const API_ROUTES = {
             insertClass: "{{ route('admin.insert_class') }}",
             getClass: "{{ route('admin.get_class', ':id') }}",
-            updateClass: "{{ route('admin.update_class', ':id') }}"
+            updateClass: "{{ route('admin.update_class', ':id') }}",
+            getClassesList: "{{ route('admin.get_classes_list') }}"
         };
     </script>
 

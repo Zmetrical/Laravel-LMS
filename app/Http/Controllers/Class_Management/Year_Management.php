@@ -352,6 +352,50 @@ public function updateSchoolYear(Request $request, $id)
         try {
             $schoolYear = DB::table('school_years')->where('id', $request->school_year_id)->first();
 
+            if (!$schoolYear) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School year not found.'
+                ], 404);
+            }
+
+            $syStartDate = "{$schoolYear->year_start}-01-01"; 
+            $syEndDate = "{$schoolYear->year_end}-12-31";
+            
+            if ($request->start_date < $syStartDate || $request->start_date > $syEndDate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Semester start date must be within school year {$schoolYear->year_start}-{$schoolYear->year_end} (between {$syStartDate} and {$syEndDate})."
+                ], 422);
+            }
+
+            if ($request->end_date < $syStartDate || $request->end_date > $syEndDate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Semester end date must be within school year {$schoolYear->year_start}-{$schoolYear->year_end} (between {$syStartDate} and {$syEndDate})."
+                ], 422);
+            }
+
+            // Check for overlapping semesters
+            $overlapping = DB::table('semesters')
+                ->where('school_year_id', $request->school_year_id)
+                ->where(function($query) use ($request) {
+                    $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                          ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                          ->orWhere(function($q) use ($request) {
+                              $q->where('start_date', '<=', $request->start_date)
+                                ->where('end_date', '>=', $request->end_date);
+                          });
+                })
+                ->exists();
+
+            if ($overlapping) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester dates overlap with an existing semester in this school year.'
+                ], 422);
+            }
+
             $currentCount = DB::table('semesters')
                 ->where('school_year_id', $request->school_year_id)
                 ->count();
@@ -443,7 +487,6 @@ public function updateSchoolYear(Request $request, $id)
         $validated = $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:active,completed,upcoming',
         ]);
 
         try {
@@ -458,17 +501,55 @@ public function updateSchoolYear(Request $request, $id)
 
             $schoolYear = DB::table('school_years')->where('id', $semester->school_year_id)->first();
 
-            if ($request->status === 'active') {
-                DB::table('semesters')
-                    ->where('id', '!=', $id)
-                    ->where('status', 'active')
-                    ->update(['status' => 'upcoming']);
+            if (!$schoolYear) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School year not found.'
+                ], 404);
+            }
+
+            // Validate semester dates are within school year bounds
+            $syStartDate = "{$schoolYear->year_start}-01-01";
+            $syEndDate = "{$schoolYear->year_end}-12-31";
+            
+            if ($request->start_date < $syStartDate || $request->start_date > $syEndDate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Semester start date must be within school year {$schoolYear->year_start}-{$schoolYear->year_end} (between {$syStartDate} and {$syEndDate})."
+                ], 422);
+            }
+
+            if ($request->end_date < $syStartDate || $request->end_date > $syEndDate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Semester end date must be within school year {$schoolYear->year_start}-{$schoolYear->year_end} (between {$syStartDate} and {$syEndDate})."
+                ], 422);
+            }
+
+            // Check for overlapping semesters (excluding current semester)
+            $overlapping = DB::table('semesters')
+                ->where('school_year_id', $semester->school_year_id)
+                ->where('id', '!=', $id)
+                ->where(function($query) use ($request) {
+                    $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                          ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                          ->orWhere(function($q) use ($request) {
+                              $q->where('start_date', '<=', $request->start_date)
+                                ->where('end_date', '>=', $request->end_date);
+                          });
+                })
+                ->exists();
+
+            if ($overlapping) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester dates overlap with an existing semester in this school year.'
+                ], 422);
             }
 
             $oldValues = [
                 'start_date' => $semester->start_date,
                 'end_date' => $semester->end_date,
-                'status' => $semester->status,
             ];
 
             DB::beginTransaction();
@@ -478,7 +559,6 @@ public function updateSchoolYear(Request $request, $id)
                 ->update([
                     'start_date' => $request->start_date,
                     'end_date' => $request->end_date,
-                    'status' => $request->status,
                     'updated_at' => now(),
                 ]);
 
@@ -491,7 +571,6 @@ public function updateSchoolYear(Request $request, $id)
                 [
                     'start_date' => $request->start_date,
                     'end_date' => $request->end_date,
-                    'status' => $request->status,
                 ]
             );
 
@@ -519,6 +598,7 @@ public function updateSchoolYear(Request $request, $id)
             ], 500);
         }
     }
+
 
     public function getSemesterSections($id)
     {
@@ -851,4 +931,6 @@ public function updateSchoolYear(Request $request, $id)
             ], 500);
         }
     }
+
+
 }

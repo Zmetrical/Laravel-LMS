@@ -253,7 +253,11 @@ CREATE TABLE `school_years` (
   `code` varchar(20) NOT NULL,
   `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `activated_at` timestamp NULL DEFAULT NULL COMMENT 'When school year was manually activated',
+  `activated_by` int(11) DEFAULT NULL COMMENT 'Admin ID who activated',
+  `completed_at` timestamp NULL DEFAULT NULL COMMENT 'When school year was manually completed',
+  `completed_by` int(11) DEFAULT NULL COMMENT 'Admin ID who completed'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `sections` (
@@ -287,7 +291,11 @@ CREATE TABLE `semesters` (
   `end_date` date NOT NULL,
   `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `activated_at` timestamp NULL DEFAULT NULL COMMENT 'When semester was manually activated',
+  `activated_by` int(11) DEFAULT NULL COMMENT 'Admin ID who activated',
+  `completed_at` timestamp NULL DEFAULT NULL COMMENT 'When semester was manually completed',
+  `completed_by` int(11) DEFAULT NULL COMMENT 'Admin ID who completed'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `sessions` (

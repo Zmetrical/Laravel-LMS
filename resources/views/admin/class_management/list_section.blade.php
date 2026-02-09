@@ -265,6 +265,7 @@
 
 @section('scripts')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+    
     <script>
     const API_ROUTES = {
         getSections: "{{ route('admin.sections.data') }}",
@@ -279,6 +280,7 @@
         removeClass: "{{ route('admin.sections-class.remove-class', ':id') }}"
     };
     </script>
+    
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>

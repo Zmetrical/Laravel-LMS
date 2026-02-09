@@ -84,6 +84,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/create', [Year_Management::class, 'createSchoolYear'])->name('schoolyears.create');
             Route::put('/{id}/update', [Year_Management::class, 'updateSchoolYear'])->name('schoolyears.update');
             Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSchoolYear'])->name('schoolyears.set-active');
+
+
         });
 
         // ---------------------------------------------------------------------------
@@ -91,29 +93,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // ---------------------------------------------------------------------------
 
         // Archive/Semester Management Routes
-Route::prefix('archive')->name('archive.')->group(function () {
-    // Main page - GET request
-    Route::get('/', [Semester_Management::class, 'archivePage'])->name('index');
-    
-    // Verification - POST request
-    Route::post('/verify', [Semester_Management::class, 'verifyAdminAccess'])->name('verify');
-    
-    // Archive Info
-    Route::get('/info/{id}', [Semester_Management::class, 'getArchiveInfo'])->name('info');
-    Route::get('/semester-details/{id}', [Semester_Management::class, 'getSemesterDetails'])->name('semester-details');
-    Route::get('/section-students/{semesterId}/{sectionId}', [Semester_Management::class, 'getSectionStudents'])->name('section-students');
-    
-    // Archive Actions
-    Route::post('/semester/{id}', [Semester_Management::class, 'archiveSemester'])->name('semester');
-    
-    // Quick Enrollment Routes
-    Route::get('/search-sections', [Semester_Management::class, 'searchSections'])->name('search-sections');
-    Route::post('/load-students', [Semester_Management::class, 'loadStudentsFromSection'])->name('load-students');
-    Route::post('/get-section-details', [Semester_Management::class, 'getSectionDetails'])->name('get-section-details');
-    Route::post('/get-target-sections', [Semester_Management::class, 'getTargetSections'])->name('get-target-sections');
-    Route::post('/get-section-capacity', [Semester_Management::class, 'getSectionCapacity'])->name('get-section-capacity');
-    Route::post('/enroll-students', [Semester_Management::class, 'enrollStudents'])->name('enroll-students');
-});
+        Route::prefix('archive')->name('archive.')->group(function () {
+            // Main page - GET request
+            Route::get('/', [Semester_Management::class, 'archivePage'])->name('index');
+            
+            // Verification - POST request
+            Route::post('/verify', [Semester_Management::class, 'verifyAdminAccess'])->name('verify');
+            
+            // Archive Info
+            Route::get('/info/{id}', [Semester_Management::class, 'getArchiveInfo'])->name('info');
+            Route::get('/semester-details/{id}', [Semester_Management::class, 'getSemesterDetails'])->name('semester-details');
+            Route::get('/section-students/{semesterId}/{sectionId}', [Semester_Management::class, 'getSectionStudents'])->name('section-students');
+            
+            // Archive Actions
+            Route::post('/semester/{id}', [Semester_Management::class, 'archiveSemester'])->name('semester');
+            
+            // Quick Enrollment Routes
+            Route::get('/search-sections', [Semester_Management::class, 'searchSections'])->name('search-sections');
+            Route::post('/load-students', [Semester_Management::class, 'loadStudentsFromSection'])->name('load-students');
+            Route::post('/get-section-details', [Semester_Management::class, 'getSectionDetails'])->name('get-section-details');
+            Route::post('/get-target-sections', [Semester_Management::class, 'getTargetSections'])->name('get-target-sections');
+            Route::post('/get-section-capacity', [Semester_Management::class, 'getSectionCapacity'])->name('get-section-capacity');
+            Route::post('/enroll-students', [Semester_Management::class, 'enrollStudents'])->name('enroll-students');
+        });
 
         // Semester Activation (if not already exists)
         Route::post('/semesters/{id}/set-active', [Semester_Management::class, 'setActive'])->name('semesters.set-active');
@@ -132,18 +134,18 @@ Route::prefix('archive')->name('archive.')->group(function () {
             Route::get('/{semesterId}/quarters', [Year_Management::class, 'getQuartersData'])->name('quarters.list');
             Route::get('/{semesterId}/class/{classCode}/history', [Year_Management::class, 'getEnrollmentHistory'])->name('semesters.enrollment-history');
 
-            Route::get(
-                '/semesters/{id}/sections',
-                [Year_Management::class, 'getSemesterSections']
-            )
+
+            Route::get('/semesters/{id}/sections',[Year_Management::class, 'getSemesterSections'])
                 ->name('semesters.sections');
 
-            Route::get(
-                '/semesters/{semesterId}/sections/{sectionId}/enrollment',
-                [Year_Management::class, 'getSectionEnrollment']
-            )
+            Route::get('/semesters/{semesterId}/sections/{sectionId}/enrollment',[Year_Management::class, 'getSectionEnrollment'])
                 ->name('sections.enrollment');
+
+                
         });
+
+
+
 
         Route::prefix('audit')->name('audit.')->group(function () {
             // Admin Audit Logs
@@ -280,6 +282,7 @@ Route::prefix('archive')->name('archive.')->group(function () {
             Route::get('/get_class/{id}', [Class_Management::class, 'getClassData'])->name('get_class');
             Route::put('/update_class/{id}', [Class_Management::class, 'updateClass'])->name('update_class');
             Route::get('/get_classes_data', [Class_Management::class, 'getClassesData'])->name('get_classes_data');
+            Route::get('/classes/list', [Class_Management::class, 'getClassesList'])->name('get_classes_list');
 
             // Strands
             Route::get('/list_strand', [Class_Management::class, 'list_strand'])->name('list_strand');

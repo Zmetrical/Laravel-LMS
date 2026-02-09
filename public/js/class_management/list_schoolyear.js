@@ -19,17 +19,17 @@ $(document).ready(function () {
         isEditMode = false;
         $('#syModalTitle').text('Add School Year');
         $('#schoolYearId').val('');
-        
+
         const latestYear = getLatestSchoolYear();
         if (latestYear) {
-            const startYear = parseInt(latestYear.year_end, 10); 
+            const startYear = parseInt(latestYear.year_end, 10);
             $('#yearStart').val(startYear);
             $('#yearEnd').val(startYear + 1);
         } else {
             $('#yearStart').val('');
             $('#yearEnd').val('');
         }
-        
+
         $('#schoolYearModal').modal('show');
     });
 
@@ -41,7 +41,7 @@ $(document).ready(function () {
     });
 
     // Enforce 4-digit limit
-    $('#yearStart, #yearEnd').on('input keyup paste', function() {
+    $('#yearStart, #yearEnd').on('input keyup paste', function () {
         let value = $(this).val();
         value = value.replace(/\D/g, '');
         if (value.length > 4) {
@@ -52,22 +52,22 @@ $(document).ready(function () {
         }
     });
 
-    $('#yearStart, #yearEnd').on('keypress', function(e) {
+    $('#yearStart, #yearEnd').on('keypress', function (e) {
         const char = String.fromCharCode(e.which);
-        
+
         if (!/[0-9]/.test(char)) {
             e.preventDefault();
             return false;
         }
-        
+
         const currentValue = $(this).val();
         const selectionStart = this.selectionStart;
         const selectionEnd = this.selectionEnd;
-        
+
         if (selectionStart !== selectionEnd) {
             return true;
         }
-        
+
         if (currentValue.length >= 4) {
             e.preventDefault();
             return false;
@@ -76,12 +76,12 @@ $(document).ready(function () {
 
     $('#yearStart').on('blur', function () {
         let value = $(this).val().trim();
-        
+
         if (value.length > 4) {
             value = value.substring(0, 4);
             $(this).val(value);
         }
-        
+
         if (value.length === 4) {
             const startYear = parseInt(value, 10);
             if (!isNaN(startYear) && startYear >= 2000 && startYear <= 3000) {
@@ -102,12 +102,12 @@ $(document).ready(function () {
 
     $('#yearEnd').on('blur', function () {
         let value = $(this).val().trim();
-        
+
         if (value.length > 4) {
             value = value.substring(0, 4);
             $(this).val(value);
         }
-        
+
         if (value.length === 4) {
             const endYear = parseInt(value, 10);
             if (!isNaN(endYear) && endYear >= 2000 && endYear <= 3000) {
@@ -175,14 +175,8 @@ $(document).ready(function () {
         }
     });
 
-    // Activate Button
-    $('#activateBtn').click(function () {
-        if (selectedYearId) {
-            activateSchoolYear(selectedYearId);
-        }
-    });
 
-// Archive Management Button - Pass school year ID
+    // Archive Management Button - Pass school year ID
     $('#archiveManagementBtn').click(function () {
         if (selectedYearId) {
             window.location.href = API_ROUTES.archiveManagementPage + '?sy=' + selectedYearId;
@@ -198,7 +192,7 @@ $(document).ready(function () {
     // Add Semester Button
     $('#addSemesterBtn').click(function () {
         if (!selectedYearId) return;
-        
+
         if (currentSemesters.length >= MAX_SEMESTERS) {
             Swal.fire({
                 icon: 'warning',
@@ -207,7 +201,7 @@ $(document).ready(function () {
             });
             return;
         }
-        
+
         isSemesterEditMode = false;
         $('#semModalTitle').text('Add Semester');
         $('#semesterId').val('');
@@ -221,7 +215,7 @@ $(document).ready(function () {
     // View Semesters Button
     $('#viewSemestersBtn').click(function () {
         if (!selectedYearId) return;
-        
+
         const year = schoolYears.find(sy => sy.id === selectedYearId);
         if (year) {
             window.location.href = API_ROUTES.semestersPage + '?sy=' + selectedYearId;
@@ -248,7 +242,7 @@ $(document).ready(function () {
 
     function getLatestSchoolYear() {
         if (schoolYears.length === 0) return null;
-        
+
         return schoolYears.reduce((latest, current) => {
             if (!latest) return current;
             return current.year_end > latest.year_end ? current : latest;
@@ -302,7 +296,7 @@ $(document).ready(function () {
         filteredYears.forEach(sy => {
             const statusBadge = getStatusBadgeClass(sy.status);
             const isSelected = sy.id === selectedYearId ? 'active' : '';
-            
+
             const item = `
                 <a href="#" class="list-group-item list-group-item-action year-item ${isSelected}" 
                    data-year-id="${sy.id}">
@@ -340,7 +334,7 @@ $(document).ready(function () {
     function selectYear(yearId) {
         selectedYearId = yearId;
         const year = schoolYears.find(sy => sy.id === yearId);
-        
+
         if (!year) return;
 
         $('.year-item').removeClass('active');
@@ -351,12 +345,6 @@ $(document).ready(function () {
         $('#detailsTools').show();
 
         $('#detailsTitle').text(`School Year ${year.year_start}-${year.year_end}`);
-        
-        $('#activateBtn').hide();
-        
-        if (year.status === 'upcoming') {
-            $('#activateBtn').show();
-        }
 
         loadSemesters(yearId);
     }
@@ -372,12 +360,12 @@ $(document).ready(function () {
             data: { school_year_id: yearId },
             success: function (response) {
                 $('#semestersLoading').hide();
-                
+
                 if (response.success && response.data.length > 0) {
                     currentSemesters = response.data;
                     displaySemesters(response.data);
                     $('#semestersTableContainer').show();
-                    
+
                     if (currentSemesters.length >= MAX_SEMESTERS) {
                         $('#addSemesterBtn').prop('disabled', true)
                             .attr('title', `Maximum of ${MAX_SEMESTERS} semesters reached`);
@@ -399,33 +387,41 @@ $(document).ready(function () {
     }
 
     function displaySemesters(semesters) {
-        const tbody = $('#semestersTableBody');
-        tbody.empty();
+    const tbody = $('#semestersTableBody');
+    tbody.empty();
 
-        semesters.forEach(sem => {
-            const statusBadge = sem.status === 'active' ? 'badge-primary' :
-                              sem.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
-            
-            const row = `
-                <tr>
-                    <td><strong>${sem.name}</strong></td>
-                    <td><small>${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small></td>
-                    <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-secondary edit-semester-btn" data-semester-id="${sem.id}" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-            tbody.append(row);
-        });
+    // Sort semesters by order_number (extracted from name)
+    const sortedSemesters = semesters.sort((a, b) => {
+        // Extract the order number from semester names like "1st Semester", "2nd Semester"
+        const orderA = parseInt(a.name.match(/\d+/)[0]);
+        const orderB = parseInt(b.name.match(/\d+/)[0]);
+        return orderA - orderB;
+    });
 
-        $('.edit-semester-btn').click(function () {
-            const semId = $(this).data('semester-id');
-            editSemester(semId);
-        });
-    }
+    sortedSemesters.forEach(sem => {
+        const statusBadge = sem.status === 'active' ? 'badge-primary' :
+            sem.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
+
+        const row = `
+            <tr>
+                <td><strong>${sem.name}</strong></td>
+                <td><small>${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small></td>
+                <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-secondary edit-semester-btn" data-semester-id="${sem.id}" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+
+    $('.edit-semester-btn').click(function () {
+        const semId = $(this).data('semester-id');
+        editSemester(semId);
+    });
+}
 
     function editSemester(semesterId) {
         const semester = currentSemesters.find(s => s.id === semesterId);
@@ -529,7 +525,7 @@ $(document).ready(function () {
 
     function activateSchoolYear(id) {
         const year = schoolYears.find(sy => sy.id === id);
-        
+
         Swal.fire({
             title: 'Activate School Year?',
             html: `Set <strong>SY ${year.year_start}-${year.year_end}</strong> as active?<br><small class="text-muted">This will deactivate all other school years</small>`,
@@ -631,4 +627,146 @@ $(document).ready(function () {
             }
         });
     }
+
+
+    $('#addSemesterBtn').click(function () {
+        if (!selectedYearId) return;
+
+        if (currentSemesters.length >= MAX_SEMESTERS) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Maximum Semesters Reached',
+                text: `Only ${MAX_SEMESTERS} semesters are allowed per school year.`
+            });
+            return;
+        }
+
+        const year = schoolYears.find(sy => sy.id === selectedYearId);
+
+        isSemesterEditMode = false;
+        $('#semModalTitle').text(`Add Semester - SY ${year.year_start}-${year.year_end}`);
+        $('#semesterId').val('');
+        $('#semesterSchoolYearId').val(selectedYearId);
+        $('#startDate').val('');
+        $('#endDate').val('');
+
+        // Set min and max date attributes based on school year
+        const minDate = `${year.year_start}-01-01`;
+        const maxDate = `${year.year_end}-12-31`;
+        $('#startDate').attr('min', minDate).attr('max', maxDate);
+        $('#endDate').attr('min', minDate).attr('max', maxDate);
+
+        // Show helper text
+        if (!$('#semesterDateHelper').length) {
+            $('#endDate').parent().after(`
+            <small id="semesterDateHelper" class="form-text text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+            </small>
+        `);
+        } else {
+            $('#semesterDateHelper').html(`
+            <i class="fas fa-info-circle"></i> 
+            Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+        `);
+        }
+
+        $('#semesterModal').modal('show');
+    });
+
+    // Update editSemester function
+    function editSemester(semesterId) {
+        const semester = currentSemesters.find(s => s.id === semesterId);
+        if (!semester) return;
+
+        const year = schoolYears.find(sy => sy.id === semester.school_year_id);
+
+        isSemesterEditMode = true;
+        $('#semModalTitle').text(`Edit Semester - ${semester.name} (SY ${year.year_start}-${year.year_end})`);
+        $('#semesterId').val(semester.id);
+        $('#semesterSchoolYearId').val(semester.school_year_id);
+        $('#startDate').val(semester.start_date);
+        $('#endDate').val(semester.end_date);
+
+        // Set min and max date attributes
+        const minDate = `${year.year_start}-01-01`;
+        const maxDate = `${year.year_end}-12-31`;
+        $('#startDate').attr('min', minDate).attr('max', maxDate);
+        $('#endDate').attr('min', minDate).attr('max', maxDate);
+
+        // Show helper text
+        if (!$('#semesterDateHelper').length) {
+            $('#endDate').parent().after(`
+            <small id="semesterDateHelper" class="form-text text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+            </small>
+        `);
+        } else {
+            $('#semesterDateHelper').html(`
+            <i class="fas fa-info-circle"></i> 
+            Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+        `);
+        }
+
+        $('#semesterModal').modal('show');
+    }
+
+    // Add client-side validation before form submit
+    $('#semesterForm').submit(function (e) {
+        e.preventDefault();
+
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+        const schoolYearId = $('#semesterSchoolYearId').val();
+
+        // Get school year bounds
+        const year = schoolYears.find(sy => sy.id == schoolYearId);
+        if (year) {
+            const minDate = `${year.year_start}-01-01`;
+            const maxDate = `${year.year_end}-12-31`;
+
+            if (startDate < minDate || startDate > maxDate) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Start Date',
+                    html: `Start date must be between <br><strong>${formatDate(minDate)}</strong> and <strong>${formatDate(maxDate)}</strong>`
+                });
+                return;
+            }
+
+            if (endDate < minDate || endDate > maxDate) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid End Date',
+                    html: `End date must be between <br><strong>${formatDate(minDate)}</strong> and <strong>${formatDate(maxDate)}</strong>`
+                });
+                return;
+            }
+        }
+
+        const formData = {
+            school_year_id: schoolYearId,
+            start_date: startDate,
+            end_date: endDate
+        };
+
+        if (isSemesterEditMode) {
+            updateSemester(formData);
+        } else {
+            createSemester(formData);
+        }
+    });
+
+    // Clean up helper text when modal closes
+    $('#semesterModal').on('hidden.bs.modal', function () {
+        $('#semesterDateHelper').remove();
+        $('#startDate').removeAttr('min').removeAttr('max');
+        $('#endDate').removeAttr('min').removeAttr('max');
+    });
+
+
+    
 });
+
+

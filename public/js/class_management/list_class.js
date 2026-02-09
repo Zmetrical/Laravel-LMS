@@ -4,7 +4,7 @@ let dataTable;
 
 $(document).ready(function() {
     // ========================================================================
-    // DATATABLE INITIALIZATION
+    // DATATABLE INITIALIZATION WITH AJAX
     // ========================================================================
     
     function updateClassCount() {
@@ -15,12 +15,52 @@ $(document).ready(function() {
     }
 
     dataTable = $('#classesTable').DataTable({
+        ajax: {
+            url: API_ROUTES.getClassesList, // Add this route
+            dataSrc: 'data'
+        },
+        columns: [
+            { 
+                data: 'class_name',
+                render: function(data, type, row) {
+                    return data;
+                }
+            },
+            { 
+                data: 'ww_perc',
+                render: function(data) {
+                    return '<span class="badge badge-secondary">' + data + '%</span>';
+                }
+            },
+            { 
+                data: 'pt_perc',
+                render: function(data) {
+                    return '<span class="badge badge-secondary">' + data + '%</span>';
+                }
+            },
+            { 
+                data: 'qa_perce',
+                render: function(data) {
+                    return '<span class="badge badge-secondary">' + data + '%</span>';
+                }
+            },
+            { 
+                data: 'id',
+                orderable: false,
+                className: 'text-center',
+                render: function(data) {
+                    return '<button class="btn btn-sm btn-outline-primary btn-edit" data-id="' + data + '" title="Edit">' +
+                           '<i class="fas fa-edit"></i></button>';
+                }
+            }
+        ],
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         scrollX: true,
         autoWidth: false,
-        order: [[1, 'asc']], // Sort by Class Name by default
+        order: [[0, 'asc']],
         searching: true,
+        processing: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
              '<"row"<"col-sm-12"tr>>' +
              '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
@@ -31,6 +71,7 @@ $(document).ready(function() {
             info: "Showing _START_ to _END_ of _TOTAL_ classes",
             infoEmpty: "Showing 0 to 0 of 0 classes",
             infoFiltered: "(filtered from _MAX_ total classes)",
+            processing: "Loading classes...",
             paginate: {
                 first: "First",
                 last: "Last",
@@ -38,9 +79,6 @@ $(document).ready(function() {
                 previous: "Previous"
             }
         },
-        columnDefs: [
-            { targets: 4, orderable: false } // Disable sorting on Actions column
-        ],
         drawCallback: function() {
             updateClassCount();
         }
@@ -78,17 +116,17 @@ $(document).ready(function() {
         const messageSpan = $('#weightMessage');
 
         if (total === 100) {
-            alertDiv.removeClass('alert-danger alert-warning').addClass('alert-success').show();
+            alertDiv.removeClass('alert-danger').addClass('alert-success').show();
             statusSpan.html('<i class="fas fa-check-circle"></i> Perfect!');
             messageSpan.text(' Total weight is 100%');
             return true;
         } else if (total < 100) {
-            alertDiv.removeClass('alert-success alert-danger').addClass('alert-warning').show();
-            statusSpan.html('<i class="fas fa-exclamation-triangle"></i> Warning:');
+            alertDiv.removeClass('alert-success').addClass('alert-danger').show();
+            statusSpan.html('<i class="fas fa-exclamation-triangle"></i> Error:');
             messageSpan.text(' Total weight is ' + total + '%. Need ' + (100 - total) + '% more.');
             return false;
         } else {
-            alertDiv.removeClass('alert-success alert-warning').addClass('alert-danger').show();
+            alertDiv.removeClass('alert-success').addClass('alert-danger').show();
             statusSpan.html('<i class="fas fa-times-circle"></i> Error:');
             messageSpan.text(' Total weight is ' + total + '%. Exceeds 100% by ' + (total - 100) + '%.');
             return false;
@@ -252,11 +290,8 @@ $(document).ready(function() {
                         confirmButtonText: 'OK'
                     }).then(() => {
                         $('#classModal').modal('hide');
-                        dataTable.ajax.reload(null, false); // Reload without resetting pagination
-                        // If ajax is not configured, fallback to page reload
-                        if (!dataTable.settings()[0].ajax) {
-                            window.location.reload();
-                        }
+                        // Reload DataTable data via AJAX
+                        dataTable.ajax.reload(null, false); // false = stay on current page
                     });
                 } else {
                     Swal.fire({
