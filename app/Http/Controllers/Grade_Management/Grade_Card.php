@@ -422,14 +422,31 @@ class Grade_Card extends MainController
                 abort(404, 'Student not found');
             }
 
-            // Verify teacher has access to this student
-            $hasAccess = DB::table('grades_final as gf')
-                ->join('classes as c', 'gf.class_code', '=', 'c.class_code')
-                ->join('teacher_class_matrix as tcm', 'c.id', '=', 'tcm.class_id')
-                ->where('gf.student_number', $studentNumber)
-                ->where('gf.semester_id', $semesterId)
-                ->where('tcm.teacher_id', $teacherId)
-                ->exists();
+            // Verify teacher has access to this student (check if teacher teaches any of the student's subjects)
+            if ($student->student_type === 'regular') {
+                // For regular students, check via section_class_matrix
+                $hasAccess = DB::table('section_class_matrix as scm')
+                    ->join('teacher_class_matrix as tcm', function($join) use ($semesterId) {
+                        $join->on('scm.class_id', '=', 'tcm.class_id')
+                            ->where('tcm.semester_id', '=', $semesterId);
+                    })
+                    ->where('scm.section_id', $student->section_id)
+                    ->where('scm.semester_id', $semesterId)
+                    ->where('tcm.teacher_id', $teacherId)
+                    ->exists();
+            } else {
+                // For irregular students, check via student_class_matrix
+                $hasAccess = DB::table('student_class_matrix as stcm')
+                    ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
+                    ->join('teacher_class_matrix as tcm', function($join) use ($semesterId) {
+                        $join->on('c.id', '=', 'tcm.class_id')
+                            ->where('tcm.semester_id', '=', $semesterId);
+                    })
+                    ->where('stcm.student_number', $studentNumber)
+                    ->where('stcm.semester_id', $semesterId)
+                    ->where('tcm.teacher_id', $teacherId)
+                    ->exists();
+            }
 
             if (!$hasAccess) {
                 abort(403, 'Unauthorized access');

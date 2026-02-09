@@ -36,17 +36,20 @@
                         <h3 class="card-title"><i class="fas fa-users"></i> Sections</h3>
                     </div>
                     <div class="card-body p-0">
-                        <div class="p-3">
-                            <input type="text" class="form-control form-control-sm" id="sectionSearch" placeholder="Search sections...">
+                        <div class="p-3 ">
+                            <input type="text" class="form-control form-control-sm mb-2" id="sectionSearch" placeholder="Search sections...">
+                            <input type="text" class="form-control form-control-sm" id="adviserFilter" placeholder="Filter by adviser...">
                         </div>
-                        <div class="p-3 pt-0">
+                        <div class="pb-3 px-3">
                             <select class="form-control form-control-sm mb-2" id="levelFilter">
                                 <option value="">All Levels</option>
                             </select>
-                            <select class="form-control form-control-sm" id="strandFilter">
+                            <select class="form-control form-control-sm mb-2" id="strandFilter">
                                 <option value="">All Strands</option>
                             </select>
                         </div>
+
+
                         <div class="list-group list-group-flush" id="sectionsListContainer"
                             style="max-height: 550px; overflow-y: auto;">
                             <div class="text-center py-4">

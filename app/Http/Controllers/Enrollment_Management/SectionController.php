@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Enroll_Management\Section;
 use App\Models\Enroll_Management\Classes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class SectionController extends MainController
@@ -49,158 +50,158 @@ class SectionController extends MainController
     }
 
     /**
-     * Get sections list with filters
+     * Get sections list with filters and adviser information
      */
-public function getSectionsList()
-{
-    try {
-        // Get active semester
-        $activeSemester = DB::table('semesters')
-            ->where('status', 'active')
-            ->first();
+    public function getSectionsList()
+    {
+        try {
+            // Get active semester
+            $activeSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
 
-        if (!$activeSemester) {
+            if (!$activeSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 400);
+            }
+
+            $sections = DB::table('sections as sec')
+                ->join('levels as l', 'sec.level_id', '=', 'l.id')
+                ->join('strands as st', 'sec.strand_id', '=', 'st.id')
+                ->leftJoin('section_adviser_matrix as sam', function($join) use ($activeSemester) {
+                    $join->on('sam.section_id', '=', 'sec.id')
+                         ->where('sam.semester_id', '=', $activeSemester->id);
+                })
+                ->leftJoin('teachers as t', 'sam.teacher_id', '=', 't.id')
+                ->where('sec.status', 1)
+                ->select(
+                    'sec.id',
+                    'sec.code',
+                    'sec.name',
+                    'sec.capacity',
+                    'sec.level_id',
+                    'sec.strand_id',
+                    'l.name as level_name',
+                    'st.code as strand_code',
+                    'st.name as strand_name',
+                    DB::raw("TRIM(CONCAT_WS(' ', t.first_name, t.middle_name, t.last_name)) as adviser_name"),
+                    // Count classes for current semester only
+                    DB::raw("(SELECT COUNT(*) FROM section_class_matrix 
+                             WHERE section_id = sec.id 
+                             AND semester_id = {$activeSemester->id}) as class_count")
+                )
+                ->orderBy('l.name')
+                ->orderBy('st.code')
+                ->orderBy('sec.name')
+                ->get();
+
+            $levels = DB::table('levels')
+                ->orderBy('name')
+                ->get();
+
+            $strands = DB::table('strands')
+                ->where('status', 1)
+                ->orderBy('code')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'sections' => $sections,
+                'levels' => $levels,
+                'strands' => $strands,
+                'semester_id' => $activeSemester->id
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Sections list error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'No active semester found'
-            ], 400);
+                'message' => 'Failed to load sections'
+            ], 500);
         }
-
-        $sections = DB::table('sections as sec')
-            ->join('levels as l', 'sec.level_id', '=', 'l.id')
-            ->join('strands as st', 'sec.strand_id', '=', 'st.id')
-            ->where('sec.status', 1)
-            ->select(
-                'sec.id',
-                'sec.code',
-                'sec.name',
-                'sec.capacity',
-                'sec.level_id',
-                'sec.strand_id',
-                'l.name as level_name',
-                'st.code as strand_code',
-                'st.name as strand_name',
-                // Count students enrolled in current semester only
-                DB::raw("(SELECT COUNT(*) FROM student_semester_enrollment 
-                         WHERE section_id = sec.id 
-                         AND semester_id = {$activeSemester->id}
-                         AND enrollment_status = 'enrolled') as student_count"),
-                // Count classes for current semester only
-                DB::raw("(SELECT COUNT(*) FROM section_class_matrix 
-                         WHERE section_id = sec.id 
-                         AND semester_id = {$activeSemester->id}) as class_count")
-            )
-            ->orderBy('l.name')
-            ->orderBy('st.code')
-            ->orderBy('sec.name')
-            ->get();
-
-        $levels = DB::table('levels')
-            ->orderBy('name')
-            ->get();
-
-        $strands = DB::table('strands')
-            ->where('status', 1)
-            ->orderBy('code')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'sections' => $sections,
-            'levels' => $levels,
-            'strands' => $strands,
-            'semester_id' => $activeSemester->id
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Sections list error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load sections'
-        ], 500);
     }
-}
 
     /**
      * Get section classes and students
      */
+    public function getSectionDetails($id)
+    {
+        try {
+            // Get active semester
+            $activeSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
 
-public function getSectionDetails($id)
-{
-    try {
-        // Get active semester
-        $activeSemester = DB::table('semesters')
-            ->where('status', 'active')
-            ->first();
+            if (!$activeSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 400);
+            }
 
-        if (!$activeSemester) {
+            $section = DB::table('sections')->find($id);
+            
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found'
+                ], 404);
+            }
+
+            // Get enrolled classes for this section in current semester
+            $classes = DB::table('section_class_matrix as scm')
+                ->join('classes as c', 'scm.class_id', '=', 'c.id')
+                ->leftJoin('teacher_class_matrix as tcm', function($join) use ($activeSemester) {
+                    $join->on('tcm.class_id', '=', 'c.id')
+                         ->where('tcm.semester_id', '=', $activeSemester->id);
+                })
+                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+                ->where('scm.section_id', $id)
+                ->where('scm.semester_id', $activeSemester->id)
+                ->select(
+                    'c.id',
+                    'c.class_name',
+                    DB::raw("GROUP_CONCAT(CONCAT(t.first_name, ' ', t.last_name) SEPARATOR ', ') as teachers")
+                )
+                ->groupBy('c.id', 'c.class_name')
+                ->get();
+
+            // Get students enrolled in this section for current semester ONLY
+            $students = DB::table('students as s')
+                ->join('student_semester_enrollment as sse', 's.student_number', '=', 'sse.student_number')
+                ->where('sse.section_id', $id)
+                ->where('sse.semester_id', $activeSemester->id)
+                ->where('sse.enrollment_status', 'enrolled')
+                ->select(
+                    's.student_number',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.email',
+                    's.gender',
+                    's.student_type'
+                )
+                ->orderBy('s.last_name')
+                ->orderBy('s.first_name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'classes' => $classes,
+                'students' => $students,
+                'semester_id' => $activeSemester->id
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Section details error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'No active semester found'
-            ], 400);
+                'message' => 'Failed to load section details'
+            ], 500);
         }
-
-        $section = DB::table('sections')->find($id);
-        
-        if (!$section) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Section not found'
-            ], 404);
-        }
-
-        // Get enrolled classes for this section in current semester
-        $classes = DB::table('section_class_matrix as scm')
-            ->join('classes as c', 'scm.class_id', '=', 'c.id')
-            ->leftJoin('teacher_class_matrix as tcm', function($join) use ($activeSemester) {
-                $join->on('tcm.class_id', '=', 'c.id')
-                     ->where('tcm.semester_id', '=', $activeSemester->id);
-            })
-            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-            ->where('scm.section_id', $id)
-            ->where('scm.semester_id', $activeSemester->id)
-            ->select(
-                'c.id',
-                'c.class_name',
-                DB::raw("GROUP_CONCAT(CONCAT(t.first_name, ' ', t.last_name) SEPARATOR ', ') as teachers")
-            )
-            ->groupBy('c.id', 'c.class_name')
-            ->get();
-
-        // Get students enrolled in this section for current semester ONLY
-        $students = DB::table('students as s')
-            ->join('student_semester_enrollment as sse', 's.student_number', '=', 'sse.student_number')
-            ->where('sse.section_id', $id)
-            ->where('sse.semester_id', $activeSemester->id)
-            ->where('sse.enrollment_status', 'enrolled')
-            ->select(
-                's.student_number',
-                's.first_name',
-                's.middle_name',
-                's.last_name',
-                's.email',
-                's.gender',
-                's.student_type'
-            )
-            ->orderBy('s.last_name')
-            ->orderBy('s.first_name')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'classes' => $classes,
-            'students' => $students,
-            'semester_id' => $activeSemester->id
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Section details error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load section details'
-        ], 500);
     }
-}
 
     /**
      * Get available classes not enrolled in section
@@ -374,174 +375,173 @@ public function getSectionDetails($id)
         }
     }
 
+    /**
+     * Get section adviser
+     */
+    public function getSectionAdviser($sectionId)
+    {
+        try {
+            $activeSemester = $this->getActiveSemester();
+            
+            if (!$activeSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 400);
+            }
+
+            $adviser = DB::table('section_adviser_matrix as sam')
+                ->join('teachers as t', 'sam.teacher_id', '=', 't.id')
+                ->where('sam.section_id', $sectionId)
+                ->where('sam.semester_id', $activeSemester->semester_id)
+                ->select(
+                    't.id',
+                    't.first_name',
+                    't.middle_name',
+                    't.last_name',
+                    't.email',
+                    'sam.assigned_date'
+                )
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'adviser' => $adviser
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load adviser: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
- * Get section adviser
- */
-public function getSectionAdviser($sectionId)
-{
-    try {
-        $activeSemester = $this->getActiveSemester();
-        
-        if (!$activeSemester) {
+     * Get available teachers for adviser assignment
+     */
+    public function getAvailableTeachers()
+    {
+        try {
+            $teachers = DB::table('teachers')
+                ->where('status', 1)
+                ->select(
+                    'id',
+                    'first_name',
+                    'middle_name',
+                    'last_name',
+                    'email'
+                )
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'teachers' => $teachers
+            ]);
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'No active semester found'
-            ], 400);
+                'message' => 'Failed to load teachers: ' . $e->getMessage()
+            ], 500);
         }
-
-        $adviser = DB::table('section_adviser_matrix as sam')
-            ->join('teachers as t', 'sam.teacher_id', '=', 't.id')
-            ->where('sam.section_id', $sectionId)
-            ->where('sam.semester_id', $activeSemester->semester_id)
-            ->select(
-                't.id',
-                't.first_name',
-                't.middle_name',
-                't.last_name',
-                't.email',
-                'sam.assigned_date'
-            )
-            ->first();
-
-        return response()->json([
-            'success' => true,
-            'adviser' => $adviser
-        ]);
-    } catch (Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load adviser: ' . $e->getMessage()
-        ], 500);
     }
-}
 
-/**
- * Get available teachers for adviser assignment
- */
-public function getAvailableTeachers()
-{
-    try {
-        $teachers = DB::table('teachers')
-            ->where('status', 1)
-            ->select(
-                'id',
-                'first_name',
-                'middle_name',
-                'last_name',
-                'email'
-            )
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'teachers' => $teachers
+    /**
+     * Assign adviser to section
+     */
+    public function assignAdviser(Request $request, $sectionId)
+    {
+        $request->validate([
+            'teacher_id' => 'required|exists:teachers,id',
+            'semester_id' => 'required|exists:semesters,id'
         ]);
-    } catch (Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load teachers: ' . $e->getMessage()
-        ], 500);
-    }
-}
 
-/**
- * Assign adviser to section
- */
-public function assignAdviser(Request $request, $sectionId)
-{
-    $request->validate([
-        'teacher_id' => 'required|exists:teachers,id',
-        'semester_id' => 'required|exists:semesters,id'
-    ]);
+        try {
+            DB::beginTransaction();
 
-    try {
-        DB::beginTransaction();
+            // Check if teacher exists and is active
+            $teacher = DB::table('teachers')
+                ->where('id', $request->teacher_id)
+                ->where('status', 1)
+                ->first();
 
-        // Check if teacher exists and is active
-        $teacher = DB::table('teachers')
-            ->where('id', $request->teacher_id)
-            ->where('status', 1)
-            ->first();
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Teacher not found or inactive'
+                ], 404);
+            }
 
-        if (!$teacher) {
+            // Delete existing adviser for this section-semester
+            DB::table('section_adviser_matrix')
+                ->where('section_id', $sectionId)
+                ->where('semester_id', $request->semester_id)
+                ->delete();
+
+            // Insert new adviser
+            DB::table('section_adviser_matrix')->insert([
+                'section_id' => $sectionId,
+                'teacher_id' => $request->teacher_id,
+                'semester_id' => $request->semester_id,
+                'assigned_date' => now()->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Adviser assigned successfully'
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher not found or inactive'
-            ], 404);
+                'message' => 'Failed to assign adviser: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Delete existing adviser for this section-semester
-        DB::table('section_adviser_matrix')
-            ->where('section_id', $sectionId)
-            ->where('semester_id', $request->semester_id)
-            ->delete();
-
-        // Insert new adviser
-        DB::table('section_adviser_matrix')->insert([
-            'section_id' => $sectionId,
-            'teacher_id' => $request->teacher_id,
-            'semester_id' => $request->semester_id,
-            'assigned_date' => now()->toDateString(),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Adviser assigned successfully'
-        ]);
-
-    } catch (Exception $e) {
-        DB::rollBack();
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to assign adviser: ' . $e->getMessage()
-        ], 500);
     }
-}
 
-/**
- * Remove adviser from section
- */
-public function removeAdviser($sectionId)
-{
-    try {
-        $activeSemester = $this->getActiveSemester();
-        
-        if (!$activeSemester) {
+    /**
+     * Remove adviser from section
+     */
+    public function removeAdviser($sectionId)
+    {
+        try {
+            $activeSemester = $this->getActiveSemester();
+            
+            if (!$activeSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 400);
+            }
+
+            $deleted = DB::table('section_adviser_matrix')
+                ->where('section_id', $sectionId)
+                ->where('semester_id', $activeSemester->semester_id)
+                ->delete();
+
+            if (!$deleted) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No adviser assigned to this section'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Adviser removed successfully'
+            ]);
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'No active semester found'
-            ], 400);
+                'message' => 'Failed to remove adviser: ' . $e->getMessage()
+            ], 500);
         }
-
-        $deleted = DB::table('section_adviser_matrix')
-            ->where('section_id', $sectionId)
-            ->where('semester_id', $activeSemester->semester_id)
-            ->delete();
-
-        if (!$deleted) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No adviser assigned to this section'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Adviser removed successfully'
-        ]);
-    } catch (Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to remove adviser: ' . $e->getMessage()
-        ], 500);
     }
-}
 }

@@ -23,7 +23,7 @@ $(document).ready(function () {
     // ========================================================================
     function loadSections() {
         showLoader('#sectionsListContainer', 'Loading sections...');
-        
+
         $.ajax({
             url: API_ROUTES.getSections,
             method: 'GET',
@@ -51,7 +51,7 @@ $(document).ready(function () {
 
     function loadSectionAdviser(sectionId) {
         $('#adviserDisplay').html('<small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading adviser...</small>');
-        
+
         const url = API_ROUTES.getSectionAdviser.replace(':id', sectionId);
 
         $.ajax({
@@ -105,14 +105,14 @@ $(document).ready(function () {
                 if (response.success) {
                     const select = $('#availableClassesSelect');
                     select.empty().prop('disabled', false);
-                    
+
                     if (response.classes.length === 0) {
                         select.append('<option value="">No available classes</option>');
                         return;
                     }
-                    
+
                     select.append('<option value="">-- Select Class --</option>');
-                    
+
                     response.classes.forEach(cls => {
                         select.append(`
                             <option value="${cls.id}" 
@@ -130,11 +130,11 @@ $(document).ready(function () {
                         dropdownParent: $('#enrollClassModal')
                     });
 
-                    $('#availableClassesSelect').on('select2:select', function(e) {
+                    $('#availableClassesSelect').on('select2:select', function (e) {
                         $('#addClassToListBtn').prop('disabled', false);
                     });
 
-                    $('#availableClassesSelect').on('select2:unselect select2:clear', function(e) {
+                    $('#availableClassesSelect').on('select2:unselect select2:clear', function (e) {
                         $('#addClassToListBtn').prop('disabled', true);
                     });
                 } else {
@@ -198,7 +198,12 @@ $(document).ready(function () {
 
         filtered.forEach(section => {
             const sectionDisplay = `${section.level_name} - ${section.strand_code || section.strand_name}`;
-            
+
+            // Show adviser name or "No adviser" if not assigned
+            const adviserDisplay = section.adviser_name
+                ? `<i class="fas fa-user-tie"></i> ${section.adviser_name}`
+                : '<span class="text-muted"><i class="fas fa-user-tie"></i> No adviser</span>';
+
             const item = `
                 <a href="#" class="list-group-item list-group-item-action section-item" 
                    data-section-id="${section.id}"
@@ -211,10 +216,10 @@ $(document).ready(function () {
                             <h6 class="mb-1"><strong>${section.name}</strong></h6>
                             <p class="mb-1 text-muted small">${sectionDisplay}</p>
                             <small class="text-muted">
-                                <i class="fas fa-user-graduate"></i> ${section.student_count || 0} students
+                                ${adviserDisplay}
                             </small>
                         </div>
-                        <span class="badge badge-light badge-pill ml-2">${section.class_count || 0}</span>
+                        <span class="badge badge-secondary badge-pill ml-2">${section.class_count || 0}</span>
                     </div>
                 </a>
             `;
@@ -225,26 +230,26 @@ $(document).ready(function () {
     // ========================================================================
     // SECTION ITEM CLICK
     // ========================================================================
-    $(document).on('click', '.section-item', function(e) {
+    $(document).on('click', '.section-item', function (e) {
         e.preventDefault();
-        
+
         $('.section-item').removeClass('active');
         $(this).addClass('active');
-        
+
         selectedSectionId = $(this).data('section-id');
         const sectionName = $(this).data('section-name');
         const sectionLevel = $(this).data('section-level');
         const sectionStrand = $(this).data('section-strand');
-        
+
         $('#selectedSectionName').html(`<i class="fas fa-users"></i> ${sectionName}`);
         $('#levelDisplay').text(sectionLevel || '-');
         $('#strandDisplay').text(sectionStrand || '-');
-        
+
         $('#noSectionSelected').hide();
         $('#enrollmentSection').show();
-        
+
         resetStudentFilters();
-        
+
         loadSectionDetails(selectedSectionId);
         loadSectionAdviser(selectedSectionId);
     });
@@ -255,7 +260,7 @@ $(document).ready(function () {
     function loadSectionDetails(sectionId) {
         showLoader('#enrolledClassesBody', 'Loading classes...', 4);
         showLoader('#studentsBody', 'Loading students...', 6);
-        
+
         const url = API_ROUTES.getSectionDetails.replace(':id', sectionId);
 
         $.ajax({
@@ -288,7 +293,7 @@ $(document).ready(function () {
     function renderClasses(classes) {
         const tbody = $('#enrolledClassesBody');
         tbody.empty();
-        
+
         $('#classesCount').text(`${classes.length} ${classes.length === 1 ? 'Class' : 'Classes'}`);
 
         if (classes.length === 0) {
@@ -304,10 +309,10 @@ $(document).ready(function () {
         }
 
         classes.forEach((cls, index) => {
-            const teachers = cls.teachers 
-                ? cls.teachers 
+            const teachers = cls.teachers
+                ? cls.teachers
                 : '<span class="text-muted">No teacher assigned</span>';
-            
+
             const row = `
                 <tr>
                     <td>${index + 1}</td>
@@ -333,13 +338,13 @@ $(document).ready(function () {
     function renderStudents(students) {
         const tbody = $('#studentsBody');
         tbody.empty();
-        
+
         const totalCount = allStudents.length;
         const filteredCount = students.length;
-        const countText = filteredCount === totalCount 
+        const countText = filteredCount === totalCount
             ? `${totalCount} ${totalCount === 1 ? 'Student' : 'Students'}`
             : `${filteredCount} of ${totalCount} Students`;
-        
+
         $('#studentsCount').text(countText);
 
         if (students.length === 0) {
@@ -357,7 +362,7 @@ $(document).ready(function () {
         students.forEach((student, index) => {
             const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
             const typeColor = student.student_type === 'regular' ? 'primary' : 'secondary';
-            
+
             const row = `
                 <tr>
                     <td>${student.student_number}</td>
@@ -387,11 +392,11 @@ $(document).ready(function () {
 
         const filtered = allStudents.filter(student => {
             const fullName = `${student.first_name} ${student.middle_name} ${student.last_name}`.toLowerCase();
-            
-            const matchSearch = !searchTerm || 
+
+            const matchSearch = !searchTerm ||
                 student.student_number.toLowerCase().includes(searchTerm) ||
                 fullName.includes(searchTerm);
-            
+
             const matchGender = !genderFilter || student.gender === genderFilter;
             const matchType = !typeFilter || student.student_type === typeFilter;
 
@@ -403,7 +408,7 @@ $(document).ready(function () {
 
     $('#studentSearchFilter, #genderFilter, #studentTypeFilter').on('input change', applyStudentFilters);
 
-    $('#resetStudentFiltersBtn').click(function() {
+    $('#resetStudentFiltersBtn').click(function () {
         resetStudentFilters();
         renderStudents(allStudents);
     });
@@ -419,12 +424,12 @@ $(document).ready(function () {
     // ========================================================================
     $('#enrollClassBtn').click(function () {
         if (!selectedSectionId) return;
-        
+
         selectedClassesList = [];
         updateSelectedClassesDisplay();
-        
+
         initializeClassSelect2();
-        
+
         $('#enrollClassModal').modal('show');
     });
 
@@ -443,7 +448,7 @@ $(document).ready(function () {
         const select = $('#availableClassesSelect');
         const selectedOption = select.find(':selected');
         const classId = selectedOption.val();
-        
+
         if (!classId) return;
 
         if (selectedClassesList.some(c => c.id === classId)) {
@@ -464,9 +469,9 @@ $(document).ready(function () {
         selectedOption.remove();
         select.val('').trigger('change');
         $('#addClassToListBtn').prop('disabled', true);
-        
+
         updateSelectedClassesDisplay();
-        
+
         Toast.fire({
             icon: "success",
             title: "Class added to list"
@@ -479,10 +484,10 @@ $(document).ready(function () {
     function updateSelectedClassesDisplay() {
         const container = $('#selectedClassesContainer');
         const count = selectedClassesList.length;
-        
+
         $('#selectedClassesCount').text(count);
         $('#enrollCountBadge').text(count);
-        
+
         if (count === 0) {
             container.html(`
                 <div class="text-center py-4 text-muted">
@@ -496,7 +501,7 @@ $(document).ready(function () {
         }
 
         let html = '<ul class="list-group list-group-flush">';
-        
+
         selectedClassesList.forEach((cls, index) => {
             html += `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -515,10 +520,10 @@ $(document).ready(function () {
                 </li>
             `;
         });
-        
+
         html += '</ul>';
         container.html(html);
-        
+
         $('#confirmEnrollBtn').prop('disabled', false);
     }
 
@@ -528,9 +533,9 @@ $(document).ready(function () {
     $(document).on('click', '.remove-from-list-btn', function () {
         const index = $(this).data('index');
         const removedClass = selectedClassesList[index];
-        
+
         selectedClassesList.splice(index, 1);
-        
+
         const select = $('#availableClassesSelect');
         select.append(`
             <option value="${removedClass.id}" 
@@ -539,15 +544,15 @@ $(document).ready(function () {
                 ${removedClass.name}
             </option>
         `);
-        
+
         const options = select.find('option:not(:first)').sort((a, b) => {
             return $(a).text().localeCompare($(b).text());
         });
         select.find('option:not(:first)').remove();
         select.append(options);
-        
+
         updateSelectedClassesDisplay();
-        
+
         Toast.fire({
             icon: "info",
             title: "Class removed from list"
@@ -559,7 +564,7 @@ $(document).ready(function () {
     // ========================================================================
     $('#confirmEnrollBtn').click(function () {
         if (selectedClassesList.length === 0 || !selectedSectionId) return;
-        
+
         if (!ACTIVE_SEMESTER_ID) {
             Toast.fire({
                 icon: "error",
@@ -608,11 +613,11 @@ $(document).ready(function () {
     // ========================================================================
     $('#enrollClassModal').on('hidden.bs.modal', function () {
         selectedClassesList = [];
-        
+
         if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
             $('#availableClassesSelect').select2('destroy');
         }
-        
+
         $('#availableClassesSelect').empty().html('<option value="">Search for class...</option>');
         $('#addClassToListBtn').prop('disabled', true);
         updateSelectedClassesDisplay();
@@ -682,7 +687,7 @@ $(document).ready(function () {
     // ========================================================================
     // ADVISER MANAGEMENT
     // ========================================================================
-    $('#assignAdviserBtn').click(function() {
+    $('#assignAdviserBtn').click(function () {
         if (!selectedSectionId) return;
         loadAdviserModal();
         $('#assignAdviserModal').modal('show');
@@ -691,17 +696,17 @@ $(document).ready(function () {
     function loadAdviserModal() {
         const select = $('#adviserTeacherSelect');
         select.html('<option value="">Loading teachers...</option>').prop('disabled', true);
-        
+
         loadCurrentAdviser();
-        
+
         $.ajax({
             url: API_ROUTES.getAvailableTeachers,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     select.empty().prop('disabled', false);
                     select.append('<option value="">-- Select Teacher --</option>');
-                    
+
                     response.teachers.forEach(teacher => {
                         const fullName = `${teacher.last_name}, ${teacher.first_name} ${teacher.middle_name || ''}`.trim();
                         select.append(`
@@ -710,7 +715,7 @@ $(document).ready(function () {
                             </option>
                         `);
                     });
-                    
+
                     if (!select.hasClass('select2-hidden-accessible')) {
                         select.select2({
                             theme: 'bootstrap4',
@@ -721,7 +726,7 @@ $(document).ready(function () {
                     }
                 }
             },
-            error: function() {
+            error: function () {
                 select.html('<option value="">Failed to load teachers</option>');
                 Swal.fire({
                     icon: 'error',
@@ -734,11 +739,11 @@ $(document).ready(function () {
 
     function loadCurrentAdviser() {
         const url = API_ROUTES.getSectionAdviser.replace(':id', selectedSectionId);
-        
+
         $.ajax({
             url: url,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.adviser) {
                     const adviser = response.adviser;
                     const fullName = `${adviser.first_name} ${adviser.middle_name || ''} ${adviser.last_name}`.trim();
@@ -750,25 +755,25 @@ $(document).ready(function () {
                     $('#currentAdviserSection').hide();
                 }
             },
-            error: function() {
+            error: function () {
                 $('#currentAdviserSection').hide();
             }
         });
     }
 
-    $('#adviserTeacherSelect').on('select2:select', function() {
+    $('#adviserTeacherSelect').on('select2:select', function () {
         $('#confirmAssignAdviserBtn').prop('disabled', false);
         $('#removeAdviserBtn').hide();
     });
 
-    $('#adviserTeacherSelect').on('select2:unselect select2:clear', function() {
+    $('#adviserTeacherSelect').on('select2:unselect select2:clear', function () {
         $('#confirmAssignAdviserBtn').prop('disabled', true);
         loadCurrentAdviser();
     });
 
-    $('#confirmAssignAdviserBtn').click(function() {
+    $('#confirmAssignAdviserBtn').click(function () {
         const teacherId = $('#adviserTeacherSelect').val();
-        
+
         if (!teacherId) {
             Swal.fire({
                 icon: 'warning',
@@ -791,7 +796,7 @@ $(document).ready(function () {
                 semester_id: ACTIVE_SEMESTER_ID,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
@@ -802,73 +807,75 @@ $(document).ready(function () {
                     });
                     $('#assignAdviserModal').modal('hide');
                     loadSectionAdviser(selectedSectionId);
+                    loadSections();
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
                     text: xhr.responseJSON?.message || 'Failed to assign adviser'
                 });
             },
-            complete: function() {
+            complete: function () {
                 btn.prop('disabled', false).html('<i class="fas fa-check"></i> Assign Adviser');
             }
         });
     });
 
-$(document).on('click', '#removeAdviserBtn', function() {
-    Swal.fire({
-        icon: 'warning',
-        title: 'Remove Adviser?',
-        text: 'Are you sure you want to remove this adviser from the section?',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, remove',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const btn = $('#removeAdviserBtn');
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
+    $(document).on('click', '#removeAdviserBtn', function () {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Remove Adviser?',
+            text: 'Are you sure you want to remove this adviser from the section?',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, remove',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const btn = $('#removeAdviserBtn');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
 
-            const url = API_ROUTES.removeAdviser.replace(':id', selectedSectionId);
+                const url = API_ROUTES.removeAdviser.replace(':id', selectedSectionId);
 
-            $.ajax({
-                url: url,
-                method: 'DELETE',  // ✅ Changed from POST to DELETE
-                data: {
-                    _token: $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
+                $.ajax({
+                    url: url,
+                    method: 'DELETE',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            $('#assignAdviserModal').modal('hide');
+                            loadSectionAdviser(selectedSectionId);
+                            loadSections();
+                        }
+                    },
+                    error: function (xhr) {
                         Swal.fire({
-                            icon: 'success',
-                            title: 'Success',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Failed to remove adviser'
                         });
-                        $('#assignAdviserModal').modal('hide');
-                        loadSectionAdviser(selectedSectionId);
+                    },
+                    complete: function () {
+                        btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Adviser');
                     }
-                },
-                error: function(xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: xhr.responseJSON?.message || 'Failed to remove adviser'
-                    });
-                },
-                complete: function() {
-                    btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Adviser');
-                }
-            });
-        }
+                });
+            }
+        });
     });
-});
 
-    $('#assignAdviserModal').on('hidden.bs.modal', function() {
+    $('#assignAdviserModal').on('hidden.bs.modal', function () {
         if ($('#adviserTeacherSelect').hasClass('select2-hidden-accessible')) {
             $('#adviserTeacherSelect').select2('destroy');
         }
@@ -881,7 +888,7 @@ $(document).on('click', '#removeAdviserBtn', function() {
     // UTILITY FUNCTIONS
     // ========================================================================
     function showLoader(selector, message = 'Loading...', colspan = 1) {
-        const loader = colspan > 1 
+        const loader = colspan > 1
             ? `<tr><td colspan="${colspan}" class="text-center py-4">
                     <div class="spinner-border spinner-border-sm text-primary" role="status">
                         <span class="sr-only">Loading...</span>
@@ -894,7 +901,7 @@ $(document).on('click', '#removeAdviserBtn', function() {
                     </div>
                     <p class="mt-2 mb-0 small">${message}</p>
                </div>`;
-        
+
         $(selector).html(loader);
     }
 
@@ -908,7 +915,78 @@ $(document).on('click', '#removeAdviserBtn', function() {
                     <i class="fas fa-exclamation-triangle mb-2"></i>
                     <p class="mb-0 small">${message}</p>
                </div>`;
-        
+
         $(selector).html(error);
     }
+
+    // ========================================================================
+    // RENDER SECTIONS LIST
+    // ========================================================================
+    function renderSectionsList() {
+        const container = $('#sectionsListContainer');
+        const search = $('#sectionSearch').val().toLowerCase();
+        const levelFilter = $('#levelFilter').val();
+        const strandFilter = $('#strandFilter').val();
+        const adviserFilter = $('#adviserFilter').val().toLowerCase();
+
+        let filtered = sections.filter(section => {
+            const matchSearch = !search ||
+                section.name.toLowerCase().includes(search) ||
+                section.code.toLowerCase().includes(search);
+            const matchLevel = !levelFilter || section.level_id == levelFilter;
+            const matchStrand = !strandFilter || section.strand_id == strandFilter;
+            const matchAdviser = !adviserFilter ||
+                (section.adviser_name && section.adviser_name.toLowerCase().includes(adviserFilter));
+
+            return matchSearch && matchLevel && matchStrand && matchAdviser;
+        });
+
+        container.empty();
+
+        if (filtered.length === 0) {
+            container.html(`
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-inbox fa-2x mb-2"></i>
+                <p class="mb-0 small">No sections found</p>
+            </div>
+        `);
+            return;
+        }
+
+        filtered.forEach(section => {
+            const sectionDisplay = `${section.level_name} - ${section.strand_code || section.strand_name}`;
+
+            const adviserDisplay = section.adviser_name
+                ? `<i class="fas fa-user-tie"></i> ${section.adviser_name}`
+                : '<span class="text-muted"><i class="fas fa-user-tie"></i> No adviser</span>';
+
+            const item = `
+            <a href="#" class="list-group-item list-group-item-action section-item" 
+               data-section-id="${section.id}"
+               data-section-name="${section.name}"
+               data-section-level="${section.level_name}"
+               data-section-strand="${section.strand_name}"
+               data-section-code="${section.code}">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div style="flex: 1;">
+                        <h6 class="mb-1"><strong>${section.name}</strong></h6>
+                        <p class="mb-1 text-muted small">${sectionDisplay}</p>
+                        <small class="text-muted">
+                            ${adviserDisplay}
+                        </small>
+                    </div>
+                    <span class="badge badge-secondary badge-pill ml-2">${section.class_count || 0}</span>
+                </div>
+            </a>
+        `;
+            container.append(item);
+        });
+    }
+
+    // ========================================================================
+    // SECTION FILTERS - Update this section
+    // ========================================================================
+    $('#sectionSearch, #levelFilter, #strandFilter, #adviserFilter').on('input change', function () {
+        renderSectionsList();
+    });
 });
