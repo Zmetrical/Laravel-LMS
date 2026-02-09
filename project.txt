@@ -299,8 +299,8 @@ CREATE TABLE `semesters` (
   `school_year_id` int(11) NOT NULL,
   `name` varchar(50) NOT NULL,
   `code` varchar(20) NOT NULL,
-  `start_date` date NOT NULL,
-  `end_date` date NOT NULL,
+  `start_date` date NOT NULL, //activated_at
+  `end_date` date NOT NULL,   //completed_at
   `status` enum('active','completed','upcoming') DEFAULT 'upcoming',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

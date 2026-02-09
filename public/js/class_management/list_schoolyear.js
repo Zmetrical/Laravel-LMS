@@ -40,7 +40,76 @@ $(document).ready(function () {
         }
     });
 
-    // Enforce 4-digit limit
+    // Archive Management Button
+    $('#archiveManagementBtn').click(function () {
+        if (selectedYearId) {
+            window.location.href = API_ROUTES.archiveManagementPage + '?sy=' + selectedYearId;
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Selection',
+                text: 'Please select a school year first'
+            });
+        }
+    });
+
+    // View Semesters Button
+    $('#viewSemestersBtn').click(function () {
+        if (!selectedYearId) return;
+
+        const year = schoolYears.find(sy => sy.id === selectedYearId);
+        if (year) {
+            window.location.href = API_ROUTES.semestersPage + '?sy=' + selectedYearId;
+        }
+    });
+
+    // Add Semester Button - SINGLE HANDLER
+    $('#addSemesterBtn').off('click').on('click', function () {
+        if (!selectedYearId) return;
+
+        if (currentSemesters.length >= MAX_SEMESTERS) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Maximum Semesters Reached',
+                text: `Only ${MAX_SEMESTERS} semesters are allowed per school year.`
+            });
+            return;
+        }
+
+        const year = schoolYears.find(sy => sy.id === selectedYearId);
+
+        isSemesterEditMode = false;
+        $('#semModalTitle').text(`Add Semester - SY ${year.year_start}-${year.year_end}`);
+        $('#semesterId').val('');
+        $('#semesterSchoolYearId').val(selectedYearId);
+        $('#startDate').val('');
+        $('#endDate').val('');
+
+        // Set min and max date attributes based on school year
+        const minDate = `${year.year_start}-01-01`;
+        const maxDate = `${year.year_end}-12-31`;
+        $('#startDate').attr('min', minDate).attr('max', maxDate);
+        $('#endDate').attr('min', minDate).attr('max', maxDate);
+
+        // Show helper text
+        if (!$('#semesterDateHelper').length) {
+            $('#endDate').parent().after(`
+                <small id="semesterDateHelper" class="form-text text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+                </small>
+            `);
+        } else {
+            $('#semesterDateHelper').html(`
+                <i class="fas fa-info-circle"></i> 
+                Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+            `);
+        }
+
+        $('#semesterModal').modal('show');
+    });
+
+    // Year input validation
     $('#yearStart, #yearEnd').on('input keyup paste', function () {
         let value = $(this).val();
         value = value.replace(/\D/g, '');
@@ -127,7 +196,7 @@ $(document).ready(function () {
     });
 
     // School Year Form Submit
-    $('#schoolYearForm').submit(function (e) {
+    $('#schoolYearForm').off('submit').on('submit', function (e) {
         e.preventDefault();
 
         const yearStartStr = $('#yearStart').val();
@@ -175,71 +244,60 @@ $(document).ready(function () {
         }
     });
 
-
-    // Archive Management Button - Pass school year ID
-    $('#archiveManagementBtn').click(function () {
-        if (selectedYearId) {
-            window.location.href = API_ROUTES.archiveManagementPage + '?sy=' + selectedYearId;
-        } else {
-            Swal.fire({
-                icon: 'warning',
-                title: 'No Selection',
-                text: 'Please select a school year first'
-            });
-        }
-    });
-
-    // Add Semester Button
-    $('#addSemesterBtn').click(function () {
-        if (!selectedYearId) return;
-
-        if (currentSemesters.length >= MAX_SEMESTERS) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Maximum Semesters Reached',
-                text: `Only ${MAX_SEMESTERS} semesters are allowed per school year.`
-            });
-            return;
-        }
-
-        isSemesterEditMode = false;
-        $('#semModalTitle').text('Add Semester');
-        $('#semesterId').val('');
-        $('#semesterSchoolYearId').val(selectedYearId);
-        $('#startDate').val('');
-        $('#endDate').val('');
-        $('#semStatusGroup').hide();
-        $('#semesterModal').modal('show');
-    });
-
-    // View Semesters Button
-    $('#viewSemestersBtn').click(function () {
-        if (!selectedYearId) return;
-
-        const year = schoolYears.find(sy => sy.id === selectedYearId);
-        if (year) {
-            window.location.href = API_ROUTES.semestersPage + '?sy=' + selectedYearId;
-        }
-    });
-
-    // Semester Form Submit
-    $('#semesterForm').submit(function (e) {
+    // Semester Form Submit - SINGLE HANDLER
+    $('#semesterForm').off('submit').on('submit', function (e) {
         e.preventDefault();
 
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+        const schoolYearId = $('#semesterSchoolYearId').val();
+
+        // Get school year bounds
+        const year = schoolYears.find(sy => sy.id == schoolYearId);
+        if (year) {
+            const minDate = `${year.year_start}-01-01`;
+            const maxDate = `${year.year_end}-12-31`;
+
+            if (startDate < minDate || startDate > maxDate) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Start Date',
+                    html: `Start date must be between <br><strong>${formatDate(minDate)}</strong> and <strong>${formatDate(maxDate)}</strong>`
+                });
+                return;
+            }
+
+            if (endDate < minDate || endDate > maxDate) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid End Date',
+                    html: `End date must be between <br><strong>${formatDate(minDate)}</strong> and <strong>${formatDate(maxDate)}</strong>`
+                });
+                return;
+            }
+        }
+
         const formData = {
-            school_year_id: $('#semesterSchoolYearId').val(),
-            start_date: $('#startDate').val(),
-            end_date: $('#endDate').val()
+            school_year_id: schoolYearId,
+            start_date: startDate,
+            end_date: endDate
         };
 
         if (isSemesterEditMode) {
-            // No status update allowed
             updateSemester(formData);
         } else {
             createSemester(formData);
         }
     });
 
+    // Clean up helper text when modal closes
+    $('#semesterModal').on('hidden.bs.modal', function () {
+        $('#semesterDateHelper').remove();
+        $('#startDate').removeAttr('min').removeAttr('max');
+        $('#endDate').removeAttr('min').removeAttr('max');
+    });
+
+    // Helper Functions
     function getLatestSchoolYear() {
         if (schoolYears.length === 0) return null;
 
@@ -317,7 +375,8 @@ $(document).ready(function () {
         $('#schoolYearsContainer').show();
         $('#emptyYears').hide();
 
-        container.find('.year-item').click(function (e) {
+        // Use event delegation to prevent multiple bindings
+        container.off('click', '.year-item').on('click', '.year-item', function (e) {
             e.preventDefault();
             const yearId = $(this).data('year-id');
             selectYear(yearId);
@@ -387,53 +446,73 @@ $(document).ready(function () {
     }
 
     function displaySemesters(semesters) {
-    const tbody = $('#semestersTableBody');
-    tbody.empty();
+        const tbody = $('#semestersTableBody');
+        tbody.empty();
 
-    // Sort semesters by order_number (extracted from name)
-    const sortedSemesters = semesters.sort((a, b) => {
-        // Extract the order number from semester names like "1st Semester", "2nd Semester"
-        const orderA = parseInt(a.name.match(/\d+/)[0]);
-        const orderB = parseInt(b.name.match(/\d+/)[0]);
-        return orderA - orderB;
-    });
+        const sortedSemesters = semesters.sort((a, b) => {
+            const orderA = parseInt(a.name.match(/\d+/)[0]);
+            const orderB = parseInt(b.name.match(/\d+/)[0]);
+            return orderA - orderB;
+        });
 
-    sortedSemesters.forEach(sem => {
-        const statusBadge = sem.status === 'active' ? 'badge-primary' :
-            sem.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
+        sortedSemesters.forEach(sem => {
+            const statusBadge = sem.status === 'active' ? 'badge-primary' :
+                sem.status === 'upcoming' ? 'badge-secondary' : 'badge-dark';
 
-        const row = `
-            <tr>
-                <td><strong>${sem.name}</strong></td>
-                <td><small>${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small></td>
-                <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
-                <td>
-                    <button class="btn btn-sm btn-secondary edit-semester-btn" data-semester-id="${sem.id}" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-        tbody.append(row);
-    });
+            const row = `
+                <tr>
+                    <td><strong>${sem.name}</strong></td>
+                    <td><small>${formatDate(sem.start_date)} - ${formatDate(sem.end_date)}</small></td>
+                    <td><span class="badge ${statusBadge}">${sem.status.toUpperCase()}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary edit-semester-btn" data-semester-id="${sem.id}" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
 
-    $('.edit-semester-btn').click(function () {
-        const semId = $(this).data('semester-id');
-        editSemester(semId);
-    });
-}
+        // Use event delegation
+        tbody.off('click', '.edit-semester-btn').on('click', '.edit-semester-btn', function () {
+            const semId = $(this).data('semester-id');
+            editSemester(semId);
+        });
+    }
 
     function editSemester(semesterId) {
         const semester = currentSemesters.find(s => s.id === semesterId);
         if (!semester) return;
 
+        const year = schoolYears.find(sy => sy.id === semester.school_year_id);
+
         isSemesterEditMode = true;
-        $('#semModalTitle').text('Edit Semester - ' + semester.name);
+        $('#semModalTitle').text(`Edit Semester - ${semester.name} (SY ${year.year_start}-${year.year_end})`);
         $('#semesterId').val(semester.id);
         $('#semesterSchoolYearId').val(semester.school_year_id);
         $('#startDate').val(semester.start_date);
         $('#endDate').val(semester.end_date);
-        $('#semStatusGroup').hide(); // Hide status field - no status updates allowed
+
+        const minDate = `${year.year_start}-01-01`;
+        const maxDate = `${year.year_end}-12-31`;
+        $('#startDate').attr('min', minDate).attr('max', maxDate);
+        $('#endDate').attr('min', minDate).attr('max', maxDate);
+
+        if (!$('#semesterDateHelper').length) {
+            $('#endDate').parent().after(`
+                <small id="semesterDateHelper" class="form-text text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+                </small>
+            `);
+        } else {
+            $('#semesterDateHelper').html(`
+                <i class="fas fa-info-circle"></i> 
+                Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
+            `);
+        }
+
         $('#semesterModal').modal('show');
     }
 
@@ -523,50 +602,6 @@ $(document).ready(function () {
         });
     }
 
-    function activateSchoolYear(id) {
-        const year = schoolYears.find(sy => sy.id === id);
-
-        Swal.fire({
-            title: 'Activate School Year?',
-            html: `Set <strong>SY ${year.year_start}-${year.year_end}</strong> as active?<br><small class="text-muted">This will deactivate all other school years</small>`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#007bff',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-check"></i> Yes, activate',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const url = API_ROUTES.setActive.replace(':id', id);
-
-                $.ajax({
-                    url: url,
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
-                    success: function (response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Activated',
-                                text: response.message,
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            loadSchoolYears();
-                        }
-                    },
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Failed to activate school year'
-                        });
-                    }
-                });
-            }
-        });
-    }
-
     function createSemester(formData) {
         $.ajax({
             url: API_ROUTES.createSemester,
@@ -627,146 +662,4 @@ $(document).ready(function () {
             }
         });
     }
-
-
-    $('#addSemesterBtn').click(function () {
-        if (!selectedYearId) return;
-
-        if (currentSemesters.length >= MAX_SEMESTERS) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Maximum Semesters Reached',
-                text: `Only ${MAX_SEMESTERS} semesters are allowed per school year.`
-            });
-            return;
-        }
-
-        const year = schoolYears.find(sy => sy.id === selectedYearId);
-
-        isSemesterEditMode = false;
-        $('#semModalTitle').text(`Add Semester - SY ${year.year_start}-${year.year_end}`);
-        $('#semesterId').val('');
-        $('#semesterSchoolYearId').val(selectedYearId);
-        $('#startDate').val('');
-        $('#endDate').val('');
-
-        // Set min and max date attributes based on school year
-        const minDate = `${year.year_start}-01-01`;
-        const maxDate = `${year.year_end}-12-31`;
-        $('#startDate').attr('min', minDate).attr('max', maxDate);
-        $('#endDate').attr('min', minDate).attr('max', maxDate);
-
-        // Show helper text
-        if (!$('#semesterDateHelper').length) {
-            $('#endDate').parent().after(`
-            <small id="semesterDateHelper" class="form-text text-muted">
-                <i class="fas fa-info-circle"></i> 
-                Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
-            </small>
-        `);
-        } else {
-            $('#semesterDateHelper').html(`
-            <i class="fas fa-info-circle"></i> 
-            Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
-        `);
-        }
-
-        $('#semesterModal').modal('show');
-    });
-
-    // Update editSemester function
-    function editSemester(semesterId) {
-        const semester = currentSemesters.find(s => s.id === semesterId);
-        if (!semester) return;
-
-        const year = schoolYears.find(sy => sy.id === semester.school_year_id);
-
-        isSemesterEditMode = true;
-        $('#semModalTitle').text(`Edit Semester - ${semester.name} (SY ${year.year_start}-${year.year_end})`);
-        $('#semesterId').val(semester.id);
-        $('#semesterSchoolYearId').val(semester.school_year_id);
-        $('#startDate').val(semester.start_date);
-        $('#endDate').val(semester.end_date);
-
-        // Set min and max date attributes
-        const minDate = `${year.year_start}-01-01`;
-        const maxDate = `${year.year_end}-12-31`;
-        $('#startDate').attr('min', minDate).attr('max', maxDate);
-        $('#endDate').attr('min', minDate).attr('max', maxDate);
-
-        // Show helper text
-        if (!$('#semesterDateHelper').length) {
-            $('#endDate').parent().after(`
-            <small id="semesterDateHelper" class="form-text text-muted">
-                <i class="fas fa-info-circle"></i> 
-                Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
-            </small>
-        `);
-        } else {
-            $('#semesterDateHelper').html(`
-            <i class="fas fa-info-circle"></i> 
-            Dates must be between ${formatDate(minDate)} and ${formatDate(maxDate)}
-        `);
-        }
-
-        $('#semesterModal').modal('show');
-    }
-
-    // Add client-side validation before form submit
-    $('#semesterForm').submit(function (e) {
-        e.preventDefault();
-
-        const startDate = $('#startDate').val();
-        const endDate = $('#endDate').val();
-        const schoolYearId = $('#semesterSchoolYearId').val();
-
-        // Get school year bounds
-        const year = schoolYears.find(sy => sy.id == schoolYearId);
-        if (year) {
-            const minDate = `${year.year_start}-01-01`;
-            const maxDate = `${year.year_end}-12-31`;
-
-            if (startDate < minDate || startDate > maxDate) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid Start Date',
-                    html: `Start date must be between <br><strong>${formatDate(minDate)}</strong> and <strong>${formatDate(maxDate)}</strong>`
-                });
-                return;
-            }
-
-            if (endDate < minDate || endDate > maxDate) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid End Date',
-                    html: `End date must be between <br><strong>${formatDate(minDate)}</strong> and <strong>${formatDate(maxDate)}</strong>`
-                });
-                return;
-            }
-        }
-
-        const formData = {
-            school_year_id: schoolYearId,
-            start_date: startDate,
-            end_date: endDate
-        };
-
-        if (isSemesterEditMode) {
-            updateSemester(formData);
-        } else {
-            createSemester(formData);
-        }
-    });
-
-    // Clean up helper text when modal closes
-    $('#semesterModal').on('hidden.bs.modal', function () {
-        $('#semesterDateHelper').remove();
-        $('#startDate').removeAttr('min').removeAttr('max');
-        $('#endDate').removeAttr('min').removeAttr('max');
-    });
-
-
-    
 });
-
-

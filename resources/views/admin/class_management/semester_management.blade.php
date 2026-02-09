@@ -350,7 +350,7 @@
                                 <i class="fas fa-arrow-left"></i> Back
                             </button>
                             <button type="button" class="btn btn-primary" id="btnEnrollConfirm">
-                                <i class="fas fa-check"></i> Enroll Students
+                                <i class="fas fa-check"></i> Enroll Existing Students
                             </button>
                         </div>
                     </div>

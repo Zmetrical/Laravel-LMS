@@ -263,7 +263,7 @@ class Semester_Management extends MainController
         }
     }
 
-public function completeSemester($id)  // RENAME from archiveSemester
+public function completeSemester($id) 
 {
     try {
         $semester = DB::table('semesters')->where('id', $id)->first();
