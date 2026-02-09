@@ -26,11 +26,6 @@ function setupEventListeners() {
         saveSection();
     });
 
-    $('#addClassForm').on('submit', function(e) {
-        e.preventDefault();
-        assignClassToSection();
-    });
-
     // Auto-uppercase section name
     $('#sectionName').on('input', function() {
         this.value = this.value.toUpperCase();
@@ -39,10 +34,6 @@ function setupEventListeners() {
     // Modal reset on close
     $('#sectionModal').on('hidden.bs.modal', function() {
         resetSectionForm();
-    });
-
-    $('#addClassModal').on('hidden.bs.modal', function() {
-        resetAddClassForm();
     });
 
     // Filter changes
@@ -56,11 +47,6 @@ function setupEventListeners() {
         $('#filterStrand').val('');
         $('#filterLevel').val('');
         applyFilters();
-    });
-
-    // Add class button
-    $('#addClassBtn').on('click', function() {
-        openAddClassModal();
     });
 }
 
@@ -189,8 +175,8 @@ function renderSectionsTable() {
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-secondary" 
                             onclick="viewSectionClasses(${section.id}, '${escapeHtml(section.code)}')" 
-                            title="Manage Classes">
-                        <i class="fas fa-book"></i> ${countLabel}
+                            title="View Classes">
+                        <i class="fas fa-eye"></i> ${countLabel}
                     </button>
                 </td>
                 <td class="text-center">
@@ -412,7 +398,7 @@ function viewSectionClasses(sectionId, sectionCode) {
     const semester = semesters.find(s => s.id == semesterId);
     const semesterLabel = semester ? `${semester.school_year_code} - ${semester.name}` : '';
 
-    $('#classesModalTitle').html(`<i class="fas fa-book"></i> ${sectionCode} - Manage Classes`);
+    $('#classesModalTitle').html(`<i class="fas fa-book"></i> ${sectionCode} - View Classes`);
     $('#currentSemesterLabel').text(semesterLabel);
     
     loadSectionClasses(sectionId, semesterId);
@@ -424,7 +410,7 @@ function viewSectionClasses(sectionId, sectionCode) {
 function loadSectionClasses(sectionId, semesterId) {
     $('#classesTableBody').html(`
         <tr>
-            <td colspan="5" class="text-center">
+            <td colspan="6" class="text-center">
                 <i class="fas fa-spinner fa-spin"></i> Loading classes...
             </td>
         </tr>
@@ -445,7 +431,7 @@ function loadSectionClasses(sectionId, semesterId) {
             console.error('Failed to load classes:', xhr);
             $('#classesTableBody').html(`
                 <tr>
-                    <td colspan="5" class="text-center text-danger">
+                    <td colspan="6" class="text-center text-danger">
                         <i class="fas fa-exclamation-circle"></i> Failed to load classes
                     </td>
                 </tr>
@@ -462,7 +448,7 @@ function renderClassesTable(classes) {
     if (classes.length === 0) {
         tbody.append(`
             <tr>
-                <td colspan="5" class="text-center text-muted py-4">
+                <td colspan="6" class="text-center text-muted py-4">
                     <i class="fas fa-info-circle"></i> No classes assigned for this semester.
                 </td>
             </tr>
@@ -471,206 +457,41 @@ function renderClassesTable(classes) {
     }
     
     classes.forEach((classItem, index) => {
+        // Determine badge class for category
+        let categoryBadgeClass = 'badge-secondary';
+        if (classItem.class_category === 'CORE SUBJECT') {
+            categoryBadgeClass = 'badge-primary';
+        } else if (classItem.class_category === 'APPLIED SUBJECT') {
+            categoryBadgeClass = 'badge-secondary';
+        } else if (classItem.class_category === 'SPECIALIZED SUBJECT') {
+            categoryBadgeClass = 'badge-secondary';
+        }
+        
         tbody.append(`
             <tr>
                 <td>${index + 1}</td>
-                <td><strong>${escapeHtml(classItem.class_code)}</strong></td>
-                <td>${escapeHtml(classItem.class_name)}</td>
-                <td>
-                    <small>
-                        WW: ${classItem.ww_perc}% | 
-                        PT: ${classItem.pt_perc}% | 
-                        QA: ${classItem.qa_perce}%
-                    </small>
+                <td><strong>${escapeHtml(classItem.class_name)}</strong></td>
+                <td><span class="badge ${categoryBadgeClass}">${escapeHtml(classItem.class_category)}</span></td>
+                <td class="text-center">
+                    <span class="badge badge-light">${classItem.ww_perc}%</span>
                 </td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-danger" 
-                            onclick="removeClassFromSection(${classItem.matrix_id})"
-                            title="Remove">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <span class="badge badge-light">${classItem.pt_perc}%</span>
+                </td>
+                <td class="text-center">
+                    <span class="badge badge-light">${classItem.qa_perce}%</span>
                 </td>
             </tr>
         `);
     });
 }
 
-// Open add class modal
-function openAddClassModal() {
-    if (!currentSemesterId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No Semester Selected',
-            text: 'Please select a semester first.',
-            confirmButtonColor: '#007bff'
-        });
-        return;
-    }
-
-    $('#addClassSectionId').val(currentViewingSectionId);
-    $('#addClassSemesterId').val(currentSemesterId);
-    
-    loadAvailableClasses(currentViewingSectionId, currentSemesterId);
-    
-    $('#addClassModal').modal('show');
-}
-
-// Load available classes for section
-function loadAvailableClasses(sectionId, semesterId) {
-    $('#availableClasses').html('<option value="">Loading...</option>');
-    
-    const url = API_ROUTES.getAvailableClasses.replace(':id', sectionId);
-    
-    $.ajax({
-        url: url,
-        type: 'GET',
-        data: { semester_id: semesterId },
-        success: function(response) {
-            if (response.success) {
-                const select = $('#availableClasses');
-                select.empty();
-                select.append('<option value="">Choose a class...</option>');
-                
-                if (response.data.length === 0) {
-                    select.append('<option value="" disabled>No available classes</option>');
-                } else {
-                    response.data.forEach(classItem => {
-                        select.append(`<option value="${classItem.id}">${classItem.class_code} - ${classItem.class_name}</option>`);
-                    });
-                }
-            }
-        },
-        error: function(xhr) {
-            console.error('Failed to load available classes:', xhr);
-            $('#availableClasses').html('<option value="">Failed to load classes</option>');
-        }
-    });
-}
-
-// Assign class to section
-function assignClassToSection() {
-    const formData = {
-        section_id: $('#addClassSectionId').val(),
-        class_id: $('#availableClasses').val(),
-        semester_id: $('#addClassSemesterId').val(),
-        _token: $('input[name="_token"]').val()
-    };
-    
-    if (!formData.class_id) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Validation Error',
-            text: 'Please select a class.',
-            confirmButtonColor: '#007bff'
-        });
-        return;
-    }
-    
-    const submitBtn = $('#addClassForm button[type="submit"]');
-    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
-    
-    $.ajax({
-        url: API_ROUTES.assignClass,
-        type: 'POST',
-        data: formData,
-        success: function(response) {
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: response.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
-                $('#addClassModal').modal('hide');
-                loadSectionClasses(currentViewingSectionId, formData.semester_id);
-                loadSections(); // Refresh count
-            }
-        },
-        error: function(xhr) {
-            let errorMessage = 'Failed to assign class.';
-            
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                errorMessage = xhr.responseJSON.message;
-            }
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage,
-                confirmButtonColor: '#007bff'
-            });
-        },
-        complete: function() {
-            submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Add Class');
-        }
-    });
-}
-
-// Remove class from section
-function removeClassFromSection(matrixId) {
-    Swal.fire({
-        title: 'Remove Class?',
-        text: 'Are you sure you want to remove this class from the section?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Yes, remove it',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const url = API_ROUTES.removeClass.replace(':id', matrixId);
-            
-            $.ajax({
-                url: url,
-                type: 'DELETE',
-                data: { _token: $('input[name="_token"]').val() },
-                success: function(response) {
-                    if (response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Removed!',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                        
-                        loadSectionClasses(currentViewingSectionId, currentSemesterId);
-                        loadSections(); // Refresh count
-                    }
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Failed to remove class.';
-                    
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage,
-                        confirmButtonColor: '#007bff'
-                    });
-                }
-            });
-        }
-    });
-}
-
-// Reset forms
+// Reset form
 function resetSectionForm() {
     $('#sectionForm')[0].reset();
     $('#sectionId').val('');
     $('#sectionModalTitle').html('<i class="fas fa-plus"></i> Create New Section');
     editingSectionId = null;
-}
-
-function resetAddClassForm() {
-    $('#addClassForm')[0].reset();
-    $('#availableClasses').html('<option value="">Choose a class...</option>');
 }
 
 // Helper function to escape HTML

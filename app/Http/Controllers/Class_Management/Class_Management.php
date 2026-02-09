@@ -44,6 +44,7 @@ class Class_Management extends MainController
     {
         $validated = $request->validate([
             'class_name' => 'required|string|max:250',
+            'class_category' => 'required|in:CORE SUBJECT,APPLIED SUBJECT,SPECIALIZED SUBJECT',
             'ww_perc' => 'required|integer|min:0|max:100',
             'pt_perc' => 'required|integer|min:0|max:100',
             'qa_perce' => 'required|integer|min:0|max:100',
@@ -65,6 +66,7 @@ class Class_Management extends MainController
             $class = DB::table('classes')->insertGetId([
                 'class_code' => $classCode,
                 'class_name' => $request->class_name,
+                'class_category' => $request->class_category,
                 'ww_perc' => $request->ww_perc,
                 'pt_perc' => $request->pt_perc,
                 'qa_perce' => $request->qa_perce,
@@ -82,6 +84,7 @@ class Class_Management extends MainController
                 [
                     'class_code' => $classCode,
                     'class_name' => $request->class_name,
+                    'class_category' => $request->class_category,
                     'ww_perc' => $request->ww_perc,
                     'pt_perc' => $request->pt_perc,
                     'qa_perce' => $request->qa_perce,
@@ -92,6 +95,7 @@ class Class_Management extends MainController
                 'class_id' => $class,
                 'class_code' => $classCode,
                 'class_name' => $request->class_name,
+                'class_category' => $request->class_category,
             ]);
 
             DB::commit();
@@ -125,6 +129,7 @@ class Class_Management extends MainController
     {
         $validated = $request->validate([
             'class_name' => 'required|string|max:250',
+            'class_category' => 'required|in:CORE SUBJECT,APPLIED SUBJECT,SPECIALIZED SUBJECT',
             'ww_perc' => 'required|integer|min:0|max:100',
             'pt_perc' => 'required|integer|min:0|max:100',
             'qa_perce' => 'required|integer|min:0|max:100',
@@ -153,6 +158,7 @@ class Class_Management extends MainController
             // Store old values for audit
             $oldValues = [
                 'class_name' => $class->class_name,
+                'class_category' => $class->class_category,
                 'ww_perc' => $class->ww_perc,
                 'pt_perc' => $class->pt_perc,
                 'qa_perce' => $class->qa_perce,
@@ -160,6 +166,7 @@ class Class_Management extends MainController
 
             $newValues = [
                 'class_name' => $request->class_name,
+                'class_category' => $request->class_category,
                 'ww_perc' => $request->ww_perc,
                 'pt_perc' => $request->pt_perc,
                 'qa_perce' => $request->qa_perce,
@@ -169,6 +176,7 @@ class Class_Management extends MainController
                 ->where('id', $id)
                 ->update([
                     'class_name' => $request->class_name,
+                    'class_category' => $request->class_category,
                     'ww_perc' => $request->ww_perc,
                     'pt_perc' => $request->pt_perc,
                     'qa_perce' => $request->qa_perce,
@@ -189,6 +197,7 @@ class Class_Management extends MainController
                 'class_id' => $id,
                 'class_code' => $class->class_code,
                 'class_name' => $request->class_name,
+                'class_category' => $request->class_category,
             ]);
 
             DB::commit();
@@ -244,6 +253,21 @@ class Class_Management extends MainController
                 'message' => 'Failed to load class data.'
             ], 500);
         }
+    }
+
+    /**
+     * Get classes list for DataTables (AJAX)
+     */
+    public function getClassesList()
+    {
+        $classes = DB::table('classes')
+            ->select('id', 'class_code', 'class_name', 'class_category', 'ww_perc', 'pt_perc', 'qa_perce')
+            ->orderBy('class_name', 'asc')
+            ->get();
+
+        return response()->json([
+            'data' => $classes
+        ]);
     }
 
     public function list_class()
@@ -856,6 +880,7 @@ class Class_Management extends MainController
                     'classes.id',
                     'classes.class_code',
                     'classes.class_name',
+                    'classes.class_category',
                     'classes.ww_perc',
                     'classes.pt_perc',
                     'classes.qa_perce',
@@ -905,7 +930,7 @@ class Class_Management extends MainController
                         ->where('section_id', $sectionId)
                         ->where('semester_id', $semesterId);
                 })
-                ->select('id', 'class_code', 'class_name')
+                ->select('id', 'class_code', 'class_name', 'class_category')
                 ->orderBy('class_code', 'asc')
                 ->get();
 
@@ -985,6 +1010,7 @@ class Class_Management extends MainController
                     'class_id' => $request->class_id,
                     'class_code' => $class->class_code,
                     'class_name' => $class->class_name,
+                    'class_category' => $class->class_category,
                     'semester_id' => $request->semester_id,
                     'semester_name' => $semester->name,
                     'school_year' => $semester->sy_code,
@@ -1017,17 +1043,7 @@ class Class_Management extends MainController
             ], 500);
         }
     }
-    public function getClassesList()
-{
-    $classes = DB::table('classes')
-        ->select('id', 'class_code', 'class_name', 'ww_perc', 'pt_perc', 'qa_perce')
-        ->orderBy('class_name', 'asc')
-        ->get();
 
-    return response()->json([
-        'data' => $classes
-    ]);
-}
     /**
      * Remove class from section
      */
@@ -1062,6 +1078,7 @@ class Class_Management extends MainController
                 'class_id' => $matrix->class_id,
                 'class_code' => $class->class_code,
                 'class_name' => $class->class_name,
+                'class_category' => $class->class_category,
                 'semester_id' => $matrix->semester_id,
                 'semester_name' => $semester->name,
                 'school_year' => $semester->sy_code,

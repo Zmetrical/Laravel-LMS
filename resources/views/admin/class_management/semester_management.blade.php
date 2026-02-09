@@ -180,7 +180,7 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header bg-primary">
-                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Bulk Student Enrollment</h5>
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i>Student Enrollment</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
@@ -275,6 +275,7 @@
                                             <th>Name</th>
                                             <th>Gender</th>
                                             <th>Type</th>
+                                            <th width="150">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="qe_studentList">
@@ -406,9 +407,6 @@
                         </div>
                         <div class="col-md-6 text-right">
                             <span class="semester-status-badge mr-2" id="syStatusBadge"></span>
-                            <button class="btn btn-primary" id="quickEnrollBtn">
-                                <i class="fas fa-user-plus"></i> Bulk Enrollment
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -446,8 +444,9 @@
         getArchiveInfo: "{{ route('admin.archive.info', ['id' => ':id']) }}",
         getSemesterDetails: "{{ route('admin.archive.semester-details', ['id' => ':id']) }}",
         getSectionStudents: "{{ route('admin.archive.section-students', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
-        archiveSemester: "{{ route('admin.archive.semester', ['id' => ':id']) }}",
+        completeSemester: "{{ route('admin.archive.complete-semester', ['id' => ':id']) }}",
         activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
+        getPreviousSemester: "{{ route('admin.archive.get-previous-semester', ['id' => ':id']) }}", // NEW
         searchSections: "{{ route('admin.archive.search-sections') }}",
         loadStudents: "{{ route('admin.archive.load-students') }}",
         getSectionDetails: "{{ route('admin.archive.get-section-details') }}",
@@ -457,8 +456,6 @@
     };
 
     const SCHOOL_YEAR_ID = {{ $school_year_id }};
-    const SOURCE_SEMESTER = @json($source_semester);
-    const TARGET_SEMESTER = @json($target_semester);
 </script>
 
     @if(isset($scripts))

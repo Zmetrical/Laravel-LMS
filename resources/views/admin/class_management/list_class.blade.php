@@ -22,6 +22,29 @@
             text-transform: uppercase;
             margin-bottom: 0.25rem;
         }
+        
+        /* Fix DataTable alignment issues */
+        #classesTable {
+            width: 100% !important;
+            table-layout: fixed;
+        }
+        
+        #classesTable th,
+        #classesTable td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        #classesTable th:first-child,
+        #classesTable td:first-child {
+            white-space: normal;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
 @endsection
 
@@ -67,14 +90,15 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0" id="classesTable" style="width: 100%;">
+                <table class="table table-striped table-hover mb-0" id="classesTable">
                     <thead>
                         <tr>
-                            <th style="width: 35%">Class Name</th>
-                            <th style="width: 15%">Written Work</th>
-                            <th style="width: 15%">Performance Task</th>
-                            <th style="width: 15%">Quarterly Assessment</th>
-                            <th class="text-center" style="width: 10%">Actions</th>
+                            <th>Class Name</th>
+                            <th>Category</th>
+                            <th>Written Work</th>
+                            <th>Performance Task</th>
+                            <th>Quarterly Assessment</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="classTableBody">
@@ -117,6 +141,16 @@
                     <div class="form-group">
                         <label for="class_name">Class Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="class_name" name="class_name" placeholder="e.g., Mathematics 101" required>
+                    </div>
+
+                    <!-- Class Category -->
+                    <div class="form-group">
+                        <label for="class_category">Class Category <span class="text-danger">*</span></label>
+                        <select class="form-control" id="class_category" name="class_category" required>
+                            <option value="CORE SUBJECT">Core Subject</option>
+                            <option value="APPLIED SUBJECT">Applied Subject</option>
+                            <option value="SPECIALIZED SUBJECT">Specialized Subject</option>
+                        </select>
                     </div>
 
                     <!-- Weight Distribution -->

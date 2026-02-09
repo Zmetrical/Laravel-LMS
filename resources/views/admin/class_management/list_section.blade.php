@@ -28,6 +28,17 @@
             font-size: 0.875rem;
             font-weight: 500;
         }
+        .grade-weight-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0 0.1rem;
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #dee2e6;
+        }
     </style>
 @endsection
 
@@ -168,13 +179,13 @@
     </div>
 </div>
 
-<!-- View/Manage Classes Modal -->
+<!-- View Classes Modal -->
 <div class="modal fade" id="viewClassesModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="classesModalTitle">
-                    <i class="fas fa-book"></i> Manage Classes
+                    <i class="fas fa-book"></i> View Classes
                 </h5>
                 <button type="button" class="close" data-dismiss="modal">
                     <span>&times;</span>
@@ -182,16 +193,11 @@
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
-                    <div class="col-md-10">
+                    <div class="col-md-12">
                         <div class="d-flex align-items-center">
                             <label class="mb-0 mr-2">Semester:</label>
                             <span class="semester-badge" id="currentSemesterLabel"></span>
                         </div>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-primary btn-block" id="addClassBtn">
-                            <i class="fas fa-plus"></i> Add Class
-                        </button>
                     </div>
                 </div>
                 
@@ -199,16 +205,17 @@
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
-                                <th width="8%">#</th>
-                                <th width="20%">Class Code</th>
-                                <th width="42%">Class Name</th>
-                                <th width="20%">Grade Distribution</th>
-                                <th width="10%" class="text-center">Action</th>
+                                <th width="5%">#</th>
+                                <th width="35%">Class Name</th>
+                                <th width="20%">Category</th>
+                                <th width="10%" class="text-center">WW</th>
+                                <th width="10%" class="text-center">PT</th>
+                                <th width="10%" class="text-center">QA</th>
                             </tr>
                         </thead>
                         <tbody id="classesTableBody">
                             <tr>
-                                <td colspan="5" class="text-center text-muted">
+                                <td colspan="6" class="text-center text-muted">
                                     <i class="fas fa-info-circle"></i> Loading...
                                 </td>
                             </tr>
@@ -221,43 +228,6 @@
                     <i class="fas fa-times"></i> Close
                 </button>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add Class Modal -->
-<div class="modal fade" id="addClassModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-plus"></i> Add Class to Section
-                </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form id="addClassForm">
-                @csrf
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="availableClasses">Select Class <span class="text-danger">*</span></label>
-                        <select class="form-control" id="availableClasses" name="class_id" required>
-                            <option value="">Choose a class...</option>
-                        </select>
-                    </div>
-                    <input type="hidden" id="addClassSectionId" name="section_id" />
-                    <input type="hidden" id="addClassSemesterId" name="semester_id" />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Add Class
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -274,10 +244,7 @@
         getSemesters: "{{ route('admin.semesters.data') }}",
         createSection: "{{ route('admin.sections.create') }}",
         updateSection: "{{ route('admin.sections.update', ':id') }}",
-        getSectionClasses: "{{ route('admin.sections.classes', ':id') }}",
-        getAvailableClasses: "{{ route('admin.sections.available-classes', ':id') }}",
-        assignClass: "{{ route('admin.sections.assign-class') }}",
-        removeClass: "{{ route('admin.sections-class.remove-class', ':id') }}"
+        getSectionClasses: "{{ route('admin.sections.classes', ':id') }}"
     };
     </script>
     

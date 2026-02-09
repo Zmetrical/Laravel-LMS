@@ -309,41 +309,51 @@ $(document).ready(function () {
         loadSectionEnrollment(sectionId);
     }
 
-    function loadSectionEnrollment(sectionId) {
-        const url = API_ROUTES.getSectionEnrollment
-            .replace(':semesterId', selectedSemesterId)
-            .replace(':sectionId', sectionId);
+function loadSectionEnrollment(sectionId) {
+    const url = API_ROUTES.getSectionEnrollment
+        .replace(':semesterId', selectedSemesterId)
+        .replace(':sectionId', sectionId);
 
-        $.ajax({
-            url: url,
-            method: 'GET',
-            success: function (response) {
-                $('#studentsLoading').hide();
+    $.ajax({
+        url: url,
+        method: 'GET',
+        success: function (response) {
+            console.log('=== SECTION ENROLLMENT RESPONSE ===');
+            console.log('Full Response:', response);
+            console.log('Students Count:', response.students ? response.students.length : 0);
+            if (response.students && response.students.length > 0) {
+                console.log('First Student:', response.students[0]);
+                console.log('First Student Class Grades:', response.students[0].class_grades);
+            }
+            console.log('===================================');
+            
+            $('#studentsLoading').hide();
+            
+            if (response.success && response.students.length > 0) {
+                allStudents = response.students;
+                allClasses = response.classes || [];
+                quarters = response.quarters || [];
                 
-                if (response.success && response.students.length > 0) {
-                    allStudents = response.students;
-                    allClasses = response.classes || [];
-                    quarters = response.quarters || [];
-                    
-                    populateClassDropdown(allClasses);
-                    buildQuarterTabs(quarters);
-                    
-                    applyFilters();
-                    $('#studentsContent').show();
-                    $('#filtersSection').show();
-                    $('#quarterTabsSection').show();
-                } else {
-                    $('#noStudents').show();
-                    $('#studentCount').text('0 Students');
-                }
-            },
-            error: function () {
-                $('#studentsLoading').hide();
+                populateClassDropdown(allClasses);
+                buildQuarterTabs(quarters);
+                
+                applyFilters();
+                $('#studentsContent').show();
+                $('#filtersSection').show();
+                $('#quarterTabsSection').show();
+            } else {
                 $('#noStudents').show();
                 $('#studentCount').text('0 Students');
             }
-        });
-    }
+        },
+        error: function (xhr) {
+            console.error('Error loading section enrollment:', xhr);
+            $('#studentsLoading').hide();
+            $('#noStudents').show();
+            $('#studentCount').text('0 Students');
+        }
+    });
+}
 
     function populateClassDropdown(classes) {
         const dropdown = $('#classDropdownList');

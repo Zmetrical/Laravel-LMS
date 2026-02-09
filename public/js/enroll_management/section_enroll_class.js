@@ -12,7 +12,7 @@ $(document).ready(function () {
     let levels = [];
     let strands = [];
     let selectedClassesList = [];
-    let allStudents = []; // Store all students for filtering
+    let allStudents = [];
     const MAX_CLASSES = 10;
 
     // Load sections on page load
@@ -50,121 +50,116 @@ $(document).ready(function () {
     }
 
     function loadSectionAdviser(sectionId) {
-    $('#adviserDisplay').html('<small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading adviser...</small>');
-    
-    const url = API_ROUTES.getSectionAdviser.replace(':id', sectionId);
+        $('#adviserDisplay').html('<small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading adviser...</small>');
+        
+        const url = API_ROUTES.getSectionAdviser.replace(':id', sectionId);
 
-    $.ajax({
-        url: url,
-        method: 'GET',
-        success: function (response) {
-            if (response.success) {
-                if (response.adviser) {
-                    const fullName = `${response.adviser.first_name} ${response.adviser.middle_name || ''} ${response.adviser.last_name}`.trim();
-                    $('#adviserDisplay').html(`
-                        <small>
-                            <strong><i class="fas fa-user-tie"></i> Adviser:</strong> 
-                            <span class="text-primary">${fullName}</span>
-                        </small>
-                    `);
-                } else {
-                    $('#adviserDisplay').html('<small class="text-muted"><i class="fas fa-exclamation-circle"></i> No adviser assigned</small>');
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+                if (response.success) {
+                    if (response.adviser) {
+                        const fullName = `${response.adviser.first_name} ${response.adviser.middle_name || ''} ${response.adviser.last_name}`.trim();
+                        $('#adviserDisplay').html(`
+                            <small>
+                                <strong><i class="fas fa-user-tie"></i> Adviser:</strong> 
+                                <span class="text-primary">${fullName}</span>
+                            </small>
+                        `);
+                    } else {
+                        $('#adviserDisplay').html('<small class="text-muted"><i class="fas fa-exclamation-circle"></i> No adviser assigned</small>');
+                    }
                 }
+            },
+            error: function (xhr) {
+                $('#adviserDisplay').html('<small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load adviser</small>');
             }
-        },
-        error: function (xhr) {
-            $('#adviserDisplay').html('<small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load adviser</small>');
-        }
-    });
-}
-// =========================================================================
-// SELECT2 INITIALIZATION
-// =========================================================================
-function initializeClassSelect2() {
-    // Destroy existing instance if it exists
-    if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
-        $('#availableClassesSelect').select2('destroy');
+        });
     }
 
-    // Load classes first, then initialize Select2 with local data
-    loadAvailableClasses();
-}
-
-// ========================================================================
-// LOAD AVAILABLE CLASSES
-// ========================================================================
-function loadAvailableClasses() {
-    $('#availableClassesSelect').html('<option value="">Loading...</option>').prop('disabled', true);
-    $('#addClassToListBtn').prop('disabled', true);
-
-    const url = API_ROUTES.getAvailableClasses.replace(':id', selectedSectionId);
-
-    $.ajax({
-        url: url,
-        method: 'GET',
-        success: function (response) {
-            if (response.success) {
-                const select = $('#availableClassesSelect');
-                select.empty().prop('disabled', false);
-                
-                if (response.classes.length === 0) {
-                    select.append('<option value="">No available classes</option>');
-                    return;
-                }
-                
-                select.append('<option value="">-- Select Class --</option>');
-                
-                response.classes.forEach(cls => {
-                    select.append(`
-                        <option value="${cls.id}" 
-                                data-teachers="${cls.teachers}"
-                                data-class-name="${cls.class_name}">
-                            ${cls.class_name}
-                        </option>
-                    `);
-                });
-
-                // Initialize Select2 AFTER options are loaded
-                $('#availableClassesSelect').select2({
-                    theme: 'bootstrap4',
-                    placeholder: 'Search for class...',
-                    allowClear: true,
-                    dropdownParent: $('#enrollClassModal')
-                });
-
-                // Handle selection change
-                $('#availableClassesSelect').on('select2:select', function(e) {
-                    $('#addClassToListBtn').prop('disabled', false);
-                });
-
-                $('#availableClassesSelect').on('select2:unselect select2:clear', function(e) {
-                    $('#addClassToListBtn').prop('disabled', true);
-                });
-            } else {
-                $('#availableClassesSelect').html('<option value="">No available classes</option>');
-            }
-        },
-        error: function (xhr) {
-            $('#availableClassesSelect').html('<option value="">Error loading classes</option>');
-            Toast.fire({
-                icon: "error",
-                title: "Failed to load available classes"
-            });
+    // =========================================================================
+    // SELECT2 INITIALIZATION
+    // =========================================================================
+    function initializeClassSelect2() {
+        if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
+            $('#availableClassesSelect').select2('destroy');
         }
-    });
-}
+
+        loadAvailableClasses();
+    }
+
+    // ========================================================================
+    // LOAD AVAILABLE CLASSES
+    // ========================================================================
+    function loadAvailableClasses() {
+        $('#availableClassesSelect').html('<option value="">Loading...</option>').prop('disabled', true);
+        $('#addClassToListBtn').prop('disabled', true);
+
+        const url = API_ROUTES.getAvailableClasses.replace(':id', selectedSectionId);
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+                if (response.success) {
+                    const select = $('#availableClassesSelect');
+                    select.empty().prop('disabled', false);
+                    
+                    if (response.classes.length === 0) {
+                        select.append('<option value="">No available classes</option>');
+                        return;
+                    }
+                    
+                    select.append('<option value="">-- Select Class --</option>');
+                    
+                    response.classes.forEach(cls => {
+                        select.append(`
+                            <option value="${cls.id}" 
+                                    data-teachers="${cls.teachers}"
+                                    data-class-name="${cls.class_name}">
+                                ${cls.class_name}
+                            </option>
+                        `);
+                    });
+
+                    $('#availableClassesSelect').select2({
+                        theme: 'bootstrap4',
+                        placeholder: 'Search for class...',
+                        allowClear: true,
+                        dropdownParent: $('#enrollClassModal')
+                    });
+
+                    $('#availableClassesSelect').on('select2:select', function(e) {
+                        $('#addClassToListBtn').prop('disabled', false);
+                    });
+
+                    $('#availableClassesSelect').on('select2:unselect select2:clear', function(e) {
+                        $('#addClassToListBtn').prop('disabled', true);
+                    });
+                } else {
+                    $('#availableClassesSelect').html('<option value="">No available classes</option>');
+                }
+            },
+            error: function (xhr) {
+                $('#availableClassesSelect').html('<option value="">Error loading classes</option>');
+                Toast.fire({
+                    icon: "error",
+                    title: "Failed to load available classes"
+                });
+            }
+        });
+    }
 
     // ========================================================================
     // POPULATE FILTERS
     // ========================================================================
     function populateFilters() {
-        // Levels
         $('#levelFilter').html('<option value="">All Levels</option>');
         levels.forEach(level => {
             $('#levelFilter').append(`<option value="${level.id}">${level.name}</option>`);
         });
 
-        // Strands
         $('#strandFilter').html('<option value="">All Strands</option>');
         strands.forEach(strand => {
             $('#strandFilter').append(`<option value="${strand.id}">${strand.code}</option>`);
@@ -248,10 +243,10 @@ function loadAvailableClasses() {
         $('#noSectionSelected').hide();
         $('#enrollmentSection').show();
         
-        // Reset student filters when switching sections
         resetStudentFilters();
         
         loadSectionDetails(selectedSectionId);
+        loadSectionAdviser(selectedSectionId);
     });
 
     // ========================================================================
@@ -309,8 +304,8 @@ function loadAvailableClasses() {
         }
 
         classes.forEach((cls, index) => {
-            const teachers = cls.teachers && cls.teachers.length > 0
-                ? cls.teachers.map(t => t.name).join(', ')
+            const teachers = cls.teachers 
+                ? cls.teachers 
                 : '<span class="text-muted">No teacher assigned</span>';
             
             const row = `
@@ -333,13 +328,12 @@ function loadAvailableClasses() {
     }
 
     // ========================================================================
-    // RENDER STUDENTS (with filtering support)
+    // RENDER STUDENTS
     // ========================================================================
     function renderStudents(students) {
         const tbody = $('#studentsBody');
         tbody.empty();
         
-        // Update count to show filtered/total
         const totalCount = allStudents.length;
         const filteredCount = students.length;
         const countText = filteredCount === totalCount 
@@ -407,10 +401,8 @@ function loadAvailableClasses() {
         renderStudents(filtered);
     }
 
-    // Filter events
     $('#studentSearchFilter, #genderFilter, #studentTypeFilter').on('input change', applyStudentFilters);
 
-    // Reset student filters
     $('#resetStudentFiltersBtn').click(function() {
         resetStudentFilters();
         renderStudents(allStudents);
@@ -423,65 +415,19 @@ function loadAvailableClasses() {
     }
 
     // ========================================================================
-    // ENROLL CLASS BUTTON - OPEN MODAL
+    // ENROLL CLASS BUTTON
     // ========================================================================
-$('#enrollClassBtn').click(function () {
-    if (!selectedSectionId) return;
-    
-    selectedClassesList = [];
-    updateSelectedClassesDisplay();
-    
-    // Initialize Select2 (which will load classes)
-    initializeClassSelect2();
-    
-    $('#enrollClassModal').modal('show');
-});
-
-
-    // ========================================================================
-    // AVAILABLE CLASSES SELECT CHANGE
-    // ========================================================================
-$('#addClassToListBtn').click(function () {
-    if (selectedClassesList.length >= MAX_CLASSES) {
-        Toast.fire({
-            icon: "warning",
-            title: `You can only add up to ${MAX_CLASSES} classes at once`
-        });
-        return;
-    }
-
-    const select = $('#availableClassesSelect');
-    const selectedOption = select.find(':selected');
-    const classId = selectedOption.val();
-    
-    if (!classId) return;
-
-    if (selectedClassesList.some(c => c.id === classId)) {
-        Toast.fire({
-            icon: "info",
-            title: "This class is already in the list"
-        });
-        return;
-    }
-
-    const classData = {
-        id: classId,
-        name: selectedOption.data('class-name'),
-        teachers: selectedOption.data('teachers')
-    };
-
-    selectedClassesList.push(classData);
-    selectedOption.remove();
-    select.val('').trigger('change');
-    $('#addClassToListBtn').prop('disabled', true);
-    
-    updateSelectedClassesDisplay();
-    
-    Toast.fire({
-        icon: "success",
-        title: "Class added to list"
+    $('#enrollClassBtn').click(function () {
+        if (!selectedSectionId) return;
+        
+        selectedClassesList = [];
+        updateSelectedClassesDisplay();
+        
+        initializeClassSelect2();
+        
+        $('#enrollClassModal').modal('show');
     });
-});
+
     // ========================================================================
     // ADD CLASS TO LIST
     // ========================================================================
@@ -516,7 +462,7 @@ $('#addClassToListBtn').click(function () {
 
         selectedClassesList.push(classData);
         selectedOption.remove();
-        select.val('');
+        select.val('').trigger('change');
         $('#addClassToListBtn').prop('disabled', true);
         
         updateSelectedClassesDisplay();
@@ -579,38 +525,37 @@ $('#addClassToListBtn').click(function () {
     // ========================================================================
     // REMOVE FROM LIST
     // ========================================================================
-$(document).on('click', '.remove-from-list-btn', function () {
-    const index = $(this).data('index');
-    const removedClass = selectedClassesList[index];
-    
-    selectedClassesList.splice(index, 1);
-    
-    const select = $('#availableClassesSelect');
-    select.append(`
-        <option value="${removedClass.id}" 
-                data-teachers="${removedClass.teachers}"
-                data-class-name="${removedClass.name}">
-            ${removedClass.name}
-        </option>
-    `);
-    
-    // Sort options alphabetically
-    const options = select.find('option:not(:first)').sort((a, b) => {
-        return $(a).text().localeCompare($(b).text());
+    $(document).on('click', '.remove-from-list-btn', function () {
+        const index = $(this).data('index');
+        const removedClass = selectedClassesList[index];
+        
+        selectedClassesList.splice(index, 1);
+        
+        const select = $('#availableClassesSelect');
+        select.append(`
+            <option value="${removedClass.id}" 
+                    data-teachers="${removedClass.teachers}"
+                    data-class-name="${removedClass.name}">
+                ${removedClass.name}
+            </option>
+        `);
+        
+        const options = select.find('option:not(:first)').sort((a, b) => {
+            return $(a).text().localeCompare($(b).text());
+        });
+        select.find('option:not(:first)').remove();
+        select.append(options);
+        
+        updateSelectedClassesDisplay();
+        
+        Toast.fire({
+            icon: "info",
+            title: "Class removed from list"
+        });
     });
-    select.find('option:not(:first)').remove();
-    select.append(options);
-    
-    updateSelectedClassesDisplay();
-    
-    Toast.fire({
-        icon: "info",
-        title: "Class removed from list"
-    });
-});
 
     // ========================================================================
-    // CONFIRM ENROLL ALL CLASSES
+    // CONFIRM ENROLL
     // ========================================================================
     $('#confirmEnrollBtn').click(function () {
         if (selectedClassesList.length === 0 || !selectedSectionId) return;
@@ -661,18 +606,17 @@ $(document).on('click', '.remove-from-list-btn', function () {
     // ========================================================================
     // RESET MODAL ON CLOSE
     // ========================================================================
-$('#enrollClassModal').on('hidden.bs.modal', function () {
-    selectedClassesList = [];
-    
-    // Destroy Select2 instance
-    if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
-        $('#availableClassesSelect').select2('destroy');
-    }
-    
-    $('#availableClassesSelect').empty().html('<option value="">Search for class...</option>');
-    $('#addClassToListBtn').prop('disabled', true);
-    updateSelectedClassesDisplay();
-});
+    $('#enrollClassModal').on('hidden.bs.modal', function () {
+        selectedClassesList = [];
+        
+        if ($('#availableClassesSelect').hasClass('select2-hidden-accessible')) {
+            $('#availableClassesSelect').select2('destroy');
+        }
+        
+        $('#availableClassesSelect').empty().html('<option value="">Search for class...</option>');
+        $('#addClassToListBtn').prop('disabled', true);
+        updateSelectedClassesDisplay();
+    });
 
     // ========================================================================
     // REMOVE CLASS FROM SECTION
@@ -736,6 +680,204 @@ $('#enrollClassModal').on('hidden.bs.modal', function () {
     });
 
     // ========================================================================
+    // ADVISER MANAGEMENT
+    // ========================================================================
+    $('#assignAdviserBtn').click(function() {
+        if (!selectedSectionId) return;
+        loadAdviserModal();
+        $('#assignAdviserModal').modal('show');
+    });
+
+    function loadAdviserModal() {
+        const select = $('#adviserTeacherSelect');
+        select.html('<option value="">Loading teachers...</option>').prop('disabled', true);
+        
+        loadCurrentAdviser();
+        
+        $.ajax({
+            url: API_ROUTES.getAvailableTeachers,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    select.empty().prop('disabled', false);
+                    select.append('<option value="">-- Select Teacher --</option>');
+                    
+                    response.teachers.forEach(teacher => {
+                        const fullName = `${teacher.last_name}, ${teacher.first_name} ${teacher.middle_name || ''}`.trim();
+                        select.append(`
+                            <option value="${teacher.id}">
+                                ${fullName}
+                            </option>
+                        `);
+                    });
+                    
+                    if (!select.hasClass('select2-hidden-accessible')) {
+                        select.select2({
+                            theme: 'bootstrap4',
+                            placeholder: '-- Select Teacher --',
+                            allowClear: true,
+                            dropdownParent: $('#assignAdviserModal')
+                        });
+                    }
+                }
+            },
+            error: function() {
+                select.html('<option value="">Failed to load teachers</option>');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Could not load teachers list'
+                });
+            }
+        });
+    }
+
+    function loadCurrentAdviser() {
+        const url = API_ROUTES.getSectionAdviser.replace(':id', selectedSectionId);
+        
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.adviser) {
+                    const adviser = response.adviser;
+                    const fullName = `${adviser.first_name} ${adviser.middle_name || ''} ${adviser.last_name}`.trim();
+                    $('#currentAdviserNameModal').text(fullName);
+                    $('#currentAdviserEmail').text(adviser.email);
+                    $('#currentAdviserSection').show();
+                    $('#removeAdviserBtn').show();
+                } else {
+                    $('#currentAdviserSection').hide();
+                }
+            },
+            error: function() {
+                $('#currentAdviserSection').hide();
+            }
+        });
+    }
+
+    $('#adviserTeacherSelect').on('select2:select', function() {
+        $('#confirmAssignAdviserBtn').prop('disabled', false);
+        $('#removeAdviserBtn').hide();
+    });
+
+    $('#adviserTeacherSelect').on('select2:unselect select2:clear', function() {
+        $('#confirmAssignAdviserBtn').prop('disabled', true);
+        loadCurrentAdviser();
+    });
+
+    $('#confirmAssignAdviserBtn').click(function() {
+        const teacherId = $('#adviserTeacherSelect').val();
+        
+        if (!teacherId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Teacher Selected',
+                text: 'Please select a teacher to assign as adviser'
+            });
+            return;
+        }
+
+        const btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Assigning...');
+
+        const url = API_ROUTES.assignAdviser.replace(':id', selectedSectionId);
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: {
+                teacher_id: teacherId,
+                semester_id: ACTIVE_SEMESTER_ID,
+                _token: $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    $('#assignAdviserModal').modal('hide');
+                    loadSectionAdviser(selectedSectionId);
+                }
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Failed to assign adviser'
+                });
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Assign Adviser');
+            }
+        });
+    });
+
+    $(document).on('click', '#removeAdviserBtn', function() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Remove Adviser?',
+            text: 'Are you sure you want to remove this adviser from the section?',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, remove',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const btn = $('#removeAdviserBtn');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
+
+                const url = API_ROUTES.removeAdviser.replace(':id', selectedSectionId);
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            $('#assignAdviserModal').modal('hide');
+                            loadSectionAdviser(selectedSectionId);
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Failed to remove adviser'
+                        });
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Adviser');
+                    }
+                });
+            }
+        });
+    });
+
+    $('#assignAdviserModal').on('hidden.bs.modal', function() {
+        if ($('#adviserTeacherSelect').hasClass('select2-hidden-accessible')) {
+            $('#adviserTeacherSelect').select2('destroy');
+        }
+        $('#adviserTeacherSelect').empty().html('<option value="">-- Select Teacher --</option>');
+        $('#confirmAssignAdviserBtn').prop('disabled', false);
+        $('#currentAdviserSection').hide();
+    });
+
+    // ========================================================================
     // UTILITY FUNCTIONS
     // ========================================================================
     function showLoader(selector, message = 'Loading...', colspan = 1) {
@@ -769,246 +911,4 @@ $('#enrollClassModal').on('hidden.bs.modal', function () {
         
         $(selector).html(error);
     }
-
-
-
-
-
-
-
-// ========================================================================
-// SECTION ITEM CLICK
-// ========================================================================
-$(document).on('click', '.section-item', function(e) {
-    e.preventDefault();
-    
-    $('.section-item').removeClass('active');
-    $(this).addClass('active');
-    
-    selectedSectionId = $(this).data('section-id');
-    const sectionName = $(this).data('section-name');
-    const sectionLevel = $(this).data('section-level');
-    const sectionStrand = $(this).data('section-strand');
-    
-    $('#selectedSectionName').html(`<i class="fas fa-users"></i> ${sectionName}`);
-    $('#levelDisplay').text(sectionLevel || '-');
-    $('#strandDisplay').text(sectionStrand || '-');
-    
-    $('#noSectionSelected').hide();
-    $('#enrollmentSection').show();
-    
-    resetStudentFilters();
-    
-    loadSectionDetails(selectedSectionId);
-    loadSectionAdviser(selectedSectionId);
-});
-
-// ========================================================================
-// ASSIGN ADVISER MODAL
-// ========================================================================
-$('#assignAdviserBtn').click(function() {
-    if (!selectedSectionId) return;
-    loadAdviserModal();
-    $('#assignAdviserModal').modal('show');
-});
-
-function loadAdviserModal() {
-    const select = $('#adviserTeacherSelect');
-    select.html('<option value="">Loading teachers...</option>').prop('disabled', true);
-    
-    // Load current adviser first
-    loadCurrentAdviser();
-    
-    // Then load available teachers
-    $.ajax({
-        url: API_ROUTES.getAvailableTeachers,
-        method: 'GET',
-        success: function(response) {
-            if (response.success) {
-                select.empty().prop('disabled', false);
-                select.append('<option value="">-- Select Teacher --</option>');
-                
-                response.teachers.forEach(teacher => {
-                    const fullName = `${teacher.last_name}, ${teacher.first_name} ${teacher.middle_name || ''}`.trim();
-                    select.append(`
-                        <option value="${teacher.id}">
-                            ${fullName}
-                        </option>
-                    `);
-                });
-                
-                // Initialize Select2 if not already initialized
-                if (!select.hasClass('select2-hidden-accessible')) {
-                    select.select2({
-                        theme: 'bootstrap4',
-                        placeholder: '-- Select Teacher --',
-                        allowClear: true,
-                        dropdownParent: $('#assignAdviserModal')
-                    });
-                }
-            }
-        },
-        error: function() {
-            select.html('<option value="">Failed to load teachers</option>');
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Could not load teachers list'
-            });
-        }
-    });
-}
-
-function loadCurrentAdviser() {
-    const url = API_ROUTES.getSectionAdviser.replace(':id', selectedSectionId);
-    
-    $.ajax({
-        url: url,
-        method: 'GET',
-        success: function(response) {
-            if (response.success && response.adviser) {
-                const adviser = response.adviser;
-                const fullName = `${adviser.first_name} ${adviser.middle_name || ''} ${adviser.last_name}`.trim();
-                $('#currentAdviserNameModal').text(fullName);
-                $('#currentAdviserEmail').text(adviser.email);
-                $('#currentAdviserSection').show();
-                $('#removeAdviserBtn').show();
-            } else {
-                $('#currentAdviserSection').hide();
-            }
-        },
-        error: function() {
-            $('#currentAdviserSection').hide();
-        }
-    });
-}
-
-// Handle teacher selection change
-$('#adviserTeacherSelect').on('select2:select', function() {
-    $('#confirmAssignAdviserBtn').prop('disabled', false);
-    $('#removeAdviserBtn').hide();
-});
-
-$('#adviserTeacherSelect').on('select2:unselect select2:clear', function() {
-    $('#confirmAssignAdviserBtn').prop('disabled', true);
-    loadCurrentAdviser(); // Reload to show remove button again if there's current adviser
-});
-
-// ========================================================================
-// CONFIRM ASSIGN ADVISER
-// ========================================================================
-$('#confirmAssignAdviserBtn').click(function() {
-    const teacherId = $('#adviserTeacherSelect').val();
-    
-    if (!teacherId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No Teacher Selected',
-            text: 'Please select a teacher to assign as adviser'
-        });
-        return;
-    }
-
-    const btn = $(this);
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Assigning...');
-
-    const url = API_ROUTES.assignAdviser.replace(':id', selectedSectionId);
-
-    $.ajax({
-        url: url,
-        method: 'POST',
-        data: {
-            teacher_id: teacherId,
-            semester_id: ACTIVE_SEMESTER_ID,
-            _token: $('meta[name="csrf-token"]').attr('content')
-        },
-        success: function(response) {
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: response.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                $('#assignAdviserModal').modal('hide');
-                loadSectionAdviser(selectedSectionId);
-            }
-        },
-        error: function(xhr) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: xhr.responseJSON?.message || 'Failed to assign adviser'
-            });
-        },
-        complete: function() {
-            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Assign Adviser');
-        }
-    });
-});
-
-// ========================================================================
-// REMOVE ADVISER
-// ========================================================================
-$(document).on('click', '#removeAdviserBtn', function() {
-    Swal.fire({
-        icon: 'warning',
-        title: 'Remove Adviser?',
-        text: 'Are you sure you want to remove this adviser from the section?',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, remove',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const btn = $('#removeAdviserBtn');
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
-
-            const url = API_ROUTES.removeAdviser.replace(':id', selectedSectionId);
-
-            $.ajax({
-                url: url,
-                method: 'POST',
-                data: {
-                    _token: $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                        $('#assignAdviserModal').modal('hide');
-                        loadSectionAdviser(selectedSectionId);
-                    }
-                },
-                error: function(xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: xhr.responseJSON?.message || 'Failed to remove adviser'
-                    });
-                },
-                complete: function() {
-                    btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Adviser');
-                }
-            });
-        }
-    });
-});
-
-// Reset modal on close
-$('#assignAdviserModal').on('hidden.bs.modal', function() {
-    if ($('#adviserTeacherSelect').hasClass('select2-hidden-accessible')) {
-        $('#adviserTeacherSelect').select2('destroy');
-    }
-    $('#adviserTeacherSelect').empty().html('<option value="">-- Select Teacher --</option>');
-    $('#confirmAssignAdviserBtn').prop('disabled', false);
-    $('#currentAdviserSection').hide();
-});
 });

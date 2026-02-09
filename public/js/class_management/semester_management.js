@@ -2,19 +2,19 @@ $(document).ready(function () {
     let schoolYearData = null;
     let semestersData = [];
     let semesterDetailsCache = {};
-    let sourceSemesterData = SOURCE_SEMESTER; // From blade - active semester
-    let targetSemesterData = TARGET_SEMESTER; // From blade
+    let sourceSemesterData = null; // Set dynamically
+    let targetSemesterData = null; // Set dynamically
 
     // Enrollment wizard state
     let wizard = {
         currentStep: 1,
         sourceSection: null,
-        sourceSemesterId: sourceSemesterData?.id || null,
+        sourceSemesterId: null,
         students: [],
         selectedStudents: [],
         targetSection: null,
         targetSectionData: null,
-        targetSemesterId: targetSemesterData?.id || null,
+        targetSemesterId: null,
         sourceStrandId: null,
         sourceLevelId: null
     };
@@ -56,10 +56,13 @@ $(document).ready(function () {
     // =========================================================================
     // LOAD ARCHIVE DATA
     // =========================================================================
-    
+
     function loadArchiveInfo() {
         $('#contentLoading').show();
         $('#mainContent').hide();
+        
+        // Clear cache to force fresh data load
+        semesterDetailsCache = {};
 
         const url = API_ROUTES.getArchiveInfo.replace(':id', SCHOOL_YEAR_ID);
 
@@ -76,6 +79,8 @@ $(document).ready(function () {
             },
             error: function () {
                 showToast('error', 'Failed to load data');
+                $('#contentLoading').hide();
+                $('#mainContent').show();
             }
         });
     }
@@ -133,11 +138,11 @@ $(document).ready(function () {
         $('#semesterTabs').html(tabsHtml.join(''));
         $('#semesterTabContent').html(contentHtml.join(''));
 
-        // Load first semester
+        // Always load first semester
         loadSemesterDetails(semestersData[0].id);
 
         // Load on tab change
-        $('#semesterTabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        $('#semesterTabs a[data-toggle="tab"]').off('shown.bs.tab').on('shown.bs.tab', function (e) {
             const semId = $(e.target).attr('href').replace('#tab-', '');
             if (!semesterDetailsCache[semId]) {
                 loadSemesterDetails(semId);
@@ -168,24 +173,25 @@ $(document).ready(function () {
     function displaySemesterContent(semesterId, data) {
         const semester = semestersData.find(s => s.id == semesterId);
         const canActivate = semester.status === 'upcoming';
-        const canArchive = semester.status === 'upcoming';
+        const canComplete = semester.status === 'active';
         
         let html = `
             <!-- Actions -->
-            ${canActivate || canArchive ? `
-                <div class="mb-3 text-right">
-                    ${canActivate ? `
-                        <button class="btn btn-primary activate-sem" data-id="${semesterId}">
-                            <i class="fas fa-play"></i> Activate
-                        </button>
-                    ` : ''}
-                    ${canArchive ? `
-                        <button class="btn btn-secondary archive-sem" data-id="${semesterId}">
-                            <i class="fas fa-archive"></i> Archive
-                        </button>
-                    ` : ''}
-                </div>
-            ` : ''}
+            <div class="mb-3 text-right">
+                ${canActivate ? `
+                    <button class="btn btn-primary activate-sem" data-id="${semesterId}">
+                        <i class="fas fa-play"></i> Activate
+                    </button>
+                ` : ''}
+                ${canComplete ? `
+                    <button class="btn btn-secondary complete-sem" data-id="${semesterId}">
+                        <i class="fas fa-check-circle"></i> Complete
+                    </button>
+                ` : ''}
+                <button class="btn btn-primary enroll-to-sem" data-semester-id="${semesterId}">
+                    <i class="fas fa-user-plus"></i> Enroll Students
+                </button>
+            </div>
 
             <!-- Sections -->
             ${buildSectionsTable(semesterId, data.sections)}
@@ -198,12 +204,105 @@ $(document).ready(function () {
             activateSemester($(this).data('id'));
         });
 
-        $('.archive-sem').click(function() {
-            archiveSemester($(this).data('id'));
+        $('.complete-sem').click(function() {
+            completeSemester($(this).data('id'));
         });
 
         $('.section-row').click(function() {
             toggleSectionDetails($(this));
+        });
+
+        // NEW: Enrollment button handler
+        $('.enroll-to-sem').click(function() {
+            const targetSemId = $(this).data('semester-id');
+            openEnrollmentWizard(targetSemId);
+        });
+    }
+
+    // NEW: Function to determine source semester and open wizard
+    function openEnrollmentWizard(targetSemesterId) {
+        const targetSemester = semestersData.find(s => s.id == targetSemesterId);
+        
+        if (!targetSemester) {
+            showToast('error', 'Target semester not found');
+            return;
+        }
+
+        // Get semester details with source determination
+        $.ajax({
+            url: API_ROUTES.getPreviousSemester.replace(':id', targetSemesterId),
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const sourceSem = response.source_semester;
+                    const targetSem = response.target_semester;
+
+                    if (!sourceSem) {
+                        showToast('warning', 'No source semester found for enrollment');
+                        return;
+                    }
+
+                    // Set wizard data
+                    wizard.sourceSemesterId = sourceSem.id;
+                    wizard.targetSemesterId = targetSem.id;
+
+                    // Set the semester data for display
+                    sourceSemesterData = {
+                        id: sourceSem.id,
+                        semester_name: sourceSem.name,
+                        year_code: sourceSem.year_code,
+                        status: sourceSem.status
+                    };
+
+                    targetSemesterData = {
+                        id: targetSem.id,
+                        semester_name: targetSem.name,
+                        year_code: targetSem.year_code,
+                        status: targetSem.status
+                    };
+
+                    resetWizard();
+                    $('#quickEnrollModal').modal('show');
+                }
+            },
+            error: function(xhr) {
+                showToast('error', xhr.responseJSON?.message || 'Failed to get semester info');
+            }
+        });
+    }
+
+    function completeSemester(id) {
+        const semester = semestersData.find(s => s.id == id);
+
+        Swal.fire({
+            title: 'Complete Semester?',
+            html: `
+                <p>Mark <strong>${semester.name}</strong> as completed?</p>
+                <p class="small text-muted">This will mark the semester as finished and preserve all data</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, complete',
+            confirmButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const url = API_ROUTES.completeSemester.replace(':id', id);
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
+                    success: function (response) {
+                        if (response.success) {
+                            showToast('success', 'Semester completed');
+                            loadArchiveInfo();
+                        }
+                    },
+                    error: function (xhr) {
+                        showToast('error', xhr.responseJSON?.message || 'Failed');
+                    }
+                });
+            }
         });
     }
 
@@ -342,7 +441,7 @@ $(document).ready(function () {
         if (maleStudents.length > 0) {
             html += `
                 <div class="mb-3">
-                    <h6 class="text-muted mb-2">
+                    <h6 class="bg-primary text-white mb-2 p-2 rounded">
                         <i class="fas fa-mars"></i> Male (${maleStudents.length})
                     </h6>
                     <div class="row">
@@ -360,7 +459,7 @@ $(document).ready(function () {
         if (femaleStudents.length > 0) {
             html += `
                 <div class="mb-3">
-                    <h6 class="text-muted mb-2">
+                    <h6 class="bg-primary text-white mb-2 p-2 rounded">
                         <i class="fas fa-venus"></i> Female (${femaleStudents.length})
                     </h6>
                     <div class="row">
@@ -381,19 +480,6 @@ $(document).ready(function () {
     // =========================================================================
     // ENROLLMENT WIZARD
     // =========================================================================
-    
-    $('#quickEnrollBtn').click(function() {
-        if (!wizard.targetSemesterId) {
-            showToast('warning', 'No target semester available for enrollment');
-            return;
-        }
-        if (!wizard.sourceSemesterId) {
-            showToast('warning', 'No active semester found as source');
-            return;
-        }
-        resetWizard();
-        $('#quickEnrollModal').modal('show');
-    });
 
     function resetWizard() {
         wizard = {
@@ -434,7 +520,7 @@ $(document).ready(function () {
     function displaySourceSemesterInfo() {
         if (!sourceSemesterData) {
             $('#sourceSemesterDisplay').html(`
-                <span class="text-muted"><i class="fas fa-exclamation-circle"></i> No active semester found</span>
+                <span class="text-muted"><i class="fas fa-exclamation-circle"></i> No source semester found</span>
             `);
             return;
         }
@@ -487,18 +573,27 @@ $(document).ready(function () {
         }
     }).on('select2:select', function(e) {
         wizard.sourceSection = e.params.data.id;
-        loadWizardStudents();
+        
+        // Close the dropdown first
+        $(this).select2('close');
+        
+        // Small delay to let dropdown fully close, then load students
+        setTimeout(function() {
+            loadWizardStudents();
+        }, 150);
+        
     }).on('select2:clear', function() {
         wizard.sourceSection = null;
-        $('#studentSelectionArea').hide();
+        $('#studentSelectionArea').slideUp(200);
         $('#btnStep1Next').prop('disabled', true);
     });
 
     function loadWizardStudents() {
-        $('#studentSelectionArea').show();
+        $('#studentSelectionArea').slideDown(300);
+        
         $('#qe_studentList').html(`
             <tr>
-                <td colspan="5" class="text-center py-4">
+                <td colspan="6" class="text-center py-4">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Loading students...</p>
                 </td>
@@ -511,19 +606,23 @@ $(document).ready(function () {
             data: {
                 _token: API_ROUTES.csrfToken,
                 source_section_id: wizard.sourceSection,
-                source_semester_id: wizard.sourceSemesterId
+                source_semester_id: wizard.sourceSemesterId,
+                target_semester_id: wizard.targetSemesterId
             },
             success: function(response) {
                 if (response.success) {
-                    wizard.students = response.students.map(s => ({...s, selected: true}));
-                    wizard.selectedStudents = [...wizard.students];
+                    wizard.students = response.students.map(s => ({
+                        ...s, 
+                        selected: !s.already_enrolled
+                    }));
+                    wizard.selectedStudents = wizard.students.filter(s => s.selected);
                     displayWizardStudents();
                     loadSectionDetailsForWizard();
                 }
             },
             error: function() {
                 showToast('error', 'Failed to load students');
-                $('#studentSelectionArea').hide();
+                $('#studentSelectionArea').slideUp(200);
             }
         });
     }
@@ -548,33 +647,57 @@ $(document).ready(function () {
     function displayWizardStudents() {
         if (wizard.students.length === 0) {
             $('#qe_studentList').html(`
-                <tr><td colspan="5" class="text-center text-muted py-4">No students found</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">No students found</td></tr>
             `);
             $('#btnStep1Next').prop('disabled', true);
             return;
+        }
+
+        // Remove old warning if exists
+        $('#enrollmentWarning').remove();
+        
+        // Add warning for already enrolled
+        const alreadyEnrolledCount = wizard.students.filter(s => s.already_enrolled).length;
+        
+        if (alreadyEnrolledCount > 0) {
+            $('#studentSelectionArea').prepend(`
+                <div class="alert alert-warning alert-dismissible fade show" id="enrollmentWarning">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> ${alreadyEnrolledCount} student(s) are already enrolled in the target semester.
+                    They are automatically deselected.
+                </div>
+            `);
         }
 
         let html = '';
         wizard.students.forEach((s, i) => {
             const fullName = `${s.last_name}, ${s.first_name} ${s.middle_name || ''}`.trim();
             const genderIcon = s.gender === 'Male' ? 'fa-mars' : 'fa-venus';
+            const isEnrolled = s.already_enrolled;
+            const rowClass = isEnrolled ? 'table-warning' : '';
             
             html += `
-                <tr class="student-row" data-index="${i}" data-gender="${s.gender.toLowerCase()}">
+                <tr class="student-row ${rowClass}" data-index="${i}" data-gender="${s.gender.toLowerCase()}">
                     <td>
-                        <input type="checkbox" class="student-checkbox" ${s.selected ? 'checked' : ''}>
+                        <input type="checkbox" class="student-checkbox" 
+                               ${s.selected ? 'checked' : ''} 
+                               ${isEnrolled ? 'disabled' : ''}>
                     </td>
                     <td>${s.student_number}</td>
                     <td>${fullName}</td>
                     <td><i class="fas ${genderIcon}"></i> ${s.gender}</td>
                     <td><span class="badge badge-secondary">${s.student_type}</span></td>
+                    <td>
+                        ${isEnrolled ? '<span class="badge badge-warning"><i class="fas fa-check"></i> Already Enrolled</span>' : ''}
+                    </td>
                 </tr>
             `;
         });
 
         $('#qe_studentList').html(html);
         updateStudentCount();
-        $('#btnStep1Next').prop('disabled', false);
+        $('#btnStep1Next').prop('disabled', wizard.selectedStudents.length === 0);
     }
 
     $(document).on('change', '.student-checkbox', function() {
@@ -585,19 +708,23 @@ $(document).ready(function () {
 
     $('#selectAllCheckbox').change(function() {
         const checked = $(this).is(':checked');
-        $('.student-checkbox:visible').prop('checked', checked);
+        $('.student-checkbox:visible:not(:disabled)').prop('checked', checked);
         $('.student-row:visible').each(function() {
             const index = $(this).data('index');
-            wizard.students[index].selected = checked;
+            if (!wizard.students[index].already_enrolled) {
+                wizard.students[index].selected = checked;
+            }
         });
         updateSelectedStudents();
     });
 
     $('#qe_selectAll').click(function() {
-        $('.student-checkbox:visible').prop('checked', true);
+        $('.student-checkbox:visible:not(:disabled)').prop('checked', true);
         $('.student-row:visible').each(function() {
             const index = $(this).data('index');
-            wizard.students[index].selected = true;
+            if (!wizard.students[index].already_enrolled) {
+                wizard.students[index].selected = true;
+            }
         });
         updateSelectedStudents();
     });
@@ -638,7 +765,7 @@ $(document).ready(function () {
     });
 
     function updateSelectAllCheckbox() {
-        const visibleCheckboxes = $('.student-checkbox:visible');
+        const visibleCheckboxes = $('.student-checkbox:visible:not(:disabled)');
         const checkedCheckboxes = $('.student-checkbox:visible:checked');
         $('#selectAllCheckbox').prop('checked', visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedCheckboxes.length);
     }
@@ -652,7 +779,7 @@ $(document).ready(function () {
 
     function updateStudentCount() {
         const count = wizard.selectedStudents.length;
-        const total = wizard.students.length;
+        const total = wizard.students.filter(s => !s.already_enrolled).length;
         $('#qe_studentCount').text(`${count} / ${total} selected`);
     }
 
@@ -862,16 +989,31 @@ $(document).ready(function () {
             },
             success: function(response) {
                 if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: `${response.enrolled} students enrolled`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        $('#quickEnrollModal').modal('hide');
-                        loadArchiveInfo();
-                    });
+                    if (response.skipped > 0) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Enrollment Complete',
+                            html: `
+                                <p><strong>${response.enrolled}</strong> students enrolled successfully</p>
+                                <p class="text-warning"><strong>${response.skipped}</strong> students were already enrolled (skipped)</p>
+                            `,
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            $('#quickEnrollModal').modal('hide');
+                            loadArchiveInfo();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: `${response.enrolled} students enrolled`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            $('#quickEnrollModal').modal('hide');
+                            loadArchiveInfo();
+                        });
+                    }
                 }
             },
             error: function(xhr) {
@@ -885,7 +1027,7 @@ $(document).ready(function () {
     }
 
     // =========================================================================
-    // ACTIVATE/ARCHIVE
+    // ACTIVATE/COMPLETE
     // =========================================================================
     
     function activateSemester(id) {
@@ -912,41 +1054,6 @@ $(document).ready(function () {
                     success: function (response) {
                         if (response.success) {
                             showToast('success', 'Semester activated');
-                            loadArchiveInfo();
-                        }
-                    },
-                    error: function (xhr) {
-                        showToast('error', xhr.responseJSON?.message || 'Failed');
-                    }
-                });
-            }
-        });
-    }
-
-    function archiveSemester(id) {
-        const semester = semestersData.find(s => s.id == id);
-
-        Swal.fire({
-            title: 'Archive Semester?',
-            html: `
-                <p>Archive <strong>${semester.name}</strong>?</p>
-                <p class="small text-muted">Data will be preserved but marked as completed</p>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, archive',
-            confirmButtonColor: '#6c757d'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const url = API_ROUTES.archiveSemester.replace(':id', id);
-
-                $.ajax({
-                    url: url,
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': API_ROUTES.csrfToken },
-                    success: function (response) {
-                        if (response.success) {
-                            showToast('success', 'Semester archived');
                             loadArchiveInfo();
                         }
                     },

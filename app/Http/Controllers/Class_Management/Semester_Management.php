@@ -23,70 +23,9 @@ class Semester_Management extends MainController
                 ->with('error', 'Please select a school year first');
         }
 
-        // Get current school year
-        $currentSchoolYear = DB::table('school_years')->where('id', $schoolYearId)->first();
-        
-        // Get SOURCE semester (active or most recent completed)
-        $sourceSemester = DB::table('semesters as s')
-            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-            ->select(
-                's.id',
-                's.name as semester_name',
-                'sy.code as year_code',
-                's.status',
-                's.code as semester_code',
-                's.school_year_id'
-            )
-            ->where(function($query) use ($currentSchoolYear) {
-                // Current school year's active semester
-                $query->where(function($q) use ($currentSchoolYear) {
-                    $q->where('s.school_year_id', $currentSchoolYear->id)
-                      ->where('s.status', 'active');
-                });
-                
-                // If no active, get most recent completed
-                $query->orWhere(function($q) use ($currentSchoolYear) {
-                    $q->where('s.school_year_id', $currentSchoolYear->id)
-                      ->where('s.status', 'completed')
-                      ->orderBy('s.code', 'desc');
-                });
-
-                // Previous school year's 2nd semester
-                $query->orWhere(function($q) use ($currentSchoolYear) {
-                    $q->where('sy.year_start', $currentSchoolYear->year_start - 1)
-                      ->where('s.code', '2nd')
-                      ->where('s.status', 'completed');
-                });
-            })
-            ->orderByRaw("FIELD(s.status, 'active', 'completed')")
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('s.code', 'desc')
-            ->first();
-
-        // Get target semester (upcoming or next active)
-        $targetSemester = DB::table('semesters as s')
-            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-            ->select(
-                's.id',
-                's.name as semester_name',
-                'sy.code as year_code',
-                's.status',
-                's.code as semester_code'
-            )
-            ->where('s.school_year_id', $schoolYearId)
-            ->where(function($query) {
-                $query->where('s.status', 'upcoming')
-                      ->orWhere('s.status', 'active');
-            })
-            ->orderByRaw("FIELD(s.status, 'upcoming', 'active')")
-            ->orderBy('s.code')
-            ->first();
-
         $data = [
             'scripts' => ['class_management/semester_management.js'],
-            'school_year_id' => $schoolYearId,
-            'source_semester' => $sourceSemester,
-            'target_semester' => $targetSemester
+            'school_year_id' => $schoolYearId
         ];
 
         return view('admin.class_management.semester_management', $data);
@@ -324,82 +263,218 @@ class Semester_Management extends MainController
         }
     }
 
-    public function archiveSemester($id)
-    {
-        try {
-            $semester = DB::table('semesters')->where('id', $id)->first();
+public function completeSemester($id)  // RENAME from archiveSemester
+{
+    try {
+        $semester = DB::table('semesters')->where('id', $id)->first();
 
-            if (!$semester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Semester not found.'
-                ], 404);
-            }
-
-            if ($semester->status === 'active') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Cannot archive active semester.'
-                ], 422);
-            }
-
-            $schoolYear = DB::table('school_years')
-                ->where('id', $semester->school_year_id)
-                ->first();
-
-            DB::beginTransaction();
-
-            DB::table('semesters')
-                ->where('id', $id)
-                ->update([
-                    'status' => 'completed',
-                    'updated_at' => now()
-                ]);
-
-            // Check if all semesters are completed
-            $remainingActive = DB::table('semesters')
-                ->where('school_year_id', $semester->school_year_id)
-                ->where('status', '!=', 'completed')
-                ->count();
-
-            if ($remainingActive === 0) {
-                DB::table('school_years')
-                    ->where('id', $semester->school_year_id)
-                    ->update([
-                        'status' => 'completed',
-                        'updated_at' => now()
-                    ]);
-            }
-
-            $this->logAudit(
-                'archived',
-                'semesters',
-                (string)$id,
-                "Archived {$semester->name} for school year {$schoolYear->code}",
-                ['status' => $semester->status],
-                ['status' => 'completed']
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Semester archived successfully!'
-            ]);
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            \Log::error('Failed to archive semester', [
-                'semester_id' => $id,
-                'error' => $e->getMessage()
-            ]);
-
+        if (!$semester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to archive semester.'
-            ], 500);
+                'message' => 'Semester not found.'
+            ], 404);
         }
+
+        // CHANGE: Only allow completing active semesters
+        if ($semester->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only active semesters can be completed.'
+            ], 422);
+        }
+
+        $schoolYear = DB::table('school_years')
+            ->where('id', $semester->school_year_id)
+            ->first();
+
+        $adminId = Auth::guard('admin')->id();
+
+        DB::beginTransaction();
+
+        // UPDATE: Add completed_by and completed_at
+        DB::table('semesters')
+            ->where('id', $id)
+            ->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'completed_by' => $adminId,
+                'updated_at' => now()
+            ]);
+
+        // Check if all semesters are completed
+        $remainingActive = DB::table('semesters')
+            ->where('school_year_id', $semester->school_year_id)
+            ->whereIn('status', ['active', 'upcoming'])
+            ->count();
+
+        if ($remainingActive === 0) {
+            // UPDATE: Add completed_by and completed_at for school year
+            DB::table('school_years')
+                ->where('id', $semester->school_year_id)
+                ->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                    'completed_by' => $adminId,
+                    'updated_at' => now()
+                ]);
+        }
+
+        $this->logAudit(
+            'completed',
+            'semesters',
+            (string)$id,
+            "Completed {$semester->name} for school year {$schoolYear->code}",
+            ['status' => $semester->status],
+            ['status' => 'completed', 'completed_by' => $adminId, 'completed_at' => now()]
+        );
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semester completed successfully!'
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to complete semester', [
+            'semester_id' => $id,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to complete semester.'
+        ], 500);
     }
+}
+
+
+public function getPreviousSemester($targetSemesterId)
+{
+    try {
+        // Get target semester with school year info
+        $targetSemester = DB::table('semesters as s')
+            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+            ->where('s.id', $targetSemesterId)
+            ->select(
+                's.id',
+                's.name',
+                's.code',
+                's.status',
+                's.school_year_id',
+                'sy.code as year_code',
+                'sy.year_start',
+                'sy.year_end'
+            )
+            ->first();
+
+        if (!$targetSemester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Target semester not found.'
+            ], 404);
+        }
+
+        $sourceSemester = null;
+
+        // Try multiple strategies to find a source semester
+        
+        // Strategy 1: If target is 2nd semester, get 1st semester of same year
+        if ($targetSemester->code === '2nd') {
+            $sourceSemester = DB::table('semesters as s')
+                ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+                ->where('s.school_year_id', $targetSemester->school_year_id)
+                ->where('s.code', '1st')
+                ->select(
+                    's.id',
+                    's.name',
+                    's.code',
+                    's.status',
+                    'sy.code as year_code'
+                )
+                ->first();
+        }
+        
+        // Strategy 2: If target is 1st semester OR no source found yet, get 2nd semester of previous year
+        if (!$sourceSemester) {
+            $sourceSemester = DB::table('semesters as s')
+                ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+                ->where('sy.year_start', '<', $targetSemester->year_start)
+                ->where('s.code', '2nd')
+                ->select(
+                    's.id',
+                    's.name',
+                    's.code',
+                    's.status',
+                    'sy.code as year_code'
+                )
+                ->orderBy('sy.year_start', 'desc')
+                ->first();
+        }
+        
+        // Strategy 3: Get ANY semester before the target (fallback)
+        if (!$sourceSemester) {
+            $sourceSemester = DB::table('semesters as s')
+                ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+                ->where(function($query) use ($targetSemester) {
+                    $query->where('sy.year_start', '<', $targetSemester->year_start)
+                          ->orWhere(function($q) use ($targetSemester) {
+                              $q->where('sy.year_start', '=', $targetSemester->year_start)
+                                ->where('s.code', '<', $targetSemester->code);
+                          });
+                })
+                ->select(
+                    's.id',
+                    's.name',
+                    's.code',
+                    's.status',
+                    'sy.code as year_code'
+                )
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('s.code', 'desc')
+                ->first();
+        }
+        
+        // Strategy 4: If still no source, allow selecting from same semester (for testing/special cases)
+        if (!$sourceSemester) {
+            $sourceSemester = DB::table('semesters as s')
+                ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+                ->where('s.id', $targetSemesterId)
+                ->select(
+                    's.id',
+                    's.name',
+                    's.code',
+                    's.status',
+                    'sy.code as year_code'
+                )
+                ->first();
+        }
+
+        return response()->json([
+            'success' => true,
+            'source_semester' => $sourceSemester,
+            'target_semester' => [
+                'id' => $targetSemester->id,
+                'name' => $targetSemester->name,
+                'code' => $targetSemester->code,
+                'status' => $targetSemester->status,
+                'year_code' => $targetSemester->year_code
+            ]
+        ]);
+    } catch (Exception $e) {
+        \Log::error('Failed to get previous semester', [
+            'target_semester_id' => $targetSemesterId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to determine source semester.'
+        ], 500);
+    }
+}
 
     // Quick Enrollment Methods
     public function searchSections(Request $request)
@@ -442,6 +517,7 @@ class Semester_Management extends MainController
         try {
             $sourceSectionId = $request->input('source_section_id');
             $sourceSemesterId = $request->input('source_semester_id');
+            $targetSemesterId = $request->input('target_semester_id');
 
             // Always load students enrolled in the source semester
             $students = DB::table('students as s')
@@ -460,6 +536,25 @@ class Semester_Management extends MainController
                 ->orderBy('s.last_name')
                 ->orderBy('s.first_name')
                 ->get();
+
+            // Check which students are already enrolled in target semester
+            if ($targetSemesterId) {
+                $alreadyEnrolled = DB::table('student_semester_enrollment')
+                    ->where('semester_id', $targetSemesterId)
+                    ->where('enrollment_status', 'enrolled')
+                    ->pluck('student_number')
+                    ->toArray();
+
+                $students = $students->map(function($student) use ($alreadyEnrolled) {
+                    $student->already_enrolled = in_array($student->student_number, $alreadyEnrolled);
+                    return $student;
+                });
+            } else {
+                $students = $students->map(function($student) {
+                    $student->already_enrolled = false;
+                    return $student;
+                });
+            }
 
             return response()->json([
                 'success' => true,
@@ -619,89 +714,122 @@ class Semester_Management extends MainController
     }
 
     public function enrollStudents(Request $request)
-    {
-        try {
-            $semesterId = $request->input('semester_id');
-            $sectionId = $request->input('section_id');
-            $students = $request->input('students', []);
+{
+    try {
+        $semesterId = $request->input('semester_id');
+        $sectionId = $request->input('section_id');
+        $students = $request->input('students', []);
 
-            if (empty($students)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No students to enroll.'
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            $enrolledCount = 0;
-            $errors = [];
-
-            foreach ($students as $studentData) {
-                try {
-                    // Update student record
-                    DB::table('students')
-                        ->where('student_number', $studentData['student_number'])
-                        ->update([
-                            'section_id' => $studentData['new_section_id'],
-                            'student_type' => $studentData['student_type'],
-                            'updated_at' => now()
-                        ]);
-
-                    // Create or update semester enrollment
-                    DB::table('student_semester_enrollment')->updateOrInsert(
-                        [
-                            'student_number' => $studentData['student_number'],
-                            'semester_id' => $semesterId
-                        ],
-                        [
-                            'section_id' => $studentData['new_section_id'],
-                            'enrollment_status' => 'enrolled',
-                            'enrollment_date' => now(),
-                            'updated_at' => now(),
-                            'created_at' => DB::raw('COALESCE(created_at, NOW())')
-                        ]
-                    );
-
-                    $enrolledCount++;
-                } catch (Exception $e) {
-                    $errors[] = "Failed to enroll {$studentData['student_number']}: " . $e->getMessage();
-                }
-            }
-
-            if ($enrolledCount > 0) {
-                $this->logAudit(
-                    'enrolled',
-                    'student_enrollment',
-                    (string)$semesterId,
-                    "Bulk enrolled {$enrolledCount} student(s) to semester",
-                    null,
-                    [
-                        'semester_id' => $semesterId,
-                        'section_id' => $sectionId,
-                        'count' => $enrolledCount
-                    ]
-                );
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'enrolled' => $enrolledCount,
-                'errors' => $errors
-            ]);
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            \Log::error('Failed to enroll students', [
-                'error' => $e->getMessage()
-            ]);
-
+        if (empty($students)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to enroll students.'
-            ], 500);
+                'message' => 'No students to enroll.'
+            ], 422);
         }
+
+        // Check for existing enrollments
+        $studentNumbers = array_column($students, 'student_number');
+        $existingEnrollments = DB::table('student_semester_enrollment')
+            ->where('semester_id', $semesterId)
+            ->where('enrollment_status', 'enrolled')
+            ->whereIn('student_number', $studentNumbers)
+            ->pluck('student_number')
+            ->toArray();
+
+        // Filter out already enrolled students
+        $studentsToEnroll = array_filter($students, function($student) use ($existingEnrollments) {
+            return !in_array($student['student_number'], $existingEnrollments);
+        });
+
+        if (empty($studentsToEnroll)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'All selected students are already enrolled in this semester.',
+                'already_enrolled' => $existingEnrollments
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        $enrolledCount = 0;
+        $skippedCount = count($existingEnrollments);
+        $errors = [];
+
+        foreach ($studentsToEnroll as $studentData) {
+            try {
+                // Update student record
+                DB::table('students')
+                    ->where('student_number', $studentData['student_number'])
+                    ->update([
+                        'section_id' => $studentData['new_section_id'],
+                        'student_type' => $studentData['student_type'],
+                        'updated_at' => now()
+                    ]);
+
+                // Create semester enrollment
+                $inserted = DB::table('student_semester_enrollment')->insert([
+                    'student_number' => $studentData['student_number'],
+                    'semester_id' => $semesterId,
+                    'section_id' => $studentData['new_section_id'],
+                    'enrollment_status' => 'enrolled',
+                    'enrollment_date' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                if ($inserted) {
+                    $enrolledCount++;
+                }
+            } catch (Exception $e) {
+                $errors[] = "Failed to enroll {$studentData['student_number']}: " . $e->getMessage();
+            }
+        }
+
+        if ($enrolledCount > 0) {
+            $this->logAudit(
+                'enrolled',
+                'student_enrollment',
+                (string)$semesterId,
+                "Bulk enrolled {$enrolledCount} student(s) to semester" . 
+                ($skippedCount > 0 ? " ({$skippedCount} already enrolled, skipped)" : ""),
+                null,
+                [
+                    'semester_id' => $semesterId,
+                    'section_id' => $sectionId,
+                    'enrolled' => $enrolledCount,
+                    'skipped' => $skippedCount,
+                    'skipped_students' => $existingEnrollments
+                ]
+            );
+        }
+
+        DB::commit();
+
+        $message = "{$enrolledCount} student(s) enrolled successfully";
+        if ($skippedCount > 0) {
+            $message .= ". {$skippedCount} already enrolled (skipped)";
+        }
+
+        return response()->json([
+            'success' => true,
+            'enrolled' => $enrolledCount,
+            'skipped' => $skippedCount,
+            'skipped_students' => $existingEnrollments,
+            'errors' => $errors,
+            'message' => $message
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to enroll students', [
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to enroll students.'
+        ], 500);
     }
+}
+
 }

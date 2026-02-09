@@ -16,7 +16,7 @@ $(document).ready(function() {
 
     dataTable = $('#classesTable').DataTable({
         ajax: {
-            url: API_ROUTES.getClassesList, // Add this route
+            url: API_ROUTES.getClassesList,
             dataSrc: 'data'
         },
         columns: [
@@ -24,6 +24,20 @@ $(document).ready(function() {
                 data: 'class_name',
                 render: function(data, type, row) {
                     return data;
+                }
+            },
+            { 
+                data: 'class_category',
+                render: function(data) {
+                    let badgeClass = 'badge-secondary';
+                    if (data === 'CORE SUBJECT') {
+                        badgeClass = 'badge-primary';
+                    } else if (data === 'APPLIED SUBJECT') {
+                        badgeClass = 'badge-secondary';
+                    } else if (data === 'SPECIALIZED SUBJECT') {
+                        badgeClass = 'badge-secondary';
+                    }
+                    return '<span class="badge ' + badgeClass + '">' + data + '</span>';
                 }
             },
             { 
@@ -54,9 +68,16 @@ $(document).ready(function() {
                 }
             }
         ],
+        columnDefs: [
+            { width: '30%', targets: 0 },
+            { width: '15%', targets: 1 },
+            { width: '13%', targets: 2 },
+            { width: '13%', targets: 3 },
+            { width: '13%', targets: 4 },
+            { width: '10%', targets: 5 }
+        ],
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        scrollX: true,
         autoWidth: false,
         order: [[0, 'asc']],
         searching: true,
@@ -158,6 +179,8 @@ $(document).ready(function() {
         $('#classForm')[0].reset();
         $('#class_id').val('');
         $('#class_code').val('');
+        $('#class_name').val('');
+        $('#class_category').val('CORE SUBJECT');
         $('#ww_perc').val(30);
         $('#pt_perc').val(50);
         $('#qa_perce').val(20);
@@ -199,6 +222,7 @@ $(document).ready(function() {
                     $('#class_id').val(classData.id);
                     $('#class_code').val(classData.class_code);
                     $('#class_name').val(classData.class_name);
+                    $('#class_category').val(classData.class_category);
                     $('#ww_perc').val(classData.ww_perc);
                     $('#pt_perc').val(classData.pt_perc);
                     $('#qa_perce').val(classData.qa_perce);
@@ -249,7 +273,7 @@ $(document).ready(function() {
         }
 
         // Check required fields
-        if (!$('#class_name').val().trim()) {
+        if (!$('#class_name').val().trim() || !$('#class_category').val()) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Missing Data',
@@ -290,8 +314,7 @@ $(document).ready(function() {
                         confirmButtonText: 'OK'
                     }).then(() => {
                         $('#classModal').modal('hide');
-                        // Reload DataTable data via AJAX
-                        dataTable.ajax.reload(null, false); // false = stay on current page
+                        dataTable.ajax.reload(null, false);
                     });
                 } else {
                     Swal.fire({

@@ -56,6 +56,7 @@ CREATE TABLE `classes` (
   `id` int(11) NOT NULL,
   `class_code` varchar(100) NOT NULL,
   `class_name` varchar(250) NOT NULL,
+  `class_category` enum('CORE SUBJECT','APPLIED SUBJECT','SPECIALIZED SUBJECT') NOT NULL DEFAULT 'CORE SUBJECT',
   `ww_perc` int(11) NOT NULL,
   `pt_perc` int(11) NOT NULL,
   `qa_perce` int(11) NOT NULL,
@@ -280,6 +281,17 @@ CREATE TABLE `section_class_matrix` (
   `semester_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `section_adviser_matrix` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `section_id` bigint(20) UNSIGNED NOT NULL,
+  `teacher_id` bigint(20) UNSIGNED NOT NULL,
+  `semester_id` int(11) NOT NULL,
+  `assigned_date` date NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `semesters` (

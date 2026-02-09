@@ -105,9 +105,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/semester-details/{id}', [Semester_Management::class, 'getSemesterDetails'])->name('semester-details');
             Route::get('/section-students/{semesterId}/{sectionId}', [Semester_Management::class, 'getSectionStudents'])->name('section-students');
             
+            Route::get('/archive/get-previous-semester/{id}', [Semester_Management::class, 'getPreviousSemester'])
+            ->name('get-previous-semester');
+
             // Archive Actions
-            Route::post('/semester/{id}', [Semester_Management::class, 'archiveSemester'])->name('semester');
-            
+            Route::post('/semester/{id}/complete', [Semester_Management::class, 'completeSemester'])->name('complete-semester');            
             // Quick Enrollment Routes
             Route::get('/search-sections', [Semester_Management::class, 'searchSections'])->name('search-sections');
             Route::post('/load-students', [Semester_Management::class, 'loadStudentsFromSection'])->name('load-students');
@@ -149,9 +151,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::prefix('audit')->name('audit.')->group(function () {
             // Admin Audit Logs
-    Route::get('/admin', [AuditLogController::class, 'adminIndex'])->name('admin.index');
-    Route::get('/admin/data', [AuditLogController::class, 'getAdminLogs'])->name('admin.data');
-    Route::get('/admin/details/{id}', [AuditLogController::class, 'getLogDetails'])->name('admin.details');
+        Route::get('/admin', [AuditLogController::class, 'adminIndex'])->name('admin.index');
+        Route::get('/admin/data', [AuditLogController::class, 'getAdminLogs'])->name('admin.data');
+        Route::get('/admin/details/{id}', [AuditLogController::class, 'getLogDetails'])->name('admin.details');
 
             // Teacher Audit Logs
             Route::get('/teachers', [AuditLogController::class, 'teacherIndex'])->name('teachers.index');
@@ -168,6 +170,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/login/data', [AuditLogController::class, 'getLoginLogs'])->name('login.data');
             Route::get('/login/{id}', [AuditLogController::class, 'getLoginDetails'])->name('login.details');
         });
+
+
         Route::get('/profile/teacher/{id}/credentials', [Profile_Management::class, 'getCredentials'])
             ->middleware('auth:admin')
             ->name('teacher.credentials');
@@ -179,6 +183,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/section-assignment/get-sections', [Section_Management::class, 'get_sections'])
             ->name('section_assignment.get_sections');
 
+
         // Section Assignment Routes
         Route::get('/section_assignment/search_sections', [Section_Management::class, 'search_sections'])->name('section_assignment.search_sections');
         Route::get('/section_assignment/search_students', [Section_Management::class, 'search_students'])->name('section_assignment.search_students'); // Changed to GET
@@ -188,10 +193,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/section-adviser/get', [Section_Management::class, 'get_section_adviser'])->name('admin.section_adviser.get');
         Route::post('/section-adviser/save', [Section_Management::class, 'save_section_adviser'])->name('admin.section_adviser.save');
         Route::post('/section-adviser/search-teachers', [Section_Management::class, 'search_teachers'])->name('admin.section_adviser.search_teachers');
-
-
-
-
 
         Route::post('/section-assignment/get-section-details', [Section_Management::class, 'get_source_section_details'])
             ->name('section_assignment.get_section_details');
@@ -214,7 +215,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/sections/{sectionId}/classes/{classId}/grades', [SectionGrade_Management::class, 'getClassGrades'])
             ->name('sections.class-grades');
-
 
 
 
@@ -296,6 +296,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/sections/data', [Class_Management::class, 'getSectionsData'])->name('sections.data');
             Route::post('/sections/create', [Class_Management::class, 'createSection'])->name('sections.create');
             Route::put('/sections/update/{id}', [Class_Management::class, 'updateSection'])->name('sections.update');
+            
             Route::get('/sections/{id}/classes', [Class_Management::class, 'getSectionClasses'])->name('sections.classes');
             Route::get('/sections/{id}/available-classes', [Class_Management::class, 'getAvailableClasses'])->name('sections.available-classes');
             Route::post('/sections/assign-class', [Class_Management::class, 'assignClassToSection'])->name('sections.assign-class');

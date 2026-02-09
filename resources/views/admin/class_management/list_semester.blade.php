@@ -224,7 +224,7 @@
             <div class="card card-primary card-outline">
                 <div class="card-header">
                     <h3 class="card-title" id="detailsTitle">
-                        <i class="fas fa-graduation-cap"></i> Section Enrollment
+                        <i class="fas fa-graduation-cap"></i> Student List
                     </h3>
                     <div class="card-tools">
                         <span class="badge badge-primary mr-2" id="studentCount">0 Students</span>
