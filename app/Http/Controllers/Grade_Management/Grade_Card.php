@@ -343,7 +343,7 @@ class Grade_Card extends MainController
             // Get all enrolled subjects (with or without grades)
             $enrolled_subjects = $this->getEnrolledSubjects($studentNumber, $semesterId, $student->student_type);
 
-            // Get adviser name for regular students
+            // Get adviser name for regular students from section_adviser_matrix
             $adviser_name = null;
             if ($student->student_type === 'regular' && $student->section_id) {
                 $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
@@ -458,7 +458,7 @@ class Grade_Card extends MainController
             // Get all enrolled subjects (with or without grades)
             $enrolled_subjects = $this->getEnrolledSubjects($studentNumber, $semesterId, $student->student_type);
 
-            // Get adviser name for regular students
+            // Get adviser name for regular students from section_adviser_matrix
             $adviser_name = null;
             if ($student->student_type === 'regular' && $student->section_id) {
                 $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
@@ -568,11 +568,10 @@ class Grade_Card extends MainController
     }
 
     /**
-     * Get adviser name for a section
+     * Get adviser name for a section from section_adviser_matrix
      */
     private function getAdviserName($sectionId, $semesterId)
     {
-        // Get adviser from section_adviser_matrix
         $adviser = DB::table('section_adviser_matrix as sam')
             ->join('teachers as t', 'sam.teacher_id', '=', 't.id')
             ->where('sam.section_id', $sectionId)
@@ -590,6 +589,6 @@ class Grade_Card extends MainController
             return strtoupper(trim($adviser->first_name . ' ' . $middleInitial . ' ' . $adviser->last_name));
         }
 
-        return 'N/A';
+        return null;
     }
 }

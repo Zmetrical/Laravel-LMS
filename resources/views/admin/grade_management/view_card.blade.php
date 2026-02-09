@@ -246,13 +246,13 @@
                     <td class="info-label">NAME:</td>
                     <td class="info-value">{{ strtoupper($student->last_name) }}, {{ strtoupper($student->first_name) }} {{ strtoupper($student->middle_name) }}</td>
                     <td class="info-label">GRADE & SECTION:</td>
-                    <td class="info-value">{{ $student->section_code ?? 'IRREGULAR' }}</td>
+                    <td class="info-value">{{$student->level_name}} - {{ $student->section_name ?? 'IRREGULAR' }}</td>
                 </tr>
                 <tr>
                     <td class="info-label">TRACK AND STRAND:</td>
-                    <td class="info-value">{{ $student->strand_code ?? '' }} - {{ $student->level_name ?? '' }}</td>
+                    <td class="info-value">{{ $student->strand_code ?? '' }}</td>
                     <td class="info-label">ADVISER:</td>
-                    <td class="info-value">{{ $adviser_name ?? '' }}</td>
+                    <td class="info-value">{{ $adviser_name ?? 'N/A' }}</td>
                 </tr>
             </table>
         </div>
