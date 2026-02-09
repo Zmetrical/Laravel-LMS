@@ -525,6 +525,7 @@ class Grade_Card extends MainController
                     'c.id as class_id',
                     'c.class_code',
                     'c.class_name',
+                    'c.class_category',
                     'gf.q1_grade',
                     'gf.q2_grade',
                     'gf.final_grade',
@@ -532,6 +533,7 @@ class Grade_Card extends MainController
                     'gf.computed_at',
                     DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
                 )
+                ->orderBy('c.class_category')
                 ->orderBy('c.class_code')
                 ->get();
         } else {
@@ -551,6 +553,7 @@ class Grade_Card extends MainController
                     'c.id as class_id',
                     'c.class_code',
                     'c.class_name',
+                    'c.class_category',
                     'gf.q1_grade',
                     'gf.q2_grade',
                     'gf.final_grade',
@@ -558,6 +561,7 @@ class Grade_Card extends MainController
                     'gf.computed_at',
                     DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
                 )
+                ->orderBy('c.class_category')
                 ->orderBy('c.class_code')
                 ->get();
         }
@@ -568,12 +572,11 @@ class Grade_Card extends MainController
      */
     private function getAdviserName($sectionId, $semesterId)
     {
-        // Get first teacher assigned to any class in this section
-        $teacher = DB::table('section_class_matrix as scm')
-            ->join('teacher_class_matrix as tcm', 'scm.class_id', '=', 'tcm.class_id')
-            ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
-            ->where('scm.section_id', $sectionId)
-            ->where('scm.semester_id', $semesterId)
+        // Get adviser from section_adviser_matrix
+        $adviser = DB::table('section_adviser_matrix as sam')
+            ->join('teachers as t', 'sam.teacher_id', '=', 't.id')
+            ->where('sam.section_id', $sectionId)
+            ->where('sam.semester_id', $semesterId)
             ->where('t.status', 1)
             ->select(
                 't.first_name',
@@ -582,9 +585,9 @@ class Grade_Card extends MainController
             )
             ->first();
 
-        if ($teacher) {
-            $middleInitial = $teacher->middle_name ? strtoupper(substr($teacher->middle_name, 0, 1)) . '.' : '';
-            return strtoupper(trim($teacher->first_name . ' ' . $middleInitial . ' ' . $teacher->last_name));
+        if ($adviser) {
+            $middleInitial = $adviser->middle_name ? strtoupper(substr($adviser->middle_name, 0, 1)) . '.' : '';
+            return strtoupper(trim($adviser->first_name . ' ' . $middleInitial . ' ' . $adviser->last_name));
         }
 
         return 'N/A';

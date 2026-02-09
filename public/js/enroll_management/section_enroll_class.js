@@ -817,56 +817,56 @@ $(document).ready(function () {
         });
     });
 
-    $(document).on('click', '#removeAdviserBtn', function() {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Remove Adviser?',
-            text: 'Are you sure you want to remove this adviser from the section?',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, remove',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const btn = $('#removeAdviserBtn');
-                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
+$(document).on('click', '#removeAdviserBtn', function() {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Remove Adviser?',
+        text: 'Are you sure you want to remove this adviser from the section?',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, remove',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const btn = $('#removeAdviserBtn');
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
 
-                const url = API_ROUTES.removeAdviser.replace(':id', selectedSectionId);
+            const url = API_ROUTES.removeAdviser.replace(':id', selectedSectionId);
 
-                $.ajax({
-                    url: url,
-                    method: 'POST',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: response.message,
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            $('#assignAdviserModal').modal('hide');
-                            loadSectionAdviser(selectedSectionId);
-                        }
-                    },
-                    error: function(xhr) {
+            $.ajax({
+                url: url,
+                method: 'DELETE',  // ✅ Changed from POST to DELETE
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
                         Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: xhr.responseJSON?.message || 'Failed to remove adviser'
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
                         });
-                    },
-                    complete: function() {
-                        btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Adviser');
+                        $('#assignAdviserModal').modal('hide');
+                        loadSectionAdviser(selectedSectionId);
                     }
-                });
-            }
-        });
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: xhr.responseJSON?.message || 'Failed to remove adviser'
+                    });
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Adviser');
+                }
+            });
+        }
     });
+});
 
     $('#assignAdviserModal').on('hidden.bs.modal', function() {
         if ($('#adviserTeacherSelect').hasClass('select2-hidden-accessible')) {

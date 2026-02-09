@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
@@ -60,7 +60,6 @@
                                 <div class="col-md-9">
                                     <h4 class="mb-1" id="selectedClassName"><i class="fas fa-book-open"></i> </h4>
                                 </div>
-
                             </div>
                         </div>
                     </div>
@@ -81,7 +80,7 @@
                                     </span>
                                 </div>
 
-                                <!-- Enrolled Sections -->
+                                <!-- Enrolled Sections (Current Semester Only) -->
                                 <div class="p-2" style="flex: 1 1 40%;" id="enrolledSectionsContainer">
                                     <div class="text-center text-muted py-2">
                                         <i class="fas fa-spinner fa-spin"></i> Loading sections...
@@ -96,11 +95,8 @@
                                 </div>
 
                             </div>
-
                         </div>
                     </div>
-
-
 
                     <!-- Students Table -->
                     <div class="card card-primary">
@@ -201,7 +197,7 @@
                         <div class="card card-outline card-primary">
                             <div class="card-header">
                                 <h6 class="card-title mb-0">
-                                    <i class="fas fa-user-circle"></i> Assign
+                                    <i class="fas fa-user-circle"></i> Current Assignment
                                 </h6>
                             </div>
                             <div class="card-body">
@@ -238,7 +234,7 @@
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     
     <script>
         const API_ROUTES = {

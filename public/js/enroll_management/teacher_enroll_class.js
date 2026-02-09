@@ -5,13 +5,18 @@ $(document).ready(function() {
     let allSections = [];
     let allTeachers = [];
 
-    // Configure toastr
-    toastr.options = {
-        closeButton: true,
-        progressBar: true,
-        positionClass: 'toast-top-right',
-        timeOut: 3000
-    };
+    // Configure SweetAlert2 Toast
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
 
     // Load classes on page load
     loadClasses();
@@ -34,7 +39,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 showError('#classListGroup', 'Failed to load classes');
-                toastr.error('Could not load classes. Please refresh the page.');
+                showToast('error', 'Could not load classes. Please refresh the page.');
             }
         });
     }
@@ -106,7 +111,7 @@ $(document).ready(function() {
     });
 
     // ========================================================================
-    // LOAD CLASS DETAILS (Teacher & Sections)
+    // LOAD CLASS DETAILS (Teacher & Sections - Current Semester Only)
     // ========================================================================
     function loadClassDetails(classId) {
         showLoader('#enrolledSectionsContainer', 'Loading sections...');
@@ -126,7 +131,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 showError('#enrolledSectionsContainer', 'Failed to load sections');
-                toastr.error('Could not load class details');
+                showToast('error', 'Could not load class details');
             }
         });
     }
@@ -145,7 +150,7 @@ $(document).ready(function() {
     }
 
     // ========================================================================
-    // RENDER ENROLLED SECTIONS
+    // RENDER ENROLLED SECTIONS (Current Semester Only)
     // ========================================================================
     function renderEnrolledSections(sections) {
         const container = $('#enrolledSectionsContainer');
@@ -153,7 +158,7 @@ $(document).ready(function() {
         if (sections.length === 0) {
             container.html(`
                 <div class="mt-1">
-                    <strong><i class="fas fa-layer-group"></i> Sections:</strong>
+                    <strong><i class="fas fa-layer-group"></i> Sections (Current Semester):</strong>
                     <p class="text-muted mb-0"><i class="fas fa-inbox"></i> No sections enrolled</p>
                 </div>
             `);
@@ -162,7 +167,7 @@ $(document).ready(function() {
 
         let html = `
             <div class="mt-1">
-                <strong><i class="fas fa-layer-group"></i> Sections:</strong>
+                <strong><i class="fas fa-layer-group"></i> Sections (Current Semester):</strong>
                 <div class="mt-1">
         `;
 
@@ -177,7 +182,6 @@ $(document).ready(function() {
 
         container.html(html);
     }
-
 
     // ========================================================================
     // POPULATE SECTION FILTER
@@ -214,7 +218,7 @@ $(document).ready(function() {
             error: function(xhr) {
                 const message = xhr.responseJSON?.message || 'Failed to load students';
                 showError('#enrolledStudentsBody', message, 6);
-                toastr.error(message);
+                showToast('error', message);
             }
         });
     }
@@ -322,7 +326,6 @@ $(document).ready(function() {
             $('#currentTeacherEmail').text(currentTeacher.email);
             $('#currentTeacherSection').show();
             $('#removeTeacherBtn').show();
-
         } else {
             $('#currentTeacherSection').hide();
         }
@@ -347,7 +350,7 @@ $(document).ready(function() {
             },
             error: function() {
                 select.html('<option value="">Failed to load teachers</option>');
-                toastr.error('Could not load teachers list');
+                showToast('error', 'Could not load teachers list');
             }
         });
     }
@@ -379,7 +382,7 @@ $(document).ready(function() {
         const teacherId = $('#teacherSelect').val();
         
         if (!teacherId) {
-            toastr.warning('Please select a teacher');
+            showToast('warning', 'Please select a teacher');
             return;
         }
 
@@ -396,14 +399,14 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    toastr.success(response.message);
+                    showToast('success', response.message);
                     $('#assignTeacherModal').modal('hide');
                     loadClassDetails(currentClassId);
                     loadClasses(); // Refresh class list
                 }
             },
             error: function(xhr) {
-                toastr.error(xhr.responseJSON?.message || 'Failed to assign teacher');
+                showToast('error', xhr.responseJSON?.message || 'Failed to assign teacher');
             },
             complete: function() {
                 btn.prop('disabled', false).html('<i class="fas fa-check"></i> Assign Teacher');
@@ -415,33 +418,42 @@ $(document).ready(function() {
     // REMOVE TEACHER
     // ========================================================================
     $(document).on('click', '#removeTeacherBtn', function() {
-        if (!confirm('Are you sure you want to remove this teacher from the class?')) {
-            return;
-        }
+        Swal.fire({
+            title: 'Remove Teacher?',
+            text: 'Are you sure you want to remove this teacher from the class?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, remove',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const btn = $('#removeTeacherBtn');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
 
-        const btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Removing...');
-
-        $.ajax({
-            url: API_ROUTES.removeTeacher,
-            method: 'POST',
-            data: {
-                class_id: currentClassId,
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success(response.message);
-                    $('#assignTeacherModal').modal('hide');
-                    loadClassDetails(currentClassId);
-                    loadClasses(); // Refresh class list
-                }
-            },
-            error: function(xhr) {
-                toastr.error(xhr.responseJSON?.message || 'Failed to remove teacher');
-            },
-            complete: function() {
-                btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Teacher');
+                $.ajax({
+                    url: API_ROUTES.removeTeacher,
+                    method: 'POST',
+                    data: {
+                        class_id: currentClassId,
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast('success', response.message);
+                            $('#assignTeacherModal').modal('hide');
+                            loadClassDetails(currentClassId);
+                            loadClasses(); // Refresh class list
+                        }
+                    },
+                    error: function(xhr) {
+                        showToast('error', xhr.responseJSON?.message || 'Failed to remove teacher');
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).html('<i class="fas fa-times"></i> Remove Teacher');
+                    }
+                });
             }
         });
     });
@@ -479,5 +491,12 @@ $(document).ready(function() {
                </div>`;
         
         $(selector).html(error);
+    }
+
+    function showToast(icon, title) {
+        Toast.fire({
+            icon: icon,
+            title: title
+        });
     }
 });
