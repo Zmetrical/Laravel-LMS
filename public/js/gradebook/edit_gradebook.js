@@ -103,17 +103,17 @@ $(document).ready(function () {
             </div>
         `;
         $('#wwGrid, #ptGrid, #qaGrid').html(emptyHtml);
-        $('#summaryTableBody, #finalGradeTableBody').html(`
-            <tr class="empty-state-row">
-                <td colspan="100">
-                    <div style="padding: 60px 20px; text-align: center;">
-                        <i class="fas fa-table" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></i>
-                        <h5 style="color: #6c757d; margin-bottom: 10px;">No Section Selected</h5>
-                        <p style="color: #adb5bd;">Please select a section from the dropdown above to view grades.</p>
-                    </div>
-                </td>
-            </tr>
-        `);
+$('#summaryTableBody, #finalGradeTableBody').html(`
+    <tr class="empty-state-row">
+        <td colspan="100">
+            <div style="padding: 60px 20px; text-align: center;">
+                <i class="fas fa-table" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></i>
+                <h5 style="color: #6c757d; margin-bottom: 10px;">No Section Selected</h5>
+                <p style="color: #adb5bd;">Please select a section from the dropdown above to view grades.</p>
+            </div>
+        </td>
+    </tr>
+`);
     }
 
     function loadGradebook(quarterId) {
@@ -207,8 +207,8 @@ $(document).ready(function () {
             return;
         }
 
-        const loadingHtml = '<tr class="loading-row"><td colspan="7"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
-        $('#finalGradeTableBody').html(loadingHtml);
+    const loadingHtml = '<tr class="loading-row"><td colspan="6"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    $('#finalGradeTableBody').html(loadingHtml);
         
         $('.summary-table-wrapper').first().hide();
         $('#finalGradeTable').show();
@@ -245,7 +245,7 @@ $(document).ready(function () {
                                 title: 'Error',
                                 text: response.message || 'Failed to load final grades'
                             });
-                            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
+                            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">No data available</td></tr>');
                         }
                     },
                     error: function (xhr) {
@@ -255,7 +255,7 @@ $(document).ready(function () {
                             title: 'Error',
                             text: errorMsg
                         });
-                        $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
+                        $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">Error loading data</td></tr>');
                     }
                 });
             }
@@ -266,7 +266,7 @@ $(document).ready(function () {
         const students = data.students;
         
         if (!students || students.length === 0) {
-            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No students found</td></tr>');
+            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">No students found</td></tr>');
             return;
         }
 
@@ -300,23 +300,20 @@ $(document).ready(function () {
         $('#finalGradeTableBody').html(html);
     }
 
-    function renderFinalGradeRow(student) {
-        const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
-        const semesterAverage = student.semester_average || 
-            ((parseFloat(student.q1_grade || 0) + parseFloat(student.q2_grade || 0)) / 2).toFixed(2);
-        
-        return `
-            <tr data-student="${escapeHtml(student.student_number)}">
-                <td>${escapeHtml(student.student_number)}</td>
-                <td>${escapeHtml(student.full_name)}</td>
-                <td class="text-center">${student.q1_grade || '-'}</td>
-                <td class="text-center">${student.q2_grade || '-'}</td>
-                <td class="text-center">${semesterAverage}</td>
-                <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
-                <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
-            </tr>
-        `;
-    }
+function renderFinalGradeRow(student) {
+    const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
+    
+    return `
+        <tr data-student="${escapeHtml(student.student_number)}">
+            <td>${escapeHtml(student.student_number)}</td>
+            <td>${escapeHtml(student.full_name)}</td>
+            <td class="text-center">${student.q1_grade || '-'}</td>
+            <td class="text-center">${student.q2_grade || '-'}</td>
+            <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
+            <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
+        </tr>
+    `;
+}
 
     function renderSummaryTable(data) {
         const { class: classInfo, students } = data;

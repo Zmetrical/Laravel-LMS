@@ -481,7 +481,6 @@
                                         <th class="pb-4">Student Name</th>
                                         <th class="text-center pb-4">Q1 Grade</th>
                                         <th class="text-center pb-4">Q2 Grade</th>
-                                        <th class="text-center pb-4">Semester Average</th>
                                         <th class="text-center pb-4">Final Grade</th>
                                         <th class="text-center pb-4">Remarks</th>
                                     </tr>
@@ -496,6 +495,8 @@
                             </button>
                         </div>
                     </div>
+
+
                 </div>
             </div>
         </div>
