@@ -75,24 +75,40 @@ function submitLecture() {
         if (fileInput.files.length > 0) {
             formData.append('file', fileInput.files[0]);
         } else if (!IS_EDIT) {
-            toastr.warning('Please select a file to upload');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing File',
+                text: 'Please select a file to upload'
+            });
             return;
         }
     }
     
     // Validation
     if (!$('#title').val().trim()) {
-        toastr.warning('Please enter a lecture title');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please enter a lecture title'
+        });
         return;
     }
     
     if (contentType === 'video' && !$('#videoUrl').val().trim()) {
-        toastr.warning('Please enter a video URL');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please enter a video URL'
+        });
         return;
     }
     
     if (contentType === 'text' && !$('#textContent').val().trim()) {
-        toastr.warning('Please enter text content');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please enter text content'
+        });
         return;
     }
     
@@ -112,12 +128,22 @@ function submitLecture() {
         contentType: false,
         success: function(response) {
             if (response.success) {
-                toastr.success(response.message || (IS_EDIT ? 'Lecture updated successfully' : 'Lecture created successfully'));
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message || (IS_EDIT ? 'Lecture updated successfully' : 'Lecture created successfully'),
+                    timer: 2000,
+                    showConfirmButton: false
+                });
                 setTimeout(function() {
                     window.location.href = API_ROUTES.redirectUrl;
                 }, 1000);
             } else {
-                toastr.error(response.message || 'Failed to save lecture');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to save lecture'
+                });
                 submitBtn.prop('disabled', false).html(originalHtml);
             }
         },
@@ -129,10 +155,14 @@ function submitLecture() {
                 errorMsg = xhr.responseJSON.message;
             } else if (xhr.responseJSON && xhr.responseJSON.errors) {
                 const errors = xhr.responseJSON.errors;
-                errorMsg = Object.values(errors).flat().join('<br>');
+                errorMsg = Object.values(errors).flat().join('\n');
             }
             
-            toastr.error(errorMsg);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMsg
+            });
             submitBtn.prop('disabled', false).html(originalHtml);
         }
     });
@@ -141,38 +171,73 @@ function submitLecture() {
 function deleteLecture() {
     const title = $('#title').val();
     
-    if (!confirm(`Are you sure you want to delete "${title}"?\n\nThis lecture will be hidden from students but can be recovered later.\n\nContinue?`)) {
-        return;
-    }
-    
-    const deleteBtn = $('#deleteLectureBtn');
-    const originalHtml = deleteBtn.html();
-    deleteBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
-    
-    $.ajax({
-        url: API_ROUTES.deleteUrl,
-        method: 'POST', // Use POST for compatibility
-        headers: {
-            'X-CSRF-TOKEN': CSRF_TOKEN
-        },
-        data: {
-            _method: 'DELETE' // Laravel method spoofing
-        },
-        success: function(response) {
-            if (response.success) {
-                toastr.success(response.message || 'Lecture deleted successfully');
-                setTimeout(function() {
-                    window.location.href = API_ROUTES.redirectUrl;
-                }, 1000);
-            } else {
-                toastr.error(response.message || 'Failed to delete lecture');
-                deleteBtn.prop('disabled', false).html(originalHtml);
-            }
-        },
-        error: function(xhr) {
-            console.error('Error deleting lecture:', xhr);
-            toastr.error('Failed to delete lecture');
-            deleteBtn.prop('disabled', false).html(originalHtml);
+    Swal.fire({
+        title: 'Delete Lecture?',
+        html: `Are you sure you want to delete <strong>"${escapeHtml(title)}"</strong>?<br><br>This lecture will be hidden from students but can be recovered later.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const deleteBtn = $('#deleteLectureBtn');
+            const originalHtml = deleteBtn.html();
+            deleteBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            
+            $.ajax({
+                url: API_ROUTES.deleteUrl,
+                method: 'POST', // Use POST for compatibility
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                data: {
+                    _method: 'DELETE' // Laravel method spoofing
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted',
+                            text: response.message || 'Lecture deleted successfully',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        setTimeout(function() {
+                            window.location.href = API_ROUTES.redirectUrl;
+                        }, 1000);
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message || 'Failed to delete lecture'
+                        });
+                        deleteBtn.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error deleting lecture:', xhr);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to delete lecture'
+                    });
+                    deleteBtn.prop('disabled', false).html(originalHtml);
+                }
+            });
         }
     });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
 }

@@ -4,6 +4,33 @@
     'class' => $class
 ])
 
+@section('page-styles')
+<link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+<style>
+.card-body {
+    padding: 1.5rem;
+}
+
+.form-control-lg {
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+#textContent {
+    font-family: 'Courier New', monospace;
+    font-size: 0.95rem;
+}
+
+.custom-file-label::after {
+    content: "Browse";
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+</style>
+@endsection
+
 @section('tab-content')
 <div class="row">
     <!-- Main Content Area -->
@@ -220,33 +247,8 @@
 </div>
 @endsection
 
-@section('page-styles')
-<style>
-.card-body {
-    padding: 1.5rem;
-}
-
-.form-control-lg {
-    font-size: 1.25rem;
-    font-weight: 500;
-}
-
-#textContent {
-    font-family: 'Courier New', monospace;
-    font-size: 0.95rem;
-}
-
-.custom-file-label::after {
-    content: "Browse";
-}
-
-.bg-light {
-    background-color: #f8f9fa !important;
-}
-</style>
-@endsection
-
 @section('page-scripts')
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script>
     // Lecture-specific constants
     const API_ROUTES = {
@@ -270,7 +272,6 @@
 
 <script>
 $(document).ready(function() {
-    // Update status label when toggle changes
     $('#status').on('change', function() {
         const label = $(this).is(':checked') ? 'Visible to students' : 'Hidden from students';
         $('#statusLabel').text(label);

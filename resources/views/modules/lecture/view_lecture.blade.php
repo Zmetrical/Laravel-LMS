@@ -4,6 +4,62 @@
     'class' => $class
 ])
 
+@section('page-styles')
+<link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+<style>
+
+.lecture-text-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #333;
+}
+
+.lecture-text-content p {
+    margin-bottom: 1rem;
+}
+
+.list-group-item.active {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.embed-responsive {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+}
+
+.embed-responsive::before {
+    display: block;
+    content: "";
+}
+
+.embed-responsive .embed-responsive-item,
+.embed-responsive iframe,
+.embed-responsive embed,
+.embed-responsive object,
+.embed-responsive video {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.embed-responsive-16by9::before {
+    padding-top: 56.25%;
+}
+
+#markCompleteContainer {
+    min-width: 150px;
+}
+</style>
+@endsection
+
 @section('tab-content')
 <div class="row">
     <div class="col-md-9">
@@ -77,61 +133,8 @@
 </div>
 @endsection
 
-@section('page-styles')
-<style>
-.lecture-text-content {
-    font-size: 1.1rem;
-    line-height: 1.8;
-    color: #333;
-}
-
-.lecture-text-content p {
-    margin-bottom: 1rem;
-}
-
-.list-group-item.active {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-.embed-responsive {
-    position: relative;
-    display: block;
-    width: 100%;
-    padding: 0;
-    overflow: hidden;
-}
-
-.embed-responsive::before {
-    display: block;
-    content: "";
-}
-
-.embed-responsive .embed-responsive-item,
-.embed-responsive iframe,
-.embed-responsive embed,
-.embed-responsive object,
-.embed-responsive video {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-}
-
-.embed-responsive-16by9::before {
-    padding-top: 56.25%;
-}
-
-#markCompleteContainer {
-    min-width: 150px;
-}
-</style>
-@endsection
-
 @section('page-scripts')
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script>
     const API_ROUTES = {
         getLectureData: "{{ route('student.class.lecture.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",

@@ -83,13 +83,21 @@ function loadLessons() {
                 renderLessons(response.data);
                 updateCounts(response.data);
             } else {
-                toastr.error(response.message || 'Failed to load lessons');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to load lessons'
+                });
                 showEmptyState();
             }
         },
         error: function(xhr) {
             console.error('Error loading lessons:', xhr);
-            toastr.error('Failed to load lessons');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to load lessons'
+            });
             showEmptyState();
         }
     });
@@ -245,10 +253,10 @@ function renderQuarterLessons(quarter) {
                 quizzesHtml += `
                     <div class="d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
                         <div>
-                            <i class="fas fa-clipboard-check text-info mr-2"></i>
+                            <i class="fas fa-clipboard-check text-secondary mr-2"></i>
                             <span>${escapeHtml(quiz.title)}</span>
                         </div>
-                        <button class="btn btn-sm btn-outline-info edit-quiz-btn" 
+                        <button class="btn btn-sm btn-outline-secondary edit-quiz-btn" 
                                 data-lesson-id="${lesson.id}" 
                                 data-quiz-id="${quiz.id}">
                             <i class="fas fa-edit"></i>
@@ -281,30 +289,30 @@ function renderQuarterLessons(quarter) {
                     ${lesson.description ? `<p class="text-muted mb-0 mt-2"><small>${escapeHtml(lesson.description)}</small></p>` : ''}
                 </div>
                 <div class="card-body p-0">
-<div class="row no-gutters">
-    <div class="col-md-6 border-right">
-        <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
-            <small class="font-weight-bold">
-                <i class="fas fa-chalkboard-teacher text-primary"></i> Lectures
-            </small>
-            <button class="btn btn-primary btn-sm create-lecture-btn" data-lesson-id="${lesson.id}">
-                <i class="fas fa-plus"></i> Add
-            </button>
-        </div>
-        ${lecturesHtml}
-    </div>
-    <div class="col-md-6">
-        <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
-            <small class="font-weight-bold">
-                <i class="fas fa-clipboard-list text-secondary"></i> Quizzes
-            </small>
-            <button class="btn btn-info btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
-                <i class="fas fa-plus"></i> Add
-            </button>
-        </div>
-        ${quizzesHtml}
-    </div>
-</div>
+                    <div class="row no-gutters">
+                        <div class="col-md-6 border-right">
+                            <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                                <small class="font-weight-bold">
+                                    <i class="fas fa-chalkboard-teacher text-primary"></i> Lectures
+                                </small>
+                                <button class="btn btn-primary btn-sm create-lecture-btn" data-lesson-id="${lesson.id}">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                            ${lecturesHtml}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                                <small class="font-weight-bold">
+                                    <i class="fas fa-clipboard-list text-secondary"></i> Quizzes
+                                </small>
+                                <button class="btn btn-secondary btn-sm create-quiz-btn" data-lesson-id="${lesson.id}">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                            ${quizzesHtml}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -371,12 +379,20 @@ function createLesson() {
     const quarterId = $('#lessonQuarter').val();
 
     if (!title) {
-        toastr.warning('Please enter a lesson title');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please enter a lesson title'
+        });
         return;
     }
 
     if (!quarterId) {
-        toastr.warning('Please select a quarter');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please select a quarter'
+        });
         return;
     }
 
@@ -397,12 +413,22 @@ function createLesson() {
         },
         success: function(response) {
             if (response.success) {
-                toastr.success(response.message || 'Lesson created successfully');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message || 'Lesson created successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
                 $('#addLessonModal').modal('hide');
                 $('#lessonForm')[0].reset();
                 loadLessons();
             } else {
-                toastr.error(response.message || 'Failed to create lesson');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to create lesson'
+                });
             }
             btn.prop('disabled', false).html(originalHtml);
         },
@@ -412,7 +438,11 @@ function createLesson() {
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMsg = xhr.responseJSON.message;
             }
-            toastr.error(errorMsg);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMsg
+            });
             btn.prop('disabled', false).html(originalHtml);
         }
     });
@@ -425,12 +455,20 @@ function updateLesson() {
     const quarterId = $('#editLessonQuarter').val();
 
     if (!title) {
-        toastr.warning('Please enter a lesson title');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please enter a lesson title'
+        });
         return;
     }
 
     if (!quarterId) {
-        toastr.warning('Please select a quarter');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please select a quarter'
+        });
         return;
     }
 
@@ -452,17 +490,31 @@ function updateLesson() {
         }),
         success: function(response) {
             if (response.success) {
-                toastr.success(response.message || 'Lesson updated successfully');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message || 'Lesson updated successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
                 $('#editLessonModal').modal('hide');
                 loadLessons();
             } else {
-                toastr.error(response.message || 'Failed to update lesson');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to update lesson'
+                });
             }
             btn.prop('disabled', false).html(originalHtml);
         },
         error: function(xhr) {
             console.error('Error updating lesson:', xhr);
-            toastr.error('Failed to update lesson');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to update lesson'
+            });
             btn.prop('disabled', false).html(originalHtml);
         }
     });
@@ -472,34 +524,57 @@ function deleteLesson() {
     const lessonId = $('#editLessonId').val();
     const title = $('#editLessonTitle').val();
 
-    if (!confirm(`Are you sure you want to delete "${title}"?\n\nThis will hide the lesson and all its content from students.\n\nContinue?`)) {
-        return;
-    }
+    Swal.fire({
+        title: 'Delete Lesson?',
+        html: `Are you sure you want to delete <strong>"${escapeHtml(title)}"</strong>?<br><br>This will hide the lesson and all its content from students.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const btn = $('#deleteLessonBtn');
+            const originalHtml = btn.html();
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
 
-    const btn = $('#deleteLessonBtn');
-    const originalHtml = btn.html();
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
-
-    $.ajax({
-        url: API_ROUTES.deleteLesson.replace(':lessonId', lessonId),
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': CSRF_TOKEN
-        },
-        success: function(response) {
-            if (response.success) {
-                toastr.success(response.message || 'Lesson deleted successfully');
-                $('#editLessonModal').modal('hide');
-                loadLessons();
-            } else {
-                toastr.error(response.message || 'Failed to delete lesson');
-            }
-            btn.prop('disabled', false).html(originalHtml);
-        },
-        error: function(xhr) {
-            console.error('Error deleting lesson:', xhr);
-            toastr.error('Failed to delete lesson');
-            btn.prop('disabled', false).html(originalHtml);
+            $.ajax({
+                url: API_ROUTES.deleteLesson.replace(':lessonId', lessonId),
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted',
+                            text: response.message || 'Lesson deleted successfully',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        $('#editLessonModal').modal('hide');
+                        loadLessons();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message || 'Failed to delete lesson'
+                        });
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                },
+                error: function(xhr) {
+                    console.error('Error deleting lesson:', xhr);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to delete lesson'
+                    });
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
         }
     });
 }

@@ -201,6 +201,126 @@
             font-weight: 600;
             white-space: nowrap;
         }
+
+        /* Summary table styles */
+        .summary-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .summary-header th {
+            background-color: #fff !important;
+            color: black !important;
+            font-weight: 600;
+            vertical-align: top;
+            padding: 10px 5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .summary-header th:first-child,
+        .summary-header th:nth-child(2) {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background-color: #fff;
+        }
+
+        .summary-header th:nth-child(2) {
+            left: 120px;
+        }
+
+        .gender-separator {
+            background-color: #2a347e !important;
+            color: #fff !important;
+            font-weight: 700;
+            text-align: left !important;
+            padding: 8px 10px !important;
+        }
+
+        .gender-separator td {
+            text-align: left !important;
+            position: sticky;
+            left: 0;
+            z-index: 8;
+            background-color: #2a347e;
+        }
+
+        .loading-row td,
+        .empty-state-row td {
+            text-align: center !important;
+            padding: 40px !important;
+            background-color: #fff;
+        }
+
+        .remarks-passed {
+            color: black;
+            font-weight: 700;
+        }
+
+        .remarks-failed {
+            color: black;
+            font-weight: 700;
+        }
+
+        #finalGradeTable {
+            display: none;
+        }
+
+        .row-missing-grade {
+            background-color: rgba(255, 193, 7, 0.15) !important;
+        }
+
+        .row-missing-grade:hover {
+            background-color: rgba(255, 193, 7, 0.25) !important;
+        }
+
+        .missing-score {
+            background-color: rgba(255, 193, 7, 0.3) !important;
+            font-weight: 600;
+        }
+
+        .final-grade-actions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #dee2e6;
+            text-align: right;
+        }
+
+        #submitFinalGradeBtn {
+            display: none;
+        }
+
+        .grade-cell {
+            background-color: #fff;
+            color: black;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .table-gradebook {
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+        
+        .table-gradebook thead th {
+            background-color: #fff;
+            color: black;
+            font-weight: 600;
+            vertical-align: top;
+            padding: 10px 5px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .table-gradebook tbody td {
+            padding: 8px 5px;
+            text-align: center;
+        }
     </style>
 @endsection
 
@@ -251,10 +371,16 @@
                             @foreach($quarters as $quarter)
                                 <button type="button" 
                                         class="btn btn-outline-secondary quarter-btn" 
-                                        data-quarter="{{ $quarter->id }}">
+                                        data-quarter="{{ $quarter->id }}"
+                                        data-type="quarter">
                                     {{ $quarter->name }}
                                 </button>
                             @endforeach
+                            <button type="button" 
+                                    class="btn btn-outline-secondary quarter-btn" 
+                                    data-type="final">
+                                Final Grade
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -290,6 +416,11 @@
                         <i class="fas fa-clipboard-check"></i> Quarterly Assessment
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="summary-tab" data-toggle="pill" href="#summary" role="tab">
+                        <i class="fas fa-chart-bar"></i> Summary
+                    </a>
+                </li>
             </ul>
         </div>
         <div class="card-body">
@@ -318,6 +449,52 @@
                     </div>
                     <div class="table-scroll-wrapper">
                         <div id="qaGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Summary Tab -->
+                <div class="tab-pane fade" id="summary" role="tabpanel">
+                    <div class="summary-table-wrapper">
+                        <table class="table table-bordered table-hover table-sm table-gradebook">
+                            <thead class="summary-header">
+                                <tr>
+                                    <th class="pb-4">USN</th>
+                                    <th class="pb-4">Student Name</th>
+                                    <th class="text-center">Written Work<br><small>({{ $class->ww_perc }}%)</small></th>
+                                    <th class="text-center">Performance Task<br><small>({{ $class->pt_perc }}%)</small></th>
+                                    <th class="text-center">Quarterly Assessment<br><small>({{ $class->qa_perce }}%)</small></th>
+                                    <th class="text-center pb-4">Initial Grade</th>
+                                    <th class="text-center pb-4">Quarterly Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Final Grade Table -->
+                    <div id="finalGradeTable">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover table-sm table-gradebook">
+                                <thead class="summary-header">
+                                    <tr>
+                                        <th class="pb-4">USN</th>
+                                        <th class="pb-4">Student Name</th>
+                                        <th class="text-center pb-4">Q1 Grade</th>
+                                        <th class="text-center pb-4">Q2 Grade</th>
+                                        <th class="text-center pb-4">Semester Average</th>
+                                        <th class="text-center pb-4">Final Grade</th>
+                                        <th class="text-center pb-4">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finalGradeTableBody"></tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="final-grade-actions">
+                            <button type="button" class="btn btn-primary" id="submitFinalGradeBtn">
+                                <i class="fas fa-save"></i> Submit Final Grades
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -451,6 +628,46 @@
     </div>
 </div>
 
+    <!-- Passcode Modal -->
+    <div class="modal fade" id="passcodeModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary">
+                    <h5 class="modal-title text-white" id="passcodeModalTitle">
+                        <i class="fas fa-lock"></i> Verify Passcode
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <form id="passcodeForm">
+                    <div class="modal-body">
+                        <p class="text-muted mb-3" id="passcodeModalMessage">
+                            <i class="fas fa-info-circle"></i> Please enter your passcode
+                        </p>
+                        <div class="form-group">
+                            <label for="passcode">Passcode <span class="text-danger">*</span></label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="passcode" 
+                                   name="passcode" 
+                                   placeholder="Enter your passcode"
+                                   autocomplete="off"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="verifyPasscodeBtn">
+                            <i class="fas fa-check"></i> Verify
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
@@ -462,6 +679,9 @@
         const MAX_PT_COLUMNS = 10;
         const MAX_QA_COLUMNS = 1;
         const QUARTERS = @json($quarters);
+        const CLASS_INFO = @json($class);
+        const ACTIVE_SEMESTER_ID = {{ DB::table('semesters')->where('status', 'active')->value('id') ?? 'null' }};
+        
         const API_ROUTES = {
             viewGradebook: "{{ route('teacher.gradebook.view', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
@@ -470,7 +690,10 @@
             batchUpdate: "{{ route('teacher.gradebook.scores.batch', ['classId' => $classId]) }}",
             getQuizzes: "{{ route('teacher.gradebook.quizzes', ['classId' => $classId]) }}",
             import: "{{ route('teacher.gradebook.import', ['classId' => $classId]) }}",
-            importColumn: "{{ route('teacher.gradebook.column.import', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}"
+            importColumn: "{{ route('teacher.gradebook.column.import', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",
+            getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}",
+            submitFinalGrades: "{{ route('teacher.gradebook.submit-final-grades', ['classId' => $classId]) }}",
+            checkFinalGradesStatus: "{{ route('teacher.gradebook.check-final-status', ['classId' => $classId]) }}"
         };
     </script>
     

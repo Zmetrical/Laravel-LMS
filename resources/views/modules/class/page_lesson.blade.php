@@ -4,6 +4,7 @@
     'class' => $class])
 
 @section('page-styles')
+<link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
 <style>
     .lesson-nav-link.active {
         background-color: #007bff !important;
@@ -194,6 +195,7 @@
 @endsection
 
 @section('page-scripts')
+<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script>
     const API_ROUTES = {
         getLessons: "{{ route($userType === 'teacher' ? 'teacher.class.lessons.list' : 'student.class.lessons.list', $class->id ?? 0) }}",

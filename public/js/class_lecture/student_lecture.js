@@ -72,15 +72,29 @@ function markLectureComplete() {
         success: function(response) {
             if (response.success) {
                 updateCompletionUI(true, new Date().toISOString());
-                toastr.success('Lecture marked as complete!');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Completed!',
+                    text: 'Lecture marked as complete!',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             } else {
-                toastr.error(response.message || 'Failed to mark as complete');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to mark as complete'
+                });
                 btn.html(originalHtml).prop('disabled', false);
             }
         },
         error: function(xhr) {
             console.error('Error marking complete:', xhr);
-            toastr.error('Failed to mark lecture as complete');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to mark lecture as complete'
+            });
             btn.html(originalHtml).prop('disabled', false);
         }
     });
@@ -382,5 +396,5 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
 }
