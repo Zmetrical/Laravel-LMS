@@ -13,8 +13,6 @@ $(document).ready(function () {
     let gradebookData = null;
     let classInfo = null;
     let allStudentsData = null;
-    let finalGradesSubmitted = false;
-    let pendingAction = null;
 
     if (QUARTERS.length > 0) {
         currentQuarterId = QUARTERS[0].id;
@@ -184,57 +182,36 @@ $(document).ready(function () {
             return;
         }
 
-        const loadingHtml = '<tr class="loading-row"><td colspan="7"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        const loadingHtml = '<tr class="loading-row"><td colspan="6"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
         $('#finalGradeTableBody').html(loadingHtml);
         
         $('.summary-table-wrapper').first().hide();
         $('#finalGradeTable').show();
-        $('#submitFinalGradeBtn').show();
         
         $.ajax({
-            url: API_ROUTES.checkFinalGradesStatus,
+            url: API_ROUTES.getFinalGrade,
             type: 'GET',
-            data: { 
-                semester_id: ACTIVE_SEMESTER_ID,
-                section_id: currentSectionId 
-            },
-            success: function (statusResponse) {
-                if (statusResponse.success) {
-                    finalGradesSubmitted = statusResponse.data.is_submitted;
-                    
-                    if (finalGradesSubmitted) {
-                        $('#submitFinalGradeBtn').html('<i class="fas fa-check-circle"></i> Grades Already Submitted').prop('disabled', true);
-                    } else {
-                        $('#submitFinalGradeBtn').html('<i class="fas fa-save"></i> Submit Final Grades').prop('disabled', false);
-                    }
+            data: { section_id: currentSectionId },
+            success: function (response) {
+                if (response.success) {
+                    renderFinalGradeTable(response.data);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to load final grades'
+                    });
+                    $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">No data available</td></tr>');
                 }
-                
-                $.ajax({
-                    url: API_ROUTES.getFinalGrade,
-                    type: 'GET',
-                    data: { section_id: currentSectionId },
-                    success: function (response) {
-                        if (response.success) {
-                            renderFinalGradeTable(response.data);
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: response.message || 'Failed to load final grades'
-                            });
-                            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
-                        }
-                    },
-                    error: function (xhr) {
-                        const errorMsg = xhr.responseJSON?.message || 'Failed to load final grades';
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: errorMsg
-                        });
-                        $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
-                    }
+            },
+            error: function (xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Failed to load final grades';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
                 });
+                $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">Error loading data</td></tr>');
             }
         });
     }
@@ -243,7 +220,7 @@ $(document).ready(function () {
         const students = data.students;
         
         if (!students || students.length === 0) {
-            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No students found</td></tr>');
+            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">No students found</td></tr>');
             return;
         }
 
@@ -254,21 +231,21 @@ $(document).ready(function () {
         let html = '';
         
         if (maleStudents.length > 0) {
-            html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-mars"></i> MALE</td></tr>`;
+            html += `<tr class="gender-separator"><td colspan="6"><i class="fas fa-mars"></i> MALE</td></tr>`;
             maleStudents.forEach(student => {
                 html += renderFinalGradeRow(student);
             });
         }
 
         if (femaleStudents.length > 0) {
-            html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-venus"></i> FEMALE</td></tr>`;
+            html += `<tr class="gender-separator"><td colspan="6"><i class="fas fa-venus"></i> FEMALE</td></tr>`;
             femaleStudents.forEach(student => {
                 html += renderFinalGradeRow(student);
             });
         }
 
         if (otherStudents.length > 0) {
-            html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-user"></i> OTHER</td></tr>`;
+            html += `<tr class="gender-separator"><td colspan="6"><i class="fas fa-user"></i> OTHER</td></tr>`;
             otherStudents.forEach(student => {
                 html += renderFinalGradeRow(student);
             });
@@ -279,18 +256,21 @@ $(document).ready(function () {
 
     function renderFinalGradeRow(student) {
         const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
-        const semesterAverage = student.semester_average || 
-            ((parseFloat(student.q1_grade || 0) + parseFloat(student.q2_grade || 0)) / 2).toFixed(2);
+        
+        const q1 = parseFloat(student.q1_grade) || 0;
+        const q2 = parseFloat(student.q2_grade) || 0;
+        
+        // Final grade is rounded average (no transmutation)
+        const finalGrade = (q1 > 0 && q2 > 0) ? Math.round((q1 + q2) / 2) : '-';
         
         return `
             <tr data-student="${escapeHtml(student.student_number)}">
                 <td>${escapeHtml(student.student_number)}</td>
                 <td>${escapeHtml(student.full_name)}</td>
-                <td class="text-center">${student.q1_grade || '-'}</td>
-                <td class="text-center">${student.q2_grade || '-'}</td>
-                <td class="text-center">${semesterAverage}</td>
-                <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
-                <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
+                <td class="text-center">${q1 > 0 ? q1 : '-'}</td>
+                <td class="text-center">${q2 > 0 ? q2 : '-'}</td>
+                <td class="text-center grade-cell"><strong>${finalGrade}</strong></td>
+                <td class="text-center"><span class="${remarksClass}">${student.remarks || '-'}</span></td>
             </tr>
         `;
     }
@@ -305,7 +285,7 @@ $(document).ready(function () {
             '<tr class="loading-row"><td colspan="100">No data available</td></tr>'
         );
         $('#finalGradeTableBody').html(
-            '<tr class="loading-row"><td colspan="7">No data available</td></tr>'
+            '<tr class="loading-row"><td colspan="6">No data available</td></tr>'
         );
     }
 
@@ -567,52 +547,8 @@ $(document).ready(function () {
     }
 
     $('#editBtn').on('click', function() {
-        pendingAction = 'edit';
         $('#passcodeModalTitle').text('Verify Passcode');
         $('#passcodeModalMessage').html('<i class="fas fa-info-circle"></i> Please enter your passcode to access edit mode');
-        $('#passcodeModal').modal('show');
-        $('#passcode').val('').focus();
-    });
-
-    $('#submitFinalGradeBtn').click(function() {
-        if (finalGradesSubmitted) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Already Submitted',
-                text: 'Final grades have already been submitted for this semester'
-            });
-            return;
-        }
-
-        const grades = [];
-        $('#finalGradeTableBody tr:not(.gender-separator)').each(function() {
-            const $row = $(this);
-            const studentNumber = $row.data('student');
-            
-            if (studentNumber) {
-                grades.push({
-                    student_number: studentNumber,
-                    q1_grade: parseFloat($row.find('td:eq(2)').text()),
-                    q2_grade: parseFloat($row.find('td:eq(3)').text()),
-                    final_grade: parseInt($row.find('td:eq(5)').text()),
-                    remarks: $row.find('td:eq(6) span').text()
-                });
-            }
-        });
-
-        if (grades.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'No Grades',
-                text: 'No grades to submit'
-            });
-            return;
-        }
-
-        window.pendingGrades = grades;
-        pendingAction = 'submit';
-        $('#passcodeModalTitle').text('Verify Passcode');
-        $('#passcodeModalMessage').html(`<i class="fas fa-info-circle text-secondary"></i> You are about to submit final grades for <strong>${grades.length}</strong> student(s).`);
         $('#passcodeModal').modal('show');
         $('#passcode').val('').focus();
     });
@@ -646,25 +582,19 @@ $(document).ready(function () {
                 if (response.success) {
                     $('#passcodeModal').modal('hide');
                     
-                    if (pendingAction === 'edit') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Verified!',
-                            text: response.message,
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                        
-                        setTimeout(function() {
-                            window.location.href = response.redirect;
-                        }, 500);
-                    } else if (pendingAction === 'submit') {
-                        submitFinalGrades(window.pendingGrades);
-                    }
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Verified!',
+                        text: response.message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
                     
-                    pendingAction = null;
+                    setTimeout(function() {
+                        window.location.href = response.redirect;
+                    }, 500);
                 }
             },
             error: function(xhr) {
@@ -684,171 +614,67 @@ $(document).ready(function () {
     $('#passcodeModal').on('hidden.bs.modal', function() {
         $('#passcode').val('');
         $('#verifyPasscodeBtn').prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
-        pendingAction = null;
     });
 
-    function submitFinalGrades(grades) {
-        const btn = $('#submitFinalGradeBtn');
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Submitting...');
+    $('#exportBtn').click(function () {
+        if (!currentQuarterId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Quarter Required',
+                text: 'Please select a quarter first'
+            });
+            return;
+        }
+        if (!currentSectionId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Section Required',
+                text: 'Please select a section first'
+            });
+            return;
+        }
+        if (currentViewType === 'final') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Export Not Available',
+                text: 'Export is only available for quarter view'
+            });
+            return;
+        }
         
-        $.ajax({
-            url: API_ROUTES.submitFinalGrades,
-            type: 'POST',
-            data: {
-                grades: grades,
-                semester_id: ACTIVE_SEMESTER_ID,
-                section_id: currentSectionId
-            },
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: response.message || 'Final grades submitted successfully',
-                        confirmButtonColor: '#28a745'
-                    }).then(() => {
-                        finalGradesSubmitted = true;
-                        btn.html('<i class="fas fa-check-circle"></i> Grades Already Submitted');
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message || 'Failed to submit grades'
-                    });
-                    btn.prop('disabled', false).html('<i class="fas fa-save"></i> Submit Final Grades');
-                }
-            },
-            error: function(xhr) {
-                const errorMsg = xhr.responseJSON?.message || 'Failed to submit final grades';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMsg
-                });
-                btn.prop('disabled', false).html('<i class="fas fa-save"></i> Submit Final Grades');
-            }
-        });
-    }
-
-// Replace the exportBtn click handler and exportForm submit handler in view_gradebook.js
-
-$('#exportBtn').click(function () {
-    if (!currentQuarterId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Quarter Required',
-            text: 'Please select a quarter first'
-        });
-        return;
-    }
-    if (!currentSectionId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Section Required',
-            text: 'Please select a section first'
-        });
-        return;
-    }
-    if (currentViewType === 'final') {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Export Not Available',
-            text: 'Export is only available for quarter view'
-        });
-        return;
-    }
-    
-    // Reset modal to initial state
-    $('#exportInitialContent').show();
-    $('#exportProgressContent').hide();
-    $('#exportCompleteContent').hide();
-    $('#exportDownloadBtn').prop('disabled', false).show();
-    $('#exportProgressBar').css('width', '0%');
-    $('#exportProgressText').text('0%');
-    
-    // Set section name
-    const sectionName = $('#sectionFilter option:selected').text();
-    $('#exportSectionName').text(sectionName);
-    
-    $('#exportModal').modal('show');
-});
-
-$('#exportDownloadBtn').click(function () {
-    const btn = $(this);
-    btn.prop('disabled', true);
-    
-    // Show spinner
-    $('#exportInitialContent').hide();
-    $('#exportProgressContent').show();
-    $('#exportProgressContent').html(`
-        <div class="text-center py-4">
-            <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-            <h6 class="mb-2">Generating Excel File...</h6>
-            <p class="text-muted mb-0">
-                <small>This may take a few moments. Your download will begin shortly.</small>
-            </p>
-        </div>
-    `);
-    
-    // Create and submit form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = API_ROUTES.exportGradebook;
-
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = '_token';
-    csrfInput.value = $('meta[name="csrf-token"]').attr('content');
-    form.appendChild(csrfInput);
-
-    const quarterInput = document.createElement('input');
-    quarterInput.type = 'hidden';
-    quarterInput.name = 'quarter_id';
-    quarterInput.value = currentQuarterId;
-    form.appendChild(quarterInput);
-
-    const sectionInput = document.createElement('input');
-    sectionInput.type = 'hidden';
-    sectionInput.name = 'section_id';
-    sectionInput.value = currentSectionId;
-    form.appendChild(sectionInput);
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-
-    // After a reasonable delay, show completion message
-    // (This assumes the file generation takes ~3-5 seconds)
-    setTimeout(function () {
+        // Reset modal to initial state
+        $('#exportInitialContent').show();
         $('#exportProgressContent').hide();
-        $('#exportCompleteContent').show();
-        $('#exportCompleteContent').html(`
+        $('#exportCompleteContent').hide();
+        $('#exportDownloadBtn').prop('disabled', false).show();
+        $('#exportProgressBar').css('width', '0%');
+        $('#exportProgressText').text('0%');
+        
+        // Set section name
+        const sectionName = $('#sectionFilter option:selected').text();
+        $('#exportSectionName').text(sectionName);
+        
+        $('#exportModal').modal('show');
+    });
+
+    $('#exportDownloadBtn').click(function () {
+        const btn = $(this);
+        btn.prop('disabled', true);
+        
+        // Show spinner
+        $('#exportInitialContent').hide();
+        $('#exportProgressContent').show();
+        $('#exportProgressContent').html(`
             <div class="text-center py-4">
-                <i class="fas fa-check-circle fa-3x text-primary mb-3"></i>
-                <h6 class="mb-2">Export Successful!</h6>
-                <p class="text-muted mb-3">
-                    <small>Your download should begin shortly.</small>
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <h6 class="mb-2">Generating Excel File...</h6>
+                <p class="text-muted mb-0">
+                    <small>This may take a few moments. Your download will begin shortly.</small>
                 </p>
             </div>
         `);
-    }, 4000); // Adjust based on your typical export time
-});
-
-// Reset modal when closed
-$('#exportModal').on('hidden.bs.modal', function() {
-    $('#exportInitialContent').show();
-    $('#exportProgressContent').hide();
-    $('#exportCompleteContent').hide();
-    $('#exportDownloadBtn').prop('disabled', false);
-});
-
-    $('#exportForm').submit(function (e) {
-        e.preventDefault();
-
-        const btn = $('#exportForm button[type="submit"]');
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
-
+        
+        // Create and submit form
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = API_ROUTES.exportGradebook;
@@ -875,18 +701,27 @@ $('#exportModal').on('hidden.bs.modal', function() {
         form.submit();
         document.body.removeChild(form);
 
+        // After a reasonable delay, show completion message
         setTimeout(function () {
-            btn.prop('disabled', false).html('<i class="fas fa-download"></i> Download Excel');
-            $('#exportModal').modal('hide');
-            Swal.fire({
-                icon: 'success',
-                title: 'Export Started',
-                text: 'Your download should begin shortly',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
-        }, 1000);
+            $('#exportProgressContent').hide();
+            $('#exportCompleteContent').show();
+            $('#exportCompleteContent').html(`
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-primary mb-3"></i>
+                    <h6 class="mb-2">Export Successful!</h6>
+                    <p class="text-muted mb-3">
+                        <small>Your download should begin shortly.</small>
+                    </p>
+                </div>
+            `);
+        }, 4000);
+    });
+
+    // Reset modal when closed
+    $('#exportModal').on('hidden.bs.modal', function() {
+        $('#exportInitialContent').show();
+        $('#exportProgressContent').hide();
+        $('#exportCompleteContent').hide();
+        $('#exportDownloadBtn').prop('disabled', false);
     });
 });

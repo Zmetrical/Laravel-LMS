@@ -219,8 +219,12 @@ class GradebookViewController extends MainController
                 $q1Grade = $q1Data['quarterly_grade'];
                 $q2Grade = $q2Data['quarterly_grade'];
 
+                // Semester average is simple average of Q1 and Q2 (both already transmuted)
                 $semesterAverage = ($q1Grade + $q2Grade) / 2;
-                $finalGrade = GradeTransmutation::transmute($semesterAverage);
+                
+                // Final grade is rounded average (no transmutation)
+                $finalGrade = round($semesterAverage);
+                
                 $remarks = GradeTransmutation::getRemarks($finalGrade);
 
                 $finalGrades[] = [
@@ -229,7 +233,6 @@ class GradebookViewController extends MainController
                     'gender' => $student->gender,
                     'q1_grade' => $q1Grade,
                     'q2_grade' => $q2Grade,
-                    'semester_average' => number_format($semesterAverage, 2),
                     'final_grade' => $finalGrade,
                     'remarks' => $remarks
                 ];

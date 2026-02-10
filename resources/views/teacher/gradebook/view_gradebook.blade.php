@@ -204,17 +204,6 @@
             background-color: rgba(255, 193, 7, 0.3) !important;
             font-weight: 600;
         }
-
-        .final-grade-actions {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #dee2e6;
-            text-align: right;
-        }
-
-        #submitFinalGradeBtn {
-            display: none;
-        }
     </style>
 @endsection
 
@@ -246,49 +235,43 @@
 
     <div class="card">
         <div class="card-body">
-
             <div class="row align-items-center">
-
-            <div class="col-md-6 filter-controls">
-
-                <div class="filter-group">
-                    <label><i class="fas fa-users"></i> Section:</label>
-                    <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
-                        <option value="">Select Section</option>
-                        @foreach($sections as $section)
-                            <option value="{{ $section->id }}">{{ $section->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>View:</label>
-                    <div class="btn-group btn-group-sm btn-group-quarter" role="group">
-                        @foreach($quarters as $quarter)
+                <div class="col-md-6 filter-controls">
+                    <div class="filter-group">
+                        <label><i class="fas fa-users"></i> Section:</label>
+                        <select class="form-control form-control-sm" id="sectionFilter" style="width: 200px;" required>
+                            <option value="">Select Section</option>
+                            @foreach($sections as $section)
+                                <option value="{{ $section->id }}">{{ $section->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>View:</label>
+                        <div class="btn-group btn-group-sm btn-group-quarter" role="group">
+                            @foreach($quarters as $quarter)
+                                <button type="button" 
+                                        class="btn btn-outline-secondary quarter-btn" 
+                                        data-quarter="{{ $quarter->id }}"
+                                        data-type="quarter">
+                                    {{ $quarter->name }}
+                                </button>
+                            @endforeach
                             <button type="button" 
                                     class="btn btn-outline-secondary quarter-btn" 
-                                    data-quarter="{{ $quarter->id }}"
-                                    data-type="quarter">
-                                {{ $quarter->name }}
+                                    data-type="final">
+                                Final Grade
                             </button>
-                        @endforeach
-                        <button type="button" 
-                                class="btn btn-outline-secondary quarter-btn" 
-                                data-type="final">
-                            Final Grade
-                        </button>
+                        </div>
                     </div>
                 </div>
 
-            </div>
-
-            <div class="col-md-6 text-right">
+                <div class="col-md-6 text-right">
                     <button class="btn btn-primary btn-sm" id="exportBtn">
                         <i class="fas fa-file-excel"></i> Export to Excel
                     </button>
                 </div>
-
             </div>
-
         </div>
     </div>
 
@@ -371,6 +354,7 @@
                     </div>
 
                     <div id="finalGradeTable">
+                        
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover table-sm">
                                 <thead class="summary-header">
@@ -379,7 +363,6 @@
                                         <th class="pb-4">Student Name</th>
                                         <th class="text-center pb-4">Q1 Grade</th>
                                         <th class="text-center pb-4">Q2 Grade</th>
-                                        <th class="text-center pb-4">Semester Average</th>
                                         <th class="text-center pb-4">Final Grade</th>
                                         <th class="text-center pb-4">Remarks</th>
                                     </tr>
@@ -387,80 +370,75 @@
                                 <tbody id="finalGradeTableBody"></tbody>
                             </table>
                         </div>
-                        
-                        <div class="final-grade-actions">
-                            <button type="button" class="btn btn-primary" id="submitFinalGradeBtn">
-                                <i class="fas fa-save"></i> Submit Final Grades
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-<!-- Export Modal -->
-<div class="modal fade" id="exportModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white">
-                    <i class="fas fa-file-excel"></i> Export Gradebook
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="exportInitialContent">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-file-excel fa-3x text-primary"></i>
-                    </div>
-                    <p class="text-center mb-3">
-                        <strong>Class:</strong> {{ $class->class_name }}
-                    </p>
-                    <p class="text-center mb-3">
-                        <strong>Section:</strong> <span id="exportSectionName"></span>
-                    </p>
+    <!-- Export Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white">
+                        <i class="fas fa-file-excel"></i> Export Gradebook
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
                 </div>
-
-                <div id="exportProgressContent" style="display: none;">
-                    <div class="text-center mb-3">
-                        <i class="fas fa-spinner fa-spin fa-3x text-secondary"></i>
-                    </div>
-                    <h6 class="text-center mb-3">Generating Excel File...</h6>
-                    <div class="progress" style="height: 25px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-                             role="progressbar" 
-                             id="exportProgressBar"
-                             style="width: 0%">
-                            <span id="exportProgressText">0%</span>
+                <div class="modal-body">
+                    <div id="exportInitialContent">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-file-excel fa-3x text-primary"></i>
                         </div>
+                        <p class="text-center mb-3">
+                            <strong>Class:</strong> {{ $class->class_name }}
+                        </p>
+                        <p class="text-center mb-3">
+                            <strong>Section:</strong> <span id="exportSectionName"></span>
+                        </p>
                     </div>
-                    <p class="text-center text-muted mt-3 mb-0">
-                        <small>Please wait while we prepare your file...</small>
-                    </p>
-                </div>
 
-                <div id="exportCompleteContent" style="display: none;">
-                    <div class="text-center mb-3">
-                        <i class="fas fa-check-circle fa-3x text-primary"></i>
+                    <div id="exportProgressContent" style="display: none;">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                        </div>
+                        <h6 class="text-center mb-3">Generating Excel File...</h6>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                 role="progressbar" 
+                                 id="exportProgressBar"
+                                 style="width: 0%">
+                                <span id="exportProgressText">0%</span>
+                            </div>
+                        </div>
+                        <p class="text-center text-muted mt-3 mb-0">
+                            <small>Please wait while we prepare your file...</small>
+                        </p>
                     </div>
-                    <h6 class="text-center mb-3">Export Successful!</h6>
-                    <p class="text-center text-muted mb-0">
-                        Your download should begin shortly.
-                    </p>
+
+                    <div id="exportCompleteContent" style="display: none;">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-check-circle fa-3x text-primary"></i>
+                        </div>
+                        <h6 class="text-center mb-3">Export Successful!</h6>
+                        <p class="text-center text-muted mb-0">
+                            Your download should begin shortly.
+                        </p>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" id="exportDownloadBtn">
-                    <i class="fas fa-download"></i> Download Excel
-                </button>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-primary" id="exportDownloadBtn">
+                        <i class="fas fa-download"></i> Download Excel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
+    <!-- Passcode Modal -->
     <div class="modal fade" id="passcodeModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -503,7 +481,7 @@
 @endsection
 
 @section('scripts')
-<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         const CLASS_ID = {{ $classId }};
         const QUARTERS = @json($quarters);
@@ -515,9 +493,7 @@
             verifyPasscode: "{{ route('teacher.gradebook.verify-passcode', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
             exportGradebook: "{{ route('teacher.gradebook.export', ['classId' => $classId]) }}",
-            getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}",
-            submitFinalGrades: "{{ route('teacher.gradebook.submit-final-grades', ['classId' => $classId]) }}",
-            checkFinalGradesStatus: "{{ route('teacher.gradebook.check-final-status', ['classId' => $classId]) }}"
+            getFinalGrade: "{{ route('teacher.gradebook.final-grade', ['classId' => $classId]) }}"
         };
     </script>
     
