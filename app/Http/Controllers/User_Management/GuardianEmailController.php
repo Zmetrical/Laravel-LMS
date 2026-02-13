@@ -216,9 +216,6 @@ class GuardianEmailController extends MainController
         }
     }
 
-    /**
-     * Handle email verification callback
-     */
     public function verifyEmail($token)
     {
         $guardian = DB::table('guardians')
@@ -261,11 +258,24 @@ class GuardianEmailController extends MainController
             'email' => $guardian->email
         ]);
 
+        // **ADD THIS: Automatically send access email after verification**
+        $accessEmailResult = $this->sendAccessEmail($guardian->id);
+        
+        $accessEmailSent = $accessEmailResult['success'] ?? false;
+        
+        if (!$accessEmailSent) {
+            \Log::warning('Failed to auto-send access email after verification', [
+                'guardian_id' => $guardian->id,
+                'error' => $accessEmailResult['message'] ?? 'Unknown error'
+            ]);
+        }
+
         return view('guardian.verification_result', [
             'success' => true,
             'message' => 'Email verified successfully!',
             'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
-            'access_url' => route('guardian.access', ['token' => $guardian->access_token])
+            'access_url' => route('guardian.access', ['token' => $guardian->access_token]),
+            'access_email_sent' => $accessEmailSent
         ]);
     }
 
