@@ -7,7 +7,7 @@ $(document).ready(function() {
         }
     });
 
-    // Get student number from the page (you'll need to pass this from blade)
+    // Get student number from the page
     const studentNumber = $('#semester-selector').data('student-number');
 
     // Auto-load active semester on page load
@@ -36,7 +36,12 @@ $(document).ready(function() {
         const selectedText = $('#semester-selector option:selected').text();
         $('#semester-display').text(selectedText);
         
-        // Fetch grades using your existing route
+        // Get school year from the selected option
+        const selectedOption = $('#semester-selector option:selected');
+        const schoolYear = selectedOption.data('school-year');
+        $('#school-year-display').text(schoolYear || '');
+        
+        // Fetch grades
         $.ajax({
             url: window.location.pathname + '/data',
             method: 'GET',
@@ -44,8 +49,13 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.grades && response.grades.length > 0) {
                     displayGrades(response.grades);
+                    
+                    // Update adviser name if available
+                    if (response.adviser_name) {
+                        $('#adviser-display').text(response.adviser_name);
+                    }
                 } else {
-                    $('#grades-tbody').html('<tr><td colspan="5" class="text-center text-muted py-4">No grades recorded for this semester yet.</td></tr>');
+                    $('#grades-tbody').html('<tr><td colspan="5" class="text-center text-muted py-4">No subjects enrolled for this semester yet.</td></tr>');
                 }
             },
             error: function(xhr) {
@@ -57,38 +67,18 @@ $(document).ready(function() {
 
     function displayGrades(grades) {
         let html = '';
-        let coreSubjects = [];
-        let appliedSubjects = [];
-        let specializedSubjects = [];
         
-        // Categorize subjects
-        grades.forEach(function(grade) {
-            const className = grade.class_name.toUpperCase();
-            
-            if (
-                className.includes('ORAL COMMUNICATION') ||
-                className.includes('KOMUNIKASYON') ||
-                className.includes('EARTH') ||
-                className.includes('GENERAL MATH') ||
-                className.includes('INTRODUCTION TO') ||
-                className.includes('PERSONAL DEVELOPMENT') ||
-                className.includes('PHYSICAL EDUCATION') ||
-                className.includes('P.E')
-            ) {
-                coreSubjects.push(grade);
-            } else if (className.includes('APPLIED')) {
-                appliedSubjects.push(grade);
-            } else {
-                specializedSubjects.push(grade);
-            }
-        });
+        // Group subjects by category from database
+        let coreSubjects = grades.filter(g => g.class_category === 'CORE SUBJECT');
+        let appliedSubjects = grades.filter(g => g.class_category === 'APPLIED SUBJECT');
+        let specializedSubjects = grades.filter(g => g.class_category === 'SPECIALIZED SUBJECT');
         
         let totalFinal = 0;
         let countWithGrades = 0;
         
         // Core Subjects
         if (coreSubjects.length > 0) {
-            html += '<tr><td colspan="5" class="category-header">CORE SUBJECTS</td></tr>';
+            html += '<tr><td colspan="5" class="category-header">CORE SUBJECT</td></tr>';
             coreSubjects.forEach(function(grade) {
                 html += buildGradeRow(grade);
                 if (grade.final_grade !== null && grade.final_grade !== undefined) {
@@ -138,25 +128,25 @@ $(document).ready(function() {
         let html = '<tr>';
         html += '<td>' + grade.class_name + '</td>';
         
-        // Q1 Grade (using q1_transmuted_grade from your controller)
+        // Q1 Grade
         html += '<td class="text-center">';
-        if (grade.q1_transmuted_grade !== null && grade.q1_transmuted_grade !== undefined) {
-            html += parseFloat(grade.q1_transmuted_grade).toFixed(2);
+        if (grade.q1_grade !== null && grade.q1_grade !== undefined) {
+            html += parseFloat(grade.q1_grade).toFixed(2);
         } else {
             html += '';
         }
         html += '</td>';
         
-        // Q2 Grade (using q2_transmuted_grade from your controller)
+        // Q2 Grade
         html += '<td class="text-center">';
-        if (grade.q2_transmuted_grade !== null && grade.q2_transmuted_grade !== undefined) {
-            html += parseFloat(grade.q2_transmuted_grade).toFixed(2);
+        if (grade.q2_grade !== null && grade.q2_grade !== undefined) {
+            html += parseFloat(grade.q2_grade).toFixed(2);
         } else {
             html += '';
         }
         html += '</td>';
         
-        // Final Grade
+        // Final Grade (Semester Average)
         html += '<td class="text-center">';
         if (grade.final_grade !== null && grade.final_grade !== undefined) {
             html += parseFloat(grade.final_grade).toFixed(2);

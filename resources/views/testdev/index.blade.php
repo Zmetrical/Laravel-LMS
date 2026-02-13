@@ -27,9 +27,19 @@
         <!-- Guardian Email Verification Card -->
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Guardian Email Verification</h3>
+                <h3 class="card-title">Guardian Email Verification Testing</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
+                <div class="alert alert-secondary">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Testing Flow:</strong> Send verification email → Guardian verifies → Access email automatically sent
+                </div>
+
                 <div class="form-group">
                     <label>Select Guardian <span class="text-danger">*</span></label>
                     <select class="form-control" id="guardian_selector" style="width: 100%;">
@@ -72,14 +82,9 @@
                         <p class="mb-0"><strong>Students:</strong> <span id="guardianStudents"></span></p>
                     </div>
 
-                    <div class="btn-group btn-block" role="group">
-                        <button type="button" class="btn btn-default" id="sendVerificationBtn">
-                            <i class="fas fa-envelope-open-text mr-2"></i>Send Verification Email
-                        </button>
-                        <button type="button" class="btn btn-secondary" id="sendAccessBtn" disabled>
-                            <i class="fas fa-key mr-2"></i>Send Access Email
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-default btn-block" id="sendVerificationBtn">
+                        <i class="fas fa-envelope-open-text mr-2"></i>Send Verification Email
+                    </button>
                 </div>
             </div>
         </div>
@@ -103,7 +108,6 @@
 <script>
     const API_ROUTES = {
         sendVerification: "{{ route('testdev.send_verification') }}",
-        sendGuardianEmail: "{{ route('testdev.send_guardian_email') }}",
         getGuardians: "{{ route('testdev.get_guardians') }}",
         getGuardianStudents: "{{ url('testdev/get-guardian-students') }}"
     };

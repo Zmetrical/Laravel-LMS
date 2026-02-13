@@ -25,16 +25,19 @@
                             <p class="text-muted">Thank you, {{ $guardian_name }}. Your email has been verified.</p>
                             
                             <div class="alert alert-success mt-4">
-                                <p class="mb-0"><strong>What's next?</strong></p>
-                                <p class="mb-0">You will receive an email with your Guardian Portal access link shortly.</p>
+                                <p class="mb-2"><strong><i class="fas fa-envelope-open-text mr-2"></i>Access Email Sent</strong></p>
+                                <p class="mb-0">An email with your Guardian Portal access link has been automatically sent to your inbox.</p>
                             </div>
 
                             @if(isset($access_url))
                             <div class="mt-4">
                                 <a href="{{ $access_url }}" class="btn btn-lg" style="background-color: #141d5c; color: white;">
-                                    <i class="fas fa-sign-in-alt mr-2"></i>Access Guardian Portal
+                                    <i class="fas fa-sign-in-alt mr-2"></i>Access Guardian Portal Now
                                 </a>
                             </div>
+                            <p class="text-muted mt-3">
+                                <small>Or check your email for the access link</small>
+                            </p>
                             @endif
                         @else
                             <div class="mb-4">

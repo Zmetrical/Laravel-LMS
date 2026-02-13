@@ -121,6 +121,9 @@ CREATE TABLE `guardians` (
   `first_name` varchar(100) NOT NULL,
   `last_name` varchar(100) NOT NULL,
   `access_token` varchar(64) NOT NULL,
+  `email_verified_at` timestamp NULL DEFAULT NULL,
+  `verification_token` varchar(64) DEFAULT NULL,
+  `verification_sent_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `is_active` int(11) NOT NULL

@@ -133,7 +133,7 @@ class GuardianController extends Controller
             return redirect()->route('guardian.home')->with('error', 'Access denied to this student.');
         }
 
-        // Get student info
+        // Get student info with all necessary fields
         $student = DB::table('students as s')
             ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
             ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
@@ -145,11 +145,14 @@ class GuardianController extends Controller
                 's.middle_name',
                 's.last_name',
                 's.profile_image',
+                's.gender',
                 's.student_type',
                 's.section_id',
+                'sec.code as section_code',
                 'sec.name as section_name',
-                'l.name as level_name',
-                'st.name as strand_name'
+                'st.code as strand_code',
+                'st.name as strand_name',
+                'l.name as level_name'
             )
             ->first();
 
@@ -159,7 +162,7 @@ class GuardianController extends Controller
 
         $student->full_name = trim($student->first_name . ' ' . $student->middle_name . ' ' . $student->last_name);
 
-        // Get all semesters that have enrollment or grades for this student
+        // Get all semesters that have enrollment for this student
         $semesters = DB::table('semesters as sem')
             ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
             ->whereExists(function($query) use ($student_number) {
@@ -168,15 +171,20 @@ class GuardianController extends Controller
                     ->whereColumn('sse.semester_id', 'sem.id')
                     ->where('sse.student_number', $student_number);
             })
-            ->select('sem.id', 'sem.name', 'sem.status', 'sy.code as school_year_code')
-            ->distinct()
+            ->select(
+                'sem.id',
+                'sem.name',
+                'sem.code',
+                'sem.status',
+                'sy.id as school_year_id',
+                'sy.code as school_year_code',
+                'sy.year_start',
+                'sy.year_end',
+                DB::raw("CONCAT(sy.code, ' - ', sem.name) as display_name")
+            )
             ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.id', 'desc')
-            ->get()
-            ->map(function($sem) {
-                $sem->display_name = 'SY ' . $sem->school_year_code . ' - ' . $sem->name;
-                return $sem;
-            });
+            ->orderBy('sem.code', 'asc')
+            ->get();
 
         $data = [
             'scripts' => ['guardian/student_grades.js'],
@@ -215,47 +223,111 @@ class GuardianController extends Controller
             return response()->json(['error' => 'Student not found'], 404);
         }
 
-        // Get enrolled classes based on student type
+        // Get semester info for school year display
+        $semester = DB::table('semesters as sem')
+            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+            ->where('sem.id', $semesterId)
+            ->select(
+                'sem.id',
+                'sem.name',
+                'sy.code as school_year_code'
+            )
+            ->first();
+
+        // Get enrolled subjects with grades using the proper method
+        $grades = $this->getEnrolledSubjects($student_number, $semesterId, $student->student_type, $student->section_id);
+
+        // Get adviser name for regular students
+        $adviser_name = null;
         if ($student->student_type === 'regular' && $student->section_id) {
-            // Regular student - get classes from section_class_matrix
-            $enrolledClasses = DB::table('section_class_matrix as scm')
+            $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
+        }
+
+        return response()->json([
+            'grades' => $grades,
+            'semester' => $semester,
+            'adviser_name' => $adviser_name
+        ]);
+    }
+
+    /**
+     * Get all enrolled subjects for a student in a semester
+     */
+    private function getEnrolledSubjects($studentNumber, $semesterId, $studentType, $sectionId = null)
+    {
+        if ($studentType === 'regular' && $sectionId) {
+            // Get subjects from section_class_matrix for regular students
+            return DB::table('section_class_matrix as scm')
                 ->join('classes as c', 'scm.class_id', '=', 'c.id')
-                ->where('scm.section_id', $student->section_id)
+                ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
+                    $join->on('gf.class_code', '=', 'c.class_code')
+                        ->where('gf.student_number', '=', $studentNumber)
+                        ->where('gf.semester_id', '=', $semesterId);
+                })
+                ->where('scm.section_id', $sectionId)
                 ->where('scm.semester_id', $semesterId)
-                ->select('c.class_code', 'c.class_name')
+                ->select(
+                    'c.class_code',
+                    'c.class_name',
+                    'c.class_category',
+                    'gf.q1_grade',
+                    'gf.q2_grade',
+                    'gf.final_grade',
+                    'gf.remarks'
+                )
+                ->orderBy('c.class_category')
+                ->orderBy('c.class_code')
                 ->get();
         } else {
-            // Irregular student - get classes from student_class_matrix
-            $enrolledClasses = DB::table('student_class_matrix as stcm')
+            // Get subjects from student_class_matrix for irregular students
+            return DB::table('student_class_matrix as stcm')
                 ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
-                ->where('stcm.student_number', $student_number)
+                ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
+                    $join->on('gf.class_code', '=', 'c.class_code')
+                        ->where('gf.student_number', '=', $studentNumber)
+                        ->where('gf.semester_id', '=', $semesterId);
+                })
+                ->where('stcm.student_number', $studentNumber)
                 ->where('stcm.semester_id', $semesterId)
                 ->where('stcm.enrollment_status', 'enrolled')
-                ->select('c.class_code', 'c.class_name')
+                ->select(
+                    'c.class_code',
+                    'c.class_name',
+                    'c.class_category',
+                    'gf.q1_grade',
+                    'gf.q2_grade',
+                    'gf.final_grade',
+                    'gf.remarks'
+                )
+                ->orderBy('c.class_category')
+                ->orderBy('c.class_code')
                 ->get();
         }
+    }
 
-        $grades = [];
+    /**
+     * Get adviser name for a section from section_adviser_matrix
+     */
+    private function getAdviserName($sectionId, $semesterId)
+    {
+        $adviser = DB::table('section_adviser_matrix as sam')
+            ->join('teachers as t', 'sam.teacher_id', '=', 't.id')
+            ->where('sam.section_id', $sectionId)
+            ->where('sam.semester_id', $semesterId)
+            ->where('t.status', 1)
+            ->select(
+                't.first_name',
+                't.middle_name',
+                't.last_name'
+            )
+            ->first();
 
-        foreach ($enrolledClasses as $class) {
-            // Get final grade if exists
-            $finalGrade = DB::table('grades_final')
-                ->where('student_number', $student_number)
-                ->where('class_code', $class->class_code)
-                ->where('semester_id', $semesterId)
-                ->first();
-
-            $grades[] = [
-                'class_code' => $class->class_code,
-                'class_name' => $class->class_name,
-                'q1_transmuted_grade' => $finalGrade->q1_grade ?? null,
-                'q2_transmuted_grade' => $finalGrade->q2_grade ?? null,
-                'final_grade' => $finalGrade->final_grade ?? null,
-                'remarks' => $finalGrade->remarks ?? null,
-            ];
+        if ($adviser) {
+            $middleInitial = $adviser->middle_name ? strtoupper(substr($adviser->middle_name, 0, 1)) . '.' : '';
+            return strtoupper(trim($adviser->first_name . ' ' . $middleInitial . ' ' . $adviser->last_name));
         }
 
-        return response()->json(['grades' => $grades]);
+        return null;
     }
 
     // Helper function to generate access link (use in admin panel)

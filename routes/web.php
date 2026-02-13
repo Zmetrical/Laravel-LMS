@@ -242,6 +242,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
         });
 
+        
         // ---------------------------------------------------------------------------
         // ENROLLMENT MANAGEMENT
         // ---------------------------------------------------------------------------

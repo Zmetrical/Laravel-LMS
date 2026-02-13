@@ -127,12 +127,6 @@
                 <div class="url-display">{{ $verification_url }}</div>
             </div>
 
-            <div class="info-box">
-                <p style="margin: 0; color: #856404; font-size: 14px;">
-                    <strong>Important:</strong> After verification, you will automatically receive another email with your portal access link.
-                </p>
-            </div>
-
             <div class="message">
                 <p style="font-size: 13px; color: #666;">
                     If you did not request this verification or believe you received this email in error, please contact the school administration immediately.

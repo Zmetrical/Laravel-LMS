@@ -89,72 +89,6 @@ class TestDevController extends Controller
         }
     }
 
-    public function send_guardian_email(Request $request)
-    {
-        $request->validate([
-            'guardian_id' => 'required|exists:guardians,id'
-        ]);
-
-        try {
-            $guardian = DB::table('guardians')
-                ->where('id', $request->guardian_id)
-                ->first();
-
-            if (!$guardian) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Guardian not found'
-                ], 404);
-            }
-
-            // Check if email is verified
-            if (!$guardian->email_verified_at) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Guardian email is not verified. Please send verification email first.',
-                    'needs_verification' => true
-                ], 400);
-            }
-
-            $accessUrl = route('guardian.access', ['token' => $guardian->access_token]);
-
-            $students = DB::table('guardian_students as gs')
-                ->join('students as s', 'gs.student_number', '=', 's.student_number')
-                ->where('gs.guardian_id', $guardian->id)
-                ->select('s.first_name', 's.last_name', 's.student_number')
-                ->get();
-
-            if ($students->count() === 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No students linked to this guardian'
-                ], 400);
-            }
-
-            Mail::send('guardian.access_email', [
-                'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
-                'access_url' => $accessUrl,
-                'students' => $students
-            ], function ($message) use ($guardian) {
-                $message->to($guardian->email)
-                    ->subject('Trinity University - Guardian Portal Access');
-            });
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Guardian access email sent successfully to ' . $guardian->email,
-                'access_url' => $accessUrl,
-                'guardian_email' => $guardian->email
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
     public function verify_email($token)
     {
         $guardian = DB::table('guardians')
@@ -190,21 +124,58 @@ class TestDevController extends Controller
             'created_at' => now()
         ]);
 
+        // Automatically send access email after successful verification
+        try {
+            $accessUrl = route('guardian.access', ['token' => $guardian->access_token]);
+
+            $students = DB::table('guardian_students as gs')
+                ->join('students as s', 'gs.student_number', '=', 's.student_number')
+                ->where('gs.guardian_id', $guardian->id)
+                ->select('s.first_name', 's.last_name', 's.student_number')
+                ->get();
+
+            // Send access email automatically
+            Mail::send('guardian.access_email', [
+                'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
+                'access_url' => $accessUrl,
+                'students' => $students
+            ], function ($message) use ($guardian) {
+                $message->to($guardian->email)
+                    ->subject('Trinity University - Guardian Portal Access');
+            });
+
+            // Log access email sent
+            DB::table('audit_logs')->insert([
+                'user_type' => 'guardian',
+                'user_identifier' => $guardian->email,
+                'action' => 'access_email_sent',
+                'module' => 'guardians',
+                'record_id' => $guardian->id,
+                'description' => 'Guardian portal access email sent after verification: ' . $guardian->email,
+                'ip_address' => request()->ip(),
+                'created_at' => now()
+            ]);
+
+        } catch (\Exception $e) {
+            // Log error but don't fail the verification
+            DB::table('audit_logs')->insert([
+                'user_type' => 'system',
+                'user_identifier' => 'auto_email',
+                'action' => 'error',
+                'module' => 'guardians',
+                'record_id' => $guardian->id,
+                'description' => 'Failed to auto-send access email after verification: ' . $e->getMessage(),
+                'ip_address' => request()->ip(),
+                'created_at' => now()
+            ]);
+        }
+
         return view('guardian.verification_result', [
             'success' => true,
             'message' => 'Email verified successfully!',
             'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
             'access_url' => route('guardian.access', ['token' => $guardian->access_token])
         ]);
-    }
-
-    public function resend_verification(Request $request)
-    {
-        $request->validate([
-            'guardian_id' => 'required|exists:guardians,id'
-        ]);
-
-        return $this->send_verification_email($request);
     }
 
     public function get_guardians()
@@ -255,5 +226,14 @@ class TestDevController extends Controller
             });
 
         return response()->json($students);
+    }
+
+    public function resend_verification(Request $request)
+    {
+        $request->validate([
+            'guardian_id' => 'required|exists:guardians,id'
+        ]);
+
+        return $this->send_verification_email($request);
     }
 }

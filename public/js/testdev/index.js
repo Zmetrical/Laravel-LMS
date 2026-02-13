@@ -15,6 +15,7 @@ $(document).ready(function() {
         
         if (!guardianId) {
             $('#guardianInfo').hide();
+            $('#resultCard').hide();
             currentGuardian = null;
             return;
         }
@@ -49,12 +50,16 @@ $(document).ready(function() {
                     Swal.fire({
                         icon: 'success',
                         title: 'Verification Email Sent!',
-                        html: `<p>Sent to: <strong>${currentGuardian.email}</strong></p>`,
+                        html: `
+                            <p>Sent to: <strong>${currentGuardian.email}</strong></p>
+                            <div class="alert alert-secondary mt-3">
+                                <small><i class="fas fa-info-circle mr-1"></i>After verification, access email will be sent automatically</small>
+                            </div>
+                        `,
                         confirmButtonText: 'OK'
                     });
                     
                     showResult(response, 'verification');
-                    loadGuardians(); // Refresh list
                 }
             },
             error: function(xhr) {
@@ -65,61 +70,6 @@ $(document).ready(function() {
                     text: error,
                     confirmButtonText: 'OK'
                 });
-            },
-            complete: function() {
-                btn.html(originalHtml).prop('disabled', false);
-            }
-        });
-    });
-
-    // Send access email
-    $('#sendAccessBtn').click(function() {
-        if (!currentGuardian) return;
-        
-        const btn = $(this);
-        const originalHtml = btn.html();
-        btn.html('<i class="fas fa-spinner fa-spin mr-2"></i>Sending...').prop('disabled', true);
-
-        $.ajax({
-            url: API_ROUTES.sendGuardianEmail,
-            method: 'POST',
-            data: { guardian_id: currentGuardian.id },
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Access Email Sent!',
-                        html: `<p>Sent to: <strong>${response.guardian_email}</strong></p>`,
-                        confirmButtonText: 'OK'
-                    });
-                    
-                    showResult(response, 'access');
-                }
-            },
-            error: function(xhr) {
-                const error = xhr.responseJSON?.message || 'An error occurred';
-                
-                if (xhr.responseJSON?.needs_verification) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Email Not Verified',
-                        text: error,
-                        showCancelButton: true,
-                        confirmButtonText: 'Send Verification',
-                        cancelButtonText: 'Cancel'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            $('#sendVerificationBtn').click();
-                        }
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: error,
-                        confirmButtonText: 'OK'
-                    });
-                }
             },
             complete: function() {
                 btn.html(originalHtml).prop('disabled', false);
@@ -142,6 +92,26 @@ $(document).ready(function() {
             showConfirmButton: false
         });
     });
+
+    // Refresh guardians list
+    $('#refreshBtn').click(function() {
+        const btn = $(this);
+        const originalHtml = btn.html();
+        btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+        
+        loadGuardians();
+        
+        setTimeout(function() {
+            btn.html(originalHtml).prop('disabled', false);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Refreshed!',
+                timer: 1000,
+                showConfirmButton: false
+            });
+        }, 500);
+    });
 });
 
 function updateGuardianInfo(guardian) {
@@ -158,24 +128,30 @@ function updateGuardianInfo(guardian) {
     if (isVerified) {
         statusIcon.removeClass('bg-warning').addClass('bg-success');
         statusIcon.find('i').removeClass('fa-envelope').addClass('fa-check-circle');
-        statusText.text('Verified');
+        statusText.html('Verified <i class="fas fa-check ml-1"></i>');
         callout.removeClass('callout-warning').addClass('callout-success');
         
         $('#verifiedAt').text(new Date(guardian.email_verified_at).toLocaleString());
         $('#verifiedAtContainer').show();
         
-        $('#sendVerificationBtn').prop('disabled', true).html('<i class="fas fa-check-circle mr-2"></i>Already Verified');
-        $('#sendAccessBtn').prop('disabled', false);
+        $('#sendVerificationBtn')
+            .prop('disabled', true)
+            .removeClass('btn-default')
+            .addClass('btn-success')
+            .html('<i class="fas fa-check-circle mr-2"></i>Already Verified');
     } else {
         statusIcon.removeClass('bg-success').addClass('bg-warning');
         statusIcon.find('i').removeClass('fa-check-circle').addClass('fa-envelope');
-        statusText.text('Not Verified');
+        statusText.html('Not Verified <i class="fas fa-times ml-1"></i>');
         callout.removeClass('callout-success').addClass('callout-warning');
         
         $('#verifiedAtContainer').hide();
         
-        $('#sendVerificationBtn').prop('disabled', false).html('<i class="fas fa-envelope-open-text mr-2"></i>Send Verification Email');
-        $('#sendAccessBtn').prop('disabled', true);
+        $('#sendVerificationBtn')
+            .prop('disabled', false)
+            .removeClass('btn-success')
+            .addClass('btn-default')
+            .html('<i class="fas fa-envelope-open-text mr-2"></i>Send Verification Email');
     }
     
     // Load students
@@ -191,23 +167,29 @@ function updateGuardianInfo(guardian) {
 }
 
 function showResult(response, type) {
-    let resultHtml = '<div class="callout callout-success">';
-    resultHtml += '<h5><i class="fas fa-check-circle mr-2"></i>';
-    resultHtml += type === 'verification' ? 'Verification Email Sent!' : 'Access Email Sent!';
+    let resultHtml = '<div class="callout callout-secondary">';
+    resultHtml += '<h5><i class="fas fa-paper-plane mr-2"></i>';
+    resultHtml += 'Verification Email Sent';
     resultHtml += '</h5>';
+    resultHtml += '<p class="mb-2">The guardian will receive an email with a verification link.</p>';
     
-    if (response.verification_url || response.access_url) {
-        const url = response.verification_url || response.access_url;
-        resultHtml += '<p><strong>URL:</strong></p>';
-        resultHtml += '<div class="input-group">';
-        resultHtml += '<input type="text" class="form-control" value="' + url + '" readonly>';
+    if (response.verification_url) {
+        const url = response.verification_url;
+        resultHtml += '<p class="mb-2"><strong>Verification URL (for testing):</strong></p>';
+        resultHtml += '<div class="input-group mb-2">';
+        resultHtml += '<input type="text" class="form-control form-control-sm" value="' + url + '" readonly>';
         resultHtml += '<div class="input-group-append">';
-        resultHtml += '<button class="btn btn-default copy-url-btn" data-url="' + url + '">';
+        resultHtml += '<button class="btn btn-sm btn-default copy-url-btn" data-url="' + url + '">';
         resultHtml += '<i class="fas fa-copy"></i></button>';
         resultHtml += '</div></div>';
-        resultHtml += '<a href="' + url + '" class="btn btn-sm btn-secondary mt-2" target="_blank">';
-        resultHtml += '<i class="fas fa-external-link-alt mr-2"></i>Open Link</a>';
+        resultHtml += '<a href="' + url + '" class="btn btn-sm btn-secondary" target="_blank">';
+        resultHtml += '<i class="fas fa-external-link-alt mr-2"></i>Test Verification Link</a>';
     }
+    
+    resultHtml += '<div class="alert alert-secondary mt-3 mb-0">';
+    resultHtml += '<small><i class="fas fa-info-circle mr-1"></i>';
+    resultHtml += 'After the guardian clicks the verification link, the access email will be sent automatically.</small>';
+    resultHtml += '</div>';
     
     resultHtml += '</div>';
     

@@ -303,7 +303,9 @@
                     <select class="form-control" id="semester-selector" data-student-number="{{ $student->student_number }}">
                         <option value="">-- Select Semester --</option>
                         @foreach($semesters as $semester)
-                        <option value="{{ $semester->id }}" {{ $semester->status === 'active' ? 'selected' : '' }}>
+                        <option value="{{ $semester->id }}" 
+                                data-school-year="{{ $semester->school_year_code }}"
+                                {{ $semester->status === 'active' ? 'selected' : '' }}>
                             {{ $semester->display_name }}
                         </option>
                         @endforeach
@@ -338,6 +340,7 @@
                 </div>
 
                 <div class="report-title">Report Card</div>
+                <div class="school-year">School Year <span id="school-year-display"></span></div>
                 <div class="school-year" id="semester-display"></div>
 
                 <!-- Student Information -->
@@ -347,13 +350,13 @@
                             <td class="info-label">NAME:</td>
                             <td class="info-value">{{ strtoupper($student->last_name) }}, {{ strtoupper($student->first_name) }} {{ strtoupper($student->middle_name) }}</td>
                             <td class="info-label">GRADE & SECTION:</td>
-                            <td class="info-value">{{ $student->section_name ?? 'IRREGULAR' }}</td>
+                            <td class="info-value">{{ $student->level_name }} - {{ $student->section_name ?? 'IRREGULAR' }}</td>
                         </tr>
                         <tr>
                             <td class="info-label">TRACK AND STRAND:</td>
-                            <td class="info-value">{{ $student->strand_name ?? '' }} - {{ $student->level_name ?? '' }}</td>
-                            <td class="info-label">SCHOOL YEAR:</td>
-                            <td class="info-value" id="school-year-display"></td>
+                            <td class="info-value">{{ $student->strand_code ?? '' }}</td>
+                            <td class="info-label">ADVISER:</td>
+                            <td class="info-value" id="adviser-display">N/A</td>
                         </tr>
                     </table>
                 </div>

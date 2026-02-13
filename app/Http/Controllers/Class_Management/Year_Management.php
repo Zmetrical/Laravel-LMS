@@ -140,100 +140,100 @@ class Year_Management extends MainController
         }
     }
 
-public function updateSchoolYear(Request $request, $id)
-{
-    $validated = $request->validate([
-        'year_start' => 'required|integer|min:2000|max:3000',
-        'year_end' => 'required|integer|min:2000|max:3000|gt:year_start',
-    ]);
+    public function updateSchoolYear(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'year_start' => 'required|integer|min:2000|max:3000',
+            'year_end' => 'required|integer|min:2000|max:3000|gt:year_start',
+        ]);
 
-    try {
-        $schoolYear = DB::table('school_years')->where('id', $id)->first();
+        try {
+            $schoolYear = DB::table('school_years')->where('id', $id)->first();
 
-        if (!$schoolYear) {
-            return response()->json([
-                'success' => false,
-                'message' => 'School year not found.'
-            ], 404);
-        }
+            if (!$schoolYear) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School year not found.'
+                ], 404);
+            }
 
-        if ($request->year_end - $request->year_start != 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'School year must span exactly one year.'
-            ], 422);
-        }
+            if ($request->year_end - $request->year_start != 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School year must span exactly one year.'
+                ], 422);
+            }
 
-        $code = $request->year_start . '-' . $request->year_end;
+            $code = $request->year_start . '-' . $request->year_end;
 
-        $exists = DB::table('school_years')
-            ->where('code', $code)
-            ->where('id', '!=', $id)
-            ->exists();
+            $exists = DB::table('school_years')
+                ->where('code', $code)
+                ->where('id', '!=', $id)
+                ->exists();
 
-        if ($exists) {
-            return response()->json([
-                'success' => false,
-                'message' => 'School year already exists.'
-            ], 422);
-        }
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School year already exists.'
+                ], 422);
+            }
 
-        $oldValues = [
-            'year_start' => $schoolYear->year_start,
-            'year_end' => $schoolYear->year_end,
-            'code' => $schoolYear->code,
-        ];
+            $oldValues = [
+                'year_start' => $schoolYear->year_start,
+                'year_end' => $schoolYear->year_end,
+                'code' => $schoolYear->code,
+            ];
 
-        DB::beginTransaction();
+            DB::beginTransaction();
 
-        DB::table('school_years')
-            ->where('id', $id)
-            ->update([
-                'year_start' => $request->year_start,
-                'year_end' => $request->year_end,
+            DB::table('school_years')
+                ->where('id', $id)
+                ->update([
+                    'year_start' => $request->year_start,
+                    'year_end' => $request->year_end,
+                    'code' => $code,
+                    'updated_at' => now(),
+                ]);
+
+            $this->logAudit(
+                'updated',
+                'school_years',
+                (string)$id,
+                "Updated school year from '{$schoolYear->code}' to '{$code}'",
+                $oldValues,
+                [
+                    'year_start' => $request->year_start,
+                    'year_end' => $request->year_end,
+                    'code' => $code,
+                ]
+            );
+
+            \Log::info('School year updated successfully', [
+                'school_year_id' => $id,
                 'code' => $code,
-                'updated_at' => now(),
             ]);
 
-        $this->logAudit(
-            'updated',
-            'school_years',
-            (string)$id,
-            "Updated school year from '{$schoolYear->code}' to '{$code}'",
-            $oldValues,
-            [
-                'year_start' => $request->year_start,
-                'year_end' => $request->year_end,
-                'code' => $code,
-            ]
-        );
+            DB::commit();
 
-        \Log::info('School year updated successfully', [
-            'school_year_id' => $id,
-            'code' => $code,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'School year updated successfully!'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
 
-        DB::commit();
+            \Log::error('Failed to update school year', [
+                'school_year_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'School year updated successfully!'
-        ]);
-    } catch (Exception $e) {
-        DB::rollBack();
-
-        \Log::error('Failed to update school year', [
-            'school_year_id' => $id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to update school year: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update school year: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 
     public function setActiveSchoolYear($id)
     {
@@ -437,11 +437,28 @@ public function updateSchoolYear(Request $request, $id)
                 'updated_at' => now(),
             ]);
 
+            // Create quarters for this semester
+            $quarters = [
+                ['name' => '1st Quarter', 'code' => '1ST', 'order' => 1],
+                ['name' => '2nd Quarter', 'code' => '2ND', 'order' => 2]
+            ];
+
+            foreach ($quarters as $quarter) {
+                DB::table('quarters')->insert([
+                    'semester_id' => $semesterId,
+                    'name' => $quarter['name'],
+                    'code' => $quarter['code'],
+                    'order_number' => $quarter['order'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
             $this->logAudit(
                 'created',
                 'semesters',
                 (string)$semesterId,
-                "Created {$name} for school year {$schoolYear->code}",
+                "Created {$name} for school year {$schoolYear->code} with 2 quarters",
                 null,
                 [
                     'school_year_id' => $request->school_year_id,
@@ -451,20 +468,22 @@ public function updateSchoolYear(Request $request, $id)
                     'start_date' => $request->start_date,
                     'end_date' => $request->end_date,
                     'status' => 'upcoming',
+                    'quarters_created' => 2
                 ]
             );
 
-            \Log::info('Semester created successfully', [
+            \Log::info('Semester created successfully with quarters', [
                 'semester_id' => $semesterId,
                 'code' => $code,
                 'order' => $nextOrder,
+                'quarters_created' => 2
             ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Semester created successfully!',
+                'message' => 'Semester created successfully with 2 quarters!',
                 'semester_id' => $semesterId
             ], 201);
         } catch (Exception $e) {
@@ -599,7 +618,6 @@ public function updateSchoolYear(Request $request, $id)
         }
     }
 
-
     public function getSemesterSections($id)
     {
         try {
@@ -673,237 +691,237 @@ public function updateSchoolYear(Request $request, $id)
         }
     }
 
-public function getSectionEnrollment($semesterId, $sectionId)
-{
-    try {
-        $section = DB::table('sections as sec')
-            ->join('strands as str', 'sec.strand_id', '=', 'str.id')
-            ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
-            ->where('sec.id', $sectionId)
-            ->select(
-                'sec.id',
-                'sec.code as section_code',
-                'sec.name as section_name',
-                'str.code as strand_code',
-                'str.name as strand_name',
-                'lvl.name as level_name'
-            )
-            ->first();
+    public function getSectionEnrollment($semesterId, $sectionId)
+    {
+        try {
+            $section = DB::table('sections as sec')
+                ->join('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                ->where('sec.id', $sectionId)
+                ->select(
+                    'sec.id',
+                    'sec.code as section_code',
+                    'sec.name as section_name',
+                    'str.code as strand_code',
+                    'str.name as strand_name',
+                    'lvl.name as level_name'
+                )
+                ->first();
 
-        if (!$section) {
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found'
+                ], 404);
+            }
+
+            // Get quarters for this semester
+            $quarters = DB::table('quarters')
+                ->where('semester_id', $semesterId)
+                ->orderBy('order_number')
+                ->get();
+
+            // Get classes enrolled for this section
+            $classes = DB::table('section_class_matrix as scm')
+                ->join('classes as c', 'scm.class_id', '=', 'c.id')
+                ->leftJoin('teacher_class_matrix as tcm', function($join) use ($semesterId) {
+                    $join->on('tcm.class_id', '=', 'c.id')
+                         ->where('tcm.semester_id', '=', $semesterId);
+                })
+                ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+                ->where('scm.section_id', $sectionId)
+                ->where('scm.semester_id', $semesterId)
+                ->select(
+                    'c.id',
+                    'c.class_code',
+                    'c.class_name',
+                    DB::raw('CONCAT(COALESCE(t.first_name, ""), " ", COALESCE(t.last_name, "")) as teacher_name')
+                )
+                ->get();
+
+            // Get regular students in this section
+            $students = DB::table('students as s')
+                ->where('s.section_id', $sectionId)
+                ->where('s.student_type', 'regular')
+                ->select(
+                    's.student_number',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.student_type'
+                )
+                ->get();
+
+            $studentNumbers = $students->pluck('student_number')->toArray();
+            $classCodes = $classes->pluck('class_code')->toArray();
+
+            \Log::info('Section Enrollment Debug', [
+                'semester_id' => $semesterId,
+                'section_id' => $sectionId,
+                'students_count' => count($studentNumbers),
+                'classes_count' => count($classCodes),
+                'student_numbers' => $studentNumbers,
+                'class_codes' => $classCodes
+            ]);
+
+            // Initialize empty arrays
+            $quarterGradesData = [];
+            $finalGradesData = [];
+
+            if (!empty($studentNumbers) && !empty($classCodes)) {
+                // Fetch quarter grades
+                $quarterGrades = DB::table('quarter_grades as qg')
+                    ->join('quarters as q', 'qg.quarter_id', '=', 'q.id')
+                    ->whereIn('qg.student_number', $studentNumbers)
+                    ->whereIn('qg.class_code', $classCodes)
+                    ->where('q.semester_id', $semesterId)
+                    ->select(
+                        'qg.student_number',
+                        'qg.class_code',
+                        'q.code as quarter_code',
+                        'qg.transmuted_grade',
+                        'qg.initial_grade'
+                    )
+                    ->get();
+
+                \Log::info('Quarter Grades Fetched', [
+                    'count' => $quarterGrades->count(),
+                    'sample' => $quarterGrades->take(3)->toArray()
+                ]);
+
+                // Build quarter grades array
+                foreach ($quarterGrades as $grade) {
+                    if (!isset($quarterGradesData[$grade->student_number])) {
+                        $quarterGradesData[$grade->student_number] = [];
+                    }
+                    if (!isset($quarterGradesData[$grade->student_number][$grade->class_code])) {
+                        $quarterGradesData[$grade->student_number][$grade->class_code] = [];
+                    }
+                    $quarterGradesData[$grade->student_number][$grade->class_code][$grade->quarter_code] = $grade->transmuted_grade;
+                }
+
+                // Fetch final grades
+                $finalGrades = DB::table('grades_final')
+                    ->whereIn('student_number', $studentNumbers)
+                    ->whereIn('class_code', $classCodes)
+                    ->where('semester_id', $semesterId)
+                    ->select(
+                        'student_number',
+                        'class_code',
+                        'q1_grade',
+                        'q2_grade',
+                        'final_grade',
+                        'remarks'
+                    )
+                    ->get();
+
+                \Log::info('Final Grades Fetched', [
+                    'count' => $finalGrades->count(),
+                    'sample' => $finalGrades->take(3)->toArray()
+                ]);
+
+                // Build final grades array
+                foreach ($finalGrades as $grade) {
+                    if (!isset($finalGradesData[$grade->student_number])) {
+                        $finalGradesData[$grade->student_number] = [];
+                    }
+                    $finalGradesData[$grade->student_number][$grade->class_code] = [
+                        'q1_grade' => $grade->q1_grade,
+                        'q2_grade' => $grade->q2_grade,
+                        'final_grade' => $grade->final_grade,
+                        'remarks' => $grade->remarks
+                    ];
+                }
+            }
+
+            // Format student data with grades
+            $students = $students->map(function ($student) use ($quarterGradesData, $finalGradesData, $classes) {
+                $student->full_name = trim($student->first_name . ' ' . 
+                                          ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
+                                          $student->last_name);
+                
+                $studentNum = $student->student_number;
+                
+                // Build class grades array
+                $student->class_grades = $classes->map(function($class) use ($studentNum, $quarterGradesData, $finalGradesData) {
+                    $classCode = $class->class_code;
+                    
+                    // Get quarter grades
+                    $q1 = null;
+                    $q2 = null;
+                    
+                    if (isset($quarterGradesData[$studentNum][$classCode])) {
+                        $q1 = $quarterGradesData[$studentNum][$classCode]['1ST'] ?? null;
+                        $q2 = $quarterGradesData[$studentNum][$classCode]['2ND'] ?? null;
+                    }
+                    
+                    // Get final grade
+                    $finalGrade = null;
+                    $q1FromFinal = null;
+                    $q2FromFinal = null;
+                    $remarks = null;
+                    
+                    if (isset($finalGradesData[$studentNum][$classCode])) {
+                        $finalData = $finalGradesData[$studentNum][$classCode];
+                        $q1FromFinal = $finalData['q1_grade'];
+                        $q2FromFinal = $finalData['q2_grade'];
+                        $finalGrade = $finalData['final_grade'];
+                        $remarks = $finalData['remarks'];
+                    }
+                    
+                    // Use quarter grades if available, otherwise use from final grades table
+                    $q1 = $q1 ?? $q1FromFinal;
+                    $q2 = $q2 ?? $q2FromFinal;
+                    
+                    return [
+                        'class_code' => $classCode,
+                        'class_name' => $class->class_name,
+                        'q1' => $q1,
+                        'q2' => $q2,
+                        'final_grade' => $finalGrade,
+                        'remarks' => $remarks
+                    ];
+                })->values()->toArray();
+                
+                return $student;
+            });
+
+            // Sort by last name, then first name
+            $students = $students->sortBy([
+                ['last_name', 'asc'],
+                ['first_name', 'asc']
+            ])->values();
+
+            \Log::info('Students with grades prepared', [
+                'count' => $students->count(),
+                'sample_student' => $students->first()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'section' => $section,
+                'classes' => $classes,
+                'students' => $students,
+                'quarters' => $quarters,
+                'summary' => [
+                    'total_students' => $students->count(),
+                    'total_classes' => $classes->count()
+                ]
+            ]);
+        } catch (Exception $e) {
+            \Log::error('Failed to load section enrollment', [
+                'semester_id' => $semesterId,
+                'section_id' => $sectionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Section not found'
-            ], 404);
+                'message' => 'Failed to load section enrollment: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Get quarters for this semester
-        $quarters = DB::table('quarters')
-            ->where('semester_id', $semesterId)
-            ->orderBy('order_number')
-            ->get();
-
-        // Get classes enrolled for this section
-        $classes = DB::table('section_class_matrix as scm')
-            ->join('classes as c', 'scm.class_id', '=', 'c.id')
-            ->leftJoin('teacher_class_matrix as tcm', function($join) use ($semesterId) {
-                $join->on('tcm.class_id', '=', 'c.id')
-                     ->where('tcm.semester_id', '=', $semesterId);
-            })
-            ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-            ->where('scm.section_id', $sectionId)
-            ->where('scm.semester_id', $semesterId)
-            ->select(
-                'c.id',
-                'c.class_code',
-                'c.class_name',
-                DB::raw('CONCAT(COALESCE(t.first_name, ""), " ", COALESCE(t.last_name, "")) as teacher_name')
-            )
-            ->get();
-
-        // Get regular students in this section
-        $students = DB::table('students as s')
-            ->where('s.section_id', $sectionId)
-            ->where('s.student_type', 'regular')
-            ->select(
-                's.student_number',
-                's.first_name',
-                's.middle_name',
-                's.last_name',
-                's.student_type'
-            )
-            ->get();
-
-        $studentNumbers = $students->pluck('student_number')->toArray();
-        $classCodes = $classes->pluck('class_code')->toArray();
-
-        \Log::info('Section Enrollment Debug', [
-            'semester_id' => $semesterId,
-            'section_id' => $sectionId,
-            'students_count' => count($studentNumbers),
-            'classes_count' => count($classCodes),
-            'student_numbers' => $studentNumbers,
-            'class_codes' => $classCodes
-        ]);
-
-        // Initialize empty arrays
-        $quarterGradesData = [];
-        $finalGradesData = [];
-
-        if (!empty($studentNumbers) && !empty($classCodes)) {
-            // Fetch quarter grades
-            $quarterGrades = DB::table('quarter_grades as qg')
-                ->join('quarters as q', 'qg.quarter_id', '=', 'q.id')
-                ->whereIn('qg.student_number', $studentNumbers)
-                ->whereIn('qg.class_code', $classCodes)
-                ->where('q.semester_id', $semesterId)
-                ->select(
-                    'qg.student_number',
-                    'qg.class_code',
-                    'q.code as quarter_code',
-                    'qg.transmuted_grade',
-                    'qg.initial_grade'
-                )
-                ->get();
-
-            \Log::info('Quarter Grades Fetched', [
-                'count' => $quarterGrades->count(),
-                'sample' => $quarterGrades->take(3)->toArray()
-            ]);
-
-            // Build quarter grades array
-            foreach ($quarterGrades as $grade) {
-                if (!isset($quarterGradesData[$grade->student_number])) {
-                    $quarterGradesData[$grade->student_number] = [];
-                }
-                if (!isset($quarterGradesData[$grade->student_number][$grade->class_code])) {
-                    $quarterGradesData[$grade->student_number][$grade->class_code] = [];
-                }
-                $quarterGradesData[$grade->student_number][$grade->class_code][$grade->quarter_code] = $grade->transmuted_grade;
-            }
-
-            // Fetch final grades
-            $finalGrades = DB::table('grades_final')
-                ->whereIn('student_number', $studentNumbers)
-                ->whereIn('class_code', $classCodes)
-                ->where('semester_id', $semesterId)
-                ->select(
-                    'student_number',
-                    'class_code',
-                    'q1_grade',
-                    'q2_grade',
-                    'final_grade',
-                    'remarks'
-                )
-                ->get();
-
-            \Log::info('Final Grades Fetched', [
-                'count' => $finalGrades->count(),
-                'sample' => $finalGrades->take(3)->toArray()
-            ]);
-
-            // Build final grades array
-            foreach ($finalGrades as $grade) {
-                if (!isset($finalGradesData[$grade->student_number])) {
-                    $finalGradesData[$grade->student_number] = [];
-                }
-                $finalGradesData[$grade->student_number][$grade->class_code] = [
-                    'q1_grade' => $grade->q1_grade,
-                    'q2_grade' => $grade->q2_grade,
-                    'final_grade' => $grade->final_grade,
-                    'remarks' => $grade->remarks
-                ];
-            }
-        }
-
-        // Format student data with grades
-        $students = $students->map(function ($student) use ($quarterGradesData, $finalGradesData, $classes) {
-            $student->full_name = trim($student->first_name . ' ' . 
-                                      ($student->middle_name ? substr($student->middle_name, 0, 1) . '. ' : '') . 
-                                      $student->last_name);
-            
-            $studentNum = $student->student_number;
-            
-            // Build class grades array
-            $student->class_grades = $classes->map(function($class) use ($studentNum, $quarterGradesData, $finalGradesData) {
-                $classCode = $class->class_code;
-                
-                // Get quarter grades
-                $q1 = null;
-                $q2 = null;
-                
-                if (isset($quarterGradesData[$studentNum][$classCode])) {
-                    $q1 = $quarterGradesData[$studentNum][$classCode]['1ST'] ?? null;
-                    $q2 = $quarterGradesData[$studentNum][$classCode]['2ND'] ?? null;
-                }
-                
-                // Get final grade
-                $finalGrade = null;
-                $q1FromFinal = null;
-                $q2FromFinal = null;
-                $remarks = null;
-                
-                if (isset($finalGradesData[$studentNum][$classCode])) {
-                    $finalData = $finalGradesData[$studentNum][$classCode];
-                    $q1FromFinal = $finalData['q1_grade'];
-                    $q2FromFinal = $finalData['q2_grade'];
-                    $finalGrade = $finalData['final_grade'];
-                    $remarks = $finalData['remarks'];
-                }
-                
-                // Use quarter grades if available, otherwise use from final grades table
-                $q1 = $q1 ?? $q1FromFinal;
-                $q2 = $q2 ?? $q2FromFinal;
-                
-                return [
-                    'class_code' => $classCode,
-                    'class_name' => $class->class_name,
-                    'q1' => $q1,
-                    'q2' => $q2,
-                    'final_grade' => $finalGrade,
-                    'remarks' => $remarks
-                ];
-            })->values()->toArray();
-            
-            return $student;
-        });
-
-        // Sort by last name, then first name
-        $students = $students->sortBy([
-            ['last_name', 'asc'],
-            ['first_name', 'asc']
-        ])->values();
-
-        \Log::info('Students with grades prepared', [
-            'count' => $students->count(),
-            'sample_student' => $students->first()
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'section' => $section,
-            'classes' => $classes,
-            'students' => $students,
-            'quarters' => $quarters,
-            'summary' => [
-                'total_students' => $students->count(),
-                'total_classes' => $classes->count()
-            ]
-        ]);
-    } catch (Exception $e) {
-        \Log::error('Failed to load section enrollment', [
-            'semester_id' => $semesterId,
-            'section_id' => $sectionId,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load section enrollment: ' . $e->getMessage()
-        ], 500);
-        }
-}
+    }
 
     public function getQuarters($semesterId)
     {
@@ -1005,6 +1023,4 @@ public function getSectionEnrollment($semesterId, $sectionId)
             ], 500);
         }
     }
-
-
 }
