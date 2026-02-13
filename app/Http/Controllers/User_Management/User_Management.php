@@ -658,7 +658,7 @@ class User_Management extends Controller
         return Str::random(10);
     }
 
-    public function list_students(Request $request)
+public function list_students(Request $request)
     {
         $strands = Strand::all();
         $levels = Level::all();
@@ -682,7 +682,7 @@ class User_Management extends Controller
         // Get active semester for default selection
         $activeSemester = $semesters->where('status', 'active')->first();
 
-        // Get ALL enrollment records - each enrollment is a separate row
+        // Get ALL enrollment records with guardian verification status
         $students = DB::table('students')
             ->join('sections', 'students.section_id', '=', 'sections.id')
             ->join('levels', 'sections.level_id', '=', 'levels.id')
@@ -691,12 +691,16 @@ class User_Management extends Controller
             ->leftJoin('semesters as sem', 'sse.semester_id', '=', 'sem.id')
             ->leftJoin('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
             ->leftJoin('sections as enrolled_section', 'sse.section_id', '=', 'enrolled_section.id')
+            // Join with guardian to get verification status
+            ->leftJoin('guardian_students as gs', 'students.student_number', '=', 'gs.student_number')
+            ->leftJoin('guardians as g', 'gs.guardian_id', '=', 'g.id')
             ->select(
                 'students.id',
                 'students.student_number',
                 'students.first_name',
                 'students.middle_name',
                 'students.last_name',
+                'students.email',
                 'students.student_type',
                 'sections.name as current_section',
                 'levels.name as level',
@@ -705,7 +709,15 @@ class User_Management extends Controller
                 'enrolled_section.name as enrolled_section_name',
                 'sse.enrollment_status',
                 'sse.enrollment_date',
-                DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display")
+                DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
+                // Add guardian email and verification status
+                'g.email as guardian_email',
+                'g.email_verified_at',
+                DB::raw('CASE 
+                    WHEN g.email_verified_at IS NOT NULL THEN "verified"
+                    WHEN g.email IS NOT NULL THEN "pending"
+                    ELSE "none"
+                END as verification_status')
             )
             ->orderBy('students.last_name')
             ->orderBy('students.first_name')

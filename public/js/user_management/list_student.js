@@ -13,9 +13,7 @@ $(document).ready(function () {
     dataTable = $('#studentTable').DataTable({
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        scrollX: true,
-        autoWidth: false,
-        order: [[1, 'asc']],
+        order: [[2, 'asc']],
         searching: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
              '<"row"<"col-sm-12"tr>>' +
@@ -35,21 +33,30 @@ $(document).ready(function () {
             }
         },
         columnDefs: [
-            { targets: 7, orderable: false }
+            { targets: [7, 8], orderable: false, className: "text-center" }
         ],
         drawCallback: function() {
             updateStudentCount();
         }
     });
 
+    // Fix header/body alignment on zoom/resize
+    $(window).on('resize', function() {
+        if (dataTable) {
+            dataTable.columns.adjust().draw();
+        }
+    });
+
     const COL = {
-        STUDENT_NO: 0,
-        FULL_NAME: 1,
-        STRAND: 2,
-        LEVEL: 3,
-        SECTION: 4,
-        TYPE: 5,
-        SEMESTER: 6
+        SEMESTER: 0,
+        STUDENT_NO: 1,
+        FULL_NAME: 2,
+        STRAND: 3,
+        LEVEL: 4,
+        SECTION: 5,
+        TYPE: 6,
+        VERIFIED: 7,
+        ACTIONS: 8
     };
 
     // Search by student number or name

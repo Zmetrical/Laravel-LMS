@@ -222,4 +222,11 @@ $(document).ready(function () {
 
     // Initial count
     updateTeacherCount();
+
+    // Fix header/body alignment on zoom/resize
+    $(window).on('resize', function() {
+        if (dataTable) {
+            dataTable.columns.adjust().draw();
+        }
+    });
 });

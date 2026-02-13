@@ -21,6 +21,21 @@
             text-transform: uppercase;
             margin-bottom: 0.25rem;
         }
+        
+        /* Fix DataTables alignment */
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        #studentTable {
+            width: 100% !important;
+        }
+        
+        /* Compact badge styling */
+        .badge small {
+            font-size: 0.7rem;
+            margin-left: 2px;
+        }
     </style>
 @endsection
 
@@ -105,22 +120,30 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0" id="studentTable" style="width: 100%;">
+                <table class="table table-striped table-hover mb-0" id="studentTable">
                     <thead>
                         <tr>
+                            <th>Semester</th>
                             <th>Student Number</th>
                             <th>Full Name</th>
                             <th>Strand</th>
                             <th>Level</th>
                             <th>Section</th>
                             <th>Type</th>
-                            <th>Semester</th>
+                            <th class="text-center">Verified</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="studentTableBody">
                         @foreach ($students as $student)
                             <tr>
+                                <td data-semester-id="{{ $student->semester_id ?? '' }}">
+                                    @if($student->semester_display)
+                                        {{ $student->semester_display }}
+                                    @else
+                                        <span class="text-muted">No enrollment</span>
+                                    @endif
+                                </td>
                                 <td>{{ $student->student_number }}</td>
                                 <td>{{ $student->last_name }}, {{ $student->first_name }}</td>
                                 <td>{{ $student->strand }}</td>
@@ -137,16 +160,37 @@
                                     @endphp
                                     <span class="badge {{ $badgeClass }}">{{ ucfirst($type) }}</span>
                                 </td>
-                                <td data-semester-id="{{ $student->semester_id ?? '' }}">
-                                    @if($student->semester_display)
-                                        {{ $student->semester_display }}
+                                <td class="text-center">
+                                    @php
+                                        $verificationStatus = $student->verification_status ?? 'none';
+                                    @endphp
+                                    
+                                    @if($verificationStatus === 'verified')
+                                        {{-- Guardian email verified - Primary (Blue) --}}
+                                        <span class="badge badge-primary" 
+                                              title="Guardian email verified: {{ $student->guardian_email }}&#10;Verified on: {{ date('M d, Y', strtotime($student->email_verified_at)) }}">
+                                            <i class="fas fa-check-circle"></i>
+                                            <small>Verified</small>
+                                        </span>
+                                    @elseif($verificationStatus === 'pending')
+                                        {{-- Guardian exists but not verified - Secondary (Gray) --}}
+                                        <span class="badge badge-secondary" 
+                                              title="Verification pending for: {{ $student->guardian_email }}">
+                                            <i class="fas fa-clock"></i>
+                                            <small>Pending</small>
+                                        </span>
                                     @else
-                                        <span class="text-muted">No enrollment</span>
+                                        {{-- No guardian linked - Secondary (Gray) --}}
+                                        <span class="badge badge-secondary" 
+                                              title="No guardian linked">
+                                            <i class="fas fa-times-circle"></i>
+                                            <small>None</small>
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     <a href="{{ route('profile.student.show', $student->id) }}" 
-                                        class="btn btn-sm btn-secondary" title="View Profile">
+                                        class="btn btn-sm btn-primary" title="View Profile">
                                         <i class="fas fa-user"></i>
                                     </a>
                                     <a href="{{ route('profile.student.edit', $student->id) }}"
