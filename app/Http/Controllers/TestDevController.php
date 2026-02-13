@@ -18,14 +18,13 @@ class TestDevController extends Controller
         return view('testdev.index', $data);
     }
 
-    public function send_guardian_email(Request $request)
+    public function send_verification_email(Request $request)
     {
         $request->validate([
             'guardian_id' => 'required|exists:guardians,id'
         ]);
 
         try {
-            // Get guardian details
             $guardian = DB::table('guardians')
                 ->where('id', $request->guardian_id)
                 ->first();
@@ -37,10 +36,88 @@ class TestDevController extends Controller
                 ], 404);
             }
 
-            // Generate access link
-            $accessUrl = route('guardian.access', ['token' => $guardian->access_token]);
+            // Check if already verified
+            if ($guardian->email_verified_at) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email already verified on ' . date('M d, Y', strtotime($guardian->email_verified_at))
+                ], 400);
+            }
+
+            // Generate verification token
+            $verificationToken = Str::random(64);
+            
+            // Update guardian with verification token
+            DB::table('guardians')
+                ->where('id', $guardian->id)
+                ->update([
+                    'verification_token' => $verificationToken,
+                    'verification_sent_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+            $verificationUrl = route('guardian.verify', ['token' => $verificationToken]);
 
             // Get linked students
+            $students = DB::table('guardian_students as gs')
+                ->join('students as s', 'gs.student_number', '=', 's.student_number')
+                ->where('gs.guardian_id', $guardian->id)
+                ->select('s.first_name', 's.last_name', 's.student_number')
+                ->get();
+
+            // Send verification email
+            Mail::send('guardian.verification_email', [
+                'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
+                'verification_url' => $verificationUrl,
+                'students' => $students
+            ], function ($message) use ($guardian) {
+                $message->to($guardian->email)
+                    ->subject('Trinity University - Verify Your Email Address');
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Verification email sent to ' . $guardian->email,
+                'verification_url' => $verificationUrl
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function send_guardian_email(Request $request)
+    {
+        $request->validate([
+            'guardian_id' => 'required|exists:guardians,id'
+        ]);
+
+        try {
+            $guardian = DB::table('guardians')
+                ->where('id', $request->guardian_id)
+                ->first();
+
+            if (!$guardian) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Guardian not found'
+                ], 404);
+            }
+
+            // Check if email is verified
+            if (!$guardian->email_verified_at) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Guardian email is not verified. Please send verification email first.',
+                    'needs_verification' => true
+                ], 400);
+            }
+
+            $accessUrl = route('guardian.access', ['token' => $guardian->access_token]);
+
             $students = DB::table('guardian_students as gs')
                 ->join('students as s', 'gs.student_number', '=', 's.student_number')
                 ->where('gs.guardian_id', $guardian->id)
@@ -54,8 +131,7 @@ class TestDevController extends Controller
                 ], 400);
             }
 
-            // Send email
-            Mail::send('guardian.guardian_access', [
+            Mail::send('guardian.access_email', [
                 'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
                 'access_url' => $accessUrl,
                 'students' => $students
@@ -79,10 +155,56 @@ class TestDevController extends Controller
         }
     }
 
-    public function get_students()
+    public function verify_email($token)
     {
-        // Not needed anymore since we're selecting from existing guardians
-        return response()->json([]);
+        $guardian = DB::table('guardians')
+            ->where('verification_token', $token)
+            ->whereNull('email_verified_at')
+            ->first();
+
+        if (!$guardian) {
+            return view('guardian.verification_result', [
+                'success' => false,
+                'message' => 'Invalid or expired verification link.'
+            ]);
+        }
+
+        // Update guardian as verified
+        DB::table('guardians')
+            ->where('id', $guardian->id)
+            ->update([
+                'email_verified_at' => now(),
+                'verification_token' => null,
+                'updated_at' => now()
+            ]);
+
+        // Log verification
+        DB::table('audit_logs')->insert([
+            'user_type' => 'guardian',
+            'user_identifier' => $guardian->email,
+            'action' => 'email_verified',
+            'module' => 'guardians',
+            'record_id' => $guardian->id,
+            'description' => 'Guardian email verified: ' . $guardian->email,
+            'ip_address' => request()->ip(),
+            'created_at' => now()
+        ]);
+
+        return view('guardian.verification_result', [
+            'success' => true,
+            'message' => 'Email verified successfully!',
+            'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
+            'access_url' => route('guardian.access', ['token' => $guardian->access_token])
+        ]);
+    }
+
+    public function resend_verification(Request $request)
+    {
+        $request->validate([
+            'guardian_id' => 'required|exists:guardians,id'
+        ]);
+
+        return $this->send_verification_email($request);
     }
 
     public function get_guardians()
@@ -96,14 +218,19 @@ class TestDevController extends Controller
                 'g.last_name',
                 'g.access_token',
                 'g.is_active',
+                'g.email_verified_at',
+                'g.verification_sent_at',
                 'g.created_at',
                 DB::raw('COUNT(gs.student_number) as student_count')
             )
-            ->groupBy('g.id', 'g.email', 'g.first_name', 'g.last_name', 'g.access_token', 'g.is_active', 'g.created_at')
+            ->groupBy('g.id', 'g.email', 'g.first_name', 'g.last_name', 'g.access_token', 
+                      'g.is_active', 'g.email_verified_at', 'g.verification_sent_at', 'g.created_at')
             ->orderBy('g.created_at', 'desc')
             ->get()
             ->map(function($guardian) {
                 $guardian->access_url = route('guardian.access', ['token' => $guardian->access_token]);
+                $guardian->is_verified = !is_null($guardian->email_verified_at);
+                $guardian->verification_status = $guardian->is_verified ? 'verified' : 'unverified';
                 return $guardian;
             });
 
@@ -128,30 +255,5 @@ class TestDevController extends Controller
             });
 
         return response()->json($students);
-    }
-
-
-    public function toggle_guardian_status($id)
-    {
-        try {
-            $guardian = DB::table('guardians')->where('id', $id)->first();
-            
-            $newStatus = $guardian->is_active ? 0 : 1;
-            
-            DB::table('guardians')
-                ->where('id', $id)
-                ->update(['is_active' => $newStatus]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Guardian status updated',
-                'new_status' => $newStatus
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
     }
 }

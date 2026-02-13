@@ -581,11 +581,16 @@ Route::prefix('guardian')->name('guardian.')->group(function () {
 });
 
 
-// Test & Development Routes
-Route::prefix('testdev')->name('testdev.')->group(function () {
-    Route::get('/', [TestDevController::class, 'index'])->name('index');
-    Route::post('/send-guardian-email', [TestDevController::class, 'send_guardian_email'])->name('send_guardian_email');
-    Route::get('/get-guardians', [TestDevController::class, 'get_guardians'])->name('get_guardians');
-    Route::get('/get-guardian-students/{id}', [TestDevController::class, 'get_guardian_students'])->name('get_guardian_students');
-    Route::post('/toggle-guardian-status/{id}', [TestDevController::class, 'toggle_guardian_status'])->name('toggle_guardian_status');
+// Guardian verification routes
+Route::get('/guardian/verify/{token}', [TestDevController::class, 'verify_email'])->name('guardian.verify');
+
+
+// Test dev routes
+Route::prefix('testdev')->group(function () {
+    Route::get('/', [TestDevController::class, 'index'])->name('testdev.index');
+    Route::post('/send-verification', [TestDevController::class, 'send_verification_email'])->name('testdev.send_verification');
+    Route::post('/resend-verification', [TestDevController::class, 'resend_verification'])->name('testdev.resend_verification');
+    Route::post('/send-guardian-email', [TestDevController::class, 'send_guardian_email'])->name('testdev.send_guardian_email');
+    Route::get('/get-guardians', [TestDevController::class, 'get_guardians'])->name('testdev.get_guardians');
+    Route::get('/get-guardian-students/{id}', [TestDevController::class, 'get_guardian_students']);
 });
