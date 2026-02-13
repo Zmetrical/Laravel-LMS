@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\User_Management;
-
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\MainController;
 
 use Illuminate\Http\Request;
@@ -19,9 +19,16 @@ use App\Traits\AuditLogger;
 
 use Exception;
 
-class User_Management extends MainController
+class User_Management extends Controller
 {
     use AuditLogger;
+
+    protected $guardianEmailController;
+
+    public function __construct()
+    {
+        $this->guardianEmailController = new GuardianEmailController();
+    }
 
     // ---------------------------------------------------------------------------
     //  Students Page
@@ -437,8 +444,10 @@ class User_Management extends MainController
             DB::table('student_password_matrix')->insert($passwordMatrixData);
             DB::table('student_semester_enrollment')->insert($enrollmentData);
 
-            // Process guardians
+            // Process guardians and automatically send verification emails
             $guardianCount = 0;
+            $newGuardiansCreated = [];
+            
             foreach ($guardianLinks as $guardianData) {
                 $result = $this->createOrLinkGuardian([
                     'email' => $guardianData['email'],
@@ -446,8 +455,33 @@ class User_Management extends MainController
                     'lastName' => $guardianData['lastName']
                 ], $guardianData['student_number']);
                 
-                if ($result) {
+                if ($result['success']) {
                     $guardianCount++;
+                    
+                    // Track new guardians for automatic email sending
+                    if ($result['is_new']) {
+                        $newGuardiansCreated[] = $result['guardian_id'];
+                    }
+                }
+            }
+
+            // Automatically send verification emails to newly created guardians
+            $emailResults = [
+                'sent' => 0,
+                'failed' => 0
+            ];
+
+            foreach ($newGuardiansCreated as $guardianId) {
+                $emailResult = $this->guardianEmailController->sendVerificationEmail($guardianId, true);
+                
+                if ($emailResult['success']) {
+                    $emailResults['sent']++;
+                } else {
+                    $emailResults['failed']++;
+                    \Log::warning('Failed to send automatic verification email', [
+                        'guardian_id' => $guardianId,
+                        'message' => $emailResult['message']
+                    ]);
                 }
             }
 
@@ -466,17 +500,33 @@ class User_Management extends MainController
                     'total_students' => $studentsToAdd,
                     'semester_id' => $activeSemester->id,
                     'guardians_linked' => $guardianCount,
+                    'new_guardians_created' => count($newGuardiansCreated),
+                    'verification_emails_sent' => $emailResults['sent'],
+                    'verification_emails_failed' => $emailResults['failed'],
                     'students' => $auditEntries
                 ]
             );
 
             DB::commit();
 
+            $message = count($studentsData) . " student(s) created successfully and distributed across sections!";
+            
+            if ($emailResults['sent'] > 0) {
+                $message .= " {$emailResults['sent']} verification email(s) sent automatically.";
+            }
+            
+            if ($emailResults['failed'] > 0) {
+                $message .= " Note: {$emailResults['failed']} email(s) failed to send.";
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => count($studentsData) . " student(s) created successfully and distributed across sections!",
+                'message' => $message,
                 'count' => count($studentsData),
-                'guardians_linked' => $guardianCount
+                'guardians_linked' => $guardianCount,
+                'new_guardians' => count($newGuardiansCreated),
+                'emails_sent' => $emailResults['sent'],
+                'emails_failed' => $emailResults['failed']
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -496,6 +546,7 @@ class User_Management extends MainController
     private function createOrLinkGuardian($guardianData, $studentNumber)
     {
         $guardian = null;
+        $isNew = false;
         
         // Check if guardian exists by email
         $guardian = DB::table('guardians')->where('email', $guardianData['email'])->first();
@@ -513,6 +564,8 @@ class User_Management extends MainController
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+
+            $isNew = true;
 
             // Audit log for guardian creation
             $this->logAudit(
@@ -563,7 +616,11 @@ class User_Management extends MainController
             }
         }
 
-        return $guardianId;
+        return [
+            'success' => true,
+            'guardian_id' => $guardianId,
+            'is_new' => $isNew
+        ];
     }
 
     private function processMiddleInitial($middleName)

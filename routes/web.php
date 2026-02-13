@@ -46,6 +46,8 @@ use App\Http\Controllers\GuardianController;
 
 use App\Http\Controllers\User_Management\Profile_Management;
 use App\Http\Controllers\User_Management\User_Management;
+use App\Http\Controllers\User_Management\GuardianEmailController;
+
 use App\Http\Controllers\User_Management\Section_Management;
 
 use Illuminate\Support\Facades\Route;
@@ -242,7 +244,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
         });
 
-        
+
+        // ---------------------------------------------------------------------------
+        // GUARDIAN MANAGEMENT
+        // ---------------------------------------------------------------------------
+        Route::prefix('guardians')->name('guardians.')->group(function () {
+            Route::get('/list', [GuardianEmailController::class, 'getGuardians'])->name('list');
+            Route::get('/{id}/students', [GuardianEmailController::class, 'getGuardianStudents'])->name('students');
+            Route::post('/send-verification', [GuardianEmailController::class, 'manualSendVerification'])->name('send_verification');
+            Route::post('/send-access', [GuardianEmailController::class, 'manualSendAccessEmail'])->name('send_access');
+            Route::post('/resend-verification', [GuardianEmailController::class, 'resendVerification'])->name('resend_verification');
+            Route::post('/batch-send-verifications', [GuardianEmailController::class, 'batchSendVerifications'])->name('batch_send');
+        });
+
         // ---------------------------------------------------------------------------
         // ENROLLMENT MANAGEMENT
         // ---------------------------------------------------------------------------
@@ -573,18 +587,18 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 });
 
 
-// Guardian routes 
 Route::prefix('guardian')->name('guardian.')->group(function () {
+    // Email verification (public)
+    Route::get('/verify/{token}', [GuardianEmailController::class, 'verifyEmail'])->name('verify');
+    
+    // Access portal with token
     Route::get('/access/{token}', [GuardianController::class, 'access'])->name('access');
+    
+    // Dashboard (after access granted)
     Route::get('/dashboard', [GuardianController::class, 'index'])->name('home');
     Route::get('/student/{student_number}/grades', [GuardianController::class, 'view_student_grades'])->name('student.grades');
     Route::get('/student/{student_number}/grades/data', [GuardianController::class, 'get_student_grades_data'])->name('student.grades.data');
 });
-
-
-// Guardian verification routes
-Route::get('/guardian/verify/{token}', [TestDevController::class, 'verify_email'])->name('guardian.verify');
-
 
 // Test dev routes
 Route::prefix('testdev')->group(function () {
