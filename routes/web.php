@@ -287,6 +287,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/class-students', [Enroll_Management::class, 'classes_enrollment'])->name('classes.students.index');
         });
 
+
+        // ---------------------------------------------------------------------------
+        // Profile MANAGEMENT
+        // ---------------------------------------------------------------------------
+
+        // Guardian Management from Student Profile
+        Route::post('/profile/student/{id}/guardian/{guardian_id}/resend-verification', 
+            [GuardianEmailController::class, 'resendGuardianVerification'])
+            ->name('profile.student.guardian.resend_verification');
+
+        Route::post('/profile/student/{id}/guardian/{guardian_id}/resend-access', 
+            [GuardianEmailController::class, 'resendGuardianAccess'])
+            ->name('profile.student.guardian.resend_access');
+
+        Route::post('/profile/student/{id}/guardian/{guardian_id}/change-email', 
+            [GuardianEmailController::class, 'changeGuardianEmail'])
+            ->name('profile.student.guardian.change_email');
+
+        Route::get('/profile/student/{id}/guardian/{guardian_id}/status', 
+            [GuardianEmailController::class, 'getGuardianStatus'])
+            ->name('profile.student.guardian.status');
+        Route::get('/profile/student/{id}/credentials', 
+            [Profile_Management::class, 'getStudentCredentials'])
+            ->name('profile.student.credentials');
         // ---------------------------------------------------------------------------
         // CLASS MANAGEMENT
         // ---------------------------------------------------------------------------

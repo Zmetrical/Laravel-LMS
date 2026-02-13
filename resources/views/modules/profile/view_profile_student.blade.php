@@ -26,6 +26,7 @@
         <div class="row">
             <!-- Left Container -->
             <div class="col-md-3">
+
                 <!-- Profile Card -->
                 <div class="card card-primary card-outline">
                     <div class="card-body box-profile">
@@ -51,6 +52,23 @@
                             </div>
 
                             <ul class="list-group list-group-unbordered mb-3">
+
+                                @if(auth()->guard('admin')->check())
+
+                                <li class="list-group-item">
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" class="form-control" id="studentPassword" 
+                                            value="••••••••" readonly>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-default" id="togglePassword" 
+                                                title="Show password">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+
+                                @endif
                                 <li class="list-group-item">
                                     <b><i class="fas fa-user mr-1"></i> Student Type</b>
                                     <span class="float-right">{{ ucfirst($student->student_type) }}</span>
@@ -67,6 +85,9 @@
                                     <b><i class="fas fa-users mr-1"></i> Section</b>
                                     <span class="float-right">{{ $student->section }}</span>
                                 </li>
+
+
+
                             </ul>
 
                             @if($mode === 'view')
@@ -85,7 +106,8 @@
                     </div>
                 </div>
 
-            <!-- Right Container -->
+            
+                <!-- Right Container -->
             <div class="col-md-9">
                 <!-- Personal Information Card -->
                 <div class="card card-primary card-outline">
@@ -143,12 +165,11 @@
 <h6 class="mb-3"><i class="fas fa-user-friends mr-2"></i>Parent/Guardian Information</h6>
 
 @php
-    // Ensure we always have at least one guardian slot to display
     $displayGuardians = (isset($guardians) && count($guardians) > 0) ? $guardians : [null];
 @endphp
 
 @foreach($displayGuardians as $index => $guardian)
-    <div class="mb-3">
+    <div class="guardian-card mb-3 p-3 border rounded" data-guardian-id="{{ $guardian->id ?? '' }}">
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
@@ -169,11 +190,38 @@
             <div class="col-md-12">
                 <div class="form-group">
                     <label><i class="fas fa-envelope mr-1"></i>Email</label>
-                    <input type="email" class="form-control" readonly 
-                        value="{{ $guardian->email ?? '' }}" />
+                    <div class="input-group">
+                        <input type="email" class="form-control guardian-email" readonly 
+                            value="{{ $guardian->email ?? '' }}" />
+                        @if($guardian && $mode === 'view')
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-default btn-sm btn-change-email" 
+                                    data-guardian-id="{{ $guardian->id }}">
+                                    <i class="fas fa-edit"></i> Change
+                                </button>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
+        
+        @if($guardian && $mode === 'view')
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="guardian-actions">
+                        <span class="verification-status badge" data-guardian-id="{{ $guardian->id }}">
+                            <i class="fas fa-spinner fa-spin"></i> <small>Checking...</small>
+                        </span>
+                        <button type="button" class="btn btn-sm btn-primary float-right btn-email-action" 
+                            data-guardian-id="{{ $guardian->id }}" 
+                            data-action="verification">
+                            <i class="fas fa-envelope"></i> <span class="btn-text">Loading...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 @endforeach
 
@@ -256,6 +304,7 @@
             updateStudentProfile: "{{ route('profile.student.update', ['id' => $student->id]) }}",
             getEnrolledClasses: "{{ route('profile.student.enrolled_classes', ['id' => $student->id]) }}",
             redirectBack: "{{ route('profile.student.show', ['id' => $student->id]) }}",
+            studentId: "{{ $student->id }}"
         };
     </script>
 

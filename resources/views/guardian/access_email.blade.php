@@ -82,45 +82,46 @@
             margin: 20px 0;
         }
         .students-list h4 {
-            margin: 0 0 10px 0;
+            margin: 0 0 15px 0;
             color: #141d5c;
             font-size: 15px;
         }
         .student-item {
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            background: #fafafa;
         }
         .student-item:last-child {
-            border-bottom: none;
+            margin-bottom: 0;
         }
         .student-name {
             font-weight: bold;
-            color: #333;
-        }
-        .student-number {
-            color: #666;
-            font-size: 13px;
-        }
-        .info-box {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 20px 0;
-        }
-        .info-box h4 {
-            margin: 0 0 10px 0;
-            color: #856404;
+            color: #141d5c;
             font-size: 15px;
+            margin-bottom: 8px;
         }
-        .info-box ul {
+        .student-info {
             margin: 5px 0;
-            padding-left: 20px;
-        }
-        .info-box li {
-            margin: 5px 0;
-            color: #856404;
             font-size: 14px;
+        }
+        .student-info strong {
+            color: #666;
+            display: inline-block;
+            width: 120px;
+        }
+        .credential-box {
+            background: #fff;
+            border: 1px dashed #141d5c;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        .credential-item {
+            font-family: monospace;
+            font-size: 13px;
+            margin: 5px 0;
         }
         .footer {
             background: #f8f9fa;
@@ -133,23 +134,24 @@
         .footer p {
             margin: 5px 0;
         }
-        .url-display {
-            word-break: break-all;
-            background: #fff;
-            padding: 10px;
-            border: 1px dashed #ccc;
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
             border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            color: #666;
-            margin: 10px 0;
+        }
+        .warning-box p {
+            margin: 5px 0;
+            color: #856404;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Trinity University</h1>
+            <h1>Trinity Polytechic College</h1>
             <p>Guardian Portal Access</p>
         </div>
         
@@ -159,51 +161,51 @@
             </div>
             
             <div class="message">
-                <p>Welcome to Trinity University's Guardian Portal! You have been granted access to monitor the academic progress of your student(s).</p>
+                <p>You have been granted access to Trinity's Guardian Portal.</p>
+            </div>
+
+            <div class="access-box">
+                <h3>Guardian Portal Access</h3>
+                <a href="{{ $access_url }}" class="access-link">Access Guardian Portal</a>
             </div>
 
             @if(count($students) > 0)
             <div class="students-list">
-                <h4>Your Students:</h4>
+                <h4>Student Information & Credentials</h4>
                 @foreach($students as $student)
                 <div class="student-item">
-                    <div class="student-name">{{ $student->first_name }} {{ $student->last_name }}</div>
-                    <div class="student-number">Student Number: {{ $student->student_number }}</div>
+                    <div class="student-name">{{ $student->first_name }} {{ $student->middle_name }} {{ $student->last_name }}</div>
+                    <div class="student-info">
+                        <strong>Student Number:</strong> {{ $student->student_number }}
+                    </div>
+                    
+                    @if($student->plain_password)
+                    <div class="credential-box">
+                        <div class="credential-item">
+                            <strong>Student Portal:</strong> <a href="{{ $student_portal_url }}">{{ $student_portal_url }}</a>
+                        </div>
+                        <div class="credential-item">
+                            <strong>Username:</strong> {{ $student->student_number }}
+                        </div>
+                        <div class="credential-item">
+                            <strong>Password:</strong> {{ $student->plain_password }}
+                        </div>
+                    </div>
+                    @endif
                 </div>
                 @endforeach
             </div>
             @endif
 
-            <div class="access-box">
-                <h3>Access Your Portal</h3>
-                <p>Click the button below to access the Guardian Portal:</p>
-                <a href="{{ $access_url }}" class="access-link">Access Guardian Portal</a>
-                
-                <p style="margin-top: 15px; font-size: 13px; color: #666;">
-                    Or copy and paste this link into your browser:
-                </p>
-                <div class="url-display">{{ $access_url }}</div>
-            </div>
-
             <div class="message">
-                <p><strong>What you can do in the Guardian Portal:</strong></p>
-                <ul style="padding-left: 20px;">
-                    <li>View your students' grades across all subjects</li>
-                    <li>Monitor quarterly and final grades</li>
-                    <li>Track academic performance over time</li>
-                    <li>Access grade history by semester</li>
-                </ul>
-            </div>
-
-            <div class="message">
-
-                <p><strong>Trinity University</strong></p>
+                <p><strong>Trinity Polytechic College</strong></p>
                 <p>This is an automated message. Please do not reply to this email.</p>
-                <p>If you did not request this access or believe you received this email in error, please contact the school administration immediately.</p>
-
             </div>
         </div>
         
+        <div class="footer">
+            <p>&copy; {{ date('Y') }} Trinity Polytechic College. All rights reserved.</p>
+        </div>
     </div>
 </body>
 </html>

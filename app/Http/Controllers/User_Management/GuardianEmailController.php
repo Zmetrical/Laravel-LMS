@@ -121,100 +121,102 @@ class GuardianEmailController extends MainController
         }
     }
 
-    /**
-     * Send access email to verified guardian
-     */
-    public function sendAccessEmail($guardianId)
-    {
-        try {
-            $guardian = DB::table('guardians')
-                ->where('id', $guardianId)
-                ->first();
+public function sendAccessEmail($guardianId)
+{
+    try {
+        $guardian = DB::table('guardians')
+            ->where('id', $guardianId)
+            ->first();
 
-            if (!$guardian) {
-                return [
-                    'success' => false,
-                    'message' => 'Guardian not found'
-                ];
-            }
-
-            // Check if email is verified
-            if (!$guardian->email_verified_at) {
-                return [
-                    'success' => false,
-                    'message' => 'Guardian email is not verified. Please send verification email first.',
-                    'needs_verification' => true
-                ];
-            }
-
-            $accessUrl = route('guardian.access', ['token' => $guardian->access_token]);
-
-            $students = DB::table('guardian_students as gs')
-                ->join('students as s', 'gs.student_number', '=', 's.student_number')
-                ->where('gs.guardian_id', $guardian->id)
-                ->select(
-                    's.first_name',
-                    's.middle_name',
-                    's.last_name',
-                    's.student_number'
-                )
-                ->get();
-
-            if ($students->count() === 0) {
-                return [
-                    'success' => false,
-                    'message' => 'No students linked to this guardian'
-                ];
-            }
-
-            Mail::send('guardian.access_email', [
-                'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
-                'access_url' => $accessUrl,
-                'students' => $students
-            ], function ($message) use ($guardian) {
-                $message->to($guardian->email)
-                    ->subject('Trinity University - Guardian Portal Access');
-            });
-
-            // Audit log
-            $this->logAudit(
-                'email_sent',
-                'guardians',
-                (string)$guardian->id,
-                "Sent access email to guardian: {$guardian->email}",
-                null,
-                [
-                    'guardian_id' => $guardian->id,
-                    'email' => $guardian->email,
-                    'student_count' => $students->count()
-                ]
-            );
-
-            \Log::info('Access email sent', [
-                'guardian_id' => $guardian->id,
-                'email' => $guardian->email
-            ]);
-
-            return [
-                'success' => true,
-                'message' => 'Guardian access email sent successfully to ' . $guardian->email,
-                'access_url' => $accessUrl,
-                'guardian_email' => $guardian->email
-            ];
-
-        } catch (Exception $e) {
-            \Log::error('Failed to send access email', [
-                'guardian_id' => $guardianId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
+        if (!$guardian) {
             return [
                 'success' => false,
-                'message' => 'Failed to send email: ' . $e->getMessage()
+                'message' => 'Guardian not found'
             ];
         }
+
+        // Check if email is verified
+        if (!$guardian->email_verified_at) {
+            return [
+                'success' => false,
+                'message' => 'Guardian email is not verified. Please send verification email first.',
+                'needs_verification' => true
+            ];
+        }
+
+        $accessUrl = route('guardian.access', ['token' => $guardian->access_token]);
+        $studentPortalUrl = route('student.login');
+
+        // Get students with passwords
+        $students = DB::table('guardian_students as gs')
+            ->join('students as s', 'gs.student_number', '=', 's.student_number')
+            ->leftJoin('student_password_matrix as spm', 's.student_number', '=', 'spm.student_number')
+            ->where('gs.guardian_id', $guardian->id)
+            ->select(
+                's.first_name',
+                's.middle_name',
+                's.last_name',
+                's.student_number',
+                'spm.plain_password'
+            )
+            ->get();
+
+        if ($students->count() === 0) {
+            return [
+                'success' => false,
+                'message' => 'No students linked to this guardian'
+            ];
+        }
+
+        Mail::send('guardian.access_email', [
+            'guardian_name' => $guardian->first_name . ' ' . $guardian->last_name,
+            'access_url' => $accessUrl,
+            'student_portal_url' => $studentPortalUrl,
+            'students' => $students
+        ], function ($message) use ($guardian) {
+            $message->to($guardian->email)
+                ->subject('Trinity University - Guardian Portal Access');
+        });
+
+        // Audit log
+        $this->logAudit(
+            'email_sent',
+            'guardians',
+            (string)$guardian->id,
+            "Sent access email to guardian: {$guardian->email}",
+            null,
+            [
+                'guardian_id' => $guardian->id,
+                'email' => $guardian->email,
+                'student_count' => $students->count()
+            ]
+        );
+
+        \Log::info('Access email sent', [
+            'guardian_id' => $guardian->id,
+            'email' => $guardian->email
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Guardian access email sent successfully to ' . $guardian->email,
+            'access_url' => $accessUrl,
+            'guardian_email' => $guardian->email
+        ];
+
+    } catch (Exception $e) {
+        \Log::error('Failed to send access email', [
+            'guardian_id' => $guardianId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'Failed to send email: ' . $e->getMessage()
+        ];
     }
+}
 
     public function verifyEmail($token)
     {
@@ -279,19 +281,232 @@ class GuardianEmailController extends MainController
         ]);
     }
 
-    /**
-     * Resend verification email (manual trigger)
-     */
-    public function resendVerification(Request $request)
-    {
-        $request->validate([
-            'guardian_id' => 'required|exists:guardians,id'
-        ]);
+/**
+ * Resend verification email to guardian
+ */
+public function resendGuardianVerification($studentId, $guardianId)
+{
+    try {
+        // Verify guardian is linked to this student
+        $guardianStudent = DB::table('guardian_students as gs')
+            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+            ->join('students as s', 'gs.student_number', '=', 's.student_number')
+            ->where('s.id', $studentId)
+            ->where('gs.guardian_id', $guardianId)
+            ->where('g.is_active', 1)
+            ->first();
 
-        $result = $this->sendVerificationEmail($request->guardian_id, false);
+        if (!$guardianStudent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Guardian not found or not linked to this student'
+            ], 404);
+        }
+
+        // Use GuardianEmailController to send verification
+        $emailController = new \App\Http\Controllers\User_Management\GuardianEmailController();
+        $result = $emailController->sendVerificationEmail($guardianId, false);
 
         return response()->json($result, $result['success'] ? 200 : 400);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to resend verification email', [
+            'student_id' => $studentId,
+            'guardian_id' => $guardianId,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to resend verification email'
+        ], 500);
     }
+}
+
+/**
+ * Resend access email to guardian
+ */
+public function resendGuardianAccess($studentId, $guardianId)
+{
+    try {
+        // Verify guardian is linked to this student
+        $guardianStudent = DB::table('guardian_students as gs')
+            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+            ->join('students as s', 'gs.student_number', '=', 's.student_number')
+            ->where('s.id', $studentId)
+            ->where('gs.guardian_id', $guardianId)
+            ->where('g.is_active', 1)
+            ->first();
+
+        if (!$guardianStudent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Guardian not found or not linked to this student'
+            ], 404);
+        }
+
+        // Use GuardianEmailController to send access email
+        $emailController = new \App\Http\Controllers\User_Management\GuardianEmailController();
+        $result = $emailController->sendAccessEmail($guardianId);
+
+        return response()->json($result, $result['success'] ? 200 : 400);
+
+    } catch (Exception $e) {
+        \Log::error('Failed to resend access email', [
+            'student_id' => $studentId,
+            'guardian_id' => $guardianId,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to resend access email'
+        ], 500);
+    }
+}
+
+/**
+ * Change guardian email address
+ */
+public function changeGuardianEmail(Request $request, $studentId, $guardianId)
+{
+    try {
+        $validated = $request->validate([
+            'new_email' => 'required|email|max:255'
+        ]);
+
+        // Verify guardian is linked to this student
+        $guardianStudent = DB::table('guardian_students as gs')
+            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+            ->join('students as s', 'gs.student_number', '=', 's.student_number')
+            ->where('s.id', $studentId)
+            ->where('gs.guardian_id', $guardianId)
+            ->where('g.is_active', 1)
+            ->select('g.*', 's.student_number')
+            ->first();
+
+        if (!$guardianStudent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Guardian not found or not linked to this student'
+            ], 404);
+        }
+
+        // Check if email is already in use by another guardian
+        $emailExists = DB::table('guardians')
+            ->where('email', $validated['new_email'])
+            ->where('id', '!=', $guardianId)
+            ->exists();
+
+        if ($emailExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This email is already in use by another guardian'
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        // Store old email for audit
+        $oldEmail = $guardianStudent->email;
+
+        // Update guardian email and reset verification
+        DB::table('guardians')
+            ->where('id', $guardianId)
+            ->update([
+                'email' => $validated['new_email'],
+                'email_verified_at' => null,
+                'verification_token' => null,
+                'updated_at' => now()
+            ]);
+
+        // Audit log
+        $this->logAudit(
+            'updated',
+            'guardians',
+            (string)$guardianId,
+            "Changed guardian email for student {$guardianStudent->student_number}",
+            ['email' => $oldEmail],
+            ['email' => $validated['new_email']]
+        );
+
+        DB::commit();
+
+        // Automatically send verification email to new address
+        $emailController = new \App\Http\Controllers\User_Management\GuardianEmailController();
+        $verificationResult = $emailController->sendVerificationEmail($guardianId, false);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email updated successfully. Verification email sent to new address.',
+            'verification_sent' => $verificationResult['success'] ?? false
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        \Log::error('Failed to change guardian email', [
+            'student_id' => $studentId,
+            'guardian_id' => $guardianId,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update email: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get guardian verification status
+ */
+public function getGuardianStatus($studentId, $guardianId)
+{
+    try {
+        $guardian = DB::table('guardian_students as gs')
+            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+            ->join('students as s', 'gs.student_number', '=', 's.student_number')
+            ->where('s.id', $studentId)
+            ->where('gs.guardian_id', $guardianId)
+            ->select(
+                'g.id',
+                'g.email',
+                'g.email_verified_at',
+                'g.verification_sent_at',
+                'g.is_active'
+            )
+            ->first();
+
+        if (!$guardian) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Guardian not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'is_verified' => !is_null($guardian->email_verified_at),
+            'email' => $guardian->email,
+            'verified_at' => $guardian->email_verified_at,
+            'verification_sent_at' => $guardian->verification_sent_at
+        ]);
+
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to get guardian status'
+        ], 500);
+    }
+}
 
     /**
      * Manual send verification (for admin interface)

@@ -323,6 +323,59 @@ public function edit_student($id)
             ], 500);
         }
     }
+/**
+ * Get student credentials (password)
+ * Only accessible by admin type 1
+ */
+public function getStudentCredentials(Request $request, $id)
+{
+    // Check if user is admin type 1
+    if (!auth()->guard('admin')->check()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized access'
+        ], 403);
+    }
+
+    try {
+        $student = DB::table('students')->where('id', $id)->first();
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        }
+
+        // Get credentials from student_password_matrix
+        $passwordMatrix = DB::table('student_password_matrix')
+            ->where('student_number', $student->student_number)
+            ->first();
+
+        $credential = $passwordMatrix ? $passwordMatrix->plain_password : 'Not set';
+
+        // Audit log for viewing credentials
+        $this->logAudit(
+            'viewed',
+            'students',
+            $student->student_number,
+            "Viewed student password: {$student->first_name} {$student->last_name} ({$student->student_number})",
+            null,
+            ['credential_type' => 'password']
+        );
+
+        return response()->json([
+            'success' => true,
+            'credential' => $credential
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error retrieving credential'
+        ], 500);
+    }
+}
 
     // ---------------------------------------------------------------------------
     //  Teacher
