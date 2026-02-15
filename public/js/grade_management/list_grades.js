@@ -9,7 +9,7 @@ $(document).ready(function () {
         }
     });
 
-    // Initialize Select2     // Handle URL parameters for pre-filtering
+    // Handle URL parameters for pre-filtering
     const urlParams = new URLSearchParams(window.location.search);
     const classParam = urlParams.get('class');
     const sectionParam = urlParams.get('section');
@@ -41,8 +41,6 @@ $(document).ready(function () {
         $('#semester').val(semesterParam).trigger('change');
     }
 
-
-    
     function updateGradesCount() {
         if (dataTable && dataTable.rows) {
             const count = dataTable.rows({ filter: 'applied' }).count();
@@ -55,7 +53,7 @@ $(document).ready(function () {
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         scrollX: false,
         autoWidth: true,
-        order: [[4, 'desc'], [1, 'asc']], // Sort by semester (desc), then student name (asc)
+        order: [[0, 'desc'], [2, 'asc']], // Sort by semester (desc), then student name (asc)
         searching: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
              '<"row"<"col-sm-12"tr>>' +
@@ -84,25 +82,27 @@ $(document).ready(function () {
     });
 
     if (classParam || sectionParam || semesterParam) {
-    // Small delay to ensure DataTable is fully initialized
-    setTimeout(function() {
-        if (semesterParam) {
-            $('#semester').trigger('change');
-        }
-        if (classParam) {
-            $('#classFilter').trigger('change');
-        }
-        if (sectionParam) {
-            $('#sectionFilter').trigger('change');
-        }
-    }, 100);
-}
+        // Small delay to ensure DataTable is fully initialized
+        setTimeout(function() {
+            if (semesterParam) {
+                $('#semester').trigger('change');
+            }
+            if (classParam) {
+                $('#classFilter').trigger('change');
+            }
+            if (sectionParam) {
+                $('#sectionFilter').trigger('change');
+            }
+        }, 100);
+    }
+
+    // Updated column indices after reordering
     const COL = {
-        STUDENT_NO: 0,
-        STUDENT_NAME: 1,
-        CLASS: 2,
-        SECTION: 3,
-        SEMESTER: 4,
+        SEMESTER: 0,
+        STUDENT_NO: 1,
+        STUDENT_NAME: 2,
+        CLASS: 3,
+        SECTION: 4,
         FINAL: 5,
         REMARKS: 6,
         ACTIONS: 7

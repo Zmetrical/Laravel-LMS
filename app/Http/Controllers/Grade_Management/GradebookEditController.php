@@ -357,7 +357,7 @@ class GradebookEditController extends MainController
     }
 
     /**
-     * Submit final grades for the semester
+     * Submit final grades for the semester (supports partial submissions)
      */
     public function submitFinalGrades(Request $request, $classId)
     {
@@ -389,12 +389,18 @@ class GradebookEditController extends MainController
 
             DB::beginTransaction();
 
+            $submittedCount = 0;
+            $skippedCount = 0;
+
             foreach ($validated['grades'] as $gradeData) {
                 $student = DB::table('students')
                     ->where('student_number', $gradeData['student_number'])
                     ->first();
 
-                if (!$student) continue;
+                if (!$student) {
+                    $skippedCount++;
+                    continue;
+                }
 
                 // Verify enrollment
                 $isEnrolled = false;
@@ -414,8 +420,12 @@ class GradebookEditController extends MainController
                         ->exists();
                 }
 
-                if (!$isEnrolled) continue;
+                if (!$isEnrolled) {
+                    $skippedCount++;
+                    continue;
+                }
 
+                // Use updateOrInsert to handle both new and existing grades
                 DB::table('grades_final')->updateOrInsert(
                     [
                         'student_number' => $gradeData['student_number'],
@@ -432,6 +442,8 @@ class GradebookEditController extends MainController
                         'updated_at' => now()
                     ]
                 );
+
+                $submittedCount++;
             }
 
             DB::commit();
@@ -448,6 +460,8 @@ class GradebookEditController extends MainController
                     'class_code'  => $class->class_code,
                     'semester_id' => $semesterId,
                     'section_id'  => $validated['section_id'],
+                    'submitted_count' => $submittedCount,
+                    'skipped_count' => $skippedCount,
                     'total_count' => count($validated['grades']),
                 ],
                 'teacher',
@@ -456,7 +470,12 @@ class GradebookEditController extends MainController
 
             return response()->json([
                 'success' => true,
-                'message' => 'Final grades submitted successfully'
+                'message' => "Successfully submitted {$submittedCount} grade(s)" . 
+                           ($skippedCount > 0 ? " ({$skippedCount} skipped)" : ""),
+                'data' => [
+                    'submitted_count' => $submittedCount,
+                    'skipped_count' => $skippedCount
+                ]
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -482,7 +501,7 @@ class GradebookEditController extends MainController
     }
 
     /**
-     * Check if final grades are already submitted
+     * Check if final grades are already submitted (per-student)
      */
     public function checkFinalGradesStatus($classId, Request $request)
     {
@@ -512,23 +531,60 @@ class GradebookEditController extends MainController
 
             $students = $this->getEnrolledStudentsBySection($classId, $sectionId);
             
+            // Get submitted grades with timestamp info
             $submittedGrades = DB::table('grades_final')
                 ->where('class_code', $class->class_code)
                 ->where('semester_id', $semesterId)
                 ->whereIn('student_number', $students->pluck('student_number'))
+                ->select('student_number', 'computed_at', 'computed_by')
                 ->get()
                 ->keyBy('student_number');
 
-            $isSubmitted = $submittedGrades->count() > 0;
-            $submittedCount = $submittedGrades->count();
             $totalStudents = $students->count();
+            $submittedCount = $submittedGrades->count();
+            $pendingCount = $totalStudents - $submittedCount;
+
+            // Build per-student status
+            $studentStatus = [];
+            $pendingStudents = [];
+            
+            foreach ($students as $student) {
+                if ($submittedGrades->has($student->student_number)) {
+                    $studentStatus[$student->student_number] = [
+                        'submitted' => true,
+                        'submitted_at' => $submittedGrades[$student->student_number]->computed_at,
+                        'computed_by' => $submittedGrades[$student->student_number]->computed_by
+                    ];
+                } else {
+                    $studentStatus[$student->student_number] = [
+                        'submitted' => false
+                    ];
+                    $pendingStudents[] = [
+                        'student_number' => $student->student_number,
+                        'full_name' => $student->full_name
+                    ];
+                }
+            }
+
+            // Determine overall status
+            $status = 'none'; // none, partial, complete
+            if ($submittedCount === 0) {
+                $status = 'none';
+            } elseif ($submittedCount < $totalStudents) {
+                $status = 'partial';
+            } else {
+                $status = 'complete';
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'is_submitted' => $isSubmitted,
-                    'submitted_count' => $submittedCount,
-                    'total_students' => $totalStudents,
+                    'status' => $status,
+                    'total_enrolled' => $totalStudents,
+                    'total_graded' => $submittedCount,
+                    'pending_count' => $pendingCount,
+                    'student_status' => $studentStatus,
+                    'pending_students' => $pendingStudents,
                     'submitted_grades' => $submittedGrades
                 ]
             ]);

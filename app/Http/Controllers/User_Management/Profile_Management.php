@@ -14,167 +14,166 @@ use Illuminate\Support\Facades\Storage;
 use App\Traits\AuditLogger;
 
 use Exception;
+
 class Profile_Management extends MainController
 {
     use AuditLogger;
 
-// View only
-public function show_student($id)
-{
-    $student = DB::table('students')
-        ->join('sections', 'students.section_id', '=', 'sections.id')
-        ->join('levels', 'sections.level_id', '=', 'levels.id')
-        ->join('strands', 'sections.strand_id', '=', 'strands.id')
-        ->select(
-            'students.*',
-            'sections.name as section',
-            'levels.name as level',
-            'strands.code as strand'
-        )
-        ->where('students.id', '=', $id)
-        ->first();
+    // View only
+    public function show_student($id)
+    {
+        $student = DB::table('students')
+            ->join('sections', 'students.section_id', '=', 'sections.id')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+            ->select(
+                'students.*',
+                'sections.name as section',
+                'levels.name as level',
+                'strands.code as strand'
+            )
+            ->where('students.id', '=', $id)
+            ->first();
 
-    // Get enrolled semesters based on student type
-    if ($student->student_type === 'regular') {
-        // For regular students, get semesters from section_class_matrix
-        $enrolledSemesters = DB::table('section_class_matrix as scm')
-            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
-            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+        // Get enrolled semesters based on student type
+        if ($student->student_type === 'regular') {
+            // For regular students, get semesters from section_class_matrix
+            $enrolledSemesters = DB::table('section_class_matrix as scm')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'sem.id as semester_id',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'sy.code as school_year_code'
+                )
+                ->where('scm.section_id', '=', $student->section_id)
+                ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->get();
+        } else {
+            // For irregular students, get semesters from student_class_matrix
+            $enrolledSemesters = DB::table('student_class_matrix as scm')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'sem.id as semester_id',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'sy.code as school_year_code'
+                )
+                ->where('scm.student_number', '=', $student->student_number)
+                ->where('scm.enrollment_status', '=', 'enrolled')
+                ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->get();
+        }
+
+        // Get guardians
+        $guardians = DB::table('guardian_students as gs')
+            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+            ->where('gs.student_number', '=', $student->student_number)
+            ->where('g.is_active', '=', 1)
             ->select(
-                'sem.id as semester_id',
-                'sem.name as semester_name',
-                'sy.year_start',
-                'sy.year_end',
-                'sy.code as school_year_code'
+                'g.id',
+                'g.first_name',
+                'g.last_name',
+                'g.email'
             )
-            ->where('scm.section_id', '=', $student->section_id)
-            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.name', 'asc')
             ->get();
-    } else {
-        // For irregular students, get semesters from student_class_matrix
-        $enrolledSemesters = DB::table('student_class_matrix as scm')
-            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
-            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
-            ->select(
-                'sem.id as semester_id',
-                'sem.name as semester_name',
-                'sy.year_start',
-                'sy.year_end',
-                'sy.code as school_year_code'
-            )
-            ->where('scm.student_number', '=', $student->student_number)
-            ->where('scm.enrollment_status', '=', 'enrolled')
-            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.name', 'asc')
-            ->get();
+
+        $data = [
+            'student' => $student,
+            'enrolledSemesters' => $enrolledSemesters,
+            'guardians' => $guardians,
+            'mode' => 'view',
+            'scripts' => ['profile_management/view_profile_student.js']
+        ];
+
+        return view('modules.profile.view_profile_student', $data);
     }
 
-    // Get guardians
-    $guardians = DB::table('guardian_students as gs')
-        ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
-        ->where('gs.student_number', '=', $student->student_number)
-        ->where('g.is_active', '=', 1)
-        ->select(
-            'g.id',
-            'g.first_name',
-            'g.last_name',
-            'g.email'
-        )
-        ->get();
-
-    $data = [
-        'student' => $student,
-        'enrolledSemesters' => $enrolledSemesters,
-        'guardians' => $guardians,
-        'mode' => 'view',
-        'scripts' => ['profile_management/view_profile_student.js']
-    ];
-
-    return view('modules.profile.view_profile_student', $data);
-}
-
-
-
-// Edit form
-public function edit_student($id)
-{
-    $student = DB::table('students')
-        ->join('sections', 'students.section_id', '=', 'sections.id')
-        ->join('levels', 'sections.level_id', '=', 'levels.id')
-        ->join('strands', 'sections.strand_id', '=', 'strands.id')
-        ->select(
-            'students.*',
-            'sections.name as section',
-            'levels.name as level',
-            'strands.code as strand'
-        )
-        ->where('students.id', '=', $id)
-        ->first();
-
-    // Get enrolled semesters based on student type
-    if ($student->student_type === 'regular') {
-        // For regular students, get semesters from section_class_matrix
-        $enrolledSemesters = DB::table('section_class_matrix as scm')
-            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
-            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+    // Edit form
+    public function edit_student($id)
+    {
+        $student = DB::table('students')
+            ->join('sections', 'students.section_id', '=', 'sections.id')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
             ->select(
-                'sem.id as semester_id',
-                'sem.name as semester_name',
-                'sy.year_start',
-                'sy.year_end',
-                'sy.code as school_year_code'
+                'students.*',
+                'sections.name as section',
+                'levels.name as level',
+                'strands.code as strand'
             )
-            ->where('scm.section_id', '=', $student->section_id)
-            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.name', 'asc')
-            ->get();
-    } else {
-        // For irregular students, get semesters from student_class_matrix
-        $enrolledSemesters = DB::table('student_class_matrix as scm')
-            ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
-            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+            ->where('students.id', '=', $id)
+            ->first();
+
+        // Get enrolled semesters based on student type
+        if ($student->student_type === 'regular') {
+            // For regular students, get semesters from section_class_matrix
+            $enrolledSemesters = DB::table('section_class_matrix as scm')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'sem.id as semester_id',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'sy.code as school_year_code'
+                )
+                ->where('scm.section_id', '=', $student->section_id)
+                ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->get();
+        } else {
+            // For irregular students, get semesters from student_class_matrix
+            $enrolledSemesters = DB::table('student_class_matrix as scm')
+                ->join('semesters as sem', 'scm.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->select(
+                    'sem.id as semester_id',
+                    'sem.name as semester_name',
+                    'sy.year_start',
+                    'sy.year_end',
+                    'sy.code as school_year_code'
+                )
+                ->where('scm.student_number', '=', $student->student_number)
+                ->where('scm.enrollment_status', '=', 'enrolled')
+                ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
+                ->orderBy('sy.year_start', 'desc')
+                ->orderBy('sem.name', 'asc')
+                ->get();
+        }
+
+        // Get guardians
+        $guardians = DB::table('guardian_students as gs')
+            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+            ->where('gs.student_number', '=', $student->student_number)
+            ->where('g.is_active', '=', 1)
             ->select(
-                'sem.id as semester_id',
-                'sem.name as semester_name',
-                'sy.year_start',
-                'sy.year_end',
-                'sy.code as school_year_code'
+                'g.id',
+                'g.first_name',
+                'g.last_name',
+                'g.email'
             )
-            ->where('scm.student_number', '=', $student->student_number)
-            ->where('scm.enrollment_status', '=', 'enrolled')
-            ->groupBy('sem.id', 'sem.name', 'sy.year_start', 'sy.year_end', 'sy.code')
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.name', 'asc')
             ->get();
+
+        $data = [
+            'student' => $student,
+            'enrolledSemesters' => $enrolledSemesters,
+            'guardians' => $guardians,
+            'mode' => 'edit',
+            'scripts' => ['profile_management/view_profile_student.js']
+        ];
+
+        return view('modules.profile.view_profile_student', $data);
     }
-
-    // Get guardians
-    $guardians = DB::table('guardian_students as gs')
-        ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
-        ->where('gs.student_number', '=', $student->student_number)
-        ->where('g.is_active', '=', 1)
-        ->select(
-            'g.id',
-            'g.first_name',
-            'g.last_name',
-            'g.email'
-        )
-        ->get();
-
-    $data = [
-        'student' => $student,
-        'enrolledSemesters' => $enrolledSemesters,
-        'guardians' => $guardians,
-        'mode' => 'edit',
-        'scripts' => ['profile_management/view_profile_student.js']
-    ];
-
-    return view('modules.profile.view_profile_student', $data);
-}
 
     public function update_student(Request $request, $id)
     {
@@ -187,15 +186,30 @@ public function edit_student($id)
                 'middle_name' => $student->middle_name,
                 'last_name' => $student->last_name,
                 'email' => $student->email,
+                'gender' => $student->gender,
             ];
 
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
-                'middle_name' => 'nullable|string|max:255',
+                'middle_name' => 'nullable|string|max:1',
                 'last_name' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255|unique:students,email,' . $id,
+                'gender' => 'required|in:Male,Female,Other',
                 'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'guardian_first_name' => 'array',
+                'guardian_first_name.*' => 'required|string|max:255',
+                'guardian_last_name' => 'array',
+                'guardian_last_name.*' => 'required|string|max:255',
+            ], [
+                'first_name.required' => 'First name is required',
+                'last_name.required' => 'Last name is required',
+                'gender.required' => 'Gender is required',
+                'gender.in' => 'Please select a valid gender',
+                'guardian_first_name.*.required' => 'Guardian first name is required',
+                'guardian_last_name.*.required' => 'Guardian last name is required',
             ]);
+
+            DB::beginTransaction();
 
             // === Handle Image  ===
             if ($request->hasFile('profile_image')) {
@@ -211,8 +225,35 @@ public function edit_student($id)
                 $oldValues['profile_image'] = $student->profile_image;
             }
 
-            // === Update DB  ===
-            $student->update($validated);
+            // === Update Student DB  ===
+            $student->update([
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'] ?? null,
+                'gender' => $validated['gender'],
+                'profile_image' => $validated['profile_image'] ?? $student->profile_image,
+            ]);
+
+            // === Update Guardian Names ===
+            if (isset($validated['guardian_first_name']) && isset($validated['guardian_last_name'])) {
+                // Get guardian IDs linked to this student
+                $guardianLinks = DB::table('guardian_students')
+                    ->where('student_number', $student->student_number)
+                    ->get();
+
+                foreach ($guardianLinks as $index => $link) {
+                    if (isset($validated['guardian_first_name'][$index]) && isset($validated['guardian_last_name'][$index])) {
+                        DB::table('guardians')
+                            ->where('id', $link->guardian_id)
+                            ->update([
+                                'first_name' => $validated['guardian_first_name'][$index],
+                                'last_name' => $validated['guardian_last_name'][$index],
+                                'updated_at' => now(),
+                            ]);
+                    }
+                }
+            }
 
             // Prepare new values for audit
             $newValues = [
@@ -220,6 +261,7 @@ public function edit_student($id)
                 'middle_name' => $validated['middle_name'] ?? null,
                 'last_name' => $validated['last_name'],
                 'email' => $validated['email'] ?? '',
+                'gender' => $validated['gender'],
             ];
 
             if (isset($validated['profile_image'])) {
@@ -236,6 +278,8 @@ public function edit_student($id)
                 $this->formatAuditValues($newValues)
             );
 
+            DB::commit();
+
             // === Return Response  ===
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -249,7 +293,22 @@ public function edit_student($id)
             return redirect()->route('profile.student.show', $id)
                 ->with('success', 'Profile updated successfully');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return back()->withErrors($e->errors())->withInput();
+
         } catch (\Exception $e) {
+            DB::rollBack();
+            
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -323,59 +382,60 @@ public function edit_student($id)
             ], 500);
         }
     }
-/**
- * Get student credentials (password)
- * Only accessible by admin type 1
- */
-public function getStudentCredentials(Request $request, $id)
-{
-    // Check if user is admin type 1
-    if (!auth()->guard('admin')->check()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Unauthorized access'
-        ], 403);
-    }
 
-    try {
-        $student = DB::table('students')->where('id', $id)->first();
-        
-        if (!$student) {
+    /**
+     * Get student credentials (password)
+     * Only accessible by admin type 1
+     */
+    public function getStudentCredentials(Request $request, $id)
+    {
+        // Check if user is admin type 1
+        if (!auth()->guard('admin')->check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found'
-            ], 404);
+                'message' => 'Unauthorized access'
+            ], 403);
         }
 
-        // Get credentials from student_password_matrix
-        $passwordMatrix = DB::table('student_password_matrix')
-            ->where('student_number', $student->student_number)
-            ->first();
+        try {
+            $student = DB::table('students')->where('id', $id)->first();
+            
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found'
+                ], 404);
+            }
 
-        $credential = $passwordMatrix ? $passwordMatrix->plain_password : 'Not set';
+            // Get credentials from student_password_matrix
+            $passwordMatrix = DB::table('student_password_matrix')
+                ->where('student_number', $student->student_number)
+                ->first();
 
-        // Audit log for viewing credentials
-        $this->logAudit(
-            'viewed',
-            'students',
-            $student->student_number,
-            "Viewed student password: {$student->first_name} {$student->last_name} ({$student->student_number})",
-            null,
-            ['credential_type' => 'password']
-        );
+            $credential = $passwordMatrix ? $passwordMatrix->plain_password : 'Not set';
 
-        return response()->json([
-            'success' => true,
-            'credential' => $credential
-        ]);
+            // Audit log for viewing credentials
+            $this->logAudit(
+                'viewed',
+                'students',
+                $student->student_number,
+                "Viewed student password: {$student->first_name} {$student->last_name} ({$student->student_number})",
+                null,
+                ['credential_type' => 'password']
+            );
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error retrieving credential'
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'credential' => $credential
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving credential'
+            ], 500);
+        }
     }
-}
 
     // ---------------------------------------------------------------------------
     //  Teacher
@@ -537,61 +597,61 @@ public function getStudentCredentials(Request $request, $id)
         }
     }
 
-public function getCredentials(Request $request, $id)
-{
-    // Check if user is admin type 1
-    if (!auth()->guard('admin')->check() || auth()->guard('admin')->user()->admin_type != 1) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Unauthorized access'
-        ], 403);
-    }
-
-    try {
-        $teacher = DB::table('teachers')->where('id', $id)->first();
-        
-        if (!$teacher) {
+    public function getCredentials(Request $request, $id)
+    {
+        // Check if user is admin type 1
+        if (!auth()->guard('admin')->check() || auth()->guard('admin')->user()->admin_type != 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher not found'
-            ], 404);
+                'message' => 'Unauthorized access'
+            ], 403);
         }
 
-        // Get credentials from teacher_password_matrix
-        $passwordMatrix = DB::table('teacher_password_matrix')
-            ->where('teacher_id', $id)
-            ->first();
+        try {
+            $teacher = DB::table('teachers')->where('id', $id)->first();
+            
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Teacher not found'
+                ], 404);
+            }
 
-        $type = $request->input('type', 'password');
-        
-        if ($type === 'password') {
-            $credential = $passwordMatrix ? $passwordMatrix->plain_password : 'Not set';
-        } else {
-            $credential = $passwordMatrix ? $passwordMatrix->plain_passcode : 'Not set';
+            // Get credentials from teacher_password_matrix
+            $passwordMatrix = DB::table('teacher_password_matrix')
+                ->where('teacher_id', $id)
+                ->first();
+
+            $type = $request->input('type', 'password');
+            
+            if ($type === 'password') {
+                $credential = $passwordMatrix ? $passwordMatrix->plain_password : 'Not set';
+            } else {
+                $credential = $passwordMatrix ? $passwordMatrix->plain_passcode : 'Not set';
+            }
+
+            // Audit log for viewing credentials
+            $this->logAudit(
+                'viewed',
+                'teachers',
+                (string)$id,
+                "Viewed teacher {$type}: {$teacher->first_name} {$teacher->last_name} ({$teacher->email})",
+                null,
+                ['credential_type' => $type]
+            );
+
+            return response()->json([
+                'success' => true,
+                'credential' => $credential
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving credential'
+            ], 500);
         }
-
-        // Audit log for viewing credentials
-        $this->logAudit(
-            'viewed',
-            'teachers',
-            (string)$id,
-            "Viewed teacher {$type}: {$teacher->first_name} {$teacher->last_name} ({$teacher->email})",
-            null,
-            ['credential_type' => $type]
-        );
-
-        return response()->json([
-            'success' => true,
-            'credential' => $credential
-        ]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error retrieving credential'
-        ], 500);
     }
-}
 
     public function change_password_teacher(Request $request, $id)
     {

@@ -178,15 +178,6 @@
             white-space: nowrap;
         }
 
-        .remarks-passed {
-            color: black;
-            font-weight: 700;
-        }
-
-        .remarks-failed {
-            color: black;
-            font-weight: 700;
-        }
 
         #finalGradeTable {
             display: none;

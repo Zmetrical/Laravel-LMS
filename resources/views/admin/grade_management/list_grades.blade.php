@@ -114,11 +114,11 @@
                 <table class="table table-striped table-hover mb-0" id="gradesTable" style="width: 100%;">
                     <thead>
                         <tr>
+                            <th>Semester</th>
                             <th>Student Number</th>
                             <th>Student Name</th>
                             <th>Class</th>
                             <th>Section</th>
-                            <th>Semester</th>
                             <th class="text-center">Final Grade</th>
                             <th class="text-center">Remarks</th>
                             <th class="text-center">Actions</th>
@@ -127,11 +127,11 @@
                     <tbody>
                         @foreach ($grades as $grade)
                             <tr>
+                                <td data-semester-id="{{ $grade->semester_id }}">{{ $grade->semester_display }}</td>
                                 <td><strong>{{ $grade->student_number }}</strong></td>
                                 <td>{{ $grade->last_name }}, {{ $grade->first_name }}</td>
                                 <td data-class-code="{{ $grade->class_code }}">{{ $grade->class_name }}</td>
                                 <td data-section-code="{{ $grade->section_code }}">{{ $grade->section_name ?? 'N/A' }}</td>
-                                <td data-semester-id="{{ $grade->semester_id }}">{{ $grade->semester_display }}</td>
                                 <td class="text-center"><strong>{{ $grade->final_grade }}</strong></td>
                                 <td class="text-center">
                                     @php

@@ -255,7 +255,7 @@ $(document).ready(function () {
     }
 
     function renderFinalGradeRow(student) {
-        const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
+        const remarksClass = student.remarks === 'PASSED' ? 'text-success' : 'text-danger';
         
         const q1 = parseFloat(student.q1_grade) || 0;
         const q2 = parseFloat(student.q2_grade) || 0;

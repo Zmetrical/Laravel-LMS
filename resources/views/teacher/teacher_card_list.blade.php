@@ -82,20 +82,25 @@
             color: #212529;
             font-weight: 500;
         }
-        .subjects-count-compact {
+        .verification-status-compact {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             padding: 0.4rem 0.7rem;
             border-radius: 4px;
             text-align: center;
             margin-right: 0.75rem;
-            min-width: 120px;
+            min-width: 100px;
         }
-        .subjects-count-compact .semester-label {
+        .verification-status-compact .status-label {
             font-size: 0.7rem;
             color: #6c757d;
             line-height: 1.2;
             display: block;
+            text-transform: uppercase;
+        }
+        .verification-status-compact .badge {
+            margin-top: 0.2rem;
+            font-size: 0.7rem;
         }
         .view-card-btn {
             white-space: nowrap;
@@ -185,8 +190,28 @@
                                 
                                 <div class="col-md-3">
                                     <div class="d-flex align-items-center justify-content-end">
-                                        <div class="subjects-count-compact">
-                                            <span class="semester-label">{{ $card->semester_display }}</span>
+                                        <div class="verification-status-compact">
+                                            <span class="status-label">Guardian</span>
+                                            @php
+                                                $verificationStatus = $card->verification_status ?? 'none';
+                                            @endphp
+                                            
+                                            @if($verificationStatus === 'verified')
+                                                <span class="badge badge-primary" 
+                                                      title="Guardian email verified: {{ $card->guardian_email }}&#10;Verified on: {{ date('M d, Y', strtotime($card->email_verified_at)) }}">
+                                                    <i class="fas fa-check-circle"></i> Verified
+                                                </span>
+                                            @elseif($verificationStatus === 'pending')
+                                                <span class="badge badge-secondary" 
+                                                      title="Verification pending for: {{ $card->guardian_email }}">
+                                                    <i class="fas fa-clock"></i> Pending
+                                                </span>
+                                            @else
+                                                <span class="badge badge-secondary" 
+                                                      title="No guardian linked">
+                                                    <i class="fas fa-times-circle"></i> None
+                                                </span>
+                                            @endif
                                         </div>
                                         <a href="{{ route('teacher.grades.card.view', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
                                            class="btn btn-primary view-card-btn"

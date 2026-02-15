@@ -409,11 +409,80 @@ $(document).ready(function () {
     loadEnrolledClasses();
 
     // ---------------------------------------------------------------------------
+    //  Form Validation Helper
+    // ---------------------------------------------------------------------------
+
+    function validateForm() {
+        const errors = [];
+
+        // Validate first name
+        const firstName = $('#firstName').val().trim();
+        if (!firstName) {
+            errors.push('First name is required');
+        }
+
+        // Validate last name
+        const lastName = $('#lastName').val().trim();
+        if (!lastName) {
+            errors.push('Last name is required');
+        }
+
+        // Validate gender
+        const gender = $('#gender').val();
+        if (!gender) {
+            errors.push('Gender is required');
+        }
+
+        // Validate email if provided
+        const email = $('#email').val().trim();
+        if (email) {
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                errors.push('Please enter a valid email address');
+            }
+        }
+
+        // Validate guardian names
+        $('.guardian-first-name').each(function(index) {
+            const guardianFirstName = $(this).val().trim();
+            if (!guardianFirstName) {
+                errors.push(`Guardian ${index + 1} first name is required`);
+            }
+        });
+
+        $('.guardian-last-name').each(function(index) {
+            const guardianLastName = $(this).val().trim();
+            if (!guardianLastName) {
+                errors.push(`Guardian ${index + 1} last name is required`);
+            }
+        });
+
+        return errors;
+    }
+
+    // ---------------------------------------------------------------------------
     //  Profile Form Submit
     // ---------------------------------------------------------------------------
 
     $('#profileForm').on('submit', function (e) {
         e.preventDefault();
+
+        // Validate form
+        const validationErrors = validateForm();
+        if (validationErrors.length > 0) {
+            let errorHtml = '<ul class="text-left mb-0">';
+            validationErrors.forEach(error => {
+                errorHtml += `<li>${error}</li>`;
+            });
+            errorHtml += '</ul>';
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                html: errorHtml
+            });
+            return;
+        }
 
         const formData = new FormData(this);
 
@@ -451,11 +520,12 @@ $(document).ready(function () {
             error: function (xhr) {
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
-                    let errorMessage = '';
+                    let errorMessage = '<ul class="text-left mb-0">';
 
                     $.each(errors, function (key, value) {
-                        errorMessage += value[0] + '<br>';
+                        errorMessage += '<li>' + value[0] + '</li>';
                     });
+                    errorMessage += '</ul>';
                     
                     Swal.fire({
                         icon: 'error',

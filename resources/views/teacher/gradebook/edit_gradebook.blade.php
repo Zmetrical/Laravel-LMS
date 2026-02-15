@@ -255,15 +255,7 @@
             background-color: #fff;
         }
 
-        .remarks-passed {
-            color: black;
-            font-weight: 700;
-        }
 
-        .remarks-failed {
-            color: black;
-            font-weight: 700;
-        }
 
         #finalGradeTable {
             display: none;
@@ -321,6 +313,19 @@
             padding: 8px 5px;
             text-align: center;
         }
+
+
+/* Status badges */
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+
     </style>
 @endsection
 
@@ -471,23 +476,31 @@
                         </table>
                     </div>
 
-                    <!-- Final Grade Table -->
-                    <div id="finalGradeTable">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover table-sm table-gradebook">
-                                <thead class="summary-header">
-                                    <tr>
-                                        <th class="pb-4">USN</th>
-                                        <th class="pb-4">Student Name</th>
-                                        <th class="text-center pb-4">Q1 Grade</th>
-                                        <th class="text-center pb-4">Q2 Grade</th>
-                                        <th class="text-center pb-4">Final Grade</th>
-                                        <th class="text-center pb-4">Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="finalGradeTableBody"></tbody>
-                            </table>
-                        </div>
+<!-- Final Grade Table -->
+<div id="finalGradeTable">
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover table-sm table-gradebook">
+            <thead class="summary-header">
+                <tr>
+                    <th class="pb-4">USN</th>
+                    <th class="pb-4">Student Name</th>
+                    <th class="text-center pb-4">Q1 Grade</th>
+                    <th class="text-center pb-4">Q2 Grade</th>
+                    <th class="text-center pb-4">Final Grade</th>
+                    <th class="text-center pb-4">Remarks</th>
+                    <th class="text-center pb-4">Status</th>
+                </tr>
+            </thead>
+            <tbody id="finalGradeTableBody"></tbody>
+        </table>
+    </div>
+    
+    <div class="final-grade-actions">
+        <button type="button" class="btn btn-primary" id="submitFinalGradeBtn">
+            <i class="fas fa-save"></i> Submit Final Grades
+        </button>
+    </div>
+</div>
                         
                         <div class="final-grade-actions">
                             <button type="button" class="btn btn-primary" id="submitFinalGradeBtn">

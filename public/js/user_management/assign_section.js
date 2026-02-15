@@ -1,5 +1,6 @@
 $(document).ready(function() {
     let loadedStudents = [];
+    let allStudents = []; // Store all loaded students from semester
     let sourceStrandId = null;
     let sourceLevelId = null;
     let targetSectionCapacity = null;
@@ -21,80 +22,278 @@ $(document).ready(function() {
     });
 
     // =========================================================================
-    // SELECT2 INITIALIZATION
+    // INITIALIZE QUICK ACCESS BUTTONS FOR SEMESTERS
     // =========================================================================
-    
-    // Source Section Select2
-    $('#source_section').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Search for section...',
-        allowClear: true,
-        ajax: {
-            url: API_ROUTES.searchSections,
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    search: params.term
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.map(function(section) {
-                        return {
-                            id: section.id,
-                            text: section.name + ' (' + section.code + ')'
-                        };
-                    })
-                };
-            },
-            cache: true
-        },
-        minimumInputLength: 0
-    }).on('select2:select', function(e) {
-        const sourceSectionId = e.params.data.id;
+    function initializeQuickAccessButtons() {
+        const semesters = SEMESTERS_DATA;
         
-        // Get source section details to set target strand
+        console.log('=== SEMESTER ORDERING DEBUG ===');
+        console.log('Total semesters:', semesters.length);
+        semesters.forEach((sem, idx) => {
+            console.log(`Index ${idx}: ${sem.year_code} - ${sem.semester_name} (ID: ${sem.id}, Status: ${sem.status})`);
+        });
+        
+        // Find active semester
+        const activeSemester = semesters.find(s => s.status === 'active');
+        
+        if (!activeSemester) {
+            console.log('❌ No active semester found');
+            return;
+        }
+        
+        console.log('✓ Active semester:', activeSemester.year_code, '-', activeSemester.semester_name);
+        
+        const activeSemesterIndex = semesters.findIndex(s => s.id === activeSemester.id);
+        console.log('✓ Active semester is at index:', activeSemesterIndex);
+        
+        // Find previous semester (could be from previous school year)
+        // Semesters are ordered DESC by year and semester, so next in array is previous chronologically
+        let previousSemester = null;
+        if (activeSemesterIndex + 1 < semesters.length) {
+            previousSemester = semesters[activeSemesterIndex + 1];
+            console.log('✓ Previous semester found:', previousSemester.year_code, '-', previousSemester.semester_name);
+        } else {
+            console.log('⚠ No previous semester available (active is the oldest)');
+        }
+        
+        // Find next semester (could be from next school year)
+        // Previous in array is next chronologically
+        let nextSemester = null;
+        if (activeSemesterIndex - 1 >= 0) {
+            nextSemester = semesters[activeSemesterIndex - 1];
+            console.log('✓ Next semester found:', nextSemester.year_code, '-', nextSemester.semester_name);
+        } else {
+            console.log('⚠ No next semester available (active is the newest)');
+        }
+        
+        console.log('=== END DEBUG ===');
+        
+        // SOURCE SEMESTER QUICK ACCESS - Show Previous and Active
+        let sourceQuickHTML = '';
+        
+        // Previous semester button (one before active, could be from previous school year)
+        if (previousSemester) {
+            sourceQuickHTML += `
+                <button type="button" class="btn btn-sm btn-secondary btn-block semester-quick-btn" 
+                        data-semester-id="${previousSemester.id}" data-target="source">
+                    <i class="fas fa-step-backward mr-1"></i> Previous (${previousSemester.semester_name})
+                </button>
+            `;
+        }
+        
+        // Active semester button
+        sourceQuickHTML += `
+            <button type="button" class="btn btn-sm btn-secondary btn-block semester-quick-btn" 
+                    data-semester-id="${activeSemester.id}" data-target="source">
+                <i class="fas fa-check-circle mr-1"></i> Active (${activeSemester.semester_name})
+            </button>
+        `;
+        
+        $('#sourceSemesterQuick').html(sourceQuickHTML);
+        
+        // TARGET SEMESTER QUICK ACCESS - Show Active and Next
+        let targetQuickHTML = `
+            <button type="button" class="btn btn-sm btn-primary btn-block semester-quick-btn active" 
+                    data-semester-id="${activeSemester.id}" data-target="target">
+                <i class="fas fa-check-circle mr-1"></i> Active (${activeSemester.semester_name})
+            </button>
+        `;
+        
+        // Next semester button (could be from next school year)
+        if (nextSemester) {
+            targetQuickHTML += `
+                <button type="button" class="btn btn-sm btn-secondary btn-block semester-quick-btn" 
+                        data-semester-id="${nextSemester.id}" data-target="target">
+                    <i class="fas fa-step-forward mr-1"></i> Next (${nextSemester.semester_name})
+                </button>
+            `;
+        }
+        
+        $('#targetSemesterQuick').html(targetQuickHTML);
+    }
+
+    // Initialize quick access buttons
+    initializeQuickAccessButtons();
+
+    // Handle quick access button clicks
+    $(document).on('click', '.semester-quick-btn', function() {
+        const semesterId = $(this).data('semester-id');
+        const target = $(this).data('target');
+        
+        if (target === 'source') {
+            $('#source_semester').val(semesterId).trigger('change');
+            // Update active state
+            $('#sourceSemesterQuick .semester-quick-btn').removeClass('active btn-primary').addClass('btn-secondary');
+            $(this).addClass('active btn-primary').removeClass('btn-secondary');
+        } else {
+            $('#target_semester').val(semesterId).trigger('change');
+            // Update active state
+            $('#targetSemesterQuick .semester-quick-btn').removeClass('active btn-primary').addClass('btn-secondary');
+            $(this).addClass('active btn-primary').removeClass('btn-secondary');
+        }
+    });
+
+    // =========================================================================
+    // INITIALIZE SELECT2
+    // =========================================================================
+    $('#filter_section').select2({
+        theme: 'bootstrap4',
+        placeholder: 'All Sections',
+        allowClear: true,
+        width: '100%'
+    });
+
+    $('#target_section').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Select section...',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // =========================================================================
+    // SOURCE SEMESTER CHANGE - LOAD STUDENTS
+    // =========================================================================
+    $('#source_semester').on('change', function() {
+        const semesterId = $(this).val();
+        
+        if (!semesterId) {
+            clearStudentTable();
+            $('#filterOptions').hide();
+            $('#filter_section').empty().append('<option value="">All Sections</option>');
+            return;
+        }
+
+        loadStudentsBySemester(semesterId);
+        loadSectionsBySemester(semesterId);
+        $('#filterOptions').show();
+    });
+
+    // =========================================================================
+    // LOAD STUDENTS BY SEMESTER
+    // =========================================================================
+    function loadStudentsBySemester(semesterId) {
+        $('#assignmentTableBody').html(`
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Loading students...</p>
+                </td>
+            </tr>
+        `);
+
         $.ajax({
-            url: API_ROUTES.getSectionDetails,
+            url: API_ROUTES.loadStudentsBySemester,
             type: 'POST',
             data: {
                 _token: $('input[name="_token"]').val(),
-                section_id: sourceSectionId
+                semester_id: semesterId
             },
             success: function(response) {
                 if (response.success) {
-                    sourceStrandId = response.section.strand_id;
-                    sourceLevelId = response.section.level_id;
+                    allStudents = response.students;
+                    loadedStudents = response.students;
                     
-                    // Auto-select target strand
-                    $('#target_strand').val(sourceStrandId).trigger('change');
+                    // Auto-detect strand and level from first student
+                    if (loadedStudents.length > 0) {
+                        const firstStudent = loadedStudents[0];
+                        if (firstStudent.strand_id && firstStudent.level_id) {
+                            sourceStrandId = firstStudent.strand_id;
+                            sourceLevelId = firstStudent.level_id;
+                            $('#target_strand').val(sourceStrandId).trigger('change');
+                        }
+                    }
                     
-                    // Show strand info
+                    populateStudentTable(loadedStudents);
+                    
                     Toast.fire({
-                        icon: 'info',
-                        title: `Source: ${response.section.strand_name} - ${response.section.level_name}`
+                        icon: 'success',
+                        title: `${response.count} student(s) loaded`
+                    });
+                } else {
+                    Swal.fire('Error', response.message || 'Failed to load students', 'error');
+                    clearStudentTable();
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = 'Failed to load students';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+                clearStudentTable();
+            }
+        });
+    }
+
+    // =========================================================================
+    // LOAD SECTIONS BY SEMESTER (for filter dropdown)
+    // =========================================================================
+    function loadSectionsBySemester(semesterId) {
+        $.ajax({
+            url: API_ROUTES.getSectionsBySemester,
+            type: 'POST',
+            data: {
+                _token: $('input[name="_token"]').val(),
+                semester_id: semesterId
+            },
+            success: function(response) {
+                if (response.success) {
+                    const $select = $('#filter_section');
+                    $select.empty().append('<option value="">All Sections</option>');
+                    
+                    response.sections.forEach(function(section) {
+                        $select.append(`<option value="${section.id}">${section.name} (${section.code})</option>`);
                     });
                 }
             }
         });
+    }
+
+    // =========================================================================
+    // FILTER BY SECTION
+    // =========================================================================
+    $('#filter_section').on('change', function() {
+        const sectionId = $(this).val();
         
-        // Auto-load students
-        const sourceSemesterId = $('#source_semester').val();
-        loadStudentsFromSection(sourceSectionId, sourceSemesterId);
-    }).on('select2:clear', function() {
-        sourceStrandId = null;
-        sourceLevelId = null;
-        $('#target_strand').val('').trigger('change');
-        clearStudentTable();
+        if (!sectionId) {
+            // Show all students
+            loadedStudents = allStudents;
+        } else {
+            // Filter by section
+            loadedStudents = allStudents.filter(s => s.current_section_id == sectionId);
+        }
+        
+        populateStudentTable(loadedStudents);
     });
 
-    // Target Strand Select
+    // =========================================================================
+    // FILTER BY STUDENT SEARCH
+    // =========================================================================
+    $('#filter_student').on('keyup', function() {
+        const searchValue = $(this).val().toLowerCase();
+        
+        $('#assignmentTableBody tr').each(function() {
+            const $row = $(this);
+            if ($row.find('.student-checkbox').length === 0) return;
+            
+            const text = $row.text().toLowerCase();
+            if (searchValue === '' || text.indexOf(searchValue) > -1) {
+                $row.show();
+            } else {
+                $row.hide();
+            }
+        });
+        
+        updateStudentCount();
+    });
+
+    // =========================================================================
+    // TARGET STRAND CHANGE
+    // =========================================================================
     $('#target_strand').on('change', function() {
         const strandId = $(this).val();
         const semesterId = $('#target_semester').val();
         
-        // Clear target section and capacity info
         $('#target_section').empty().append('<option value="">Select section...</option>');
         $('#capacityInfo').hide();
         targetSectionCapacity = null;
@@ -104,7 +303,6 @@ $(document).ready(function() {
             return;
         }
         
-        // Load sections for this strand (grouped by level)
         $.ajax({
             url: API_ROUTES.getTargetSections,
             type: 'POST',
@@ -128,13 +326,10 @@ $(document).ready(function() {
         });
     });
 
-    // Target Section Select
-    $('#target_section').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Select section...',
-        allowClear: true,
-        width: '100%'
-    }).on('select2:select', function(e) {
+    // =========================================================================
+    // TARGET SECTION CHANGE
+    // =========================================================================
+    $('#target_section').on('select2:select', function(e) {
         const sectionId = e.params.data.id;
         loadSectionCapacity(sectionId);
     }).on('select2:clear', function() {
@@ -142,39 +337,6 @@ $(document).ready(function() {
         targetSectionCapacity = null;
         targetSectionEnrolled = null;
         validateSubmitButton();
-    });
-
-    $('#source_student').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Type student number or name...',
-        allowClear: true,
-        ajax: {
-            url: API_ROUTES.searchStudents,
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    search: params.term
-                };
-            },
-            processResults: function(data) {
-                if (!data.success) {
-                    return { results: [] };
-                }
-                return {
-                    results: data.students.map(function(student) {
-                        const fullName = student.last_name + ', ' + student.first_name + ' ' + (student.middle_name || '');
-                        return {
-                            id: student.student_number,
-                            text: student.student_number + ' - ' + fullName,
-                            student: student
-                        };
-                    })
-                };
-            },
-            cache: true
-        },
-        minimumInputLength: 2
     });
 
     // =========================================================================
@@ -211,64 +373,59 @@ $(document).ready(function() {
     // =========================================================================
     // UPDATE CAPACITY DISPLAY
     // =========================================================================
-function updateCapacityDisplay() {
-    const selectedCount = $('.student-checkbox:checked').length;
-    const availableSlots = targetSectionCapacity - targetSectionEnrolled;
-    const afterAssignment = targetSectionEnrolled + selectedCount;
-    
-    const statusText = selectedCount > availableSlots ? 'Exceeds' : `${availableSlots} slots`;
-    const targetSectionName = $('#target_section option:selected').text().split(' - ')[0] || 'Section';
-    
-    $('#capacityInfo').html(`
-        <div class="card section-capacity-card mb-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="mb-0">${targetSectionName}</h6>
-                    <span class="badge badge-light border">${statusText}</span>
+    function updateCapacityDisplay() {
+        const selectedCount = $('.student-checkbox:checked:visible').length;
+        const availableSlots = targetSectionCapacity - targetSectionEnrolled;
+        const afterAssignment = targetSectionEnrolled + selectedCount;
+        
+        const statusText = selectedCount > availableSlots ? 'Exceeds' : `${availableSlots} slots`;
+        const targetSectionName = $('#target_section option:selected').text().split(' (')[0] || 'Section';
+        
+        $('#capacityInfo').html(`
+            <div class="card section-capacity-card mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">${targetSectionName}</h6>
+                        <span class="badge badge-light border">${statusText}</span>
+                    </div>
+                    <small class="text-muted d-block mb-2">
+                        ${afterAssignment} / ${targetSectionCapacity} enrolled
+                    </small>
                 </div>
-                <small class="text-muted d-block mb-2">
-                    ${afterAssignment} / ${targetSectionCapacity} enrolled
-                </small>
             </div>
-        </div>
-    `).show();
-}
+        `).show();
+    }
+
     // =========================================================================
-    // POPULATE TARGET SECTIONS 
+    // POPULATE TARGET SECTIONS
     // =========================================================================
     function populateTargetSections(currentLevel, nextLevel) {
         const $select = $('#target_section');
         $select.empty();
         $select.append('<option value="">Select section...</option>');
         
-        // Current Level Group
         if (currentLevel && currentLevel.sections.length > 0) {
             const currentGroup = $('<optgroup>').attr('label', `Current Level (${currentLevel.name})`);
             currentLevel.sections.forEach(function(section) {
-                const available = section.capacity - section.enrolled_count;
-                const label = `${section.name} (${section.code})`;
                 currentGroup.append(
-                    $('<option>').val(section.id).text(label)
+                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
                 );
             });
             $select.append(currentGroup);
         }
         
-        // Next Level Group
         if (nextLevel && nextLevel.sections.length > 0) {
             const nextGroup = $('<optgroup>').attr('label', `Next Level (${nextLevel.name})`);
             nextLevel.sections.forEach(function(section) {
-                const available = section.capacity - section.enrolled_count;
-                const label = `${section.name} (${section.code})`;
                 nextGroup.append(
-                    $('<option>').val(section.id).text(label)
+                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
                 );
             });
             $select.append(nextGroup);
         }
         
-        if (currentLevel.sections.length === 0 && (!nextLevel || nextLevel.sections.length === 0)) {
-            $select.append('<option value="" disabled>No sections available for this strand</option>');
+        if ((!currentLevel || currentLevel.sections.length === 0) && (!nextLevel || nextLevel.sections.length === 0)) {
+            $select.append('<option value="" disabled>No sections available</option>');
         }
     }
 
@@ -280,173 +437,14 @@ function updateCapacityDisplay() {
             <tr>
                 <td colspan="6" class="text-center text-muted py-5">
                     <i class="fas fa-arrow-left fa-2x mb-3"></i>
-                    <p>Select a source section or search for a student to begin</p>
+                    <p>Select a source semester to load students</p>
                 </td>
             </tr>
         `);
+        allStudents = [];
+        loadedStudents = [];
         updateStudentCount();
         validateSubmitButton();
-    }
-
-    // =========================================================================
-    // LOAD STUDENTS FROM SECTION FUNCTION
-    // =========================================================================
-    function loadStudentsFromSection(sourceSectionId, sourceSemesterId) {
-        $('#assignmentTableBody').html(`
-            <tr>
-                <td colspan="6" class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-                    <p>Loading students...</p>
-                </td>
-            </tr>
-        `);
-
-        $.ajax({
-            url: API_ROUTES.loadStudents,
-            type: 'POST',
-            data: {
-                _token: $('input[name="_token"]').val(),
-                source_section_id: sourceSectionId,
-                source_semester_id: sourceSemesterId
-            },
-            success: function(response) {
-                if (response.success) {
-                    loadedStudents = response.students;
-                    populateStudentTable(response.students);
-                    
-                    if (response.count > 0) {
-                        Toast.fire({
-                            icon: 'success',
-                            title: `${response.count} student(s) loaded successfully`
-                        });
-                    }
-                } else {
-                    Swal.fire('Error', response.message || 'Failed to load students', 'error');
-                    clearStudentTable();
-                }
-            },
-            error: function(xhr) {
-                let errorMsg = 'Failed to load students';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                Swal.fire('Error', errorMsg, 'error');
-                clearStudentTable();
-            }
-        });
-    }
-
-    // =========================================================================
-    // SOURCE TYPE TOGGLE
-    // =========================================================================
-    $('#sourceSectionBtn').on('click', function() {
-        $(this).addClass('active btn-secondary').removeClass('btn-default');
-        $('#sourceStudentBtn').removeClass('active btn-secondary').addClass('btn-default');
-        $('#sourceSectionGroup').show();
-        $('#sourceStudentGroup').hide();
-    });
-
-    $('#sourceStudentBtn').on('click', function() {
-        $(this).addClass('active btn-secondary').removeClass('btn-default');
-        $('#sourceSectionBtn').removeClass('active btn-secondary').addClass('btn-default');
-        $('#sourceStudentGroup').show();
-        $('#sourceSectionGroup').hide();
-    });
-
-    // =========================================================================
-    // ADD INDIVIDUAL STUDENT
-    // =========================================================================
-    $('#addStudentBtn').on('click', function() {
-        const selectedData = $('#source_student').select2('data');
-        
-        if (!selectedData || selectedData.length === 0 || !selectedData[0].id) {
-            Swal.fire('Missing Selection', 'Please search and select a student first', 'warning');
-            return;
-        }
-
-        const student = selectedData[0].student;
-
-        // Check if student already exists in table
-        const exists = $(`#assignmentTableBody tr[data-student-number="${student.student_number}"]`).length > 0;
-        if (exists) {
-            Toast.fire({
-                icon: 'info',
-                title: 'This student is already in the list'
-            });
-            return;
-        }
-
-        // Set source strand and level from student
-        if (!sourceStrandId && student.strand_id) {
-            sourceStrandId = student.strand_id;
-            sourceLevelId = student.level_id;
-            $('#target_strand').val(sourceStrandId).trigger('change');
-        }
-
-        // Add student to loaded students array
-        loadedStudents.push(student);
-        
-        // Add row to table
-        addStudentRow(student);
-        
-        // Clear selection
-        $('#source_student').val(null).trigger('change');
-        
-        Toast.fire({
-            icon: 'success',
-            title: 'Student added to the list'
-        });
-
-        updateStudentCount();
-        if (targetSectionCapacity) {
-            updateCapacityDisplay();
-        }
-        validateSubmitButton();
-    });
-
-    // =========================================================================
-    // ADD STUDENT ROW
-    // =========================================================================
-    function addStudentRow(student) {
-        const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
-        const currentSection = student.current_section || 'N/A';
-        const currentInfo = student.current_strand && student.current_level 
-            ? `${student.current_strand} - ${student.current_level}` 
-            : '';
-
-        const studentType = student.student_type || 'regular';
-        const typeIcon = studentType === 'regular' ? 'fa-user-check' : 'fa-user-clock';
-        const typeText = studentType === 'regular' ? 'Regular' : 'Irregular';
-
-        // Remove empty state if exists
-        if ($('#assignmentTableBody tr').first().find('.student-checkbox').length === 0) {
-            $('#assignmentTableBody').empty();
-        }
-
-        const rowCount = $('#assignmentTableBody tr').length + 1;
-
-        const row = `
-            <tr data-student-number="${student.student_number}" data-selected="true">
-                <td class="text-center align-middle">
-                    <input type="checkbox" class="student-checkbox" checked>
-                </td>
-                <td class="text-center align-middle">${rowCount}</td>
-                <td>${student.student_number}</td>
-                <td><strong>${fullName}</strong></td>
-                <td>
-                    <small>${currentSection}</small><br>
-                    <small class="text-muted">${currentInfo}</small>
-                </td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-default btn-sm btn-block type-toggle" data-type="${studentType}">
-                        <i class="fas ${typeIcon}"></i> ${typeText}
-                    </button>
-                    <input type="hidden" class="type-input" value="${studentType}">
-                </td>
-            </tr>
-        `;
-
-        $('#assignmentTableBody').append(row);
     }
 
     // =========================================================================
@@ -460,7 +458,7 @@ function updateCapacityDisplay() {
                 <tr>
                     <td colspan="6" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-3"></i>
-                        <p>No students found in the selected section</p>
+                        <p>No students found</p>
                     </td>
                 </tr>
             `);
@@ -509,30 +507,6 @@ function updateCapacityDisplay() {
         }
         validateSubmitButton();
     }
-
-    // =========================================================================
-    // TABLE SEARCH
-    // =========================================================================
-    $('#tableSearchInput').on('keyup', function() {
-        const searchValue = $(this).val().toLowerCase();
-        
-        $('#assignmentTableBody tr').each(function() {
-            const $row = $(this);
-            if ($row.find('.student-checkbox').length === 0) return;
-            
-            const text = $row.text().toLowerCase();
-            if (text.indexOf(searchValue) > -1) {
-                $row.show();
-            } else {
-                $row.hide();
-            }
-        });
-    });
-
-    $('#clearTableSearchBtn').on('click', function() {
-        $('#tableSearchInput').val('');
-        $('#assignmentTableBody tr').show();
-    });
 
     // =========================================================================
     // CHECKBOX HANDLERS
@@ -639,14 +613,21 @@ function updateCapacityDisplay() {
         const totalStudents = $('#assignmentTableBody tr').filter(function() {
             return $(this).find('.student-checkbox').length > 0;
         }).length;
-        const selectedStudents = $('.student-checkbox:checked').length;
+        const visibleStudents = $('#assignmentTableBody tr:visible').filter(function() {
+            return $(this).find('.student-checkbox').length > 0;
+        }).length;
+        const selectedStudents = $('.student-checkbox:checked:visible').length;
         
         if (totalStudents === 0) {
             $('#studentCount').text('0 Students');
             return;
         }
         
-        $('#studentCount').text(`${selectedStudents} / ${totalStudents} Selected`);
+        if (visibleStudents < totalStudents) {
+            $('#studentCount').text(`${selectedStudents} / ${visibleStudents} Selected (${totalStudents} total)`);
+        } else {
+            $('#studentCount').text(`${selectedStudents} / ${totalStudents} Selected`);
+        }
     }
 
     function validateSubmitButton() {
@@ -666,7 +647,7 @@ function updateCapacityDisplay() {
     }
 
     // =========================================================================
-    // FORM SUBMISSION
+    // FORM SUBMISSION (Same as before - keeping batch processing logic)
     // =========================================================================
     $('#assign_section_form').on('submit', function(e) {
         e.preventDefault();
@@ -727,7 +708,6 @@ function updateCapacityDisplay() {
                 <div class="text-left">
                     <hr>
                     <p><strong>Assigning ${students.length} student(s)</strong></p>
-
                     <p><strong>Strand:</strong> ${targetStrandName}</p>
                     <p><strong>Section:</strong> ${targetSectionText}</p>
                     <p><strong>Semester:</strong> ${targetSemesterName}</p>

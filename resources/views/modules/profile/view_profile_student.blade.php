@@ -118,10 +118,10 @@
                         <div class="row">
                             <div class="col-md-5">
                                 <div class="form-group">
-                                    <label for="firstName"><i class="fas fa-user mr-1"></i>First Name</label>
+                                    <label for="firstName"><i class="fas fa-user mr-1"></i>First Name <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="firstName"
                                         name="first_name" data-editable placeholder="Enter first name"
-                                        value="{{ $student->first_name}}" />
+                                        value="{{ $student->first_name }}" required />
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -135,10 +135,10 @@
                             </div>
                             <div class="col-md-5">
                                 <div class="form-group">
-                                    <label for="lastName"><i class="fas fa-user mr-1"></i>Last Name</label>
+                                    <label for="lastName"><i class="fas fa-user mr-1"></i>Last Name <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="lastName"
                                         name="last_name" data-editable placeholder="Enter last name"
-                                        value="{{ $student->last_name }}" />
+                                        value="{{ $student->last_name }}" required />
                                 </div>
                             </div>
                         </div>
@@ -153,9 +153,13 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="gender"><i class="fas fa-venus-mars mr-1"></i>Gender</label>
-                                    <input type="text" class="form-control" id="gender"
-                                        readonly value="{{ $student->gender }}" />
+                                    <label for="gender"><i class="fas fa-venus-mars mr-1"></i>Gender <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="gender" name="gender" data-editable required>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male" {{ $student->gender === 'Male' ? 'selected' : '' }}>Male</option>
+                                        <option value="Female" {{ $student->gender === 'Female' ? 'selected' : '' }}>Female</option>
+                                        <option value="Other" {{ $student->gender === 'Other' ? 'selected' : '' }}>Other</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -173,26 +177,35 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label><i class="fas fa-user mr-1"></i>First Name</label>
-                    <input type="text" class="form-control" readonly 
-                        value="{{ $guardian->first_name ?? '' }}" />
+                    <label><i class="fas fa-user mr-1"></i>First Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control guardian-first-name" 
+                        name="guardian_first_name[]" data-editable
+                        value="{{ $guardian->first_name ?? '' }}" 
+                        placeholder="Enter first name" 
+                        {{ $mode === 'edit' ? 'required' : 'readonly' }} />
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label><i class="fas fa-user mr-1"></i>Last Name</label>
-                    <input type="text" class="form-control" readonly 
-                        value="{{ $guardian->last_name ?? '' }}" />
+                    <label><i class="fas fa-user mr-1"></i>Last Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control guardian-last-name" 
+                        name="guardian_last_name[]" data-editable
+                        value="{{ $guardian->last_name ?? '' }}" 
+                        placeholder="Enter last name"
+                        {{ $mode === 'edit' ? 'required' : 'readonly' }} />
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col-md-12">
                 <div class="form-group">
-                    <label><i class="fas fa-envelope mr-1"></i>Email</label>
+                    <label><i class="fas fa-envelope mr-1"></i>Email <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <input type="email" class="form-control guardian-email" readonly 
-                            value="{{ $guardian->email ?? '' }}" />
+                        <input type="email" class="form-control guardian-email" 
+                            name="guardian_email[]"
+                            value="{{ $guardian->email ?? '' }}" 
+                            placeholder="Enter email"
+                            readonly />
                         @if($guardian && $mode === 'view')
                             <div class="input-group-append">
                                 <button type="button" class="btn btn-default btn-sm btn-change-email" 

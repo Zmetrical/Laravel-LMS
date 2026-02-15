@@ -1,8 +1,6 @@
 @extends('layouts.main')
 
 @section('styles')
-    
-
     @if(isset($styles))
         @foreach($styles as $style)
             <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
@@ -14,14 +12,20 @@
 
     <style>
         .section-capacity-card {
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
 
+        .semester-quick-btn {
+            margin-bottom: 0.5rem;
+        }
+
+        .semester-quick-btn.active {
+            font-weight: 600;
+        }
     </style>
-
-    @endsection
+@endsection
 
 @section('breadcrumb')
     <ol class="breadcrumb breadcrumb-custom">
@@ -44,53 +48,53 @@
                         <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
                     </div>
                     <div class="card-body">
+                        <!-- Source Semester Selection -->
                         <div class="form-group">
-                            <label>Previous Semester</label>
-                            <select class="form-control" id="source_semester">
-                                <option value="">All Students in Section</option>
+                            <label>Previous Semester <span class="text-danger">*</span></label>
+                            
+                            <!-- Quick Access Buttons -->
+                            <div class="mb-2" id="sourceSemesterQuick"></div>
+                            
+                            <!-- Semester Dropdown -->
+                            <select class="form-control" id="source_semester" required>
+                                <option value="">Select semester...</option>
                                 @foreach($semesters as $semester)
-                                    <option value="{{ $semester->id }}">
+                                    <option value="{{ $semester->id }}" 
+                                        data-status="{{ $semester->status }}">
                                         {{ $semester->year_code }} - {{ $semester->semester_name }}
+                                        @if($semester->status === 'active') (Active) @endif
                                     </option>
                                 @endforeach
                             </select>
+                            <small class="form-text text-muted">
+                                Load students from this semester
+                            </small>
                         </div>
 
-                        <!-- Source Type Toggle -->
-                        <div class="form-group">
-                            <label>Source Type</label>
-                            <div class="btn-group btn-block">
-                                <button type="button" class="btn btn-secondary active" id="sourceSectionBtn">
-                                    <i class="fas fa-users"></i> Section
-                                </button>
-                                <button type="button" class="btn btn-default" id="sourceStudentBtn">
-                                    <i class="fas fa-user"></i> Student
-                                </button>
-                            </div>
-                        </div>
+                        <hr>
 
-                        <!-- Source Section -->
-                        <div id="sourceSectionGroup">
-                            <div class="form-group mb-0">
-                                <label>Source Section <span class="text-danger">*</span></label>
-                                <select class="form-control select2" id="source_section" style="width: 100%;">
-                                    <option value="">Search for section...</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Source Student -->
-                        <div id="sourceStudentGroup" style="display: none;">
+                        <!-- Filter Options -->
+                        <div id="filterOptions" style="display: none;">
+                            <label class="mb-2">Filter Students By</label>
+                            
+                            <!-- Filter by Section -->
                             <div class="form-group">
-                                <label>Search Student <span class="text-danger">*</span></label>
-                                <select class="form-control select2" id="source_student" style="width: 100%;">
-                                    <option value="">Type student number or name...</option>
+                                <label class="text-muted" style="font-size: 0.875rem;">
+                                    <i class="fas fa-users mr-1"></i> Section
+                                </label>
+                                <select class="form-control" id="filter_section" style="width: 100%;">
+                                    <option value="">All Sections</option>
                                 </select>
                             </div>
 
-                            <button type="button" class="btn btn-secondary btn-block" id="addStudentBtn">
-                                <i class="fas fa-user-plus mr-2"></i> Add Student
-                            </button>
+                            <!-- Search by Student -->
+                            <div class="form-group mb-0">
+                                <label class="text-muted" style="font-size: 0.875rem;">
+                                    <i class="fas fa-search mr-1"></i> Search Student
+                                </label>
+                                <input type="text" class="form-control" id="filter_student" 
+                                       placeholder="Number or name...">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -101,14 +105,22 @@
                         <h3 class="card-title"><i class="fas fa-bullseye mr-2"></i>Target Assignment</h3>
                     </div>
                     <div class="card-body">
+                        <!-- Target Semester Selection -->
                         <div class="form-group">
                             <label>Target Semester <span class="text-danger">*</span></label>
+                            
+                            <!-- Quick Access Buttons -->
+                            <div class="mb-2" id="targetSemesterQuick"></div>
+                            
+                            <!-- Semester Dropdown -->
                             <select class="form-control" id="target_semester" name="semester_id" required>
-                                <option value="" selected disabled>Select Semester</option>
+                                <option value="">Select semester...</option>
                                 @foreach($semesters as $semester)
                                     <option value="{{ $semester->id }}" 
+                                        data-status="{{ $semester->status }}"
                                         @if($semester->status === 'active') selected @endif>
                                         {{ $semester->year_code }} - {{ $semester->semester_name }}
+                                        @if($semester->status === 'active') (Active) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -160,16 +172,7 @@
                                 </button>
                             </div>
                             <div class="col-md-6 text-right">
-                                <!-- Search Student Table -->
-                                <div class="input-group" style="width: 250px; display: inline-flex;">
-                                    <input type="text" class="form-control" id="tableSearchInput" placeholder="Search table...">
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-default" id="clearTableSearchBtn">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-secondary ml-2" id="removeSelectedBtn">
+                                <button type="button" class="btn btn-secondary" id="removeSelectedBtn">
                                     <i class="fas fa-trash mr-1"></i> Remove Selected
                                 </button>
                             </div>
@@ -194,13 +197,12 @@
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-5">
                                             <i class="fas fa-arrow-left fa-2x mb-3"></i>
-                                            <p>Select a source section or search for a student to begin</p>
+                                            <p>Select a source semester to load students</p>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-
                     </div>
 
                     <div class="card-footer">
@@ -221,15 +223,16 @@
 
 <script>
 const API_ROUTES = {
-    searchSections: "{{ route('admin.section_assignment.search_sections') }}",
-    searchStudents: "{{ route('admin.section_assignment.search_students') }}",
-    loadStudents: "{{ route('admin.section_assignment.load_students') }}",
-    getSectionDetails: "{{ route('admin.section_assignment.get_section_details') }}",
+    loadStudentsBySemester: "{{ route('admin.section_assignment.load_students_by_semester') }}",
+    getSectionsBySemester: "{{ route('admin.section_assignment.get_sections_by_semester') }}",
     getTargetSections: "{{ route('admin.section_assignment.get_target_sections') }}",
     getSectionCapacity: "{{ route('admin.section_assignment.get_section_capacity') }}",
     assignStudents: "{{ route('admin.section_assignment.assign_students') }}",
     redirectAfterSubmit: "{{ route('admin.list_student') }}"
 };
+
+// Pass semesters data to JavaScript
+const SEMESTERS_DATA = @json($semesters);
 </script>
 
 @if(isset($scripts))

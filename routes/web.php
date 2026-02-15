@@ -186,23 +186,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('section_assignment.get_sections');
 
 
-        // Section Assignment Routes
-        Route::get('/section_assignment/search_sections', [Section_Management::class, 'search_sections'])->name('section_assignment.search_sections');
-        Route::get('/section_assignment/search_students', [Section_Management::class, 'search_students'])->name('section_assignment.search_students'); // Changed to GET
-        Route::post('/section_assignment/load_students', [Section_Management::class, 'load_students_from_section'])->name('section_assignment.load_students');
-        Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
+// Section Assignment Routes - Updated for semester-first workflow
+Route::post('/section_assignment/load_students_by_semester', [Section_Management::class, 'load_students_by_semester'])->name('section_assignment.load_students_by_semester');
+Route::post('/section_assignment/get_sections_by_semester', [Section_Management::class, 'get_sections_by_semester'])->name('section_assignment.get_sections_by_semester');
+Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
 
-        Route::post('/section-adviser/get', [Section_Management::class, 'get_section_adviser'])->name('admin.section_adviser.get');
-        Route::post('/section-adviser/save', [Section_Management::class, 'save_section_adviser'])->name('admin.section_adviser.save');
-        Route::post('/section-adviser/search-teachers', [Section_Management::class, 'search_teachers'])->name('admin.section_adviser.search_teachers');
+Route::post('/section-assignment/get-target-sections', [Section_Management::class, 'get_target_sections'])
+    ->name('section_assignment.get_target_sections');
+Route::post('/section-assignment/get-section-capacity', [Section_Management::class, 'get_section_capacity'])
+    ->name('section_assignment.get_section_capacity');
 
-        Route::post('/section-assignment/get-section-details', [Section_Management::class, 'get_source_section_details'])
-            ->name('section_assignment.get_section_details');
+// Section Adviser Routes
+Route::post('/section-adviser/get', [Section_Management::class, 'get_section_adviser'])->name('admin.section_adviser.get');
+Route::post('/section-adviser/save', [Section_Management::class, 'save_section_adviser'])->name('admin.section_adviser.save');
+Route::post('/section-adviser/search-teachers', [Section_Management::class, 'search_teachers'])->name('admin.section_adviser.search_teachers');
 
-        Route::post('/section-assignment/get-target-sections', [Section_Management::class, 'get_target_sections'])
-            ->name('section_assignment.get_target_sections');
-        Route::post('/section-assignment/get-section-capacity', [Section_Management::class, 'get_section_capacity'])
-            ->name('section_assignment.get_section_capacity');
 
         // Section Grades View
         Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])

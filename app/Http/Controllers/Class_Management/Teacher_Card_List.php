@@ -96,6 +96,8 @@ class Teacher_Card_List extends MainController
             ->join('sections as sec', 's.section_id', '=', 'sec.id')
             ->join('strands as str', 'sec.strand_id', '=', 'str.id')
             ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+            ->leftJoin('guardian_students as gs', 's.student_number', '=', 'gs.student_number')
+            ->leftJoin('guardians as g', 'gs.guardian_id', '=', 'g.id')
             ->whereIn('s.section_id', $sections->pluck('id'))
             ->where('gf.semester_id', $activeSemester->semester_id)
             ->where('s.student_type', 'regular')
@@ -110,6 +112,13 @@ class Teacher_Card_List extends MainController
                 'sec.name as section_name',
                 'str.code as strand_code',
                 'lvl.name as level_name',
+                'g.email as guardian_email',
+                'g.email_verified_at',
+                DB::raw("CASE 
+                    WHEN g.email_verified_at IS NOT NULL THEN 'verified'
+                    WHEN g.id IS NOT NULL AND g.email_verified_at IS NULL THEN 'pending'
+                    ELSE 'none'
+                END as verification_status"),
                 DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
                 DB::raw("COUNT(gf.id) as total_subjects"),
                 DB::raw("SUM(CASE WHEN gf.remarks = 'PASSED' THEN 1 ELSE 0 END) as passed_count"),
@@ -128,6 +137,9 @@ class Teacher_Card_List extends MainController
                 'sec.name',
                 'str.code',
                 'lvl.name',
+                'g.email',
+                'g.email_verified_at',
+                'verification_status',
                 'semester_display'
             )
             ->orderBy('sec.code')

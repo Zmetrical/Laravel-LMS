@@ -14,7 +14,7 @@ $(document).ready(function () {
     let currentSectionId = null;
     let currentViewType = 'quarter';
     let pendingChanges = {};
-    let finalGradesSubmitted = false;
+    let submissionStatus = null; // Store per-student submission status
     let pendingAction = null;
     let wwGrid, ptGrid, qaGrid;
 
@@ -103,17 +103,17 @@ $(document).ready(function () {
             </div>
         `;
         $('#wwGrid, #ptGrid, #qaGrid').html(emptyHtml);
-$('#summaryTableBody, #finalGradeTableBody').html(`
-    <tr class="empty-state-row">
-        <td colspan="100">
-            <div style="padding: 60px 20px; text-align: center;">
-                <i class="fas fa-table" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></i>
-                <h5 style="color: #6c757d; margin-bottom: 10px;">No Section Selected</h5>
-                <p style="color: #adb5bd;">Please select a section from the dropdown above to view grades.</p>
-            </div>
-        </td>
-    </tr>
-`);
+        $('#summaryTableBody, #finalGradeTableBody').html(`
+            <tr class="empty-state-row">
+                <td colspan="100">
+                    <div style="padding: 60px 20px; text-align: center;">
+                        <i class="fas fa-table" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></i>
+                        <h5 style="color: #6c757d; margin-bottom: 10px;">No Section Selected</h5>
+                        <p style="color: #adb5bd;">Please select a section from the dropdown above to view grades.</p>
+                    </div>
+                </td>
+            </tr>
+        `);
     }
 
     function loadGradebook(quarterId) {
@@ -207,13 +207,14 @@ $('#summaryTableBody, #finalGradeTableBody').html(`
             return;
         }
 
-    const loadingHtml = '<tr class="loading-row"><td colspan="6"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
-    $('#finalGradeTableBody').html(loadingHtml);
+        const loadingHtml = '<tr class="loading-row"><td colspan="7"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        $('#finalGradeTableBody').html(loadingHtml);
         
         $('.summary-table-wrapper').first().hide();
         $('#finalGradeTable').show();
         $('#submitFinalGradeBtn').show();
         
+        // First check submission status
         $.ajax({
             url: API_ROUTES.checkFinalGradesStatus,
             type: 'GET',
@@ -223,29 +224,25 @@ $('#summaryTableBody, #finalGradeTableBody').html(`
             },
             success: function (statusResponse) {
                 if (statusResponse.success) {
-                    finalGradesSubmitted = statusResponse.data.is_submitted;
-                    
-                    if (finalGradesSubmitted) {
-                        $('#submitFinalGradeBtn').html('<i class="fas fa-check-circle"></i> Grades Already Submitted').prop('disabled', true);
-                    } else {
-                        $('#submitFinalGradeBtn').html('<i class="fas fa-save"></i> Submit Final Grades').prop('disabled', false);
-                    }
+                    submissionStatus = statusResponse.data;
+                    updateSubmitButton(submissionStatus);
                 }
                 
+                // Then load final grades data
                 $.ajax({
                     url: API_ROUTES.getFinalGrade,
                     type: 'GET',
                     data: { section_id: currentSectionId },
                     success: function (response) {
                         if (response.success) {
-                            renderFinalGradeTable(response.data);
+                            renderFinalGradeTable(response.data, submissionStatus);
                         } else {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
                                 text: response.message || 'Failed to load final grades'
                             });
-                            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">No data available</td></tr>');
+                            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No data available</td></tr>');
                         }
                     },
                     error: function (xhr) {
@@ -255,18 +252,46 @@ $('#summaryTableBody, #finalGradeTableBody').html(`
                             title: 'Error',
                             text: errorMsg
                         });
-                        $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">Error loading data</td></tr>');
+                        $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">Error loading data</td></tr>');
                     }
+                });
+            },
+            error: function (xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to check submission status'
                 });
             }
         });
     }
 
-    function renderFinalGradeTable(data) {
+    function updateSubmitButton(status) {
+        const btn = $('#submitFinalGradeBtn');
+        
+        if (status.status === 'complete') {
+            btn.html('<i class="fas fa-check-circle"></i> All Grades Submitted')
+               .prop('disabled', true)
+               .removeClass('btn-primary')
+               .addClass('btn-success');
+        } else if (status.status === 'partial') {
+            btn.html(`<i class="fas fa-save"></i> Submit Remaining Grades (${status.pending_count} student${status.pending_count > 1 ? 's' : ''})`)
+               .prop('disabled', false)
+               .removeClass('btn-success')
+               .addClass('btn-primary');
+        } else {
+            btn.html(`<i class="fas fa-save"></i> Submit Final Grades (${status.total_enrolled} student${status.total_enrolled > 1 ? 's' : ''})`)
+               .prop('disabled', false)
+               .removeClass('btn-success')
+               .addClass('btn-primary');
+        }
+    }
+
+    function renderFinalGradeTable(data, status) {
         const students = data.students;
         
         if (!students || students.length === 0) {
-            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="6">No students found</td></tr>');
+            $('#finalGradeTableBody').html('<tr class="loading-row"><td colspan="7">No students found</td></tr>');
             return;
         }
 
@@ -279,41 +304,60 @@ $('#summaryTableBody, #finalGradeTableBody').html(`
         if (maleStudents.length > 0) {
             html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-mars"></i> MALE</td></tr>`;
             maleStudents.forEach(student => {
-                html += renderFinalGradeRow(student);
+                html += renderFinalGradeRow(student, status);
             });
         }
 
         if (femaleStudents.length > 0) {
             html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-venus"></i> FEMALE</td></tr>`;
             femaleStudents.forEach(student => {
-                html += renderFinalGradeRow(student);
+                html += renderFinalGradeRow(student, status);
             });
         }
 
         if (otherStudents.length > 0) {
             html += `<tr class="gender-separator"><td colspan="7"><i class="fas fa-user"></i> OTHER</td></tr>`;
             otherStudents.forEach(student => {
-                html += renderFinalGradeRow(student);
+                html += renderFinalGradeRow(student, status);
             });
         }
 
         $('#finalGradeTableBody').html(html);
     }
 
-function renderFinalGradeRow(student) {
-    const remarksClass = student.remarks === 'PASSED' ? 'remarks-passed' : 'remarks-failed';
-    
-    return `
-        <tr data-student="${escapeHtml(student.student_number)}">
-            <td>${escapeHtml(student.student_number)}</td>
-            <td>${escapeHtml(student.full_name)}</td>
-            <td class="text-center">${student.q1_grade || '-'}</td>
-            <td class="text-center">${student.q2_grade || '-'}</td>
-            <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
-            <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
-        </tr>
-    `;
-}
+    function renderFinalGradeRow(student, status) {
+        const remarksClass = student.remarks === 'PASSED' ? 'text-success' : 'text-danger';
+        const studentStatus = status?.student_status?.[student.student_number];
+        const isSubmitted = studentStatus?.submitted || false;
+        
+        let statusBadge = '';
+        let rowClass = '';
+        
+        if (isSubmitted) {
+            const submittedDate = new Date(studentStatus.submitted_at).toLocaleDateString();
+            statusBadge = `<span class="text-primary" title="Submitted on ${submittedDate}">
+                SUBMITTED
+            </span>`;
+            rowClass = 'submitted-row';
+        } else {
+            statusBadge = `<span class="text-secondary">
+                PENDING
+            </span>`;
+            rowClass = 'pending-row';
+        }
+        
+        return `
+            <tr data-student="${escapeHtml(student.student_number)}" class="${rowClass}">
+                <td>${escapeHtml(student.student_number)}</td>
+                <td>${escapeHtml(student.full_name)}</td>
+                <td class="text-center">${student.q1_grade || '-'}</td>
+                <td class="text-center">${student.q2_grade || '-'}</td>
+                <td class="text-center grade-cell"><strong>${student.final_grade || '-'}</strong></td>
+                <td class="text-center"><span class="${remarksClass}">${student.remarks}</span></td>
+                <td class="text-center">${statusBadge}</td>
+            </tr>
+        `;
+    }
 
     function renderSummaryTable(data) {
         const { class: classInfo, students } = data;
@@ -447,44 +491,63 @@ function renderFinalGradeRow(student) {
 
     // Submit Final Grades button
     $('#submitFinalGradeBtn').click(function() {
-        if (finalGradesSubmitted) {
+        if (!submissionStatus) {
             Swal.fire({
-                icon: 'info',
-                title: 'Already Submitted',
-                text: 'Final grades have already been submitted for this semester'
+                icon: 'warning',
+                title: 'Loading',
+                text: 'Please wait while we load the submission status'
             });
             return;
         }
 
+        // Collect only pending students
         const grades = [];
-        $('#finalGradeTableBody tr:not(.gender-separator)').each(function() {
+        $('#finalGradeTableBody tr.pending-row').each(function() {
             const $row = $(this);
             const studentNumber = $row.data('student');
             
             if (studentNumber) {
-                grades.push({
-                    student_number: studentNumber,
-                    q1_grade: parseFloat($row.find('td:eq(2)').text()),
-                    q2_grade: parseFloat($row.find('td:eq(3)').text()),
-                    final_grade: parseInt($row.find('td:eq(5)').text()),
-                    remarks: $row.find('td:eq(6) span').text()
-                });
+                const q1 = parseFloat($row.find('td:eq(2)').text());
+                const q2 = parseFloat($row.find('td:eq(3)').text());
+                const final = parseInt($row.find('td:eq(4) strong').text());
+                const remarks = $row.find('td:eq(5) span').text();
+                
+                if (!isNaN(q1) && !isNaN(q2) && !isNaN(final) && remarks) {
+                    grades.push({
+                        student_number: studentNumber,
+                        q1_grade: q1,
+                        q2_grade: q2,
+                        final_grade: final,
+                        remarks: remarks
+                    });
+                }
             }
         });
 
         if (grades.length === 0) {
             Swal.fire({
-                icon: 'warning',
-                title: 'No Grades',
-                text: 'No grades to submit'
+                icon: 'info',
+                title: 'No Pending Grades',
+                text: submissionStatus.status === 'complete' 
+                    ? 'All grades have already been submitted' 
+                    : 'No valid grades to submit'
             });
             return;
         }
 
         window.pendingGrades = grades;
         pendingAction = 'submit';
+        
+        let message = '';
+        if (submissionStatus.status === 'partial') {
+            message = `<i class="fas fa-info-circle text-secondary"></i> You are about to submit final grades for <strong>${grades.length}</strong> remaining student(s).<br><br>
+                       <small class="text-muted">${submissionStatus.total_graded} student(s) already have submitted grades.</small>`;
+        } else {
+            message = `<i class="fas fa-info-circle text-secondary"></i> You are about to submit final grades for <strong>${grades.length}</strong> student(s).`;
+        }
+        
         $('#passcodeModalTitle').text('Verify Passcode');
-        $('#passcodeModalMessage').html(`<i class="fas fa-info-circle text-secondary"></i> You are about to submit final grades for <strong>${grades.length}</strong> student(s).`);
+        $('#passcodeModalMessage').html(message);
         $('#passcodeModal').modal('show');
         $('#passcode').val('').focus();
     });
@@ -566,8 +629,6 @@ function renderFinalGradeRow(student) {
                         text: response.message || 'Final grades submitted successfully',
                         confirmButtonColor: '#28a745'
                     }).then(() => {
-                        finalGradesSubmitted = true;
-                        btn.html('<i class="fas fa-check-circle"></i> Grades Already Submitted');
                         loadFinalGrade(); // Reload to show updated status
                     });
                 } else {
@@ -576,7 +637,8 @@ function renderFinalGradeRow(student) {
                         title: 'Error',
                         text: response.message || 'Failed to submit grades'
                     });
-                    btn.prop('disabled', false).html('<i class="fas fa-save"></i> Submit Final Grades');
+                    btn.prop('disabled', false);
+                    updateSubmitButton(submissionStatus);
                 }
             },
             error: function(xhr) {
@@ -586,7 +648,8 @@ function renderFinalGradeRow(student) {
                     title: 'Error',
                     text: errorMsg
                 });
-                btn.prop('disabled', false).html('<i class="fas fa-save"></i> Submit Final Grades');
+                btn.prop('disabled', false);
+                updateSubmitButton(submissionStatus);
             }
         });
     }
