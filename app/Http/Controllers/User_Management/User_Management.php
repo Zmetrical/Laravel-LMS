@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User_Management;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\MainController;
+use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -895,39 +896,285 @@ public function list_students(Request $request)
         return strtoupper(Str::random(6));
     }
 
-    public function list_teacher(Request $request)
-    {
-        $teachers = DB::table('teachers')
-            ->select('teachers.*')
-            ->get()
-            ->map(function($teacher) {
-                $classes = DB::table('teacher_class_matrix')
-                    ->join('classes', 'teacher_class_matrix.class_id', '=', 'classes.id')
-                    ->where('teacher_class_matrix.teacher_id', $teacher->id)
-                    ->select(
-                        'classes.id',
-                        'classes.class_code',
-                        'classes.class_name'
-                    )
-                    ->get();
-                
-                $teacher->classes = $classes;
-                return $teacher;
-            });
+public function list_teacher(Request $request)
+{
+    // Get active school year for default class assignments display
+    $activeSchoolYear = DB::table('school_years')
+        ->where('status', 'active')
+        ->first();
 
-        $classes = DB::table('classes')
-            ->select('id','class_code', 'class_name')
-            ->orderBy('class_code')
+    $teachers = DB::table('teachers')
+        ->leftJoin('teacher_school_year_status as tsys', function($join) use ($activeSchoolYear) {
+            $join->on('teachers.id', '=', 'tsys.teacher_id')
+                 ->where('tsys.school_year_id', '=', $activeSchoolYear->id ?? 0);
+        })
+        ->select(
+            'teachers.*',
+            'tsys.status as school_year_status',
+            'tsys.id as status_id'
+        )
+        ->get()
+        ->map(function($teacher) use ($activeSchoolYear) {
+            // Get classes for this teacher in active school year
+            $classes = DB::table('teacher_class_matrix')
+                ->join('classes', 'teacher_class_matrix.class_id', '=', 'classes.id')
+                ->where('teacher_class_matrix.teacher_id', $teacher->id)
+                ->where('teacher_class_matrix.school_year_id', $activeSchoolYear->id ?? 0)
+                ->select(
+                    'classes.id',
+                    'classes.class_code',
+                    'classes.class_name'
+                )
+                ->get();
+            
+            $teacher->classes = $classes;
+            
+            // Set default status if no status record exists
+            if (!$teacher->school_year_status) {
+                $teacher->school_year_status = 'active';
+            }
+            
+            return $teacher;
+        });
+
+    // Count active and inactive teachers
+    $activeCount = $teachers->where('school_year_status', 'active')->count();
+    $inactiveCount = $teachers->where('school_year_status', 'inactive')->count();
+
+    $classes = DB::table('classes')
+        ->select('id', 'class_code', 'class_name')
+        ->orderBy('class_code')
+        ->get();
+
+    $data = [
+        'scripts' => [
+            'user_management/list_teacher.js',
+        ],
+        'teachers' => $teachers,
+        'classes' => $classes,
+        'activeSchoolYear' => $activeSchoolYear,
+        'activeCount' => $activeCount,
+        'inactiveCount' => $inactiveCount
+    ];
+
+    return view('admin.user_management.list_teacher', $data);
+}
+
+
+public function teacherHistory($id)
+{
+    // Get teacher details
+    $teacher = DB::table('teachers')
+        ->where('id', $id)
+        ->first();
+
+    if (!$teacher) {
+        abort(404, 'Teacher not found');
+    }
+
+    // Get all school years where teacher was active (has status record or has classes assigned)
+    $schoolYears = DB::table('school_years as sy')
+        ->leftJoin('teacher_school_year_status as tsys', function($join) use ($id) {
+            $join->on('sy.id', '=', 'tsys.school_year_id')
+                 ->where('tsys.teacher_id', '=', $id);
+        })
+        ->leftJoin('teacher_class_matrix as tcm', function($join) use ($id) {
+            $join->on('sy.id', '=', 'tcm.school_year_id')
+                 ->where('tcm.teacher_id', '=', $id);
+        })
+        ->whereNotNull('tcm.id') // Only show school years where teacher had classes
+        ->select(
+            'sy.id as school_year_id',
+            'sy.code as school_year_code',
+            'sy.status as school_year_status',
+            'tsys.status as teacher_status',
+            'tsys.activated_at',
+            'tsys.deactivated_at'
+        )
+        ->groupBy('sy.id', 'sy.code', 'sy.status', 'tsys.status', 'tsys.activated_at', 'tsys.deactivated_at')
+        ->orderBy('sy.year_start', 'desc')
+        ->get();
+
+    // For each school year, get detailed class and adviser information
+    $schoolYearData = [];
+    foreach ($schoolYears as $sy) {
+        // Get semesters for this school year
+        $semesters = DB::table('semesters')
+            ->where('school_year_id', $sy->school_year_id)
+            ->orderBy('code')
             ->get();
 
-        $data = [
-            'scripts' => [
-                'user_management/list_teacher.js',
-            ],
-            'teachers' => $teachers,
-            'classes' => $classes
+        // Get teaching assignments (classes with sections)
+        $classes = DB::table('teacher_class_matrix as tcm')
+            ->join('classes as c', 'tcm.class_id', '=', 'c.id')
+            ->leftJoin('semesters as sem', 'tcm.semester_id', '=', 'sem.id')
+            ->where('tcm.teacher_id', $id)
+            ->where('tcm.school_year_id', $sy->school_year_id)
+            ->select(
+                'c.id as class_id',
+                'c.class_code',
+                'c.class_name',
+                'c.class_category',
+                'sem.id as semester_id',
+                'sem.name as semester_name',
+                'sem.code as semester_code'
+            )
+            ->distinct()
+            ->get();
+
+        // For each class, get the sections
+        $classesWithSections = $classes->map(function($class) use ($id, $sy) {
+            // Get sections for regular students
+            $sections = DB::table('section_class_matrix as scm')
+                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+                ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                ->join('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->where('scm.class_id', $class->class_id)
+                ->where('scm.semester_id', $class->semester_id)
+                ->select(
+                    'sec.code as section_code',
+                    'sec.name as section_name',
+                    'str.code as strand_code',
+                    'lvl.name as level_name'
+                )
+                ->get();
+
+            $class->sections = $sections;
+            $class->section_count = $sections->count();
+            
+            return $class;
+        });
+
+        // Group classes by subject
+        $groupedClasses = $classesWithSections->groupBy('class_code');
+
+        // Get adviser assignments separately
+        $adviserAssignments = DB::table('section_adviser_matrix as sam')
+            ->join('sections as sec', 'sam.section_id', '=', 'sec.id')
+            ->join('semesters as sem', 'sam.semester_id', '=', 'sem.id')
+            ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+            ->join('strands as str', 'sec.strand_id', '=', 'str.id')
+            ->where('sam.teacher_id', $id)
+            ->where('sem.school_year_id', $sy->school_year_id)
+            ->select(
+                'sec.id as section_id',
+                'sec.code as section_code',
+                'sec.name as section_name',
+                'str.code as strand_code',
+                'lvl.name as level_name',
+                'sem.id as semester_id',
+                'sem.name as semester_name',
+                'sem.code as semester_code',
+                'sam.assigned_date'
+            )
+            ->orderBy('sem.code')
+            ->orderBy('sec.code')
+            ->get();
+
+        // Group adviser assignments by semester
+        $groupedAdvisers = $adviserAssignments->groupBy('semester_id');
+
+        $schoolYearData[] = [
+            'school_year_id' => $sy->school_year_id,
+            'school_year_code' => $sy->school_year_code,
+            'school_year_status' => $sy->school_year_status,
+            'teacher_status' => $sy->teacher_status ?? 'active',
+            'activated_at' => $sy->activated_at,
+            'deactivated_at' => $sy->deactivated_at,
+            'semesters' => $semesters,
+            'classes' => $groupedClasses,
+            'adviser_assignments' => $groupedAdvisers,
+            'total_classes' => $classesWithSections->count(),
+            'total_sections' => $classesWithSections->sum('section_count'),
+            'total_adviser_sections' => $adviserAssignments->count()
+        ];
+    }
+
+    $data = [
+        'scripts' => [
+            'user_management/teacher_history.js',
+        ],
+        'teacher' => $teacher,
+        'schoolYearData' => $schoolYearData
+    ];
+
+    return view('admin.user_management.teacher_history', $data);
+}
+
+public function toggleTeacherStatus(Request $request)
+{
+    $validated = $request->validate([
+        'teacher_id' => 'required|exists:teachers,id',
+        'school_year_id' => 'required|exists:school_years,id',
+        'status' => 'required|in:active,inactive'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $teacher = DB::table('teachers')->where('id', $validated['teacher_id'])->first();
+        $schoolYear = DB::table('school_years')->where('id', $validated['school_year_id'])->first();
+
+        // Get admin ID from session (adjust based on your auth system)
+        $adminId = session('admin_id') ?? null;
+        
+        $statusData = [
+            'teacher_id' => $validated['teacher_id'],
+            'school_year_id' => $validated['school_year_id'],
+            'status' => $validated['status'],
+            'updated_at' => now()
         ];
 
-        return view('admin.user_management.list_teacher', $data);
+        if ($validated['status'] === 'active') {
+            $statusData['activated_by'] = $adminId;
+            $statusData['activated_at'] = now();
+            $statusData['deactivated_by'] = null;
+            $statusData['deactivated_at'] = null;
+        } else {
+            $statusData['deactivated_by'] = $adminId;
+            $statusData['deactivated_at'] = now();
+        }
+
+        DB::table('teacher_school_year_status')->updateOrInsert(
+            [
+                'teacher_id' => $validated['teacher_id'],
+                'school_year_id' => $validated['school_year_id']
+            ],
+            $statusData
+        );
+
+        // Audit log
+        $this->logAudit(
+            'updated',
+            'teacher_school_year_status',
+            (string)$validated['teacher_id'],
+            "Changed teacher {$teacher->first_name} {$teacher->last_name} status to {$validated['status']} for school year {$schoolYear->code}",
+            ['status' => $validated['status'] === 'active' ? 'inactive' : 'active'],
+            ['status' => $validated['status'], 'school_year' => $schoolYear->code]
+        );
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Teacher status updated to {$validated['status']} successfully!",
+            'status' => $validated['status']
+        ]);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to update teacher status', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update teacher status: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+
 }

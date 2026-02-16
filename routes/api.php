@@ -59,6 +59,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Teacher Pages
         Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('insert_teacher');
+        Route::post('/active/toggle-status', [User_Management::class, 'toggleTeacherStatus'])
+            ->name('teachers.toggleStatus');
     });
 
     Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');
@@ -79,6 +81,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 
     Route::prefix('sections')->group(function () {
+
         Route::get('/data', [Class_Management::class, 'getSectionsData'])->name('sections.data');
 
         Route::post('/create', [Class_Management::class, 'createSection'])->name('sections.create');

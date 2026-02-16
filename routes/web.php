@@ -240,6 +240,14 @@ Route::post('/section-adviser/search-teachers', [Section_Management::class, 'sea
             Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
 
             Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
+
+            Route::post('/teachers/toggle-status', [User_Management::class, 'toggleTeacherStatus'])
+                ->name('teachers.toggleStatus');
+            Route::get('/teachers/{id}/history', [User_Management::class, 'teacherHistory'])
+                ->name('teachers.history');
+            Route::post('/teachers/toggle-status', [User_Management::class, 'toggleTeacherStatus'])
+                ->name('teachers.toggleStatus');
+
         });
 
 

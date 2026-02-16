@@ -271,7 +271,6 @@ CREATE TABLE `sections` (
   `capacity` int(11) NOT NULL,
   `strand_id` bigint(20) UNSIGNED NOT NULL,
   `level_id` int(11) NOT NULL,
-  `semester_id` int(11) DEFAULT NULL,
   `status` int(11) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -454,6 +453,20 @@ CREATE TABLE `teacher_password_matrix` (
   `plain_password` varchar(100) NOT NULL,
   `plain_passcode` varchar(100) NOT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `teacher_school_year_status` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `teacher_id` bigint(20) UNSIGNED NOT NULL,
+  `school_year_id` int(11) NOT NULL,
+  `status` enum('active','archived') NOT NULL DEFAULT 'active',
+  `activated_by` int(11) DEFAULT NULL COMMENT 'Admin ID who activated',
+  `activated_at` timestamp NULL DEFAULT NULL,
+  `deactivate_by` int(11) DEFAULT NULL COMMENT 'Admin ID who archived',
+  `deactivate_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+)
 
 CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,
