@@ -524,79 +524,96 @@ class Class_Management extends MainController
     /**
      * Get sections data with filters (AJAX)
      */
-    public function getSectionsData(Request $request)
-    {
-        try {
-            $query = DB::table('sections')
-                ->join('levels', 'sections.level_id', '=', 'levels.id')
-                ->join('strands', 'sections.strand_id', '=', 'strands.id')
-                ->select(
-                    'sections.id',
-                    'sections.code',
-                    'sections.name',
-                    'sections.status',
-                    'sections.created_at',
-                    'sections.updated_at',
-                    'levels.id as level_id',
-                    'levels.name as level_name',
-                    'strands.id as strand_id',
-                    'strands.code as strand_code',
-                    'strands.name as strand_name'
-                );
+public function getSectionsData(Request $request)
+{
+    try {
+        $query = DB::table('sections')
+            ->join('levels', 'sections.level_id', '=', 'levels.id')
+            ->join('strands', 'sections.strand_id', '=', 'strands.id')
+            ->select(
+                'sections.id',
+                'sections.code',
+                'sections.name',
+                'sections.is_active',
+                'sections.created_at',
+                'sections.updated_at',
+                'levels.id as level_id',
+                'levels.name as level_name',
+                'strands.id as strand_id',
+                'strands.code as strand_code',
+                'strands.name as strand_name'
+            );
 
-            if ($request->has('strand') && $request->strand != '') {
-                $query->where('strands.code', $request->strand);
-            }
-
-            if ($request->has('level') && $request->level != '') {
-                $query->where('levels.id', $request->level);
-            }
-
-            if ($request->has('search') && $request->search != '') {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('sections.name', 'like', "%{$search}%")
-                        ->orWhere('sections.code', 'like', "%{$search}%");
-                });
-            }
-
-            $sections = $query->orderBy('strands.code', 'asc')
-                ->orderBy('levels.id', 'asc')
-                ->orderBy('sections.name', 'asc')
-                ->get();
-
-            // Get semester filter if provided
-            $semesterId = $request->has('semester') && $request->semester != '' ? $request->semester : null;
-
-            foreach ($sections as $section) {
-                if ($semesterId) {
-                    $section->classes_count = DB::table('section_class_matrix')
-                        ->where('section_id', $section->id)
-                        ->where('semester_id', $semesterId)
-                        ->count();
-                } else {
-                    $section->classes_count = DB::table('section_class_matrix')
-                        ->where('section_id', $section->id)
-                        ->count();
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $sections
-            ]);
-        } catch (Exception $e) {
-            \Log::error('Failed to get sections data', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load sections data.'
-            ], 500);
+        if ($request->has('strand') && $request->strand != '') {
+            $query->where('strands.code', $request->strand);
         }
+
+        if ($request->has('level') && $request->level != '') {
+            $query->where('levels.id', $request->level);
+        }
+
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('sections.name', 'like', "%{$search}%")
+                    ->orWhere('sections.code', 'like', "%{$search}%");
+            });
+        }
+
+        $sections = $query->orderBy('strands.code', 'asc')
+            ->orderBy('levels.id', 'asc')
+            ->orderBy('sections.name', 'asc')
+            ->get();
+
+        // Get semester filter if provided
+        $semesterId = $request->has('semester') && $request->semester != '' ? $request->semester : null;
+
+        foreach ($sections as $section) {
+            if ($semesterId) {
+                // Get classes count
+                $section->classes_count = DB::table('section_class_matrix')
+                    ->where('section_id', $section->id)
+                    ->where('semester_id', $semesterId)
+                    ->count();
+                
+                // Get classes details for expand functionality
+                $section->classes = DB::table('section_class_matrix')
+                    ->join('classes', 'section_class_matrix.class_id', '=', 'classes.id')
+                    ->where('section_class_matrix.section_id', $section->id)
+                    ->where('section_class_matrix.semester_id', $semesterId)
+                    ->select(
+                        'classes.id',
+                        'classes.class_code',
+                        'classes.class_name',
+                        'classes.class_category'
+                    )
+                    ->orderBy('classes.class_code', 'asc')
+                    ->get();
+            } else {
+                $section->classes_count = DB::table('section_class_matrix')
+                    ->where('section_id', $section->id)
+                    ->count();
+                
+                $section->classes = [];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $sections
+        ]);
+    } catch (Exception $e) {
+        \Log::error('Failed to get sections data', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load sections data.'
+        ], 500);
     }
+}
 
     /**
      * Get levels data (AJAX)
@@ -1123,4 +1140,85 @@ class Class_Management extends MainController
             ], 500);
         }
     }
+
+/**
+ * Toggle Section Status (Activate/Deactivate)
+ * 
+ */
+public function toggleSectionStatus(Request $request)
+{
+    $validated = $request->validate([
+        'section_id' => 'required|exists:sections,id',
+        'is_active' => 'required|in:0,1',
+    ]);
+
+    try {
+        $section = DB::table('sections')->where('id', $request->section_id)->first();
+
+        if (!$section) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Section not found.'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
+        // Store old values for audit
+        $oldValues = [
+            'is_active' => $section->is_active,
+        ];
+
+        $newValues = [
+            'is_active' => $request->is_active,
+        ];
+
+        // Update section status
+        DB::table('sections')
+            ->where('id', $request->section_id)
+            ->update([
+                'is_active' => $request->is_active,
+                'updated_at' => now(),
+            ]);
+
+        $action = $request->is_active == 1 ? 'activated' : 'deactivated';
+
+        // Audit log
+        $this->logAudit(
+            $action,
+            'sections',
+            (string)$request->section_id,
+            "Section '{$section->name}' ({$section->code}) {$action}",
+            $oldValues,
+            $newValues
+        );
+
+        \Log::info('Section status toggled', [
+            'section_id' => $request->section_id,
+            'section_code' => $section->code,
+            'section_name' => $section->name,
+            'new_status' => $request->is_active,
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Section {$action} successfully!"
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+
+        \Log::error('Failed to toggle section status', [
+            'section_id' => $request->section_id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update section status: ' . $e->getMessage()
+        ], 500);
+    }
+}    
 }

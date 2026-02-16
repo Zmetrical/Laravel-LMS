@@ -346,6 +346,8 @@ Route::post('/section-adviser/search-teachers', [Section_Management::class, 'sea
             Route::get('/sections/{id}/available-classes', [Class_Management::class, 'getAvailableClasses'])->name('sections.available-classes');
             Route::post('/sections/assign-class', [Class_Management::class, 'assignClassToSection'])->name('sections.assign-class');
             Route::delete('/sections/remove-class/{id}', [Class_Management::class, 'removeClassFromSection'])->name('sections-class.remove-class');
+            Route::post('/sections/toggle-status', [Class_Management::class, 'toggleSectionStatus'])
+                ->name('sections.toggleStatus');
 
             // Levels
             Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');
