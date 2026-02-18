@@ -19,7 +19,73 @@ $(document).ready(function () {
         $('.quarter-btn[data-type="quarter"]').first().addClass('btn-secondary active').removeClass('btn-outline-secondary');
     }
 
-    showEmptyState();
+    // =========================================================================
+    // INLINE VERIFICATION — same pattern as semester_management
+    // Replaces the old passcode modal approach
+    // =========================================================================
+
+    $('#verificationForm').submit(function (e) {
+        e.preventDefault();
+
+        const passcode = $('#verifyPasscode').val().trim();
+
+        if (!passcode) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Passcode Required',
+                text: 'Please enter your passcode',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+
+        const btn = $('#verifyBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+
+        $.ajax({
+            url: API_ROUTES.verifyPasscode,
+            type: 'POST',
+            data: { passcode: passcode },
+            success: function (response) {
+                if (response.success) {
+                    $('#verificationCard').fadeOut(300, function () {
+                        $('#gradebookContent').fadeIn(300);
+                        // Initialize gradebook state now that content is visible
+                        showEmptyState();
+                    });
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Access Granted',
+                        text: response.message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                }
+            },
+            error: function (xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Invalid passcode. Please try again.';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Passcode',
+                    text: errorMsg,
+                    confirmButtonColor: '#dc3545'
+                });
+                btn.prop('disabled', false)
+                   .html('<i class="fas fa-unlock"></i> Verify &amp; View Gradebook');
+                $('#verifyPasscode').val('').focus();
+            }
+        });
+    });
+
+    // =========================================================================
+    // SECTION & QUARTER FILTERS
+    // =========================================================================
 
     $('#sectionFilter').change(function () {
         currentSectionId = $(this).val();
@@ -81,6 +147,10 @@ $(document).ready(function () {
             loadGradebook(currentQuarterId);
         }
     });
+
+    // =========================================================================
+    // DATA LOADING
+    // =========================================================================
 
     function showEmptyState() {
         const emptyHtml = `
@@ -216,6 +286,10 @@ $(document).ready(function () {
         });
     }
 
+    // =========================================================================
+    // RENDER — FINAL GRADE TABLE
+    // =========================================================================
+
     function renderFinalGradeTable(data) {
         const students = data.students;
         
@@ -224,9 +298,9 @@ $(document).ready(function () {
             return;
         }
 
-        const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
+        const maleStudents   = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
         const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
-        const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
+        const otherStudents  = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
 
         let html = '';
         
@@ -274,6 +348,10 @@ $(document).ready(function () {
             </tr>
         `;
     }
+
+    // =========================================================================
+    // RENDER — HELPERS
+    // =========================================================================
 
     function showTabLoading() {
         const loadingHtml = '<tr class="loading-row"><td colspan="100"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
@@ -329,9 +407,9 @@ $(document).ready(function () {
             </div>
         </th>`;
         
-        const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
+        const maleStudents   = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
         const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
-        const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
+        const otherStudents  = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
 
         let bodyHtml = '';
         
@@ -413,9 +491,9 @@ $(document).ready(function () {
     function renderSummaryTable(data) {
         const { class: classInfo, students } = data;
         
-        const maleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
+        const maleStudents   = students.filter(s => s.gender && s.gender.toLowerCase() === 'male');
         const femaleStudents = students.filter(s => s.gender && s.gender.toLowerCase() === 'female');
-        const otherStudents = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
+        const otherStudents  = students.filter(s => !s.gender || (s.gender.toLowerCase() !== 'male' && s.gender.toLowerCase() !== 'female'));
 
         let summaryHtml = '';
         
@@ -507,6 +585,10 @@ $(document).ready(function () {
         `;
     }
 
+    // =========================================================================
+    // TRANSMUTATION TABLE (unchanged from original)
+    // =========================================================================
+
     function transmuteGrade(initialGrade) {
         const table = [
             {min: 100.00, max: 100.00, grade: 100}, {min: 98.40, max: 99.99, grade: 99},
@@ -546,75 +628,9 @@ $(document).ready(function () {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    $('#editBtn').on('click', function() {
-        $('#passcodeModalTitle').text('Verify Passcode');
-        $('#passcodeModalMessage').html('<i class="fas fa-info-circle"></i> Please enter your passcode to access edit mode');
-        $('#passcodeModal').modal('show');
-        $('#passcode').val('').focus();
-    });
-
-    $('#passcodeForm').submit(function(e) {
-        e.preventDefault();
-        
-        const passcode = $('#passcode').val().trim();
-        
-        if (!passcode) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Passcode Required',
-                text: 'Please enter your passcode',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
-            return;
-        }
-
-        const btn = $('#verifyPasscodeBtn');
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
-
-        $.ajax({
-            url: API_ROUTES.verifyPasscode, 
-            type: 'POST',
-            data: { passcode: passcode },
-            success: function(response) {
-                if (response.success) {
-                    $('#passcodeModal').modal('hide');
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Verified!',
-                        text: response.message,
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                    
-                    setTimeout(function() {
-                        window.location.href = response.redirect;
-                    }, 500);
-                }
-            },
-            error: function(xhr) {
-                const errorMsg = xhr.responseJSON?.message || 'Verification failed';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid Passcode',
-                    text: errorMsg,
-                    confirmButtonColor: '#dc3545'
-                });
-                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
-                $('#passcode').val('').focus();
-            }
-        });
-    });
-
-    $('#passcodeModal').on('hidden.bs.modal', function() {
-        $('#passcode').val('');
-        $('#verifyPasscodeBtn').prop('disabled', false).html('<i class="fas fa-check"></i> Verify');
-    });
+    // =========================================================================
+    // EXPORT (unchanged from original)
+    // =========================================================================
 
     $('#exportBtn').click(function () {
         if (!currentQuarterId) {

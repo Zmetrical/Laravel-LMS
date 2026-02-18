@@ -707,6 +707,7 @@
         const ACTIVE_SEMESTER_ID = {{ DB::table('semesters')->where('status', 'active')->value('id') ?? 'null' }};
         
         const API_ROUTES = {
+            verifyPasscode: "{{ route('teacher.gradebook.verify-passcode', ['classId' => $classId]) }}",
             viewGradebook: "{{ route('teacher.gradebook.view', ['classId' => $classId]) }}",
             getGradebook: "{{ route('teacher.gradebook.data', ['classId' => $classId]) }}",
             toggleColumn: "{{ route('teacher.gradebook.column.toggle', ['classId' => $classId, 'columnId' => '__COLUMN_ID__']) }}",

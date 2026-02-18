@@ -14,7 +14,9 @@ class GradebookEditController extends MainController
     use AuditLogger;
 
     /**
-     * Verify passcode before allowing edit access
+     * Verify passcode — now called from the VIEW page (inline verification).
+     * No longer needs to return a redirect; just confirms success.
+     * Still sets the session flag in case other parts of the app check it.
      */
     public function verify_passcode(Request $request, $classId)
     {
@@ -29,6 +31,7 @@ class GradebookEditController extends MainController
             ->value('plain_passcode');
 
         if ($request->input('passcode') === $plainPasscode) {
+            // Keep session flag so edit page access is seamless
             session([
                 'gradebook_passcode_verified_' . $classId => true,
                 'gradebook_passcode_time_' . $classId => now()
@@ -36,8 +39,8 @@ class GradebookEditController extends MainController
 
             return response()->json([
                 'success' => true,
-                'message' => 'Passcode verified successfully',
-                'redirect' => route('teacher.gradebook.edit', ['classId' => $classId])
+                'message' => 'Passcode verified successfully'
+                // No redirect needed — JS fades in the gradebook content inline
             ]);
         }
 
@@ -48,7 +51,9 @@ class GradebookEditController extends MainController
     }
 
     /**
-     * Edit gradebook page
+     * Edit gradebook page.
+     * Passcode verification now happens on the view page, so no session gate here.
+     * Access is still protected by teacher_class_matrix check.
      */
     public function edit_gradebook($classId) 
     {
@@ -63,20 +68,9 @@ class GradebookEditController extends MainController
             abort(403, 'Unauthorized access to this class');
         }
 
-        // Check passcode verification
-        $sessionKey = 'gradebook_passcode_verified_' . $classId;
-        $timeKey = 'gradebook_passcode_time_' . $classId;
-        
-        if (!session($sessionKey) || 
-            !session($timeKey) || 
-            now()->diffInMinutes(session($timeKey)) > 5) {
-            session()->forget([$sessionKey, $timeKey]);
-            return redirect()->route('teacher.gradebook.view', ['classId' => $classId])
-                ->with('error', 'Please verify your passcode to access edit mode');
-        }
-
-        // Clear the session after successful access
-        session()->forget([$sessionKey, $timeKey]);
+        // NOTE: Passcode session gate removed — verification is now done inline
+        // on the view page. Edit is accessed directly via the Edit button after
+        // the teacher has already verified on view_gradebook.
 
         $class = DB::table('classes')->where('id', $classId)->first();
         
@@ -602,7 +596,10 @@ class GradebookEditController extends MainController
         }
     }
 
-    // Private helper method
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
     private function getEnrolledStudentsBySection($classId, $sectionId)
     {
         $class = DB::table('classes')->where('id', $classId)->first();

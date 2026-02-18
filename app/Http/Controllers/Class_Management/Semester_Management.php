@@ -843,36 +843,4 @@ class Semester_Management extends MainController
             ], 500);
         }
     }
-
-        public function getSemesters(Request $request)
-    {
-        try {
-            $semesters = DB::table('semesters as s')
-                ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-                ->whereIn('s.status', ['active', 'completed'])
-                ->select(
-                    's.id',
-                    's.name',
-                    's.code',
-                    's.status',
-                    'sy.code as year_code',
-                    'sy.year_start',
-                    'sy.year_end'
-                )
-                ->orderBy('sy.year_start', 'desc')
-                ->orderBy('s.code', 'desc')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'semesters' => $semesters
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load semesters.'
-            ], 500);
-        }
-    }
-    
 }

@@ -185,6 +185,10 @@
             color: white !important;
         }
         
+        .btn-group-toggle .btn i {
+            margin-right: 0.5rem;
+        }
+        
         .btn-outline-primary:not(.active):hover {
             background-color: #e7f3ff;
             border-color: #007bff;
@@ -236,18 +240,15 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <div class="form-group mb-0">
-                                    <label>
-                                        Source Semester
-                                        <small class="text-muted font-weight-normal">
-                                            — auto-detected, change if needed
-                                        </small>
-                                    </label>
-                                    <select class="form-control select2" id="sourceSemesterSelect" style="width: 100%;"></select>
+                                <div class="form-group">
+                                    <label>Source Semester</label>
+                                    <div class="form-control bg-light" id="sourceSemesterDisplay" style="cursor: not-allowed;">
+                                        <span class="text-muted">Loading...</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group mb-0">
+                                <div class="form-group">
                                     <label>Target Semester</label>
                                     <div class="form-control bg-light" id="targetSemesterDisplay" style="cursor: not-allowed;">
                                         <span class="text-muted">Loading...</span>
@@ -462,7 +463,6 @@
         completeSemester: "{{ route('admin.archive.complete-semester', ['id' => ':id']) }}",
         activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
         getPreviousSemester: "{{ route('admin.archive.get-previous-semester', ['id' => ':id']) }}",
-        getSemesters: "{{ route('admin.archive.get-semesters') }}",
         searchSections: "{{ route('admin.archive.search-sections') }}",
         loadStudents: "{{ route('admin.archive.load-students') }}",
         getSectionDetails: "{{ route('admin.archive.get-section-details') }}",
@@ -480,3 +480,4 @@
         @endforeach
     @endif
 @endsection
+

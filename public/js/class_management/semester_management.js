@@ -4,7 +4,6 @@ $(document).ready(function () {
     let semesterDetailsCache = {};
     let sourceSemesterData = null;
     let targetSemesterData = null;
-    let allSemestersCache = []; // cache for the source semester dropdown
 
     // Enrollment wizard state
     let wizard = {
@@ -228,49 +227,43 @@ $(document).ready(function () {
             return;
         }
 
-        // Load all semesters and auto-detect previous in parallel
-        $.when(
-            $.ajax({ url: API_ROUTES.getSemesters, method: 'GET' }),
-            $.ajax({ url: API_ROUTES.getPreviousSemester.replace(':id', targetSemesterId), method: 'GET' })
-        ).done(function(semestersRes, previousRes) {
-            const semestersData = semestersRes[0];
-            const previousData = previousRes[0];
+        $.ajax({
+            url: API_ROUTES.getPreviousSemester.replace(':id', targetSemesterId),
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const sourceSem = response.source_semester;
+                    const targetSem = response.target_semester;
 
-            if (!semestersData.success || !previousData.success) {
-                showToast('error', 'Failed to load semester information');
-                return;
+                    if (!sourceSem) {
+                        showToast('warning', 'No source semester found for enrollment');
+                        return;
+                    }
+
+                    wizard.sourceSemesterId = sourceSem.id;
+                    wizard.targetSemesterId = targetSem.id;
+
+                    sourceSemesterData = {
+                        id: sourceSem.id,
+                        semester_name: sourceSem.name,
+                        year_code: sourceSem.year_code,
+                        status: sourceSem.status
+                    };
+
+                    targetSemesterData = {
+                        id: targetSem.id,
+                        semester_name: targetSem.name,
+                        year_code: targetSem.year_code,
+                        status: targetSem.status
+                    };
+
+                    resetWizard();
+                    $('#quickEnrollModal').modal('show');
+                }
+            },
+            error: function(xhr) {
+                showToast('error', xhr.responseJSON?.message || 'Failed to get semester info');
             }
-
-            allSemestersCache = semestersData.semesters;
-
-            const sourceSem = previousData.source_semester;
-            const targetSem = previousData.target_semester;
-
-            if (!sourceSem) {
-                showToast('warning', 'No source semester found. You can select one manually.');
-            }
-
-            wizard.sourceSemesterId = sourceSem ? sourceSem.id : null;
-            wizard.targetSemesterId = targetSem.id;
-
-            sourceSemesterData = sourceSem ? {
-                id: sourceSem.id,
-                semester_name: sourceSem.name,
-                year_code: sourceSem.year_code,
-                status: sourceSem.status
-            } : null;
-
-            targetSemesterData = {
-                id: targetSem.id,
-                semester_name: targetSem.name,
-                year_code: targetSem.year_code,
-                status: targetSem.status
-            };
-
-            resetWizard();
-            $('#quickEnrollModal').modal('show');
-        }).fail(function() {
-            showToast('error', 'Failed to get semester info');
         });
     }
 
@@ -514,7 +507,7 @@ $(document).ready(function () {
         $('#studentSelectionArea').hide();
         $('#btnStep1Next').prop('disabled', true);
         
-        initSourceSemesterSelect();
+        displaySourceSemesterInfo();
         displayTargetSemesterInfo();
     }
 
@@ -527,57 +520,20 @@ $(document).ready(function () {
         $(`.step[data-step="${step}"]`).addClass('active');
     }
 
-    // ---- Source Semester Select2 ----
-
-    function initSourceSemesterSelect() {
-        const $select = $('#sourceSemesterSelect');
-
-        // Destroy existing select2 if any
-        if ($select.hasClass('select2-hidden-accessible')) {
-            $select.select2('destroy');
+    function displaySourceSemesterInfo() {
+        if (!sourceSemesterData) {
+            $('#sourceSemesterDisplay').html(`
+                <span class="text-muted"><i class="fas fa-exclamation-circle"></i> No source semester found</span>
+            `);
+            return;
         }
-
-        $select.empty();
-
-        // Build options from cache
-        allSemestersCache.forEach(function(sem) {
-            const label = `${sem.year_code} — ${sem.name}`;
-            const statusLabel = sem.status === 'active' ? ' (Active)' : ' (Completed)';
-            const option = new Option(label + statusLabel, sem.id, false, false);
-            $select.append(option);
-        });
-
-        $select.select2({
-            theme: 'bootstrap4',
-            dropdownParent: $('#quickEnrollModal'),
-            placeholder: 'Select source semester...',
-            allowClear: false
-        });
-
-        // Pre-select auto-detected semester
-        if (sourceSemesterData && sourceSemesterData.id) {
-            $select.val(sourceSemesterData.id).trigger('change.select2');
-        }
-
-        // On manual change — update wizard and reload students if section already chosen
-        $select.off('change.wizard').on('change.wizard', function() {
-            const newId = parseInt($(this).val());
-            if (newId === wizard.sourceSemesterId) return;
-
-            wizard.sourceSemesterId = newId;
-
-            // Reset student list and downstream state
-            wizard.students = [];
-            wizard.selectedStudents = [];
-            wizard.sourceStrandId = null;
-            wizard.sourceLevelId = null;
-            wizard.sourceStrandName = null;
-            wizard.sourceLevelName = null;
-
-            if (wizard.sourceSection) {
-                loadWizardStudents();
-            }
-        });
+        
+        const semesterDisplay = `${sourceSemesterData.year_code} - ${sourceSemesterData.semester_name}`;
+        const statusBadge = sourceSemesterData.status === 'active' ? 'badge-primary' : 'badge-dark';
+        
+        $('#sourceSemesterDisplay').html(`
+            ${semesterDisplay} <span class="badge ${statusBadge} ml-2">${sourceSemesterData.status.toUpperCase()}</span>
+        `);
     }
 
     function displayTargetSemesterInfo() {
@@ -634,11 +590,6 @@ $(document).ready(function () {
     });
 
     function loadWizardStudents() {
-        if (!wizard.sourceSemesterId) {
-            showToast('warning', 'Please select a source semester first');
-            return;
-        }
-
         $('#studentSelectionArea').slideDown(300);
         
         $('#qe_studentList').html(`
@@ -857,6 +808,7 @@ $(document).ready(function () {
                     wizard.allStrands = response.all_strands;
                     wizard.allLevels = response.all_levels;
                     
+                    // Now build the UI based on scenario
                     buildEnrollmentActionUI();
                 }
             },
@@ -871,6 +823,7 @@ $(document).ready(function () {
         $('#step2').show();
         updateStepIndicator(2);
 
+        // Determine default action and available options
         let defaultAction = 'retain';
         let showPromote = wizard.isPromotionScenario;
         
@@ -880,6 +833,7 @@ $(document).ready(function () {
         
         wizard.enrollmentAction = defaultAction;
 
+        // Build enrollment action selector with horizontal layout
         let html = `
             <div class="alert alert-default-secondary mb-3">
                 <i class="fas fa-info-circle"></i>
@@ -940,6 +894,7 @@ $(document).ready(function () {
 
         $('#step2').html(html);
 
+        // Event handlers
         $('input[name="enrollmentAction"]').change(function() {
             wizard.enrollmentAction = $(this).val();
             
@@ -952,6 +907,7 @@ $(document).ready(function () {
             }
         });
 
+        // Attach button handlers
         $('#btnStep2Back').off('click').on('click', function() {
             $('.enrollment-step').hide();
             $('#step1').show();
@@ -962,10 +918,13 @@ $(document).ready(function () {
             showConfirmationStep();
         });
 
+        // Load initial sections based on default action
         loadTargetSectionsForWizard();
     }
 
     function loadTransferOptions() {
+        // This will be populated when we get target sections
+        // Just trigger the load
         loadTargetSectionsForWizard();
     }
 
@@ -1007,12 +966,15 @@ $(document).ready(function () {
                     wizard.allStrands = response.all_strands;
                     wizard.allLevels = response.all_levels;
                     
+                    // Populate transfer dropdowns if transfer mode
                     if (wizard.enrollmentAction === 'transfer') {
                         populateTransferDropdowns(response);
                     }
                     
+                    // Clear loading and show sections
                     $('#sectionsLoader').remove();
                     
+                    // Show action-specific info
                     let infoHtml = '';
                     if (wizard.enrollmentAction === 'promote' && wizard.isPromotionScenario) {
                         infoHtml = `
@@ -1050,6 +1012,7 @@ $(document).ready(function () {
     }
 
     function populateTransferDropdowns(response) {
+        // Populate levels
         let levelHtml = '';
         response.all_levels.forEach(level => {
             const selected = level.id == response.target_level_id ? 'selected' : '';
@@ -1057,6 +1020,7 @@ $(document).ready(function () {
         });
         $('#transfer_level').html(levelHtml);
 
+        // Populate strands
         let strandHtml = '';
         response.all_strands.forEach(strand => {
             const selected = strand.id == response.target_strand_id ? 'selected' : '';
@@ -1074,6 +1038,7 @@ $(document).ready(function () {
             return;
         }
 
+        // Add header
         $('#qe_targetSections').append(`
             <h6 class="mb-3"><i class="fas fa-bullseye"></i> Select Target Section</h6>
         `);
