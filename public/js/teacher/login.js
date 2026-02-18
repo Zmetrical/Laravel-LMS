@@ -68,23 +68,36 @@ $(document).ready(function() {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Validation Error',
-                        text: 'Please correct the errors below.'
+                        text: 'Please correct the errors below.',
+                        confirmButtonColor: '#6c757d'
                     });
                 } else if (xhr.status === 401) {
-                    // Authentication failed
+                    // Authentication failed - wrong credentials
                     const message = xhr.responseJSON?.message || 'Invalid email or password.';
                     
                     Swal.fire({
                         icon: 'error',
                         title: 'Authentication Failed',
-                        text: message
+                        text: message,
+                        confirmButtonColor: '#6c757d'
+                    });
+                } else if (xhr.status === 403) {
+                    // ✅ Access denied - account inactive or deactivated
+                    const message = xhr.responseJSON?.message || 'Access denied.';
+                    
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Access Denied',
+                        text: message,
+                        confirmButtonColor: '#6c757d'
                     });
                 } else {
                     // Other errors
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'An error occurred. Please try again.'
+                        text: 'An error occurred. Please try again.',
+                        confirmButtonColor: '#6c757d'
                     });
                 }
             }

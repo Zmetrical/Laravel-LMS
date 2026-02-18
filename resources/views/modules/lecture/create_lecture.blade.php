@@ -95,7 +95,7 @@
                                 <i class="fas fa-file-alt"></i> Text Content
                             </option>
                             <option value="video" {{ (isset($lecture) && $lecture->content_type === 'video') ? 'selected' : '' }}>
-                                <i class="fas fa-video"></i> Video (YouTube/Vimeo)
+                                <i class="fas fa-video"></i> Video (URL)
                             </option>
                             <option value="pdf" {{ (isset($lecture) && $lecture->content_type === 'pdf') ? 'selected' : '' }}>
                                 <i class="fas fa-file-pdf"></i> PDF Document
@@ -131,9 +131,6 @@
                                name="video_url"
                                value="{{ isset($lecture) && $lecture->content_type === 'video' ? $lecture->content : '' }}"
                                placeholder="https://www.youtube.com/watch?v=...">
-                        <small class="form-text text-muted">
-                            Paste a YouTube or Vimeo URL. The video will be embedded for students.
-                        </small>
                     </div>
 
                     <!-- File Upload -->

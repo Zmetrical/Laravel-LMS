@@ -1,24 +1,22 @@
-console.log("Enhanced Grade Page - Clean Design");
+console.log("Grade Page - Student View");
 
 let gradesData = [];
 let quartersData = [];
+let serverNow = null; // Server time from Manila (UTC+8), not client clock
 
-$(document).ready(function() {
+$(document).ready(function () {
     loadGrades();
 
-    // Toggle quarter collapse
-    $(document).on('click', '.quarter-header', function() {
+    $(document).on('click', '.quarter-header', function () {
         const icon = $(this).find('.toggle-icon');
         icon.toggleClass('fa-chevron-down fa-chevron-up');
     });
 
-    // View quiz button click
-    $(document).on('click', '.btn-view-quiz', function(e) {
+    $(document).on('click', '.btn-view-quiz', function (e) {
         e.preventDefault();
-        
         const lessonId = $(this).data('lesson-id');
-        const quizId = $(this).data('quiz-id');
-        
+        const quizId   = $(this).data('quiz-id');
+
         if (lessonId && quizId) {
             const url = API_ROUTES.viewQuiz
                 .replace(':lessonId', lessonId)
@@ -30,17 +28,24 @@ $(document).ready(function() {
 
 function loadGrades() {
     showLoadingState();
-    
+
     $.ajax({
         url: API_ROUTES.getGrades,
         type: 'GET',
         dataType: 'json',
-        success: function(response) {
+        success: function (response) {
             console.log('Grades response:', response);
-            
-            gradesData = response.grades || [];
-            quartersData = response.quarters || [];
-            
+
+            gradesData  = response.grades   || [];
+            quartersData= response.quarters || [];
+
+            // Use server time (Manila UTC+8) — never client clock
+            serverNow = response.server_time ? new Date(response.server_time) : new Date();
+
+            if (response.bypass_active) {
+                showBypassWarning();
+            }
+
             if (gradesData.length > 0) {
                 renderQuarters();
                 showMainContent();
@@ -48,10 +53,10 @@ function loadGrades() {
                 showEmptyState();
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error('Error loading grades:', error);
             showEmptyState();
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -65,51 +70,43 @@ function loadGrades() {
 function renderQuarters() {
     const $container = $('#quartersContainer');
     $container.empty();
-    
-    // Group quizzes by quarter
+
     const quarterGroups = {};
-    
-    gradesData.forEach(function(lesson) {
-        lesson.quizzes.forEach(function(quiz) {
-            const quarterId = quiz.quarter_id || 'unassigned';
+
+    gradesData.forEach(function (lesson) {
+        lesson.quizzes.forEach(function (quiz) {
+            const quarterId   = quiz.quarter_id   || 'unassigned';
             const quarterName = quiz.quarter_name || 'Unassigned';
-            
+
             if (!quarterGroups[quarterId]) {
-                quarterGroups[quarterId] = {
-                    id: quarterId,
-                    name: quarterName,
-                    quizzes: []
-                };
+                quarterGroups[quarterId] = { id: quarterId, name: quarterName, quizzes: [] };
             }
-            
+
             quarterGroups[quarterId].quizzes.push({
                 ...quiz,
-                lesson_id: lesson.lesson_id,
+                lesson_id:    lesson.lesson_id,
                 lesson_title: lesson.lesson_title
             });
         });
     });
-    
-    // Sort quarters
+
     const sortedQuarters = Object.values(quarterGroups).sort((a, b) => {
         if (a.id === 'unassigned') return 1;
         if (b.id === 'unassigned') return -1;
         return a.id - b.id;
     });
-    
-    // Render each quarter
-    sortedQuarters.forEach(function(quarter) {
+
+    sortedQuarters.forEach(function (quarter) {
         $container.append(buildQuarterSection(quarter));
     });
 }
 
 function buildQuarterSection(quarter) {
-    // Build quiz rows
     let quizRowsHtml = '';
-    quarter.quizzes.forEach(function(quiz) {
+    quarter.quizzes.forEach(function (quiz) {
         quizRowsHtml += buildQuizRow(quiz);
     });
-    
+
     return `
         <div class="card card-primary mb-3">
             <div class="card-header quarter-header" data-toggle="collapse" data-target="#quarter-${quarter.id}" style="cursor: pointer;">
@@ -147,34 +144,29 @@ function buildQuarterSection(quarter) {
 }
 
 function buildQuizRow(quiz) {
-    const now = new Date();
-    const availableFrom = quiz.available_from ? new Date(quiz.available_from) : null;
+    // Use server time — student's system clock is irrelevant
+    const now            = serverNow || new Date();
+    const availableFrom  = quiz.available_from  ? new Date(quiz.available_from)  : null;
     const availableUntil = quiz.available_until ? new Date(quiz.available_until) : null;
-    
-    // Determine actual quiz state based on dates
+
     let quizState = 'unknown';
-    
+
     if (quiz.submitted_at) {
-        // Already submitted
         quizState = 'submitted';
     } else if (availableFrom && now < availableFrom) {
-        // Not yet open (upcoming)
         quizState = 'upcoming';
     } else if (availableUntil && now > availableUntil) {
-        // Already closed
         quizState = 'closed';
     } else if (quiz.is_available) {
-        // Currently available
         quizState = 'available';
     } else {
-        // Not available (no dates or other reason)
         quizState = 'unavailable';
     }
-    
-    // Status badge based on submission
+
+    // Status badge
     let statusBadge = '';
     if (quiz.status === 'passed') {
-        statusBadge = '<span class="badge">Passed</span>';
+        statusBadge = '<span class="badge badge-success">Passed</span>';
     } else if (quiz.status === 'failed') {
         statusBadge = '<span class="badge badge-danger">Failed</span>';
     } else if (quizState === 'available') {
@@ -186,123 +178,109 @@ function buildQuizRow(quiz) {
     } else if (quizState === 'unavailable') {
         statusBadge = '<span class="badge badge-secondary">Unavailable</span>';
     }
-    
+
     // Score display
-    let scoreHtml = '<span class="text-muted">—</span>';
+    let scoreHtml      = '<span class="text-muted">—</span>';
     let percentageHtml = '<span class="text-muted">—</span>';
-    
+
     if (quiz.score !== null) {
-        // Has a score - show it
         const scoreColor = quiz.status === 'failed' ? 'text-danger' : '';
-        scoreHtml = `<strong class="${scoreColor}">${quiz.score}/${quiz.total_points}</strong>`;
+        scoreHtml      = `<strong class="${scoreColor}">${quiz.score}/${quiz.total_points}</strong>`;
         percentageHtml = `<span class="${scoreColor}">${quiz.percentage}%</span>`;
     } else if (quizState === 'closed') {
-        // Closed and not taken = 0
-        scoreHtml = `<strong class="text-danger">0/${quiz.total_points || 0}</strong>`;
+        scoreHtml      = `<strong class="text-danger">0/${quiz.total_points || 0}</strong>`;
         percentageHtml = `<span class="text-danger">0%</span>`;
     }
-    
-    // Date info with visual indicators
+
+    // Date info
     let dateHtml = '';
     if (quizState === 'submitted') {
         dateHtml = `
             <div class="quiz-date">
                 <i class="fas fa-check-circle mr-1"></i>
                 <small class="text-muted">Submitted: ${formatDate(quiz.submitted_at)}</small>
-            </div>
-        `;
+            </div>`;
     } else if (quizState === 'upcoming') {
         dateHtml = `
             <div class="quiz-date">
                 <i class="fas fa-clock mr-1"></i>
                 <small class="text-muted">Opens: ${formatDate(availableFrom)}</small>
-            </div>
-        `;
+            </div>`;
     } else if (quizState === 'available') {
         dateHtml = `
             <div class="quiz-date">
                 <i class="fas fa-circle text-primary mr-1" style="font-size: 8px;"></i>
                 <small class="text-primary font-weight-bold">Available Now</small>
                 ${availableUntil ? `<br><small class="text-muted ml-3">Closes: ${formatDate(availableUntil)}</small>` : ''}
-            </div>
-        `;
+            </div>`;
     } else if (quizState === 'closed') {
         dateHtml = `
             <div class="quiz-date">
                 <i class="fas fa-lock mr-1"></i>
                 <small class="text-muted">Closed: ${formatDate(availableUntil)}</small>
-            </div>
-        `;
+            </div>`;
     } else {
         dateHtml = `
             <div class="quiz-date">
                 <i class="fas fa-ban mr-1"></i>
                 <small class="text-muted">Unavailable</small>
-            </div>
-        `;
+            </div>`;
     }
-    
-    // Action button - only show for available quizzes
+
+    // Action button
     let actionButton = '';
     if (quizState === 'available' || quizState === 'submitted') {
         actionButton = `
-            <button class="btn btn-primary btn-sm btn-view-quiz" 
+            <button class="btn btn-primary btn-sm btn-view-quiz"
                     data-lesson-id="${quiz.lesson_id}"
                     data-quiz-id="${quiz.quiz_id}">
                 <i class="fas fa-eye"></i> View
-            </button>
-        `;
+            </button>`;
     } else {
         actionButton = '<span class="text-muted">—</span>';
     }
-    
+
     return `
         <tr>
             <td class="align-middle">
                 <strong>${escapeHtml(quiz.quiz_title)}</strong>
                 ${quiz.lesson_title ? `<br><small class="text-muted">${escapeHtml(quiz.lesson_title)}</small>` : ''}
             </td>
-            <td class="align-middle text-center">
-                ${scoreHtml}
-            </td>
-            <td class="align-middle text-center">
-                ${percentageHtml}
-            </td>
-            <td class="align-middle text-center">
-                ${statusBadge}
-            </td>
-            <td class="align-middle">
-                ${dateHtml}
-            </td>
-            <td class="align-middle text-center">
-                ${actionButton}
-            </td>
+            <td class="align-middle text-center">${scoreHtml}</td>
+            <td class="align-middle text-center">${percentageHtml}</td>
+            <td class="align-middle text-center">${statusBadge}</td>
+            <td class="align-middle">${dateHtml}</td>
+            <td class="align-middle text-center">${actionButton}</td>
         </tr>
     `;
 }
 
+function showBypassWarning() {
+    if ($('#bypassWarning').length) return;
+    $('#mainContent').prepend(`
+        <div id="bypassWarning" class="alert alert-warning alert-dismissible mb-3">
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            <strong>Dev Mode:</strong> Quiz date restrictions are currently bypassed.
+        </div>
+    `);
+}
+
 function formatDate(dateString) {
     if (!dateString) return '-';
-    
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
+        month:  'short',
+        day:    'numeric',
+        year:   'numeric',
+        hour:   '2-digit',
         minute: '2-digit'
     });
 }
 
 function escapeHtml(text) {
     if (!text) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 

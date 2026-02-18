@@ -1,4 +1,4 @@
-console.log("insert teacher");
+console.log("Create Admin");
 
 $(document).ready(function () {
 
@@ -6,11 +6,12 @@ $(document).ready(function () {
     //  Form Submission
     // ---------------------------------------------------------------------------
 
-    $('#insert_teacher').on('submit', function (e) {
+    $('#insert_admin').on('submit', function (e) {
         e.preventDefault();
 
         const formData = new FormData(this);
 
+        // Check if form has data
         let hasData = false;
         for (let pair of formData.entries()) {
             if (pair[1]) {
@@ -23,14 +24,15 @@ $(document).ready(function () {
             Swal.fire({
                 icon: 'warning',
                 title: 'No Data',
-                text: 'Please fill in the required fields'
+                text: 'Please fill in all required fields'
             });
             return false;
         }
 
+        // Show loading
         Swal.fire({
             title: 'Processing...',
-            text: 'Creating teacher record',
+            text: 'Creating admin account',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -38,7 +40,7 @@ $(document).ready(function () {
         });
 
         $.ajax({
-            url: API_ROUTES.insertTeacher,
+            url: API_ROUTES.insertAdmin,
             method: 'POST',
             data: formData,
             processData: false,
@@ -52,12 +54,12 @@ $(document).ready(function () {
                             <p>${response.message}</p>
                             <hr>
                             <div class="text-left">
-                                <p><strong>Teacher Details:</strong></p>
-                                <p><strong>Name:</strong> ${response.data.name}</p>
+                                <p><strong>Admin Details:</strong></p>
+                                <p><strong>Name:</strong> ${response.data.admin_name}</p>
                                 <p><strong>Email:</strong> ${response.data.email}</p>
                                 <p><strong>Default Password:</strong> <code>${response.data.default_password}</code></p>
-                                <p><strong>Default Passcode:</strong> <code>${response.data.passcode}</code></p>
                             </div>
+
                         `,
                         confirmButtonText: 'OK'
                     }).then(() => {
@@ -85,6 +87,12 @@ $(document).ready(function () {
                         icon: 'error',
                         title: 'Validation Error',
                         html: errorMessage
+                    });
+                } else if (xhr.status === 403) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Unauthorized',
+                        text: 'You do not have permission to create admins.'
                     });
                 } else {
                     Swal.fire({

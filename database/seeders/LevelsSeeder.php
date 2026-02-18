@@ -7,24 +7,18 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-class AdminSeeder extends Seeder
+class LevelsSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('admins')->insert([
+        DB::table('levels')->insert([
             [
-                'admin_name' => 'Admin',
-                'email' => 'admin@trinity.edu',
-                'admin_password' => Hash::make('tr1n1ty@edu'),
-                'admin_type' => 0,
+                'name' => 'Grade 11',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'admin_name' => 'Super Admin',
-                'email' => 'super_admin@trinity.edu',
-                'admin_password' => Hash::make('tr1n1ty@admin'),
-                'admin_type' => 1,
+                'name' => 'Grade 12',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]

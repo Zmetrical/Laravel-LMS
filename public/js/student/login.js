@@ -1,20 +1,16 @@
 console.log("login_student");
 
 $(document).ready(function() {
-    // Handle form submission
     $('#loginForm').on('submit', function(e) {
         e.preventDefault();
         
-        // Clear previous errors
         $('.is-invalid').removeClass('is-invalid');
         $('.invalid-feedback').remove();
         
-        // Disable submit button and show loading state
         const $submitBtn = $('#submitBtn');
         const originalText = $submitBtn.html();
         $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Signing in...');
         
-        // Get form data
         const formData = {
             student_number: $('#student_number').val(),
             password: $('#password').val(),
@@ -22,7 +18,6 @@ $(document).ready(function() {
             _token: $('meta[name="csrf-token"]').attr('content')
         };
         
-        // Send AJAX request
         $.ajax({
             url: '/student/auth',
             type: 'POST',
@@ -30,7 +25,6 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Show success message with SweetAlert2
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
@@ -42,7 +36,6 @@ $(document).ready(function() {
                         window.location.href = response.redirect || '/student';
                     });
                 } else {
-                    // Show error message
                     Swal.fire({
                         icon: 'error',
                         title: 'Login Failed',
@@ -52,11 +45,9 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                // Re-enable submit button
                 $submitBtn.prop('disabled', false).html(originalText);
                 
                 if (xhr.status === 422) {
-                    // Validation errors
                     const errors = xhr.responseJSON.errors;
                     
                     $.each(errors, function(field, messages) {
@@ -71,7 +62,6 @@ $(document).ready(function() {
                         text: 'Please correct the errors below.'
                     });
                 } else if (xhr.status === 401) {
-                    // Authentication failed
                     const message = xhr.responseJSON?.message || 'Invalid student number or password.';
                     
                     Swal.fire({
@@ -79,8 +69,15 @@ $(document).ready(function() {
                         title: 'Authentication Failed',
                         text: message
                     });
+                } else if (xhr.status === 403) {
+                    const message = xhr.responseJSON?.message || 'Access denied.';
+                    
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Access Denied',
+                        text: message,
+                    });
                 } else {
-                    // Other errors
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
@@ -91,7 +88,6 @@ $(document).ready(function() {
         });
     });
     
-    // Clear error on input focus
     $('.form-control').on('focus', function() {
         $(this).removeClass('is-invalid');
         $(this).next('.invalid-feedback').remove();

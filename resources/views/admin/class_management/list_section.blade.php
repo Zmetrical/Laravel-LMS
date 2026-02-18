@@ -221,18 +221,24 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="strandSelect">Strand <span class="text-danger">*</span></label>
+                                <label for="strandSelect">Strand <span class="text-danger" id="strandRequired">*</span></label>
                                 <select class="form-control" id="strandSelect" name="strand_id" required>
                                     <option value="">Select Strand</option>
                                 </select>
+                                <small class="form-text text-muted d-none" id="strandEditNote">
+                                    <i class="fas fa-info-circle"></i> Cannot be changed after creation
+                                </small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="levelSelect">Level <span class="text-danger">*</span></label>
+                                <label for="levelSelect">Level <span class="text-danger" id="levelRequired">*</span></label>
                                 <select class="form-control" id="levelSelect" name="level_id" required>
                                     <option value="">Select Level</option>
                                 </select>
+                                <small class="form-text text-muted d-none" id="levelEditNote">
+                                    <i class="fas fa-info-circle"></i> Cannot be changed after creation
+                                </small>
                             </div>
                         </div>
                     </div>

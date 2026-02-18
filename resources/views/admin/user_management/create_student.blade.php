@@ -129,7 +129,7 @@
 
                 <div class="text-center py-4" id="emptyState">
                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No students added yet. Enter the number of students and click the plus button to begin.</p>
+                    <p class="text-muted">No students added yet. Select a section, enter the number of students, and click the plus button to begin.</p>
                 </div>
             </div>
 
@@ -140,8 +140,9 @@
             </div>
         </div>
 
-        <input type="hidden" id="selectedStrand" name="strand_id">
-        <input type="hidden" id="selectedLevel" name="level_id">
+        <input type="hidden" id="selectedStrand"  name="strand_id">
+        <input type="hidden" id="selectedLevel"   name="level_id">
+        <input type="hidden" id="selectedSection" name="section_id">
     </form>
 </div>
 @endsection
@@ -152,9 +153,9 @@
 
 <script>
 const API_ROUTES = {
-    getSections: "{{ route('sections.data') }}",
-    insertStudents: "{{ route('admin.insert_students') }}",
-    redirectAfterSubmit: "{{ route('admin.list_student') }}"
+    getSections:        "{{ route('sections.data') }}",
+    insertStudents:     "{{ route('admin.insert_students') }}",
+    redirectAfterSubmit:"{{ route('admin.list_student') }}"
 };
 </script>
 

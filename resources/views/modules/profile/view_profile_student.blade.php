@@ -94,6 +94,15 @@
                                 <a href="{{ route('profile.student.edit', $student->id) }}" class="btn btn-primary btn-block">
                                     <i class="fas fa-edit"></i> Edit Profile
                                 </a>
+
+                                <hr>
+                                
+                                @if(count($enrolledSemesters) > 0)
+                                <a href="{{ route('admin.grades.evaluation', $student->student_number) }}" 
+                                   class="btn btn-primary btn-block">
+                                    <i class="fas fa-graduation-cap"></i> View Evaluation
+                                </a>
+                                @endif
                             @else
                                 <button type="submit" class="btn btn-primary btn-block mb-2">
                                     <i class="fas fa-save"></i> Save
@@ -219,7 +228,7 @@
             </div>
         </div>
         
-        @if($guardian && $mode === 'view')
+        @if($guardian && $guardian->id && $mode === 'view')
             <div class="row">
                 <div class="col-md-12">
                     <div class="guardian-actions">
@@ -234,6 +243,14 @@
                     </div>
                 </div>
             </div>
+        @elseif($mode === 'view')
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="alert alert-primary mb-0">
+                        <i class="fas fa-info-circle mr-2"></i>No guardian information available yet.
+                    </div>
+                </div>
+            </div>
         @endif
     </div>
 @endforeach
@@ -243,39 +260,39 @@
                 </form>
                 </div>
 
-                <!-- Enrollment History Card -->
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Enrollment History</h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 300px;">
-                            <table class="table table-sm table-hover m-0">
-                                <thead>
-                                    <tr>
-                                        <th>School Year</th>
-                                        <th>Semester</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($enrolledSemesters as $semester)
-                                        <tr>
-                                            <td>{{ $semester->year_start }} - {{ $semester->year_end }}</td>
-                                            <td>{{ $semester->semester_name }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="2" class="text-center text-muted py-3">
-                                                <i class="fas fa-inbox fa-2x d-block mb-2"></i>
-                                                No enrollment history found
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+<!-- Enrollment History Card -->
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Enrollment History</h3>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 300px;">
+            <table class="table table-sm table-hover m-0">
+                <thead>
+                    <tr>
+                        <th>School Year</th>
+                        <th>Semester</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($enrolledSemesters as $semester)
+                        <tr>
+                            <td>{{ $semester->year_start }} - {{ $semester->year_end }}</td>
+                            <td>{{ $semester->semester_name }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2" class="text-center text-muted py-3">
+                                <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                                No enrollment history found
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
                 <!-- Enrolled Classes Card -->
                 <div class="card card-primary card-outline">

@@ -162,6 +162,34 @@
             border-bottom-color: #007bff;
             color: #007bff;
         }
+        
+        /* Horizontal enrollment action buttons */
+        .btn-group-toggle .btn {
+            border-radius: 0;
+            padding: 0.75rem 1rem;
+        }
+        
+        .btn-group-toggle .btn:first-child {
+            border-top-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
+        }
+        
+        .btn-group-toggle .btn:last-child {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
+        }
+        
+        .btn-group-toggle .btn.active {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            color: white !important;
+        }
+        
+        .btn-outline-primary:not(.active):hover {
+            background-color: #e7f3ff;
+            border-color: #007bff;
+            color: #007bff;
+        }
     </style>
 @endsection
 
@@ -208,15 +236,18 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Source Semester</label>
-                                    <div class="form-control bg-light" id="sourceSemesterDisplay" style="cursor: not-allowed;">
-                                        <span class="text-muted">Loading...</span>
-                                    </div>
+                                <div class="form-group mb-0">
+                                    <label>
+                                        Source Semester
+                                        <small class="text-muted font-weight-normal">
+                                            — auto-detected, change if needed
+                                        </small>
+                                    </label>
+                                    <select class="form-control select2" id="sourceSemesterSelect" style="width: 100%;"></select>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group">
+                                <div class="form-group mb-0">
                                     <label>Target Semester</label>
                                     <div class="form-control bg-light" id="targetSemesterDisplay" style="cursor: not-allowed;">
                                         <span class="text-muted">Loading...</span>
@@ -299,23 +330,7 @@
 
                     <!-- Step 2: Target Selection -->
                     <div class="enrollment-step" id="step2" style="display: none;">
-                        <h6 class="mb-3"><i class="fas fa-bullseye"></i> Select Target Section</h6>
-                        
-                        <div id="qe_targetSections">
-                            <div class="text-center py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                                <p class="mt-2">Loading available sections...</p>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between mt-3">
-                            <button type="button" class="btn btn-default" id="btnStep2Back">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            <button type="button" class="btn btn-primary" id="btnStep2Next" disabled>
-                                Next <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
+                        <!-- Content populated dynamically by JavaScript -->
                     </div>
 
                     <!-- Step 3: Confirmation -->
@@ -446,7 +461,8 @@
         getSectionStudents: "{{ route('admin.archive.section-students', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
         completeSemester: "{{ route('admin.archive.complete-semester', ['id' => ':id']) }}",
         activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
-        getPreviousSemester: "{{ route('admin.archive.get-previous-semester', ['id' => ':id']) }}", // NEW
+        getPreviousSemester: "{{ route('admin.archive.get-previous-semester', ['id' => ':id']) }}",
+        getSemesters: "{{ route('admin.archive.get-semesters') }}",
         searchSections: "{{ route('admin.archive.search-sections') }}",
         loadStudents: "{{ route('admin.archive.load-students') }}",
         getSectionDetails: "{{ route('admin.archive.get-section-details') }}",

@@ -15,19 +15,17 @@
 
         .sidebar {
             padding-bottom: 80px;
-            max-height: calc(100vh - 380px); /* Accounts for logo + user panels + logout button */
+            max-height: calc(100vh - 380px);
             overflow-y: auto;
             overflow-x: hidden;
         }
-        
-        /* Ensure main-sidebar takes full height */
+
         .main-sidebar {
             height: 100vh;
             position: fixed;
             overflow: hidden;
         }
 
-        /* Custom Scrollbar Styling */
         .sidebar::-webkit-scrollbar {
             width: 8px;
         }
@@ -45,7 +43,6 @@
             background: #5a6268;
         }
 
-        /* For Firefox */
         .sidebar {
             scrollbar-width: thin;
             scrollbar-color: #4b545c #2c3136;
@@ -62,7 +59,6 @@
             color: #343a40 !important;
         }
 
-        /* Google Classroom style breadcrumb */
         .main-header.navbar {
             border-bottom: 1px solid #dee2e6;
         }
@@ -136,6 +132,10 @@
 @endsection
 
 @section('body')
+    @php
+        $isSuperAdmin = auth()->guard('admin')->check() && auth()->guard('admin')->user()->admin_type == 1;
+    @endphp
+
     <body class="hold-transition layout-fixed">
         <div class="wrapper">
 
@@ -143,11 +143,12 @@
             <nav class="main-header navbar navbar-expand navbar-white navbar-light">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+                        <a class="nav-link" data-widget="pushmenu" href="#" role="button">
+                            <i class="fas fa-bars"></i>
+                        </a>
                     </li>
                 </ul>
 
-                <!-- Breadcrumb in Navbar -->
                 <ul class="navbar-nav ml-3 flex-grow-1">
                     <li class="nav-item d-flex align-items-center">
                         @yield('breadcrumb')
@@ -156,7 +157,8 @@
 
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item dropdown">
-                        <i class="fas fa-user mr-2"></i> Admin
+                        <i class="fas fa-user mr-2"></i>
+                        {{ $isSuperAdmin ? 'Super Admin' : 'Admin' }}
                     </li>
                 </ul>
             </nav>
@@ -167,20 +169,21 @@
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
                         style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 </a>
-                <!-- School Year -->
+
+                <!-- Active Semester -->
                 <div class="user-panel py-3 px-3 d-flex flex-column">
                     <div class="info w-100">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <div class="text-white font-weight-bold mb-1" style="font-size: 14px;">
                                     @if($activeSemester)
-                                        </i>SY {{ $activeSemester->school_year_code }}
+                                        SY {{ $activeSemester->school_year_code }}
                                     @else
-                                        <i class="fas fa-exclamation-triangle mr-2"></i>No Active Semester</span>
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>No Active Semester
                                     @endif
                                 </div>
                                 <div class="text-white-50 small">
-                                    </i>{{ $activeSemester->semester_name ?? 'N/A' }}
+                                    {{ $activeSemester->semester_name ?? 'N/A' }}
                                 </div>
                             </div>
                             <div class="ml-2">
@@ -194,118 +197,112 @@
 
                 <div class="user-panel py-3 px-3 d-flex flex-column">
                     <div class="info w-100">
-                        <div class="d-flex justify-content-between">
-                            <div class="text-white font-weight-bold mb-1" style="font-size: 20px;">
-                            Admin
-                            </div>
+                        <div class="text-white font-weight-bold mb-1" style="font-size: 20px;">
+                            {{ $isSuperAdmin ? 'Super Admin' : 'Admin' }}
                         </div>
                     </div>
                 </div>
 
-
                 <div class="sidebar">
-
-                    <!-- Navigation Menu -->
                     <nav class="mt-2">
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                            <!-- School Year Specific Section -->
-                            <li class="nav-section-title">Semester Operation</li>
-                            
-                            <li class="nav-item {{ Request::is('enrollment_management/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('enrollment_management/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-user-graduate"></i>
-                                    <p>
-                                        Classes
-                                    </p>
-                                     <i class="right fas fa-angle-left"></i>
-                                </a>
+
+                            {{-- ── Semester Operation ──────────────────────────────── --}}
+                            @if(!$isSuperAdmin)
+                                <li class="nav-section-title">Semester Operation</li>
+
+                                {{-- Classes --}}
+                                <li class="nav-item {{ Request::is('enrollment_management/*') ? 'menu-open' : '' }}">
+                                    <a href="#" class="nav-link {{ Request::is('enrollment_management/*') ? 'active' : '' }}">
+                                        <i class="nav-icon fas fa-user-graduate"></i>
+                                        <p>Classes <i class="right fas fa-angle-left"></i></p>
+                                    </a>
                                     <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.enroll_class') }}" class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.enroll_class') }}"
+                                                class="nav-link {{ Request::routeIs('admin.enroll_class') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Assign Teacher</p>
                                             </a>
                                         </li>
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.enrollment.sections') }}" class="nav-link {{ Request::routeIs('admin.enrollment.sections') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.enrollment.sections') }}"
+                                                class="nav-link {{ Request::routeIs('admin.enrollment.sections') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Assign for Section</p>
                                             </a>
                                         </li>
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.student_irreg_class_enrollment') }}" class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.student_irreg_class_enrollment') }}"
+                                                class="nav-link {{ Request::routeIs('admin.student_irreg_class_enrollment') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Assign for Irregular</p>
                                             </a>
                                         </li>
-
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.assign_section') }}" 
-                                            class="nav-link {{ Request::routeIs('admin.assign_section') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.assign_section') }}"
+                                                class="nav-link {{ Request::routeIs('admin.assign_section') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Update Section</p>
                                             </a>
                                         </li>
-
                                     </ul>
-                            </li>
+                                </li>
 
-                            <li class="nav-item {{ Request::is('grades/*') ? 'menu-open' : '' }}">
-                                <a href="#" class="nav-link {{ Request::is('grades/*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-user-graduate"></i>
-                                    <p>
-                                        Grades
-                                    </p>
-                                     <i class="right fas fa-angle-left"></i>
-                                </a>
+                                {{-- Grades --}}
+                                <li class="nav-item {{ Request::is('grades/*') ? 'menu-open' : '' }}">
+                                    <a href="#" class="nav-link {{ Request::is('grades/*') ? 'active' : '' }}">
+                                        <i class="nav-icon fas fa-graduation-cap"></i>
+                                        <p>Grades <i class="right fas fa-angle-left"></i></p>
+                                    </a>
                                     <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.grades.list') }}" class="nav-link {{ Request::routeIs('admin.grades.list') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.grades.list') }}"
+                                                class="nav-link {{ Request::routeIs('admin.grades.list') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Grade Search</p>
                                             </a>
                                         </li>
-                                    </ul>
-                                    <ul class="nav nav-treeview">
+                                        {{-- Grade Submissions — hidden from Super Admin --}}
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.grades.section-view') }}" class="nav-link {{ Request::routeIs('admin.grades.section-view') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.grades.section-view') }}"
+                                                class="nav-link {{ Request::routeIs('admin.grades.section-view') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Grade Submissions</p>
                                             </a>
                                         </li>
-                                    </ul>
-                                    <ul class="nav nav-treeview">
                                         <li class="nav-item">
-                                            <a href="{{ route('admin.grades.cards') }}" class="nav-link {{ Request::routeIs('admin.grades.card') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
+                                            <a href="{{ route('admin.grades.cards') }}"
+                                                class="nav-link {{ Request::routeIs('admin.grades.card') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
                                                 <p>Grade Card</p>
                                             </a>
                                         </li>
                                     </ul>
-                            </li>
+                                </li>
 
-                            <div class="nav-divider"></div>
+                                <div class="nav-divider"></div>
+                            @endif
 
-                            <!-- Universal Section -->
+                            {{-- ── System Operation ────────────────────────────────── --}}
                             <li class="nav-section-title">System Operation</li>
-                            
-                            <!-- User Menu -->
+
+                            {{-- User Management --}}
                             <li class="nav-item {{ Request::is('user_management/*') ? 'menu-open' : '' }}">
                                 <a href="#" class="nav-link {{ Request::is('user_management/*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-users"></i>
-                                    <p>
-                                        User Management
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                                    <p>User Management <i class="right fas fa-angle-left"></i></p>
                                 </a>
                                 <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('admin.create_student') }}"
-                                            class="nav-link {{ Request::routeIs('admin.create_student') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Insert Student</p>
-                                        </a>
-                                    </li>
+                                    @if(!$isSuperAdmin)
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.create_student') }}"
+                                                class="nav-link {{ Request::routeIs('admin.create_student') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
+                                                <p>Insert Student</p>
+                                            </a>
+                                        </li>
+                                    @endif
                                     <li class="nav-item">
                                         <a href="{{ route('admin.create_teacher') }}"
                                             class="nav-link {{ Request::routeIs('admin.create_teacher') ? 'active' : '' }}">
@@ -313,13 +310,15 @@
                                             <p>Insert Teacher</p>
                                         </a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a href="{{ route('admin.list_student') }}"
-                                            class="nav-link {{ Request::routeIs('admin.list_student') ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>List Students</p>
-                                        </a>
-                                    </li>
+                                    @if(!$isSuperAdmin)
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.list_student') }}"
+                                                class="nav-link {{ Request::routeIs('admin.list_student') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
+                                                <p>List Students</p>
+                                            </a>
+                                        </li>
+                                    @endif
                                     <li class="nav-item">
                                         <a href="{{ route('admin.list_teacher') }}"
                                             class="nav-link {{ Request::routeIs('admin.list_teacher') ? 'active' : '' }}">
@@ -330,14 +329,37 @@
                                 </ul>
                             </li>
 
-                            <!-- Class Menu -->
+                            {{-- Admin Management (Super Admin only) --}}
+                            @if($isSuperAdmin)
+                                <li class="nav-item {{ Request::is('admin/create_admin') || Request::is('admin/list_admin') ? 'menu-open' : '' }}">
+                                    <a href="#" class="nav-link {{ Request::is('admin/create_admin') || Request::is('admin/list_admin') ? 'active' : '' }}">
+                                        <i class="nav-icon fas fa-user-shield"></i>
+                                        <p>Admin Management <i class="right fas fa-angle-left"></i></p>
+                                    </a>
+                                    <ul class="nav nav-treeview">
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.create_admin') }}"
+                                                class="nav-link {{ Request::routeIs('admin.create_admin') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
+                                                <p>Insert Admin</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.list_admin') }}"
+                                                class="nav-link {{ Request::routeIs('admin.list_admin') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
+                                                <p>List Admins</p>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            @endif
+
+                            {{-- Class Management --}}
                             <li class="nav-item {{ Request::is('class_management/*') ? 'menu-open' : '' }}">
                                 <a href="#" class="nav-link {{ Request::is('class_management/*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-chalkboard-teacher"></i>
-                                    <p>
-                                        Class Management
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                                    <p>Class Management <i class="right fas fa-angle-left"></i></p>
                                 </a>
                                 <ul class="nav nav-treeview">
                                     <li class="nav-item">
@@ -366,42 +388,39 @@
 
                             <div class="nav-divider"></div>
 
-                            <!-- Audit & Monitoring Section -->
+                            {{-- ── Audit & Monitoring ──────────────────────────────── --}}
                             <li class="nav-section-title">Audit & Monitoring</li>
 
                             <li class="nav-item {{ Request::is('audit/*') ? 'menu-open' : '' }}">
                                 <a href="#" class="nav-link {{ Request::is('audit/*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-history"></i>
-                                    <p>
-                                        Audit Logs
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                                    <p>Audit Logs <i class="right fas fa-angle-left"></i></p>
                                 </a>
                                 <ul class="nav nav-treeview">
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.audit.admin.index') }}" 
-                                        class="nav-link {{ Request::routeIs('admin.audit.admin.index') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.audit.admin.index') }}"
+                                            class="nav-link {{ Request::routeIs('admin.audit.admin.index') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Admin Activity</p>
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.audit.teachers.index') }}" 
-                                        class="nav-link {{ Request::routeIs('admin.audit.teachers.index') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.audit.teachers.index') }}"
+                                            class="nav-link {{ Request::routeIs('admin.audit.teachers.index') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Teacher Activity</p>
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.audit.students.index') }}" 
-                                        class="nav-link {{ Request::routeIs('admin.audit.students.index') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.audit.students.index') }}"
+                                            class="nav-link {{ Request::routeIs('admin.audit.students.index') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Student Activity</p>
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admin.audit.login.index') }}" 
-                                        class="nav-link {{ Request::routeIs('admin.audit.login.index') ? 'active' : '' }}">
+                                        <a href="{{ route('admin.audit.login.index') }}"
+                                            class="nav-link {{ Request::routeIs('admin.audit.login.index') ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
                                             <p>Login History</p>
                                         </a>
@@ -413,12 +432,12 @@
                     </nav>
                 </div>
 
-                <!-- Logout Button at Bottom -->
+                <!-- Logout -->
                 <div class="sidebar-bottom p-3">
                     <form method="POST" action="{{ route('admin.logout') }}" id="admin-logout-form">
                         @csrf
-                        <button type="submit" class="btn btn-warning btn-block">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        <button type="submit" class="btn btn-secondary btn-block">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </button>
                     </form>
                 </div>
@@ -439,7 +458,6 @@
 @section('foot')
     <script>
         $(document).ready(function () {
-            // Sidebar collapse persistence
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 $('body').addClass('sidebar-collapse');
             }

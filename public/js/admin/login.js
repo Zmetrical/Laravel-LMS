@@ -1,21 +1,18 @@
-$(document).ready(function() {
-    // Get CSRF token
+console.log("login_admin");
+
+$(document).ready(function () {
     const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
-    // Form submission handler
-    $('#loginForm').on('submit', function(e) {
+    $('#loginForm').on('submit', function (e) {
         e.preventDefault();
-        
-        // Disable submit button to prevent double submission
-        const $submitBtn = $('#submitBtn');
-        const originalText = $submitBtn.text();
-        $submitBtn.prop('disabled', true).text('Signing in...');
 
-        // Clear previous validation errors
+        const $submitBtn = $('#submitBtn');
+        const originalText = $submitBtn.html();
+        $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Signing in...');
+
         $('.form-control').removeClass('is-invalid');
         $('.invalid-feedback').remove();
 
-        // Collect form data
         const formData = {
             email: $('#email').val().trim(),
             password: $('#password').val(),
@@ -23,86 +20,96 @@ $(document).ready(function() {
             _token: csrfToken
         };
 
-        // Send AJAX request
         $.ajax({
             url: '/admin/auth',
             method: 'POST',
             data: formData,
             dataType: 'json',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
-                    // Show success message
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
                         text: response.message,
                         timer: 1500,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        timerProgressBar: true
                     }).then(() => {
-                        // Redirect to admin dashboard
                         window.location.href = response.redirect;
                     });
                 } else {
-                    // Show error message
                     Swal.fire({
                         icon: 'error',
                         title: 'Login Failed',
                         text: response.message || 'Invalid email or password.'
                     });
-                    
-                    // Re-enable submit button
-                    $submitBtn.prop('disabled', false).text(originalText);
+                    $submitBtn.prop('disabled', false).html(originalText);
                 }
             },
-            error: function(xhr) {
-                let errorMessage = 'An error occurred. Please try again.';
-                
+            error: function (xhr) {
+                $submitBtn.prop('disabled', false).html(originalText);
+
                 if (xhr.status === 401) {
-                    // Unauthorized - invalid credentials
-                    const response = xhr.responseJSON;
-                    errorMessage = response?.message || 'Invalid email or password.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Authentication Failed',
+                        text: xhr.responseJSON?.message || 'Invalid email or password.',
+                        confirmButtonColor: '#6c757d'
+                    });
+
                 } else if (xhr.status === 422) {
-                    // Validation error
                     const errors = xhr.responseJSON?.errors;
-                    
+
                     if (errors) {
-                        // Display validation errors
-                        $.each(errors, function(field, messages) {
+                        $.each(errors, function (field, messages) {
                             const $input = $(`#${field}`);
                             $input.addClass('is-invalid');
-                            
-                            const errorHtml = `<span class="invalid-feedback d-block">${messages[0]}</span>`;
-                            $input.after(errorHtml);
+                            $input.after(`<span class="invalid-feedback d-block">${messages[0]}</span>`);
                         });
-                        
-                        errorMessage = 'Please check your input and try again.';
                     }
-                } else if (xhr.status === 500) {
-                    errorMessage = 'Server error. Please contact administrator.';
-                }
 
-                // Show error message
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Login Failed',
-                    text: errorMessage
-                });
-                
-                // Re-enable submit button
-                $submitBtn.prop('disabled', false).text(originalText);
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Validation Error',
+                        text: 'Please check your input and try again.',
+                        confirmButtonColor: '#6c757d'
+                    });
+
+                } else if (xhr.status === 403) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Access Denied',
+                        text: xhr.responseJSON?.message || 'Your account has been deactivated. Please contact the Super Admin.',
+                        confirmButtonColor: '#6c757d'
+                    });
+
+                } else if (xhr.status === 500) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'Please contact the administrator.',
+                        confirmButtonColor: '#6c757d'
+                    });
+
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An error occurred. Please try again.',
+                        confirmButtonColor: '#6c757d'
+                    });
+                }
             }
         });
     });
 
-    // Clear validation error when user starts typing
-    $('.form-control').on('input', function() {
+    $('.form-control').on('input', function () {
         $(this).removeClass('is-invalid');
         $(this).next('.invalid-feedback').remove();
     });
 
-    // Handle Enter key in form fields
-    $('#email, #password').on('keypress', function(e) {
-        if (e.which === 13) { // Enter key
+    $('#email, #password').on('keypress', function (e) {
+        if (e.which === 13) {
             e.preventDefault();
             $('#loginForm').submit();
         }

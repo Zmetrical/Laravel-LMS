@@ -3,7 +3,8 @@ secondary(primary color) primary(secondary color) and seconday(tertiary) color i
 dont use info or any other colors
 
 minimize using color keep it professional
-
+when recoding a file i sent, dont drop anything unless told to 
+ask for permission unless it really needs to be updated
 
 this is in laravel, make use of its built it system for efficiency
 make use ajax and jquery 
@@ -48,9 +49,11 @@ CREATE TABLE `admins` (
   `admin_password` varchar(100) NOT NULL,
   `admin_type` int(11) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 CREATE TABLE `classes` (
   `id` int(11) NOT NULL,
@@ -455,19 +458,55 @@ CREATE TABLE `teacher_password_matrix` (
   `plain_passcode` varchar(100) NOT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+//
 CREATE TABLE `teacher_school_year_status` (
   `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `teacher_id` bigint(20) UNSIGNED NOT NULL,
   `school_year_id` int(11) NOT NULL,
-  `status` enum('active','archived') NOT NULL DEFAULT 'active',
-  `activated_by` int(11) DEFAULT NULL COMMENT 'Admin ID who activated',
-  `activated_at` timestamp NULL DEFAULT NULL,
-  `deactivate_by` int(11) DEFAULT NULL COMMENT 'Admin ID who archived',
-  `deactivate_at` timestamp NULL DEFAULT NULL,
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `reactivated_by` int(11) DEFAULT NULL COMMENT 'Admin ID who activated',
+  `reactivated_at` timestamp NULL DEFAULT NULL,
+  `deactivated_by` int(11) DEFAULT NULL COMMENT 'Admin ID who archived',
+  `deactivated_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 )
+
+CREATE TABLE `student_level_matrix` (
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `student_number` VARCHAR(100)    NOT NULL,
+    `level_id`       INT UNSIGNED    NOT NULL,
+    `strand_id`      BIGINT UNSIGNED NULL,
+    `semester_id`    INT             NOT NULL,
+    `created_at`     TIMESTAMP       NULL,
+    `updated_at`     TIMESTAMP       NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `student_level_per_semester` (`student_number`, `semester_id`),
+    INDEX `student_level_matrix_student_number_index` (`student_number`),
+    INDEX `student_level_matrix_semester_id_index` (`semester_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `graduation_records` (
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `school_year_id` INT UNSIGNED    NOT NULL,
+    `student_number` VARCHAR(100)    NOT NULL,
+    `section_id`     BIGINT UNSIGNED NULL     COMMENT 'Section at time of graduation (null for irregular)',
+    `strand_id`      BIGINT UNSIGNED NULL     COMMENT 'Snapshot of strand at time of graduation',
+    `level_id`       INT UNSIGNED    NULL     COMMENT 'Snapshot of level at time of graduation',
+    `status`         ENUM('graduated', 'not_graduated') NOT NULL DEFAULT 'graduated',
+    `remarks`        TEXT            NULL,
+    `is_finalized`   TINYINT(1)      NOT NULL DEFAULT 0,
+    `finalized_by`   INT UNSIGNED    NULL     COMMENT 'Admin ID who finalized',
+    `finalized_at`   TIMESTAMP       NULL,
+    `created_at`     TIMESTAMP       NULL,
+    `updated_at`     TIMESTAMP       NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `graduation_records_school_year_id_student_number_unique` (`school_year_id`, `student_number`),
+    INDEX `graduation_records_school_year_id_index` (`school_year_id`),
+    INDEX `graduation_records_student_number_index` (`student_number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -482,3 +521,5 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+

@@ -11,18 +11,39 @@
     <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 
     <style>
-        .section-capacity-card {
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        .section-card {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #dee2e6;
         }
-
-        .semester-quick-btn {
-            margin-bottom: 0.5rem;
+        
+        .section-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.15);
         }
-
-        .semester-quick-btn.active {
-            font-weight: 600;
+        
+        .section-card.selected {
+            border-color: #007bff;
+            background-color: #f8f9ff;
+        }
+        
+        .section-card.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .section-card .card-body {
+            padding: 1rem;
+        }
+        
+        .capacity-progress {
+            height: 8px;
+            margin-top: 0.5rem;
+        }
+        
+        .capacity-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
         }
     </style>
 @endsection
@@ -39,62 +60,30 @@
 <div class="container-fluid">
     <form id="assign_section_form" method="POST">
         @csrf
+        <input type="hidden" id="current_semester_id" value="{{ $currentSemester->id ?? '' }}">
+        
         <div class="row">
             <!-- Left Sidebar -->
             <div class="col-lg-3">
-                <!-- Source Selection Card -->
+                <!-- Filter Options -->
                 <div class="card card-secondary card-outline">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-graduation-cap mr-2"></i>Source Selection</h3>
+                        <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Filter Students</h3>
                     </div>
                     <div class="card-body">
-                        <!-- Source Semester Selection -->
+                        <!-- Filter by Section -->
                         <div class="form-group">
-                            <label>Previous Semester <span class="text-danger">*</span></label>
-                            
-                            <!-- Quick Access Buttons -->
-                            <div class="mb-2" id="sourceSemesterQuick"></div>
-                            
-                            <!-- Semester Dropdown -->
-                            <select class="form-control" id="source_semester" required>
-                                <option value="">Select semester...</option>
-                                @foreach($semesters as $semester)
-                                    <option value="{{ $semester->id }}" 
-                                        data-status="{{ $semester->status }}">
-                                        {{ $semester->year_code }} - {{ $semester->semester_name }}
-                                        @if($semester->status === 'active') (Active) @endif
-                                    </option>
-                                @endforeach
+                            <label>Current Section</label>
+                            <select class="form-control" id="filter_section" style="width: 100%;">
+                                <option value="">All Sections</option>
                             </select>
-                            <small class="form-text text-muted">
-                                Load students from this semester
-                            </small>
                         </div>
 
-                        <hr>
-
-                        <!-- Filter Options -->
-                        <div id="filterOptions" style="display: none;">
-                            <label class="mb-2">Filter Students By</label>
-                            
-                            <!-- Filter by Section -->
-                            <div class="form-group">
-                                <label class="text-muted" style="font-size: 0.875rem;">
-                                    <i class="fas fa-users mr-1"></i> Section
-                                </label>
-                                <select class="form-control" id="filter_section" style="width: 100%;">
-                                    <option value="">All Sections</option>
-                                </select>
-                            </div>
-
-                            <!-- Search by Student -->
-                            <div class="form-group mb-0">
-                                <label class="text-muted" style="font-size: 0.875rem;">
-                                    <i class="fas fa-search mr-1"></i> Search Student
-                                </label>
-                                <input type="text" class="form-control" id="filter_student" 
-                                       placeholder="Number or name...">
-                            </div>
+                        <!-- Search by Student -->
+                        <div class="form-group mb-0">
+                            <label>Search Student</label>
+                            <input type="text" class="form-control" id="filter_student" 
+                                   placeholder="Number or name...">
                         </div>
                     </div>
                 </div>
@@ -105,27 +94,6 @@
                         <h3 class="card-title"><i class="fas fa-bullseye mr-2"></i>Target Assignment</h3>
                     </div>
                     <div class="card-body">
-                        <!-- Target Semester Selection -->
-                        <div class="form-group">
-                            <label>Target Semester <span class="text-danger">*</span></label>
-                            
-                            <!-- Quick Access Buttons -->
-                            <div class="mb-2" id="targetSemesterQuick"></div>
-                            
-                            <!-- Semester Dropdown -->
-                            <select class="form-control" id="target_semester" name="semester_id" required>
-                                <option value="">Select semester...</option>
-                                @foreach($semesters as $semester)
-                                    <option value="{{ $semester->id }}" 
-                                        data-status="{{ $semester->status }}"
-                                        @if($semester->status === 'active') selected @endif>
-                                        {{ $semester->year_code }} - {{ $semester->semester_name }}
-                                        @if($semester->status === 'active') (Active) @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
                         <div class="form-group">
                             <label>Target Strand <span class="text-danger">*</span></label>
                             <select class="form-control" id="target_strand" name="strand_id" required>
@@ -139,14 +107,28 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Target Section <span class="text-danger">*</span></label>
-                            <select class="form-control" id="target_section" name="section_id" required>
-                                <option value="">Select section...</option>
+                            <label>Target Level <span class="text-danger">*</span></label>
+                            <select class="form-control" id="target_level" name="level_id" required>
+                                <option value="">Select Level</option>
+                                @foreach($levels as $level)
+                                    <option value="{{ $level->id }}">
+                                        {{ $level->name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
 
-                        <!-- Capacity Info Display -->
-                        <div id="capacityInfo" style="display: none;"></div>
+                        <div class="form-group mb-0">
+                            <label>Target Section <span class="text-danger">*</span></label>
+                            <div id="targetSectionCards" class="mt-2">
+                                <div class="text-center text-muted py-3">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <p class="mb-0"><small>Select strand and level first</small></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" id="target_section" name="section_id">
                     </div>
                 </div>
             </div>
@@ -194,12 +176,21 @@
                                     </tr>
                                 </thead>
                                 <tbody id="assignmentTableBody">
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted py-5">
-                                            <i class="fas fa-arrow-left fa-2x mb-3"></i>
-                                            <p>Select a source semester to load students</p>
-                                        </td>
-                                    </tr>
+                                    @if($currentSemester)
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-5">
+                                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                                <p>Loading students...</p>
+                                            </td>
+                                        </tr>
+                                    @else
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-5">
+                                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                                <p>No active semester found. Please activate a semester first.</p>
+                                            </td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
@@ -223,16 +214,16 @@
 
 <script>
 const API_ROUTES = {
-    loadStudentsBySemester: "{{ route('admin.section_assignment.load_students_by_semester') }}",
-    getSectionsBySemester: "{{ route('admin.section_assignment.get_sections_by_semester') }}",
+    loadStudents: "{{ route('admin.section_assignment.load_students') }}",
+    getFilterOptions: "{{ route('admin.section_assignment.get_filter_options') }}",
     getTargetSections: "{{ route('admin.section_assignment.get_target_sections') }}",
     getSectionCapacity: "{{ route('admin.section_assignment.get_section_capacity') }}",
     assignStudents: "{{ route('admin.section_assignment.assign_students') }}",
     redirectAfterSubmit: "{{ route('admin.list_student') }}"
 };
 
-// Pass semesters data to JavaScript
-const SEMESTERS_DATA = @json($semesters);
+const CURRENT_SEMESTER_ID = "{{ $currentSemester->id ?? '' }}";
+const HAS_ACTIVE_SEMESTER = {{ $currentSemester ? 'true' : 'false' }};
 </script>
 
 @if(isset($scripts))

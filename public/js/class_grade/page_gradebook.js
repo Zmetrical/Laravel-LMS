@@ -90,9 +90,19 @@ $(document).ready(function() {
         
         // Add quiz columns
         allQuizzes.forEach(quiz => {
+            const col = quiz.gradebook_column;
+
+            let gradebookBadge;
+            if (col) {
+                gradebookBadge = `<br><span class="badge badge-secondary" title="Assigned to gradebook column">${col.component_type}: ${col.column_name}</span>`;
+            } else {
+                gradebookBadge = `<br><a href="${API_ROUTES.gradebookEditUrl}" class="badge" style="background-color:#e9ecef;color:#6c757d;text-decoration:none;" title="Not assigned to a gradebook column — click to open gradebook">Not in Gradebook</a>`;
+            }
+
             $thead.append(`
                 <th class="text-center" title="${quiz.lesson_title}">
                     ${quiz.title}
+                    ${gradebookBadge}
                 </th>
             `);
         });

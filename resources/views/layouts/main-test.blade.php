@@ -124,8 +124,6 @@
 
             <!-- Main Sidebar -->
             <aside class="main-sidebar sidebar-dark-primary elevation-4">
-                    <img src="{{ asset('img/logo/trinity_logo.png') }}" alt="Trinity Logo"
-                        style="width: 150px; height: 150px; display: block; margin: 0 auto;">
                 <!-- School Year -->
                 <div class="user-panel py-3 px-3 d-flex flex-column">
 
@@ -138,10 +136,20 @@
                                 <a href="{{ route('testdev.index') }}"
                                     class="nav-link {{ Request::routeIs('testdev.index') ? 'active' : '' }}">
                                     <i class="far fa-circle nav-icon"></i>
-                                    <p>Test & Development</p>
+                                    <p>Guardian Verification</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('testdev.date') }}"
+                                    class="nav-link {{ Request::routeIs('testdev.date') ? 'active' : '' }}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Quiz Date</p>
                                 </a>
                             </li>
                         </ul>
+
+                        
                     </nav>
                 </div>
 

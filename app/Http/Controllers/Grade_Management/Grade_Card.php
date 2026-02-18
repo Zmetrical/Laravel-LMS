@@ -608,4 +608,57 @@ class Grade_Card extends MainController
 
         return null;
     }
+
+/**
+ * Admin evaluation summary page
+ */
+public function evaluation($student_number)
+{
+    $student = DB::table('students')
+        ->where('student_number', $student_number)
+        ->first();
+
+    if (!$student) {
+        abort(404, 'Student not found');
+    }
+
+    return view('admin.grade_management.view_evaluation', compact('student'));
+}
+
+/**
+ * Get evaluation data for admin
+ */
+public function getEvaluationData($student_number)
+{
+    $summary = DB::table('grades_final as gf')
+        ->join('classes as c', 'gf.class_code', '=', 'c.class_code')
+        ->join('semesters as s', 'gf.semester_id', '=', 's.id')
+        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+        ->where('gf.student_number', $student_number)
+        ->select(
+            'c.class_name',
+            'c.class_category',
+            's.id as semester_id',
+            's.name as semester_name',
+            's.status as semester_status',
+            'sy.code as school_year_code',
+            'sy.year_start',
+            's.code as semester_code',
+            'gf.q1_grade',
+            'gf.q2_grade',
+            'gf.final_grade',
+            'gf.remarks',
+            DB::raw("CONCAT(s.name, ' - SY ', sy.code) as full_semester")
+        )
+        ->orderBy('sy.year_start', 'desc')
+        ->orderBy('s.code', 'desc')
+        ->orderBy('c.class_category')
+        ->orderBy('c.class_name')
+        ->get();
+
+    return response()->json([
+        'summary' => $summary
+    ]);
+}
+
 }

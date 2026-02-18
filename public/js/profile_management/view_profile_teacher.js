@@ -11,83 +11,83 @@ $(document).ready(function () {
         }
     });
 
-    // Toggle password visibility (Admin Type 1 only)
-    $('#togglePassword').on('click', function() {
-        const $btn = $(this);
-        const $icon = $btn.find('i');
-        const $display = $('#passwordDisplay');
-        const isVisible = $btn.data('visible');
+// Toggle password visibility (Admin Type 1 only)
+$('#togglePassword').on('click', function() {
+    const $btn = $(this);
+    const $icon = $btn.find('i');
+    const $display = $('#passwordDisplay');
+    const isVisible = $btn.data('visible');
 
-        if (!isVisible) {
-            // Show password - fetch from server
-            $.ajax({
-                url: API_ROUTES.getCredentials,
-                type: 'GET',
-                data: { type: 'password' },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $display.text(response.credential);
-                        $icon.removeClass('fa-eye').addClass('fa-eye-slash');
-                        $btn.data('visible', true);
-                    }
-                },
-                error: function(xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'Failed to retrieve password'
-                    });
+    if (!isVisible) {
+        // Show password - fetch from server
+        $.ajax({
+            url: API_ROUTES.getCredentials,
+            type: 'GET',
+            data: { type: 'password' },
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    $display.val(response.credential);
+                    $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                    $btn.data('visible', true);
                 }
-            });
-        } else {
-            // Hide password
-            $display.text('••••••••');
-            $icon.removeClass('fa-eye-slash').addClass('fa-eye');
-            $btn.data('visible', false);
-        }
-    });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Failed to retrieve password'
+                });
+            }
+        });
+    } else {
+        // Hide password
+        $display.val('••••••••');
+        $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        $btn.data('visible', false);
+    }
+});
 
-    // Toggle passcode visibility (Admin Type 1 only)
-    $('#togglePasscode').on('click', function() {
-        const $btn = $(this);
-        const $icon = $btn.find('i');
-        const $display = $('#passcodeDisplay');
-        const isVisible = $btn.data('visible');
+// Toggle passcode visibility (Admin Type 1 only)
+$('#togglePasscode').on('click', function() {
+    const $btn = $(this);
+    const $icon = $btn.find('i');
+    const $display = $('#passcodeDisplay');
+    const isVisible = $btn.data('visible');
 
-        if (!isVisible) {
-            // Show passcode - fetch from server
-            $.ajax({
-                url: API_ROUTES.getCredentials,
-                type: 'GET',
-                data: { type: 'passcode' },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $display.text(response.credential);
-                        $icon.removeClass('fa-eye').addClass('fa-eye-slash');
-                        $btn.data('visible', true);
-                    }
-                },
-                error: function(xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'Failed to retrieve passcode'
-                    });
+    if (!isVisible) {
+        // Show passcode - fetch from server
+        $.ajax({
+            url: API_ROUTES.getCredentials,
+            type: 'GET',
+            data: { type: 'passcode' },
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    $display.val(response.credential);
+                    $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                    $btn.data('visible', true);
                 }
-            });
-        } else {
-            // Hide passcode
-            $display.text('••••••');
-            $icon.removeClass('fa-eye-slash').addClass('fa-eye');
-            $btn.data('visible', false);
-        }
-    });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Failed to retrieve passcode'
+                });
+            }
+        });
+    } else {
+        // Hide passcode
+        $display.val('••••••');
+        $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        $btn.data('visible', false);
+    }
+});
 
     // Update profile form submission
     $('#profileForm').on('submit', function (e) {

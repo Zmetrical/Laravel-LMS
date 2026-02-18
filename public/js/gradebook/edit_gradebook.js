@@ -1774,8 +1774,11 @@ $('#quizId').change(function () {
             }
         });
     });
+
+
+
 // Import button click
-$('#importBtn').click(function() {
+$('#importBtn').click(function () {
     if (!currentQuarterId) {
         Swal.fire({
             icon: 'warning',
@@ -1802,63 +1805,148 @@ $('#importBtn').click(function() {
         return;
     }
 
+    // Reset modal state
     $('#importForm')[0].reset();
-    $('#importColumnGroup').hide();
-    $('.custom-file-label').text('Choose file...');
+    $('.custom-file-label[for="importScoreFile"]').text('Choose file...');
+    $('#importSubmitBtn').prop('disabled', true);
+    $('#importColumnsList').html('<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Loading columns...</div>');
     $('#importModal').modal('show');
+
+    // Fetch active F2F columns for current quarter
+    $.ajax({
+        url: API_ROUTES.getGradebook,
+        type: 'GET',
+        data: { quarter_id: currentQuarterId, section_id: currentSectionId },
+        success: function (response) {
+            if (!response.success) {
+                $('#importColumnsList').html('<div class="text-center text-muted py-3">Failed to load columns.</div>');
+                return;
+            }
+
+            const allColumns = response.data.columns;
+            const f2fByType = {};
+
+            ['WW', 'PT', 'QA'].forEach(function (type) {
+                const cols = (allColumns[type] || []).filter(c => c.is_active && c.source_type !== 'online');
+                if (cols.length > 0) f2fByType[type] = cols;
+            });
+
+            if (Object.keys(f2fByType).length === 0) {
+                $('#importColumnsList').html(
+                    '<div class="alert alert-secondary mb-0">' +
+                    '<i class="fas fa-info-circle"></i> No active face-to-face columns found for this quarter. ' +
+                    'Enable a column using the toggle in the gradebook first.' +
+                    '</div>'
+                );
+                return;
+            }
+
+            const typeLabels = { WW: 'Written Work', PT: 'Performance Task', QA: 'Quarterly Assessment' };
+            let html = '';
+
+            Object.entries(f2fByType).forEach(function ([type, cols]) {
+                html += `<div class="mb-3">
+                    <div class="d-flex align-items-center mb-1">
+                        <strong class="mr-2">${typeLabels[type]}</strong>
+                        <a href="#" class="text-secondary small select-type-link" data-type="${type}">select all</a>
+                        <span class="text-muted mx-1 small">/</span>
+                        <a href="#" class="text-secondary small deselect-type-link" data-type="${type}">none</a>
+                    </div>
+                    <div class="row no-gutters" data-type-group="${type}">`;
+
+                cols.forEach(function (col) {
+                    html += `<div class="col-auto mr-2 mb-2">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input import-col-check"
+                                   id="col_${col.id}" value="${col.id}" data-type="${type}"
+                                   data-name="${escapeHtml(col.column_name)}" data-points="${col.max_points}">
+                            <label class="custom-control-label" for="col_${col.id}">
+                                ${escapeHtml(col.column_name)}
+                                <small class="text-muted">(${col.max_points}pts)</small>
+                            </label>
+                        </div>
+                    </div>`;
+                });
+
+                html += `</div></div>`;
+            });
+
+            $('#importColumnsList').html(html);
+            updateImportSubmitState();
+        },
+        error: function () {
+            $('#importColumnsList').html('<div class="text-center text-muted py-3">Failed to load columns.</div>');
+        }
+    });
 });
 
-// Component type change
-$('#importComponentType').change(function() {
-    const componentType = $(this).val();
-    const columnSelect = $('#importColumnNumber');
-    
-    if (!componentType) {
-        $('#importColumnGroup').hide();
+function updateImportSubmitState() {
+    const hasFile = $('#importScoreFile')[0].files.length > 0;
+    const hasChecked = $('.import-col-check:checked').length > 0;
+    $('#importSubmitBtn').prop('disabled', !(hasFile && hasChecked));
+}
+
+// File input label + submit state
+$('#importScoreFile').on('change', function () {
+    const fileName = $(this).val().split('\\').pop();
+    $(this).siblings('.custom-file-label').text(fileName || 'Choose file...');
+    updateImportSubmitState();
+});
+
+// Checkbox change
+$(document).on('change', '.import-col-check', function () {
+    updateImportSubmitState();
+});
+
+// Select/deselect all
+$('#selectAllColumnsBtn').click(function () {
+    $('.import-col-check').prop('checked', true);
+    updateImportSubmitState();
+});
+
+$('#deselectAllColumnsBtn').click(function () {
+    $('.import-col-check').prop('checked', false);
+    updateImportSubmitState();
+});
+
+// Per-type select/deselect links
+$(document).on('click', '.select-type-link', function (e) {
+    e.preventDefault();
+    $(`.import-col-check[data-type="${$(this).data('type')}"]`).prop('checked', true);
+    updateImportSubmitState();
+});
+
+$(document).on('click', '.deselect-type-link', function (e) {
+    e.preventDefault();
+    $(`.import-col-check[data-type="${$(this).data('type')}"]`).prop('checked', false);
+    updateImportSubmitState();
+});
+
+// Import form submit
+$('#importForm').submit(function (e) {
+    e.preventDefault();
+
+    const checkedCols = $('.import-col-check:checked');
+    if (checkedCols.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'No Columns Selected', text: 'Please select at least one column to import.' });
         return;
     }
 
-    columnSelect.empty().append('<option value="">Select Column</option>');
-    
-    if (componentType === 'WW') {
-        for (let i = 1; i <= MAX_WW_COLUMNS; i++) {
-            columnSelect.append(`<option value="${i}">WW${i}</option>`);
-        }
-        $('#importColumnGroup').show();
-    } else if (componentType === 'PT') {
-        for (let i = 1; i <= MAX_PT_COLUMNS; i++) {
-            columnSelect.append(`<option value="${i}">PT${i}</option>`);
-        }
-        $('#importColumnGroup').show();
-    } else if (componentType === 'QA') {
-        columnSelect.append('<option value="1">QA</option>');
-        $('#importColumnGroup').show();
-        columnSelect.val('1');
+    const file = $('#importScoreFile')[0].files[0];
+    if (!file) {
+        Swal.fire({ icon: 'warning', title: 'File Required', text: 'Please choose an Excel file to import.' });
+        return;
     }
-});
-
-// File input change
-$('#importFile').on('change', function() {
-    const fileName = $(this).val().split('\\').pop();
-    const label = $(this).siblings('.custom-file-label');
-    if (fileName) {
-        label.text(fileName);
-    } else {
-        label.text('Choose file (optional)...');
-    }
-});
-// Import form submit
-$('#importForm').submit(function(e) {
-    e.preventDefault();
 
     const formData = new FormData();
-    formData.append('file', $('#importFile')[0].files[0]);
+    formData.append('file', file);
     formData.append('quarter_id', currentQuarterId);
-    formData.append('component_type', $('#importComponentType').val());
-    formData.append('column_number', $('#importColumnNumber').val());
     formData.append('section_id', currentSectionId);
+    checkedCols.each(function () {
+        formData.append('column_ids[]', $(this).val());
+    });
 
-    const btn = $(this).find('button[type="submit"]');
+    const btn = $('#importSubmitBtn');
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
 
     $.ajax({
@@ -1867,26 +1955,26 @@ $('#importForm').submit(function(e) {
         data: formData,
         processData: false,
         contentType: false,
-        success: function(response) {
+        success: function (response) {
             if (response.success) {
-                let message = response.message;
+                let html = response.message;
+
+                if (response.data.column_summary && response.data.column_summary.length > 0) {
+                    html += '<br><br><small>' + response.data.column_summary.join('<br>') + '</small>';
+                }
+
+                let icon = 'success';
                 if (response.data.errors && response.data.errors.length > 0) {
-                    message += '\n\nWarnings:\n' + response.data.errors.slice(0, 5).join('\n');
+                    icon = 'warning';
+                    const shown = response.data.errors.slice(0, 5);
+                    html += '<br><br><small class="text-danger">' + shown.join('<br>') + '</small>';
                     if (response.data.errors.length > 5) {
-                        message += `\n... and ${response.data.errors.length - 5} more`;
+                        html += `<br><small>... and ${response.data.errors.length - 5} more</small>`;
                     }
                 }
 
-                Swal.fire({
-                    icon: response.data.errors.length > 0 ? 'warning' : 'success',
-                    title: 'Import Completed',
-                    text: message,
-                    confirmButtonText: 'OK'
-                });
-
+                Swal.fire({ icon: icon, title: 'Import Completed', html: html });
                 $('#importModal').modal('hide');
-                
-                // Destroy grids and reload
                 destroyAllGrids();
                 loadGradebook(currentQuarterId);
             } else {
@@ -1895,20 +1983,22 @@ $('#importForm').submit(function(e) {
                     title: 'Import Failed',
                     text: response.message
                 });
-                btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import');
+                btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import Selected');
             }
         },
-        error: function(xhr) {
+        error: function (xhr) {
             const errorMsg = xhr.responseJSON?.message || 'Failed to import scores';
             Swal.fire({
                 icon: 'error',
                 title: 'Import Failed',
                 text: errorMsg
             });
-            btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import');
+            btn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import Selected');
         }
     });
 });
+
+
     function escapeHtml(text) {
         if (!text) return '';
         const map = {

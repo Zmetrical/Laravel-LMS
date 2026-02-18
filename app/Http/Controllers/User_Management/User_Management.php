@@ -255,21 +255,24 @@ class User_Management extends Controller
         }
     }
 
+
+
     public function insert_students(Request $request)
     {
         $request->validate([
-            'strand_id' => 'required|exists:strands,id',
-            'level_id' => 'required|exists:levels,id',
-            'students' => 'required|array|min:1|max:100',
-            'students.*.email' => 'required|email|distinct',
-            'students.*.firstName' => 'required|string|max:255',
-            'students.*.lastName' => 'required|string|max:255',
-            'students.*.middleInitial' => 'required|string|max:50',
-            'students.*.gender' => 'required|in:Male,Female,M,F',
-            'students.*.studentType' => 'required|in:regular,irregular',
-            'students.*.parentEmail' => 'required|email',
-            'students.*.parentFirstName' => 'required|string|max:255',
-            'students.*.parentLastName' => 'required|string|max:255',
+            'strand_id'                    => 'required|exists:strands,id',
+            'level_id'                     => 'required|exists:levels,id',
+            'preferred_section_id'         => 'required|exists:sections,id',
+            'students'                     => 'required|array|min:1|max:100',
+            'students.*.email'             => 'required|email|distinct',
+            'students.*.firstName'         => 'required|string|max:255',
+            'students.*.lastName'          => 'required|string|max:255',
+            'students.*.middleInitial'     => 'required|string|max:50',
+            'students.*.gender'            => 'required|in:Male,Female,M,F',
+            'students.*.studentType'       => 'required|in:regular,irregular',
+            'students.*.parentEmail'       => 'required|email',
+            'students.*.parentFirstName'   => 'required|string|max:255',
+            'students.*.parentLastName'    => 'required|string|max:255',
         ]);
 
         try {
@@ -281,99 +284,96 @@ class User_Management extends Controller
                 throw new Exception('No active semester found');
             }
 
-            // Get strand and level details for audit
             $strand = DB::table('strands')->where('id', $request->strand_id)->first();
-            $level = DB::table('levels')->where('id', $request->level_id)->first();
+            $level  = DB::table('levels')->where('id', $request->level_id)->first();
 
-            // Get available sections for the selected strand and level
-            $availableSections = DB::table('sections')
-                ->join('strands', 'sections.strand_id', '=', 'strands.id')
-                ->join('levels', 'sections.level_id', '=', 'levels.id')
-                ->select(
-                    'sections.id',
-                    'sections.code',
-                    'sections.name',
-                    'sections.capacity',
-                    'sections.strand_id',
-                    'sections.level_id'
-                )
-                ->where('sections.status', 1)
-                ->where('sections.strand_id', $request->strand_id)
-                ->where('sections.level_id', $request->level_id)
-                ->orderBy('sections.name')
-                ->get()
-                ->map(function($section) use ($activeSemester) {
-                    // Count enrolled students in active semester
-                    $enrolled = DB::table('student_semester_enrollment')
-                        ->where('section_id', $section->id)
-                        ->where('semester_id', $activeSemester->id)
-                        ->where('enrollment_status', 'enrolled')
-                        ->count();
-                    
-                    $section->enrolled_count = $enrolled;
-                    $section->available_slots = $section->capacity - $enrolled;
-                    $section->is_full = $enrolled >= $section->capacity;
-                    
-                    return $section;
-                })
-                ->filter(function($section) {
-                    return !$section->is_full; // Only return sections with available slots
-                })
-                ->values(); // Re-index array
+            // Verify preferred section belongs to the chosen strand & level
+            $preferredSection = DB::table('sections')
+                ->where('id', $request->preferred_section_id)
+                ->where('strand_id', $request->strand_id)
+                ->where('level_id', $request->level_id)
+                ->where('status', 1)
+                ->first();
 
-            // Check if there are any available sections
-            if ($availableSections->isEmpty()) {
+            if (!$preferredSection) {
+                throw new Exception('Selected section does not match the chosen strand and level');
+            }
+
+            // Build the ordered section list: preferred section FIRST, then the rest alphabetically
+            $otherSections = DB::table('sections')
+                ->where('strand_id', $request->strand_id)
+                ->where('level_id', $request->level_id)
+                ->where('status', 1)
+                ->where('id', '!=', $request->preferred_section_id)
+                ->orderBy('name')
+                ->get();
+
+            $allSections = collect([$preferredSection])->merge($otherSections);
+
+            // Attach live available slots to each section
+            $allSections = $allSections->map(function($section) use ($activeSemester) {
+                $enrolled = DB::table('student_semester_enrollment')
+                    ->where('section_id', $section->id)
+                    ->where('semester_id', $activeSemester->id)
+                    ->where('enrollment_status', 'enrolled')
+                    ->count();
+
+                $section->enrolled_count  = $enrolled;
+                $section->available_slots = $section->capacity - $enrolled;
+                return $section;
+            })->filter(fn($s) => $s->available_slots > 0)->values();
+
+            if ($allSections->isEmpty()) {
                 throw new Exception('No sections available with capacity for the selected strand and level');
             }
 
-            // Calculate total available slots
-            $totalAvailableSlots = $availableSections->sum('available_slots');
-            $studentsToAdd = count($request->students);
+            $totalAvailableSlots = $allSections->sum('available_slots');
+            $studentsToAdd       = count($request->students);
 
-            // Check if there are enough slots
             if ($studentsToAdd > $totalAvailableSlots) {
-                throw new Exception("Insufficient capacity: {$studentsToAdd} students requested but only {$totalAvailableSlots} slots available");
+                return response()->json([
+                    'success'  => false,
+                    'message'  => "Insufficient capacity across all sections for the selected strand and level.",
+                    'required' => $studentsToAdd,
+                    'available'=> $totalAvailableSlots,
+                    'shortage' => $studentsToAdd - $totalAvailableSlots,
+                ], 422);
             }
 
-            // Get the last student number for the current year
-            $year = date('Y');
+            // Generate student numbers
+            $year        = date('Y');
             $lastStudent = Student::whereYear('created_at', $year)
                 ->orderBy('student_number', 'desc')
                 ->first();
-            
-            $lastCount = 0;
-            if ($lastStudent) {
-                $lastCount = intval(substr($lastStudent->student_number, 4));
-            }
 
-            $studentsData = [];
+            $lastCount = $lastStudent ? intval(substr($lastStudent->student_number, 4)) : 0;
+
+            $studentsData       = [];
             $passwordMatrixData = [];
-            $enrollmentData = [];
-            $guardianLinks = [];
-            $auditEntries = [];
-            $now = now();
+            $enrollmentData     = [];
+            $guardianLinks      = [];
+            $auditEntries       = [];
+            $now                = now();
 
-            // Distribute students across available sections
-            $sectionIndex = 0;
-            $currentSectionSlots = $availableSections[$sectionIndex]->available_slots;
-            $currentSectionId = $availableSections[$sectionIndex]->id;
-            $currentSectionName = $availableSections[$sectionIndex]->name;
+            // Distribute: fill preferred section first, overflow into others in order
+            $sectionIndex        = 0;
+            $currentSection      = $allSections[$sectionIndex];
+            $currentSectionSlots = $currentSection->available_slots;
 
-            foreach ($request->students as $index => $studentData) {
-                // Check if current section is full, move to next
+            foreach ($request->students as $studentData) {
+                // Advance to next section if current is full
                 if ($currentSectionSlots <= 0) {
                     $sectionIndex++;
-                    if ($sectionIndex >= $availableSections->count()) {
+                    if ($sectionIndex >= $allSections->count()) {
                         throw new Exception('Unexpected error: ran out of sections during distribution');
                     }
-                    $currentSectionId = $availableSections[$sectionIndex]->id;
-                    $currentSectionName = $availableSections[$sectionIndex]->name;
-                    $currentSectionSlots = $availableSections[$sectionIndex]->available_slots;
+                    $currentSection      = $allSections[$sectionIndex];
+                    $currentSectionSlots = $currentSection->available_slots;
                 }
 
                 $lastCount++;
                 $studentNumber = $year . str_pad($lastCount, 5, '0', STR_PAD_LEFT);
-                $password = $this->generateStudentPassword();
+                $password      = $this->generateStudentPassword();
 
                 $gender = $studentData['gender'];
                 if ($gender === 'M') $gender = 'Male';
@@ -382,18 +382,18 @@ class User_Management extends Controller
                 $middleInitial = $this->processMiddleInitial($studentData['middleInitial']);
 
                 $studentsData[] = [
-                    'student_number' => $studentNumber,
+                    'student_number'   => $studentNumber,
                     'student_password' => Hash::make($password),
-                    'email' => $studentData['email'],
-                    'first_name' => $studentData['firstName'],
-                    'middle_name' => $middleInitial,
-                    'last_name' => $studentData['lastName'],
-                    'gender' => $gender,
-                    'section_id' => $currentSectionId,
-                    'student_type' => $studentData['studentType'],
-                    'enrollment_date' => now(),
-                    'created_at' => $now,
-                    'updated_at' => $now,
+                    'email'            => $studentData['email'],
+                    'first_name'       => $studentData['firstName'],
+                    'middle_name'      => $middleInitial,
+                    'last_name'        => $studentData['lastName'],
+                    'gender'           => $gender,
+                    'section_id'       => $currentSection->id,
+                    'student_type'     => $studentData['studentType'],
+                    'enrollment_date'  => now(),
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
                 ];
 
                 $passwordMatrixData[] = [
@@ -402,144 +402,137 @@ class User_Management extends Controller
                 ];
 
                 $enrollmentData[] = [
-                    'student_number' => $studentNumber,
-                    'semester_id' => $activeSemester->id,
-                    'section_id' => $currentSectionId,
+                    'student_number'    => $studentNumber,
+                    'semester_id'       => $activeSemester->id,
+                    'section_id'        => $currentSection->id,
                     'enrollment_status' => 'enrolled',
-                    'enrollment_date' => now(),
-                    'created_at' => $now,
-                    'updated_at' => $now
+                    'enrollment_date'   => now(),
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
                 ];
 
-                // Store guardian data for processing (all fields now required)
                 $guardianLinks[] = [
                     'student_number' => $studentNumber,
-                    'email' => $studentData['parentEmail'],
-                    'firstName' => $studentData['parentFirstName'],
-                    'lastName' => $studentData['parentLastName']
+                    'email'          => $studentData['parentEmail'],
+                    'firstName'      => $studentData['parentFirstName'],
+                    'lastName'       => $studentData['parentLastName'],
                 ];
 
-                // Prepare audit entry for each student
                 $auditEntries[] = [
-                    'student_number' => $studentNumber,
-                    'first_name' => $studentData['firstName'],
-                    'middle_name' => $middleInitial,
-                    'last_name' => $studentData['lastName'],
-                    'email' => $studentData['email'],
-                    'gender' => $gender,
-                    'section_id' => $currentSectionId,
-                    'section_name' => $currentSectionName,
-                    'strand' => $strand->code,
-                    'level' => $level->name,
-                    'student_type' => $studentData['studentType'],
-                    'parent_email' => $studentData['parentEmail'],
+                    'student_number'    => $studentNumber,
+                    'first_name'        => $studentData['firstName'],
+                    'middle_name'       => $middleInitial,
+                    'last_name'         => $studentData['lastName'],
+                    'email'             => $studentData['email'],
+                    'gender'            => $gender,
+                    'section_id'        => $currentSection->id,
+                    'section_name'      => $currentSection->name,
+                    'strand'            => $strand->code,
+                    'level'             => $level->name,
+                    'student_type'      => $studentData['studentType'],
+                    'parent_email'      => $studentData['parentEmail'],
                     'parent_first_name' => $studentData['parentFirstName'],
-                    'parent_last_name' => $studentData['parentLastName'],
+                    'parent_last_name'  => $studentData['parentLastName'],
                 ];
 
                 $currentSectionSlots--;
             }
 
-            // Insert students
+            // Bulk inserts
             Student::insert($studentsData);
             DB::table('student_password_matrix')->insert($passwordMatrixData);
             DB::table('student_semester_enrollment')->insert($enrollmentData);
 
-            // Process guardians and automatically send verification emails
-            $guardianCount = 0;
+            // Process guardians + send verification emails
+            $guardianCount       = 0;
             $newGuardiansCreated = [];
-            
+
             foreach ($guardianLinks as $guardianData) {
                 $result = $this->createOrLinkGuardian([
-                    'email' => $guardianData['email'],
+                    'email'     => $guardianData['email'],
                     'firstName' => $guardianData['firstName'],
-                    'lastName' => $guardianData['lastName']
+                    'lastName'  => $guardianData['lastName'],
                 ], $guardianData['student_number']);
-                
+
                 if ($result['success']) {
                     $guardianCount++;
-                    
-                    // Track new guardians for automatic email sending
                     if ($result['is_new']) {
                         $newGuardiansCreated[] = $result['guardian_id'];
                     }
                 }
             }
 
-            // Automatically send verification emails to newly created guardians
-            $emailResults = [
-                'sent' => 0,
-                'failed' => 0
-            ];
+            $emailResults = ['sent' => 0, 'failed' => 0];
 
             foreach ($newGuardiansCreated as $guardianId) {
                 $emailResult = $this->guardianEmailController->sendVerificationEmail($guardianId, true);
-                
                 if ($emailResult['success']) {
                     $emailResults['sent']++;
                 } else {
                     $emailResults['failed']++;
                     \Log::warning('Failed to send automatic verification email', [
                         'guardian_id' => $guardianId,
-                        'message' => $emailResult['message']
+                        'message'     => $emailResult['message'],
                     ]);
                 }
             }
 
-            // Audit log for batch creation
+            // Audit log
             $this->logAudit(
                 'created',
                 'students',
                 null,
-                "Batch created {$studentsToAdd} students for {$strand->code} - {$level->name}",
+                "Batch created {$studentsToAdd} students for {$strand->code} - {$level->name}, starting in {$preferredSection->name}",
                 null,
                 [
-                    'strand_id' => $request->strand_id,
-                    'strand_code' => $strand->code,
-                    'level_id' => $request->level_id,
-                    'level_name' => $level->name,
-                    'total_students' => $studentsToAdd,
-                    'semester_id' => $activeSemester->id,
-                    'guardians_linked' => $guardianCount,
-                    'new_guardians_created' => count($newGuardiansCreated),
-                    'verification_emails_sent' => $emailResults['sent'],
+                    'strand_id'                  => $request->strand_id,
+                    'strand_code'                => $strand->code,
+                    'level_id'                   => $request->level_id,
+                    'level_name'                 => $level->name,
+                    'preferred_section_id'       => $preferredSection->id,
+                    'preferred_section_name'     => $preferredSection->name,
+                    'total_students'             => $studentsToAdd,
+                    'semester_id'                => $activeSemester->id,
+                    'guardians_linked'           => $guardianCount,
+                    'new_guardians_created'      => count($newGuardiansCreated),
+                    'verification_emails_sent'   => $emailResults['sent'],
                     'verification_emails_failed' => $emailResults['failed'],
-                    'students' => $auditEntries
+                    'students'                   => $auditEntries,
                 ]
             );
 
             DB::commit();
 
-            $message = count($studentsData) . " student(s) created successfully and distributed across sections!";
-            
+            $message = count($studentsData) . " student(s) enrolled successfully, starting in {$preferredSection->name}!";
+
             if ($emailResults['sent'] > 0) {
                 $message .= " {$emailResults['sent']} verification email(s) sent automatically.";
             }
-            
             if ($emailResults['failed'] > 0) {
                 $message .= " Note: {$emailResults['failed']} email(s) failed to send.";
             }
 
             return response()->json([
-                'success' => true,
-                'message' => $message,
-                'count' => count($studentsData),
+                'success'          => true,
+                'message'          => $message,
+                'count'            => count($studentsData),
                 'guardians_linked' => $guardianCount,
-                'new_guardians' => count($newGuardiansCreated),
-                'emails_sent' => $emailResults['sent'],
-                'emails_failed' => $emailResults['failed']
+                'new_guardians'    => count($newGuardiansCreated),
+                'emails_sent'      => $emailResults['sent'],
+                'emails_failed'    => $emailResults['failed'],
             ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
 
             \Log::error('Failed to create students', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred: ' . $e->getMessage()
+                'message' => 'An error occurred: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -807,7 +800,7 @@ public function list_students(Request $request)
         try {
             DB::beginTransaction();
 
-            $defaultPassword = 'Teacher@' . date('Y');
+            $defaultPassword = $this->generateTeacherPassword();
             $plainPasscode = $this->generateTeacherPasscode();
 
             $teacher = Teacher::create([
@@ -891,6 +884,12 @@ public function list_students(Request $request)
         }
     }
 
+    private function generateTeacherPassword()
+    {
+        return 'Tchr' . strtoupper(Str::random(4)) . rand(100, 999);
+    }
+
+
     private function generateTeacherPasscode()
     {
         return strtoupper(Str::random(6));
@@ -898,48 +897,29 @@ public function list_students(Request $request)
 
 public function list_teacher(Request $request)
 {
-    // Get active school year for default class assignments display
     $activeSchoolYear = DB::table('school_years')
         ->where('status', 'active')
         ->first();
 
     $teachers = DB::table('teachers')
-        ->leftJoin('teacher_school_year_status as tsys', function($join) use ($activeSchoolYear) {
-            $join->on('teachers.id', '=', 'tsys.teacher_id')
-                 ->where('tsys.school_year_id', '=', $activeSchoolYear->id ?? 0);
-        })
-        ->select(
-            'teachers.*',
-            'tsys.status as school_year_status',
-            'tsys.id as status_id'
-        )
+        ->select('teachers.*')
         ->get()
-        ->map(function($teacher) use ($activeSchoolYear) {
-            // Get classes for this teacher in active school year
+        ->map(function ($teacher) use ($activeSchoolYear) {
             $classes = DB::table('teacher_class_matrix')
                 ->join('classes', 'teacher_class_matrix.class_id', '=', 'classes.id')
                 ->where('teacher_class_matrix.teacher_id', $teacher->id)
                 ->where('teacher_class_matrix.school_year_id', $activeSchoolYear->id ?? 0)
-                ->select(
-                    'classes.id',
-                    'classes.class_code',
-                    'classes.class_name'
-                )
+                ->select('classes.id', 'classes.class_code', 'classes.class_name')
                 ->get();
-            
+
             $teacher->classes = $classes;
-            
-            // Set default status if no status record exists
-            if (!$teacher->school_year_status) {
-                $teacher->school_year_status = 'active';
-            }
-            
+
             return $teacher;
         });
 
-    // Count active and inactive teachers
-    $activeCount = $teachers->where('school_year_status', 'active')->count();
-    $inactiveCount = $teachers->where('school_year_status', 'inactive')->count();
+    // teachers.status is the global on/off (1 = active, 0 = inactive)
+    $activeCount   = $teachers->where('status', 1)->count();
+    $inactiveCount = $teachers->where('status', 0)->count();
 
     $classes = DB::table('classes')
         ->select('id', 'class_code', 'class_name')
@@ -947,14 +927,12 @@ public function list_teacher(Request $request)
         ->get();
 
     $data = [
-        'scripts' => [
-            'user_management/list_teacher.js',
-        ],
-        'teachers' => $teachers,
-        'classes' => $classes,
+        'scripts'          => ['user_management/list_teacher.js'],
+        'teachers'         => $teachers,
+        'classes'          => $classes,
         'activeSchoolYear' => $activeSchoolYear,
-        'activeCount' => $activeCount,
-        'inactiveCount' => $inactiveCount
+        'activeCount'      => $activeCount,
+        'inactiveCount'    => $inactiveCount,
     ];
 
     return view('admin.user_management.list_teacher', $data);
@@ -963,48 +941,51 @@ public function list_teacher(Request $request)
 
 public function teacherHistory($id)
 {
-    // Get teacher details
-    $teacher = DB::table('teachers')
-        ->where('id', $id)
-        ->first();
+    $teacher = DB::table('teachers')->where('id', $id)->first();
 
     if (!$teacher) {
         abort(404, 'Teacher not found');
     }
 
-    // Get all school years where teacher was active (has status record or has classes assigned)
+    // Get all school years that are relevant to this teacher:
+    // - has a trail record in teacher_school_year_status, OR
+    // - has classes assigned in teacher_class_matrix
+    // Use UNION so a tsys record with no classes is still included.
+    $schoolYearIds = DB::table('teacher_school_year_status')
+        ->where('teacher_id', $id)
+        ->pluck('school_year_id')
+        ->merge(
+            DB::table('teacher_class_matrix')
+                ->where('teacher_id', $id)
+                ->pluck('school_year_id')
+        )
+        ->unique()
+        ->values();
+
     $schoolYears = DB::table('school_years as sy')
-        ->leftJoin('teacher_school_year_status as tsys', function($join) use ($id) {
+        ->leftJoin('teacher_school_year_status as tsys', function ($join) use ($id) {
             $join->on('sy.id', '=', 'tsys.school_year_id')
                  ->where('tsys.teacher_id', '=', $id);
         })
-        ->leftJoin('teacher_class_matrix as tcm', function($join) use ($id) {
-            $join->on('sy.id', '=', 'tcm.school_year_id')
-                 ->where('tcm.teacher_id', '=', $id);
-        })
-        ->whereNotNull('tcm.id') // Only show school years where teacher had classes
+        ->whereIn('sy.id', $schoolYearIds)
         ->select(
             'sy.id as school_year_id',
             'sy.code as school_year_code',
             'sy.status as school_year_status',
-            'tsys.status as teacher_status',
-            'tsys.activated_at',
+            'tsys.id as trail_id',
+            'tsys.status as trail_status',
+            'tsys.reactivated_by',
+            'tsys.reactivated_at',
+            'tsys.deactivated_by',
             'tsys.deactivated_at'
         )
-        ->groupBy('sy.id', 'sy.code', 'sy.status', 'tsys.status', 'tsys.activated_at', 'tsys.deactivated_at')
         ->orderBy('sy.year_start', 'desc')
         ->get();
 
-    // For each school year, get detailed class and adviser information
     $schoolYearData = [];
-    foreach ($schoolYears as $sy) {
-        // Get semesters for this school year
-        $semesters = DB::table('semesters')
-            ->where('school_year_id', $sy->school_year_id)
-            ->orderBy('code')
-            ->get();
 
-        // Get teaching assignments (classes with sections)
+    foreach ($schoolYears as $sy) {
+        // ── Teaching assignments ────────────────────────────────────────────
         $classes = DB::table('teacher_class_matrix as tcm')
             ->join('classes as c', 'tcm.class_id', '=', 'c.id')
             ->leftJoin('semesters as sem', 'tcm.semester_id', '=', 'sem.id')
@@ -1022,9 +1003,8 @@ public function teacherHistory($id)
             ->distinct()
             ->get();
 
-        // For each class, get the sections
-        $classesWithSections = $classes->map(function($class) use ($id, $sy) {
-            // Get sections for regular students
+        // Attach sections to each class
+        $classesWithSections = $classes->map(function ($class) {
             $sections = DB::table('section_class_matrix as scm')
                 ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
                 ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
@@ -1032,23 +1012,18 @@ public function teacherHistory($id)
                 ->where('scm.class_id', $class->class_id)
                 ->where('scm.semester_id', $class->semester_id)
                 ->select(
-                    'sec.code as section_code',
-                    'sec.name as section_name',
-                    'str.code as strand_code',
-                    'lvl.name as level_name'
+                    'sec.code as section_code', 'sec.name as section_name',
+                    'str.code as strand_code', 'lvl.name as level_name'
                 )
                 ->get();
 
-            $class->sections = $sections;
+            $class->sections      = $sections;
             $class->section_count = $sections->count();
-            
+
             return $class;
         });
 
-        // Group classes by subject
-        $groupedClasses = $classesWithSections->groupBy('class_code');
-
-        // Get adviser assignments separately
+        // ── Adviser assignments ─────────────────────────────────────────────
         $adviserAssignments = DB::table('section_adviser_matrix as sam')
             ->join('sections as sec', 'sam.section_id', '=', 'sec.id')
             ->join('semesters as sem', 'sam.semester_id', '=', 'sem.id')
@@ -1057,121 +1032,154 @@ public function teacherHistory($id)
             ->where('sam.teacher_id', $id)
             ->where('sem.school_year_id', $sy->school_year_id)
             ->select(
-                'sec.id as section_id',
-                'sec.code as section_code',
-                'sec.name as section_name',
-                'str.code as strand_code',
-                'lvl.name as level_name',
-                'sem.id as semester_id',
-                'sem.name as semester_name',
-                'sem.code as semester_code',
+                'sec.id as section_id', 'sec.code as section_code',
+                'sec.name as section_name', 'str.code as strand_code',
+                'lvl.name as level_name', 'sem.id as semester_id',
+                'sem.name as semester_name', 'sem.code as semester_code',
                 'sam.assigned_date'
             )
             ->orderBy('sem.code')
             ->orderBy('sec.code')
             ->get();
 
-        // Group adviser assignments by semester
-        $groupedAdvisers = $adviserAssignments->groupBy('semester_id');
+        // ── Resolve admin names for trail ───────────────────────────────────
+        $reactivatedByName = null;
+        $deactivatedByName = null;
+
+        if ($sy->reactivated_by) {
+            $admin = DB::table('admins')->where('id', $sy->reactivated_by)->first();
+            $reactivatedByName = $admin ? $admin->admin_name : 'Admin #' . $sy->reactivated_by;
+        }
+        if ($sy->deactivated_by) {
+            $admin = DB::table('admins')->where('id', $sy->deactivated_by)->first();
+            $deactivatedByName = $admin ? $admin->admin_name : 'Admin #' . $sy->deactivated_by;
+        }
 
         $schoolYearData[] = [
-            'school_year_id' => $sy->school_year_id,
-            'school_year_code' => $sy->school_year_code,
+            'school_year_id'     => $sy->school_year_id,
+            'school_year_code'   => $sy->school_year_code,
             'school_year_status' => $sy->school_year_status,
-            'teacher_status' => $sy->teacher_status ?? 'active',
-            'activated_at' => $sy->activated_at,
-            'deactivated_at' => $sy->deactivated_at,
-            'semesters' => $semesters,
-            'classes' => $groupedClasses,
-            'adviser_assignments' => $groupedAdvisers,
-            'total_classes' => $classesWithSections->count(),
-            'total_sections' => $classesWithSections->sum('section_count'),
-            'total_adviser_sections' => $adviserAssignments->count()
+
+            // Timeline trail
+            'has_trail'           => !is_null($sy->trail_id),
+            'trail_status'        => $sy->trail_status,
+            'reactivated_at'      => $sy->reactivated_at,
+            'reactivated_by_name' => $reactivatedByName,
+            'deactivated_at'      => $sy->deactivated_at,
+            'deactivated_by_name' => $deactivatedByName,
+
+            'classes'                => $classesWithSections->groupBy('class_code'),
+            'adviser_assignments'    => $adviserAssignments->groupBy('semester_id'),
+            'total_classes'          => $classesWithSections->count(),
+            'total_sections'         => $classesWithSections->sum('section_count'),
+            'total_adviser_sections' => $adviserAssignments->count(),
         ];
     }
 
     $data = [
-        'scripts' => [
-            'user_management/teacher_history.js',
-        ],
-        'teacher' => $teacher,
-        'schoolYearData' => $schoolYearData
+        'scripts'          => ['user_management/teacher_history.js'],
+        'teacher'          => $teacher,
+        'schoolYearData'   => $schoolYearData,
+        'activeSchoolYear' => DB::table('school_years')->where('status', 'active')->first(),
     ];
 
     return view('admin.user_management.teacher_history', $data);
 }
 
+// ============================================================
 public function toggleTeacherStatus(Request $request)
 {
     $validated = $request->validate([
-        'teacher_id' => 'required|exists:teachers,id',
+        'teacher_id'     => 'required|exists:teachers,id',
         'school_year_id' => 'required|exists:school_years,id',
-        'status' => 'required|in:active,inactive'
+        'status'         => 'required|in:active,inactive',
     ]);
 
     try {
         DB::beginTransaction();
 
-        $teacher = DB::table('teachers')->where('id', $validated['teacher_id'])->first();
+        $teacher    = DB::table('teachers')->where('id', $validated['teacher_id'])->first();
         $schoolYear = DB::table('school_years')->where('id', $validated['school_year_id'])->first();
 
-        // Get admin ID from session (adjust based on your auth system)
-        $adminId = session('admin_id') ?? null;
-        
-        $statusData = [
-            'teacher_id' => $validated['teacher_id'],
-            'school_year_id' => $validated['school_year_id'],
-            'status' => $validated['status'],
-            'updated_at' => now()
-        ];
+        // Use the admin guard — session('admin_id') is always null for guard-based auth
+        $adminId = Auth::guard('admin')->id();
 
-        if ($validated['status'] === 'active') {
-            $statusData['activated_by'] = $adminId;
-            $statusData['activated_at'] = now();
-            $statusData['deactivated_by'] = null;
-            $statusData['deactivated_at'] = null;
+        $newStatus    = $validated['status'];   // 'active' | 'inactive' (request value)
+        $newIntStatus = $newStatus === 'active' ? 1 : 0;
+
+        // ── 1. Update the teacher's global status ──────────────────────────
+        DB::table('teachers')
+            ->where('id', $validated['teacher_id'])
+            ->update([
+                'status'     => $newIntStatus,
+                'updated_at' => now(),
+            ]);
+
+        // ── 2. Upsert the timeline trail ───────────────────────────────────
+
+        // status enum matches request value directly: 'active' | 'inactive'
+
+        $existing = DB::table('teacher_school_year_status')
+            ->where('teacher_id', $validated['teacher_id'])
+            ->where('school_year_id', $validated['school_year_id'])
+            ->first();
+
+        if ($newStatus === 'inactive') {
+            $trailData = [
+                'status'         => $newStatus,
+                'deactivated_by' => $adminId,
+                'deactivated_at' => now(),
+                'updated_at'     => now(),
+            ];
         } else {
-            $statusData['deactivated_by'] = $adminId;
-            $statusData['deactivated_at'] = now();
+            $trailData = [
+                'status'         => $newStatus,
+                'reactivated_by' => $adminId,
+                'reactivated_at' => now(),
+                'updated_at'     => now(),
+            ];
         }
 
-        DB::table('teacher_school_year_status')->updateOrInsert(
-            [
-                'teacher_id' => $validated['teacher_id'],
-                'school_year_id' => $validated['school_year_id']
-            ],
-            $statusData
-        );
+        if ($existing) {
+            DB::table('teacher_school_year_status')
+                ->where('id', $existing->id)
+                ->update($trailData);
+        } else {
+            DB::table('teacher_school_year_status')->insert(array_merge($trailData, [
+                'teacher_id'     => $validated['teacher_id'],
+                'school_year_id' => $validated['school_year_id'],
+                'created_at'     => now(),
+            ]));
+        }
 
-        // Audit log
+        // ── 3. Audit log ───────────────────────────────────────────────────
         $this->logAudit(
             'updated',
-            'teacher_school_year_status',
-            (string)$validated['teacher_id'],
-            "Changed teacher {$teacher->first_name} {$teacher->last_name} status to {$validated['status']} for school year {$schoolYear->code}",
-            ['status' => $validated['status'] === 'active' ? 'inactive' : 'active'],
-            ['status' => $validated['status'], 'school_year' => $schoolYear->code]
+            'teachers',
+            (string) $validated['teacher_id'],
+            "Changed teacher {$teacher->first_name} {$teacher->last_name} status to {$newStatus} (school year: {$schoolYear->code})",
+            ['status' => $newStatus === 'active' ? 0 : 1],
+            ['status' => $newIntStatus, 'school_year' => $schoolYear->code]
         );
 
         DB::commit();
 
         return response()->json([
             'success' => true,
-            'message' => "Teacher status updated to {$validated['status']} successfully!",
-            'status' => $validated['status']
+            'message' => "Teacher status updated to {$newStatus} successfully!",
+            'status'  => $newStatus,
         ]);
 
     } catch (Exception $e) {
         DB::rollBack();
-
         \Log::error('Failed to update teacher status', [
             'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
         ]);
 
         return response()->json([
             'success' => false,
-            'message' => 'Failed to update teacher status: ' . $e->getMessage()
+            'message' => 'Failed to update teacher status: ' . $e->getMessage(),
         ], 500);
     }
 }

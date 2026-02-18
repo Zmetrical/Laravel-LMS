@@ -1,135 +1,136 @@
-console.log("Teacher History Page");
+console.log("Teacher History");
 
-$(document).ready(function() {
-    
-    // Toggle subject accordion
-    $(document).on('click', '.subject-header', function(e) {
-        e.preventDefault();
-        const $subjectItem = $(this).closest('.subject-item');
-        $subjectItem.toggleClass('expanded');
+$(document).ready(function () {
+
+    // ── Subject accordion ─────────────────────────────────────────────────────
+    $(document).on('click', '.subject-header', function () {
+        $(this).closest('.subject-item').toggleClass('expanded');
     });
 
-    // Filter functions
-    function updateRecordsCount() {
-        const visibleCards = $('.school-year-card:visible').length;
-        
-        if (visibleCards === 0) {
-            $('#noResultsMessage').show();
-        } else {
-            $('#noResultsMessage').hide();
-        }
-    }
+    // ── Filtering ─────────────────────────────────────────────────────────────
+    function applyFilters() {
+        const search     = $('#searchSubject').val().toLowerCase().trim();
+        const schoolYear = $('#schoolYearFilter').val();
+        const status     = $('#statusFilter').val();
+        let visible = 0;
 
-    function filterRecords() {
-        const searchValue = $('#searchSubject').val().toLowerCase();
-        const selectedSchoolYear = $('#schoolYearFilter').val();
+        $('.school-year-card').each(function () {
+            const $card      = $(this);
+            const syId       = $card.data('school-year-id').toString();
+            const trailStatus = $card.data('trail-status'); // 'active' | 'inactive' | 'none'
+            let show         = true;
 
-        $('.school-year-card').each(function() {
-            const $card = $(this);
-            const schoolYearId = $card.data('school-year-id').toString();
-            const teacherStatus = $card.data('teacher-status');
-            
-            let show = true;
+            if (schoolYear && syId !== schoolYear) show = false;
 
-            // School Year filter
-            if (selectedSchoolYear && schoolYearId !== selectedSchoolYear) {
-                show = false;
+            if (show && status) {
+                if (status === 'none') {
+                    if (trailStatus !== 'none') show = false;
+                } else {
+                    if (trailStatus !== status) show = false;
+                }
             }
 
-
-
-            // Subject search filter (includes adviser assignments)
-            if (searchValue) {
-                const hasMatchingSubject = $card.find('.subject-item').filter(function() {
-                    const subjectName = $(this).data('subject-name');
-                    return subjectName && subjectName.includes(searchValue);
+            if (show && search) {
+                const hasMatch = $card.find('.subject-item').filter(function () {
+                    return ($(this).data('subject-name') || '').includes(search);
                 }).length > 0;
 
-                if (!hasMatchingSubject) {
-                    show = false;
-                }
+                if (!hasMatch) show = false;
             }
 
-            if (show) {
-                $card.show();
-            } else {
-                $card.hide();
-            }
+            $card.toggle(show);
+            if (show) visible++;
         });
 
-        updateRecordsCount();
+        $('#noResultsMessage').toggle(visible === 0);
     }
 
-    // Search by subject
-    $('#searchSubject').on('keyup', function() {
-        filterRecords();
-    });
+    $('#searchSubject').on('keyup', applyFilters);
+    $('#schoolYearFilter').on('change', applyFilters);
+    $('#statusFilter').on('change', applyFilters);
 
-    // Filter by school year
-    $('#schoolYearFilter').on('change', function() {
-        filterRecords();
-    });
-
-    // Clear all filters
-    $('#clearFilters').on('click', function() {
+    $('#clearFilters').on('click', function () {
         $('#searchSubject').val('');
-        $('#schoolYearFilter').val($('#schoolYearFilter option:first').val());
-        
+        $('#schoolYearFilter').val('');
+        $('#statusFilter').val('');
         $('.school-year-card').show();
-        updateRecordsCount();
+        $('#noResultsMessage').hide();
     });
 
-    // Toggle Status Button Click
-    $(document).on('click', '.btn-toggle-status', function(e) {
+    // ── Activate / Deactivate teacher ─────────────────────────────────────────
+
+    $(document).on('click', '.btn-toggle-status', function (e) {
         e.preventDefault();
-        
-        const btn = $(this);
-        const teacherId = btn.data('teacher-id');
-        const schoolYearId = btn.data('school-year-id');
-        const action = btn.data('action');
-        const newStatus = action === 'activate' ? 'active' : 'inactive';
-        
-        const actionText = action === 'activate' ? 'activate' : 'deactivate';
-        const confirmText = `Are you sure you want to ${actionText} this teacher for this school year?`;
-        
-        if (!confirm(confirmText)) {
-            return;
-        }
-        
-        // Disable button
-        btn.prop('disabled', true);
-        const originalHtml = btn.html();
-        btn.html('<i class="fas fa-spinner fa-spin"></i> Processing...');
-        
-        $.ajax({
-            url: TOGGLE_STATUS_URL,
-            method: 'POST',
-            data: {
-                _token: $('meta[name="csrf-token"]').attr('content'),
-                teacher_id: teacherId,
-                school_year_id: schoolYearId,
-                status: newStatus
-            },
-            success: function(response) {
-                if (response.success) {
-                    alert(response.message);
-                    window.location.reload();
-                } else {
-                    alert(response.message || 'Failed to update teacher status');
-                    btn.prop('disabled', false);
-                    btn.html(originalHtml);
-                }
-            },
-            error: function(xhr) {
-                const message = xhr.responseJSON?.message || 'An error occurred while updating teacher status';
-                alert(message);
-                btn.prop('disabled', false);
-                btn.html(originalHtml);
-            }
+
+        const $btn         = $(this);
+        const teacherId    = $btn.data('teacher-id');
+        const schoolYearId = $btn.data('school-year-id');
+        const action       = $btn.data('action');
+        const newStatus    = action === 'activate' ? 'active' : 'inactive';
+        const isActivating = action === 'activate';
+
+        Swal.fire({
+            title: isActivating ? 'Reactivate Teacher?' : 'Deactivate Teacher?',
+            text: isActivating
+                ? 'This teacher will be marked as active and can be assigned to classes.'
+                : 'This teacher will be marked as inactive.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: isActivating ? 'Yes, reactivate' : 'Yes, deactivate',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#6c757d',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            $btn.prop('disabled', true);
+            const originalHtml = $btn.html();
+            $btn.html('<i class="fas fa-spinner fa-spin"></i>');
+
+            $.ajax({
+                url: TOGGLE_STATUS_URL,
+                method: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    teacher_id: teacherId,
+                    school_year_id: schoolYearId,
+                    status: newStatus,
+                },
+                success: function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Done!',
+                            text: response.message,
+                            icon: 'success',
+                            confirmButtonColor: '#6c757d',
+                        }).then(function () {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: response.message || 'Failed to update teacher status.',
+                            icon: 'error',
+                            confirmButtonColor: '#6c757d',
+                        });
+                        $btn.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function (xhr) {
+                    const msg = xhr.responseJSON?.message || 'An error occurred.';
+                    Swal.fire({
+                        title: 'Error',
+                        text: msg,
+                        icon: 'error',
+                        confirmButtonColor: '#6c757d',
+                    });
+                    $btn.prop('disabled', false).html(originalHtml);
+                },
+            });
         });
     });
 
-    // Initial filter
-    updateRecordsCount();
-    filterRecords();
+    // Run on load
+    applyFilters();
 });

@@ -473,6 +473,15 @@ function updateLevelSelects() {
 function openCreateModal() {
     resetSectionForm();
     $('#sectionModalTitle').html('<i class="fas fa-plus"></i> Create New Section');
+    
+    // Enable fields for creation
+    $('#strandSelect').prop('disabled', false).removeClass('bg-light');
+    $('#levelSelect').prop('disabled', false).removeClass('bg-light');
+    $('#strandRequired').show();
+    $('#levelRequired').show();
+    $('#strandEditNote').addClass('d-none');
+    $('#levelEditNote').addClass('d-none');
+    
     $('#sectionModal').modal('show');
 }
 
@@ -497,6 +506,14 @@ function editSection(id) {
     $('#strandSelect').val(section.strand_id);
     $('#levelSelect').val(section.level_id);
     
+    // Disable strand and level fields in edit mode
+    $('#strandSelect').prop('disabled', true).addClass('bg-light');
+    $('#levelSelect').prop('disabled', true).addClass('bg-light');
+    $('#strandRequired').hide();
+    $('#levelRequired').hide();
+    $('#strandEditNote').removeClass('d-none');
+    $('#levelEditNote').removeClass('d-none');
+    
     $('#sectionModalTitle').html('<i class="fas fa-edit"></i> Edit Section');
     
     $('#sectionModal').modal('show');
@@ -506,28 +523,41 @@ function editSection(id) {
 function saveSection() {
     const formData = {
         name: $('#sectionName').val().trim(),
-        strand_id: $('#strandSelect').val(),
-        level_id: $('#levelSelect').val(),
         _token: $('input[name="_token"]').val()
     };
     
-    if (!formData.name || !formData.strand_id || !formData.level_id) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Validation Error',
-            text: 'Please fill in all required fields.',
-            confirmButtonColor: '#007bff'
-        });
-        return;
-    }
-    
     const isEdit = editingSectionId !== null;
-    const url = isEdit ? API_ROUTES.updateSection.replace(':id', editingSectionId) : API_ROUTES.createSection;
-    const method = isEdit ? 'PUT' : 'POST';
     
-    if (isEdit) {
+    // Only include strand_id and level_id for creation
+    if (!isEdit) {
+        formData.strand_id = $('#strandSelect').val();
+        formData.level_id = $('#levelSelect').val();
+        
+        if (!formData.name || !formData.strand_id || !formData.level_id) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please fill in all required fields.',
+                confirmButtonColor: '#007bff'
+            });
+            return;
+        }
+    } else {
+        // For edit, only check section name
+        if (!formData.name) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please enter a section name.',
+                confirmButtonColor: '#007bff'
+            });
+            return;
+        }
         formData.id = editingSectionId;
     }
+    
+    const url = isEdit ? API_ROUTES.updateSection.replace(':id', editingSectionId) : API_ROUTES.createSection;
+    const method = isEdit ? 'PUT' : 'POST';
     
     const submitBtn = $('#sectionForm button[type="submit"]');
     submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
@@ -648,6 +678,14 @@ function resetSectionForm() {
     $('#sectionId').val('');
     $('#sectionModalTitle').html('<i class="fas fa-plus"></i> Create New Section');
     editingSectionId = null;
+    
+    // Reset field states
+    $('#strandSelect').prop('disabled', false).removeClass('bg-light');
+    $('#levelSelect').prop('disabled', false).removeClass('bg-light');
+    $('#strandRequired').show();
+    $('#levelRequired').show();
+    $('#strandEditNote').addClass('d-none');
+    $('#levelEditNote').addClass('d-none');
 }
 
 // Helper function to escape HTML

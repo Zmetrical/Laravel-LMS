@@ -761,12 +761,13 @@ public function getSectionsData(Request $request)
         }
     }
 
+    /**
+     * Update Section (name only - strand and level cannot be changed)
+     */
     public function updateSection(Request $request, $id)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'strand_id' => 'required|exists:strands,id',
-            'level_id' => 'required|exists:levels,id',
         ]);
 
         try {
@@ -779,63 +780,22 @@ public function getSectionsData(Request $request)
                 ], 404);
             }
 
-            $strand = DB::table('strands')->where('id', $request->strand_id)->first();
-            $level = DB::table('levels')->where('id', $request->level_id)->first();
-
-            // Get old strand and level for audit
-            $oldStrand = DB::table('strands')->where('id', $section->strand_id)->first();
-            $oldLevel = DB::table('levels')->where('id', $section->level_id)->first();
-
             DB::beginTransaction();
-
-            $strandChanged = $section->strand_id != $request->strand_id;
-            $levelChanged = $section->level_id != $request->level_id;
-
-            if ($strandChanged || $levelChanged) {
-                $maxCode = DB::table('sections')
-                    ->where('code', 'LIKE', $strand->code . '-' . $level->name . '-%')
-                    ->where('id', '!=', $id)
-                    ->orderBy('code', 'desc')
-                    ->first();
-
-                $nextNumber = 1;
-                if ($maxCode) {
-                    $parts = explode('-', $maxCode->code);
-                    $lastNumber = (int) end($parts);
-                    $nextNumber = $lastNumber + 1;
-                }
-
-                $code = strtoupper($strand->code . '-' . $level->name . '-' . $nextNumber);
-            } else {
-                $code = $section->code;
-            }
 
             // Store old values for audit
             $oldValues = [
-                'code' => $section->code,
                 'name' => $section->name,
-                'strand_id' => $section->strand_id,
-                'strand_name' => $oldStrand->name,
-                'level_id' => $section->level_id,
-                'level_name' => $oldLevel->name,
             ];
 
             $newValues = [
-                'code' => $code,
                 'name' => strtoupper($request->name),
-                'strand_id' => $request->strand_id,
-                'strand_name' => $strand->name,
-                'level_id' => $request->level_id,
-                'level_name' => $level->name,
             ];
 
+            // Only update the section name, keep code, strand, and level unchanged
             DB::table('sections')
                 ->where('id', $id)
                 ->update([
-                    'code' => $code,
                     'name' => strtoupper($request->name),
-                    'strand_id' => $request->strand_id,
-                    'level_id' => $request->level_id,
                     'updated_at' => now(),
                 ]);
 
@@ -844,14 +804,14 @@ public function getSectionsData(Request $request)
                 'updated',
                 'sections',
                 (string)$id,
-                "Updated section: {$request->name} ({$code})",
+                "Updated section name: {$request->name} ({$section->code})",
                 $oldValues,
                 $newValues
             );
 
             \Log::info('Section updated successfully', [
                 'section_id' => $id,
-                'code' => $code,
+                'code' => $section->code,
                 'name' => $request->name,
             ]);
 
@@ -859,8 +819,7 @@ public function getSectionsData(Request $request)
 
             return response()->json([
                 'success' => true,
-                'message' => 'Section updated successfully!',
-                'code' => $code
+                'message' => 'Section updated successfully!'
             ]);
         } catch (Exception $e) {
             DB::rollBack();

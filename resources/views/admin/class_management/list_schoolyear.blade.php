@@ -72,8 +72,8 @@
                         <button class="btn btn-tool text-white" id="editYearBtn" title="Edit School Year">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-tool text-white" id="archiveManagementBtn" title="Archive Management">
-                            <i class="fas fa-archive"></i>
+                        <button class="btn btn-tool text-white" id="addSemesterBtn" title="Add Semester">
+                            <i class="fas fa-plus"></i>
                         </button>
                     </div>
                 </div>
@@ -97,8 +97,11 @@
                                 <button class="btn btn-secondary btn-sm mr-2" id="viewSemestersBtn">
                                     <i class="fas fa-eye"></i> View Semesters
                                 </button>
-                                <button class="btn btn-secondary btn-sm" id="addSemesterBtn">
-                                    <i class="fas fa-plus"></i> Add Semester
+                                <button class="btn btn-secondary btn-sm mr-2" id="archiveManagementBtn">
+                                    <i class="fas fa-archive"></i> Activate Semester
+                                </button>
+                                <button class="btn btn-primary btn-sm" id="graduationBtn" style="display:none;" title="Manage Graduation">
+                                    <i class="fas fa-graduation-cap"></i> Graduation
                                 </button>
                             </div>
                         </div>
@@ -232,17 +235,18 @@
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         const API_ROUTES = {
-            getSchoolYears: "{{ route('admin.schoolyears.list') }}",
+            getSchoolYears:   "{{ route('admin.schoolyears.list') }}",
             createSchoolYear: "{{ route('admin.schoolyears.create') }}",
             updateSchoolYear: "{{ route('admin.schoolyears.update', ['id' => ':id']) }}",
-            setActive: "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}",
-            getSemesters: "{{ route('admin.semesters.list') }}",
-            createSemester: "{{ route('admin.semesters.create') }}",
-            updateSemester: "{{ route('admin.semesters.update', ['id' => ':id']) }}",
-            setActiveSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
-            semestersPage: "{{ route('admin.semesters.index') }}",
+            setActive:        "{{ route('admin.schoolyears.set-active', ['id' => ':id']) }}",
+            getSemesters:     "{{ route('admin.semesters.list') }}",
+            createSemester:   "{{ route('admin.semesters.create') }}",
+            updateSemester:   "{{ route('admin.semesters.update', ['id' => ':id']) }}",
+            setActiveSemester:"{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
+            semestersPage:    "{{ route('admin.semesters.index') }}",
             archiveManagementPage: "{{ route('admin.archive.index') }}",
-            csrfToken: "{{ csrf_token() }}"
+            graduationPage:   "{{ route('admin.graduation.show', ['schoolYearId' => ':id']) }}",
+            csrfToken:        "{{ csrf_token() }}"
         };
         
         const MAX_SEMESTERS = {{ $max_semesters ?? 3 }};

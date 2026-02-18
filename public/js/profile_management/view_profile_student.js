@@ -113,28 +113,46 @@ $(document).ready(function () {
     //  Guardian Status Management
     // ---------------------------------------------------------------------------
 
-    function loadGuardianStatuses() {
-        $('.verification-status').each(function() {
-            const guardianId = $(this).data('guardian-id');
-            const $status = $(this);
-            const $actionBtn = $(`.btn-email-action[data-guardian-id="${guardianId}"]`);
+function loadGuardianStatuses() {
+    $('.verification-status').each(function() {
+        const guardianId = $(this).data('guardian-id');
+        
+        // Skip if no guardian ID (empty guardian placeholder)
+        if (!guardianId || guardianId === '') {
+            console.log('Skipping empty guardian ID');
+            $(this).closest('.guardian-card').find('.guardian-actions').hide();
+            return;
+        }
+        
+        const $status = $(this);
+        const $actionBtn = $(`.btn-email-action[data-guardian-id="${guardianId}"]`);
 
-            $.ajax({
-                url: `/admin/profile/student/${API_ROUTES.studentId}/guardian/${guardianId}/status`,
-                type: 'GET',
-                success: function(response) {
-                    if (response.success) {
-                        updateGuardianStatus(guardianId, response.is_verified);
-                    }
-                },
-                error: function() {
-                    $status.removeClass('badge-info badge-primary').addClass('badge-secondary')
-                        .html('<i class="fas fa-exclamation-triangle"></i> <small>Unknown</small>');
-                    $actionBtn.prop('disabled', true);
+        $.ajax({
+            url: `/admin/profile/student/${API_ROUTES.studentId}/guardian/${guardianId}/status`,
+            type: 'GET',
+            success: function(response) {
+                console.log('Guardian status response:', response);
+                if (response.success) {
+                    updateGuardianStatus(guardianId, response.is_verified);
                 }
-            });
+            },
+            error: function(xhr) {
+                console.error('Guardian status error:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    response: xhr.responseJSON,
+                    responseText: xhr.responseText,
+                    guardianId: guardianId,
+                    studentId: API_ROUTES.studentId
+                });
+                
+                $status.removeClass('badge-info badge-primary').addClass('badge-secondary')
+                    .html('<i class="fas fa-exclamation-triangle"></i> <small>Error</small>');
+                $actionBtn.prop('disabled', true);
+            }
         });
-    }
+    });
+}
 
     function updateGuardianStatus(guardianId, isVerified) {
         const $status = $(`.verification-status[data-guardian-id="${guardianId}"]`);

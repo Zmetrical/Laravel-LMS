@@ -586,13 +586,13 @@
     </div>
 </div>
 
-    <!-- Import Modal -->
+<!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary">
+            <div class="modal-header bg-secondary">
                 <h5 class="modal-title text-white">
-                    <i class="fas fa-file-import"></i> Import Scores
+                    <i class="fas fa-file-import"></i> Import Scores from Excel
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
@@ -600,41 +600,51 @@
             </div>
             <form id="importForm" enctype="multipart/form-data">
                 <div class="modal-body">
+
                     <div class="form-group">
                         <label>Excel File <span class="text-danger">*</span></label>
                         <div class="custom-file">
-                            <input type="file" class="custom-file-input" id="importFile" 
-                                   accept=".xlsx,.xls" required>
-                            <label class="custom-file-label" for="importFile">Choose file...</label>
+<input type="file" class="custom-file-input" id="importScoreFile" accept=".xlsx,.xls" required>
+<label class="custom-file-label" for="importScoreFile">Choose file...</label>
                         </div>
                         <small class="form-text text-muted">
-                            Maximum file size: 5MB. Accepted formats: .xlsx, .xls
+                            Use the exported class record file. Max 5MB. Accepted: .xlsx, .xls
                         </small>
                     </div>
 
-                    <div class="form-group">
-                        <label>Component Type <span class="text-danger">*</span></label>
-                        <select class="form-control" id="importComponentType" required>
-                            <option value="">Select Component</option>
-                            <option value="WW">Written Work (WW)</option>
-                            <option value="PT">Performance Task (PT)</option>
-                            <option value="QA">Quarterly Assessment (QA)</option>
-                        </select>
+                    <hr>
+
+                    <div id="importColumnsSection">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="mb-0 font-weight-bold">
+                                Select Columns to Import <span class="text-danger">*</span>
+                            </label>
+                            <div>
+                                <button type="button" class="btn btn-secondary btn-xs" id="selectAllColumnsBtn">
+                                    <i class="fas fa-check-square"></i> Select All
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-xs ml-1" id="deselectAllColumnsBtn">
+                                    <i class="far fa-square"></i> Deselect All
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="importColumnsList">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin"></i> Loading columns...
+                            </div>
+                        </div>
+
+                        <small class="form-text text-muted mt-1">
+                            Only active face-to-face columns are listed. Online columns import automatically from quiz scores.
+                        </small>
                     </div>
 
-                    <div class="form-group" id="importColumnGroup" style="display: none;">
-                        <label>Column Number <span class="text-danger">*</span></label>
-                        <select class="form-control" id="importColumnNumber" required>
-                            <option value="">Select Column</option>
-                        </select>
-                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-upload"></i> Import
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-secondary" id="importSubmitBtn" disabled>
+                        <i class="fas fa-upload"></i> Import Selected
                     </button>
                 </div>
             </form>

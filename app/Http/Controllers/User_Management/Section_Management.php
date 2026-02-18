@@ -19,22 +19,17 @@ class Section_Management extends MainController
      */
     public function assign_section(Request $request)
     {
-        $sections = Section::where('status', 1)->get();
-        
-        // Get semesters - ordered chronologically (newest first)
-        $semesters = DB::table('semesters')
+        // Get current active semester
+        $currentSemester = DB::table('semesters')
             ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+            ->where('semesters.status', 'active')
             ->select(
                 'semesters.id',
                 'semesters.name as semester_name',
                 'semesters.code as semester_code',
-                'school_years.code as year_code',
-                'school_years.year_start',
-                'semesters.status'
+                'school_years.code as year_code'
             )
-            ->orderBy('school_years.year_start', 'desc')
-            ->orderBy('semesters.code', 'desc') // 2nd semester before 1st semester
-            ->get();
+            ->first();
 
         // Get all strands for target selection
         $strands = DB::table('strands')
@@ -42,37 +37,48 @@ class Section_Management extends MainController
             ->orderBy('name')
             ->get();
 
+        // Get all levels for target selection
+        $levels = DB::table('levels')
+            ->orderBy('id')
+            ->get();
+
         $data = [
             'scripts' => [
                 'user_management/assign_section.js',
             ],
-            'sections' => $sections,
-            'semesters' => $semesters,
+            'currentSemester' => $currentSemester,
             'strands' => $strands,
+            'levels' => $levels,
         ];
 
         return view('admin.user_management.assign_section', $data);
     }
 
     /**
-     * Load all students from a specific semester
+     * Load all students from current active semester
      */
-    public function load_students_by_semester(Request $request)
+    public function load_students(Request $request)
     {
-        $request->validate([
-            'semester_id' => 'required|exists:semesters,id'
-        ]);
-
         try {
-            $semesterId = $request->semester_id;
+            // Get current active semester
+            $currentSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
 
-            // Get all students enrolled in this semester
+            if (!$currentSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 404);
+            }
+
+            // Get all students enrolled in the current semester
             $students = DB::table('student_semester_enrollment as sse')
                 ->join('students as s', 'sse.student_number', '=', 's.student_number')
                 ->leftJoin('sections as sec', 'sse.section_id', '=', 'sec.id')
                 ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
                 ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
-                ->where('sse.semester_id', $semesterId)
+                ->where('sse.semester_id', $currentSemester->id)
                 ->where('sse.enrollment_status', 'enrolled')
                 ->select(
                     's.id',
@@ -97,11 +103,12 @@ class Section_Management extends MainController
             return response()->json([
                 'success' => true,
                 'students' => $students,
-                'count' => count($students)
+                'count' => count($students),
+                'semester' => $currentSemester
             ]);
 
         } catch (Exception $e) {
-            \Log::error('Failed to load students by semester', [
+            \Log::error('Failed to load students', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -114,28 +121,38 @@ class Section_Management extends MainController
     }
 
     /**
-     * Get sections for a specific semester (for filter dropdown)
+     * Get filter options (sections and strands) for current semester
      */
-    public function get_sections_by_semester(Request $request)
+    public function get_filter_options(Request $request)
     {
-        $request->validate([
-            'semester_id' => 'required|exists:semesters,id'
-        ]);
-
         try {
-            $semesterId = $request->semester_id;
+            // Get current active semester
+            $currentSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
 
-            // Get all sections that have students enrolled in this semester
-            $sections = DB::table('student_semester_enrollment as sse')
-                ->join('sections as sec', 'sse.section_id', '=', 'sec.id')
-                ->where('sse.semester_id', $semesterId)
-                ->where('sse.enrollment_status', 'enrolled')
+            if (!$currentSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 404);
+            }
+
+            // Get ALL active sections with their strand and level info
+            $sections = DB::table('sections as sec')
+                ->join('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                ->where('sec.status', 1)
+                ->where('sec.is_active', 1)
                 ->select(
                     'sec.id',
                     'sec.code',
-                    'sec.name'
+                    'sec.name',
+                    'sec.strand_id',
+                    'sec.level_id',
+                    'str.name as strand_name',
+                    'lvl.name as level_name'
                 )
-                ->distinct()
                 ->orderBy('sec.code')
                 ->get();
 
@@ -145,7 +162,7 @@ class Section_Management extends MainController
             ]);
 
         } catch (Exception $e) {
-            \Log::error('Failed to get sections by semester', [
+            \Log::error('Failed to get filter options', [
                 'error' => $e->getMessage()
             ]);
 
@@ -157,52 +174,37 @@ class Section_Management extends MainController
     }
 
     /**
-     * Get available target sections for a specific strand
-     * Grouped by level (current and next level)
+     * Get available target sections for a specific strand and level
      */
     public function get_target_sections(Request $request)
     {
         $request->validate([
             'strand_id' => 'required|exists:strands,id',
-            'current_level_id' => 'required|exists:levels,id',
-            'semester_id' => 'nullable|exists:semesters,id'
+            'level_id' => 'required|exists:levels,id'
         ]);
 
         try {
             $strandId = $request->strand_id;
-            $currentLevelId = $request->current_level_id;
-            $semesterId = $request->semester_id;
+            $levelId = $request->level_id;
 
-            // Get current level info
-            $currentLevel = DB::table('levels')->find($currentLevelId);
-
-            // Determine next level (assuming level IDs are sequential)
-            $nextLevel = DB::table('levels')
-                ->where('id', '>', $currentLevelId)
-                ->orderBy('id', 'asc')
+            // Get current active semester
+            $currentSemester = DB::table('semesters')
+                ->where('status', 'active')
                 ->first();
 
-            // Get sections for current level with capacity info
-            $currentLevelSections = $this->getSectionsWithCapacity($strandId, $currentLevelId, $semesterId);
-
-            // Get sections for next level (if exists)
-            $nextLevelSections = [];
-            if ($nextLevel) {
-                $nextLevelSections = $this->getSectionsWithCapacity($strandId, $nextLevel->id, $semesterId);
+            if (!$currentSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 404);
             }
+
+            // Get sections for the selected strand and level with capacity info
+            $sections = $this->getSectionsWithCapacity($strandId, $levelId, $currentSemester->id);
 
             return response()->json([
                 'success' => true,
-                'current_level' => [
-                    'id' => $currentLevel->id,
-                    'name' => $currentLevel->name,
-                    'sections' => $currentLevelSections
-                ],
-                'next_level' => $nextLevel ? [
-                    'id' => $nextLevel->id,
-                    'name' => $nextLevel->name,
-                    'sections' => $nextLevelSections
-                ] : null
+                'sections' => $sections
             ]);
 
         } catch (Exception $e) {
@@ -247,18 +249,28 @@ class Section_Management extends MainController
     }
 
     /**
-     * Get section capacity and enrolled count for a specific semester
+     * Get section capacity and enrolled count
      */
     public function get_section_capacity(Request $request)
     {
         $request->validate([
-            'section_id' => 'required|exists:sections,id',
-            'semester_id' => 'nullable|exists:semesters,id'
+            'section_id' => 'required|exists:sections,id'
         ]);
 
         try {
             $sectionId = $request->section_id;
-            $semesterId = $request->semester_id;
+
+            // Get current active semester
+            $currentSemester = DB::table('semesters')
+                ->where('status', 'active')
+                ->first();
+
+            if (!$currentSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 404);
+            }
 
             // Get section capacity
             $section = DB::table('sections')
@@ -272,8 +284,9 @@ class Section_Management extends MainController
                 ], 404);
             }
 
+            
             // Get enrolled count
-            $enrolledCount = $this->getSectionEnrolledCount($sectionId, $semesterId);
+            $enrolledCount = $this->getSectionEnrolledCount($sectionId, $currentSemester->id);
 
             return response()->json([
                 'success' => true,
@@ -294,18 +307,10 @@ class Section_Management extends MainController
     }
 
     /**
-     * Helper function to get enrolled count for a section in a specific semester
+     * Helper function to get enrolled count for a section in current semester
      */
     private function getSectionEnrolledCount($sectionId, $semesterId)
     {
-        if (!$semesterId) {
-            // No semester filter - count all students in section
-            return DB::table('students')
-                ->where('section_id', $sectionId)
-                ->count();
-        }
-
-        // Count students enrolled in this section for this semester
         return DB::table('student_semester_enrollment')
             ->where('section_id', $sectionId)
             ->where('semester_id', $semesterId)
@@ -314,12 +319,11 @@ class Section_Management extends MainController
     }
 
     /**
-     * Assign students to new section and enroll in target semester
+     * Assign students to new section (within current semester)
      */
     public function assign_students(Request $request)
     {
         $request->validate([
-            'semester_id' => 'required|exists:semesters,id',
             'section_id' => 'required|exists:sections,id',
             'students' => 'required|array|min:1',
             'students.*.student_number' => 'required|exists:students,student_number',
@@ -330,17 +334,27 @@ class Section_Management extends MainController
         try {
             DB::beginTransaction();
 
-            $semesterId = $request->semester_id;
+            // Get current active semester
+            $currentSemester = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->where('semesters.status', 'active')
+                ->select(
+                    'semesters.id',
+                    'semesters.name as semester_name',
+                    'school_years.code as sy_code'
+                )
+                ->first();
+
+            if (!$currentSemester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active semester found'
+                ], 404);
+            }
+
             $assignedCount = 0;
             $errors = [];
             $auditRecords = [];
-
-            // Get semester info for audit
-            $semester = DB::table('semesters')
-                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
-                ->where('semesters.id', $semesterId)
-                ->select('semesters.name as semester_name', 'school_years.code as sy_code')
-                ->first();
 
             foreach ($request->students as $studentData) {
                 try {
@@ -383,51 +397,21 @@ class Section_Management extends MainController
                         'updated_at' => now()
                     ]);
 
-                    // 2. Handle semester enrollment record
-                    $existingEnrollment = DB::table('student_semester_enrollment')
+                    // 2. Update semester enrollment record (same semester, just changing section)
+                    DB::table('student_semester_enrollment')
                         ->where('student_number', $studentNumber)
-                        ->where('semester_id', $semesterId)
-                        ->first();
-
-                    if ($existingEnrollment) {
-                        // UPDATE: Same semester, just changing section
-                        DB::table('student_semester_enrollment')
-                            ->where('id', $existingEnrollment->id)
-                            ->update([
-                                'section_id' => $newSectionId,
-                                'enrollment_status' => 'enrolled',
-                                'updated_at' => now()
-                            ]);
-                    } else {
-                        // INSERT: New semester enrollment
-                        
-                        // Mark previous enrollments as completed
-                        DB::table('student_semester_enrollment')
-                            ->where('student_number', $studentNumber)
-                            ->where('enrollment_status', 'enrolled')
-                            ->update([
-                                'enrollment_status' => 'completed',
-                                'updated_at' => now()
-                            ]);
-
-                        // Create new enrollment for target semester
-                        DB::table('student_semester_enrollment')->insert([
-                            'student_number' => $studentNumber,
-                            'semester_id' => $semesterId,
+                        ->where('semester_id', $currentSemester->id)
+                        ->update([
                             'section_id' => $newSectionId,
-                            'enrollment_status' => 'enrolled',
-                            'enrollment_date' => now()->toDateString(),
-                            'created_at' => now(),
                             'updated_at' => now()
                         ]);
-                    }
 
                     // 3. Handle class enrollments based on student type
                     if ($studentType === 'regular') {
                         // REGULAR: Remove individual class enrollments (they follow section)
                         $sectionClasses = DB::table('section_class_matrix')
                             ->where('section_id', $newSectionId)
-                            ->where('semester_id', $semesterId)
+                            ->where('semester_id', $currentSemester->id)
                             ->get(['class_id']);
 
                         foreach ($sectionClasses as $sectionClass) {
@@ -438,7 +422,7 @@ class Section_Management extends MainController
                             DB::table('student_class_matrix')
                                 ->where('student_number', $studentNumber)
                                 ->where('class_code', $classCode)
-                                ->where('semester_id', $semesterId)
+                                ->where('semester_id', $currentSemester->id)
                                 ->delete();
                         }
 
@@ -446,7 +430,7 @@ class Section_Management extends MainController
                         // IRREGULAR: Enroll in all section classes individually
                         $sectionClasses = DB::table('section_class_matrix')
                             ->where('section_id', $newSectionId)
-                            ->where('semester_id', $semesterId)
+                            ->where('semester_id', $currentSemester->id)
                             ->get(['class_id']);
 
                         foreach ($sectionClasses as $sectionClass) {
@@ -457,14 +441,14 @@ class Section_Management extends MainController
                             $exists = DB::table('student_class_matrix')
                                 ->where('student_number', $studentNumber)
                                 ->where('class_code', $classCode)
-                                ->where('semester_id', $semesterId)
+                                ->where('semester_id', $currentSemester->id)
                                 ->exists();
 
                             if (!$exists) {
                                 DB::table('student_class_matrix')->insert([
                                     'student_number' => $studentNumber,
                                     'class_code' => $classCode,
-                                    'semester_id' => $semesterId,
+                                    'semester_id' => $currentSemester->id,
                                     'enrollment_status' => 'enrolled',
                                     'updated_at' => now()
                                 ]);
@@ -482,9 +466,6 @@ class Section_Management extends MainController
                             'section_code' => $newSection ? $newSection->code : null,
                             'section_name' => $newSection ? $newSection->name : null,
                             'student_type' => $studentType,
-                            'semester_id' => $semesterId,
-                            'semester_name' => $semester->semester_name ?? null,
-                            'school_year' => $semester->sy_code ?? null,
                         ]
                     ];
 
@@ -504,12 +485,12 @@ class Section_Management extends MainController
                     'assigned',
                     'students',
                     null,
-                    "Bulk assigned {$assignedCount} student(s) to sections for {$semester->semester_name} {$semester->sy_code}",
+                    "Bulk assigned {$assignedCount} student(s) to sections for {$currentSemester->semester_name} {$currentSemester->sy_code}",
                     null,
                     [
-                        'semester_id' => $semesterId,
-                        'semester_name' => $semester->semester_name ?? null,
-                        'school_year' => $semester->sy_code ?? null,
+                        'semester_id' => $currentSemester->id,
+                        'semester_name' => $currentSemester->semester_name,
+                        'school_year' => $currentSemester->sy_code,
                         'total_students' => $assignedCount,
                         'assignments' => $auditRecords
                     ]

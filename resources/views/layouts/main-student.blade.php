@@ -225,6 +225,13 @@
                                     <p>My Grades</p>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a href="{{ route('student.list_gradecard') }}" 
+                                class="nav-link {{ Request::routeIs('student.list_gradecard') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-th-list"></i>
+                                    <p>My Card</p>
+                                </a>
+                            </li>
 
                             <div class="nav-divider"></div>
 

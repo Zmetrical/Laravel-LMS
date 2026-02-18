@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Enrollment_Management;
+use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\MainController;
 use Illuminate\Http\Request;
@@ -450,61 +451,96 @@ class SectionController extends MainController
     /**
      * Assign adviser to section
      */
-    public function assignAdviser(Request $request, $sectionId)
-    {
-        $request->validate([
-            'teacher_id' => 'required|exists:teachers,id',
-            'semester_id' => 'required|exists:semesters,id'
-        ]);
+public function assignAdviser(Request $request, $sectionId)
+{
+    $request->validate([
+        'teacher_id' => 'required|exists:teachers,id',
+        'semester_id' => 'required|exists:semesters,id'
+    ]);
 
-        try {
-            DB::beginTransaction();
+    try {
+        DB::beginTransaction();
 
-            // Check if teacher exists and is active
-            $teacher = DB::table('teachers')
-                ->where('id', $request->teacher_id)
-                ->where('status', 1)
-                ->first();
+        // Check if teacher exists and is active
+        $teacher = DB::table('teachers')
+            ->where('id', $request->teacher_id)
+            ->where('status', 1)
+            ->first();
 
-            if (!$teacher) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Teacher not found or inactive'
-                ], 404);
-            }
-
-            // Delete existing adviser for this section-semester
-            DB::table('section_adviser_matrix')
-                ->where('section_id', $sectionId)
-                ->where('semester_id', $request->semester_id)
-                ->delete();
-
-            // Insert new adviser
-            DB::table('section_adviser_matrix')->insert([
-                'section_id' => $sectionId,
-                'teacher_id' => $request->teacher_id,
-                'semester_id' => $request->semester_id,
-                'assigned_date' => now()->toDateString(),
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Adviser assigned successfully'
-            ]);
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            
+        if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign adviser: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Teacher not found or inactive'
+            ], 404);
         }
+
+        // Get school year from semester
+        $semester = DB::table('semesters')
+            ->where('id', $request->semester_id)
+            ->first();
+
+        // Delete existing adviser for this section-semester
+        DB::table('section_adviser_matrix')
+            ->where('section_id', $sectionId)
+            ->where('semester_id', $request->semester_id)
+            ->delete();
+
+        // Insert new adviser
+        DB::table('section_adviser_matrix')->insert([
+            'section_id' => $sectionId,
+            'teacher_id' => $request->teacher_id,
+            'semester_id' => $request->semester_id,
+            'assigned_date' => now()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        // ✅ CREATE INITIAL TEACHER STATUS TRAIL
+        $this->ensureTeacherActiveTrail($request->teacher_id, $semester->school_year_id);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Adviser assigned successfully'
+        ]);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to assign adviser: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+private function ensureTeacherActiveTrail($teacherId, $schoolYearId)
+{
+    $existing = DB::table('teacher_school_year_status')
+        ->where('teacher_id', $teacherId)
+        ->where('school_year_id', $schoolYearId)
+        ->first();
+    
+    // Only create initial trail if none exists
+    if (!$existing) {
+        DB::table('teacher_school_year_status')->insert([
+            'teacher_id' => $teacherId,
+            'school_year_id' => $schoolYearId,
+            'status' => 'active',
+            'reactivated_by' => Auth::guard('admin')->id(),
+            'reactivated_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        \Log::info('Created initial teacher status trail', [
+            'teacher_id' => $teacherId,
+            'school_year_id' => $schoolYearId,
+            'trigger' => 'adviser_assignment'
+        ]);
+    }
+}
 
     /**
      * Remove adviser from section

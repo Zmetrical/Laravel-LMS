@@ -101,6 +101,7 @@
     const API_ROUTES = {
         getGrades: "{{ route('teacher.class.grades.list', ['classId' => $class->id]) }}",
         getParticipants: "{{ route('teacher.class.participants.list', ['classId' => $class->id]) }}",
+        gradebookEditUrl: "{{ route('teacher.gradebook.edit', ['classId' => $class->id]) }}",
         classId: {{ $class->id }}
     };
 </script>

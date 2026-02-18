@@ -1,10 +1,24 @@
 $(document).ready(function() {
     let loadedStudents = [];
-    let allStudents = []; // Store all loaded students from semester
-    let sourceStrandId = null;
-    let sourceLevelId = null;
+    let allStudents = [];
     let targetSectionCapacity = null;
     let targetSectionEnrolled = null;
+    let currentTargetStrandId = null;
+    let currentTargetLevelId = null;
+    let sectionStrandMap = {}; // Maps section_id to strand_id
+    let sectionLevelMap = {}; // Maps section_id to level_id
+    let isProgrammaticChange = false; // Flag to prevent warning popups on auto-updates
+
+    // Check if there's an active semester
+    if (!HAS_ACTIVE_SEMESTER) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Active Semester',
+            text: 'Please activate a semester before assigning students to sections.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
 
     // =========================================================================
     // TOAST CONFIGURATION
@@ -22,156 +36,30 @@ $(document).ready(function() {
     });
 
     // =========================================================================
-    // INITIALIZE QUICK ACCESS BUTTONS FOR SEMESTERS
-    // =========================================================================
-    function initializeQuickAccessButtons() {
-        const semesters = SEMESTERS_DATA;
-        
-        console.log('=== SEMESTER ORDERING DEBUG ===');
-        console.log('Total semesters:', semesters.length);
-        semesters.forEach((sem, idx) => {
-            console.log(`Index ${idx}: ${sem.year_code} - ${sem.semester_name} (ID: ${sem.id}, Status: ${sem.status})`);
-        });
-        
-        // Find active semester
-        const activeSemester = semesters.find(s => s.status === 'active');
-        
-        if (!activeSemester) {
-            console.log('❌ No active semester found');
-            return;
-        }
-        
-        console.log('✓ Active semester:', activeSemester.year_code, '-', activeSemester.semester_name);
-        
-        const activeSemesterIndex = semesters.findIndex(s => s.id === activeSemester.id);
-        console.log('✓ Active semester is at index:', activeSemesterIndex);
-        
-        // Find previous semester (could be from previous school year)
-        // Semesters are ordered DESC by year and semester, so next in array is previous chronologically
-        let previousSemester = null;
-        if (activeSemesterIndex + 1 < semesters.length) {
-            previousSemester = semesters[activeSemesterIndex + 1];
-            console.log('✓ Previous semester found:', previousSemester.year_code, '-', previousSemester.semester_name);
-        } else {
-            console.log('⚠ No previous semester available (active is the oldest)');
-        }
-        
-        // Find next semester (could be from next school year)
-        // Previous in array is next chronologically
-        let nextSemester = null;
-        if (activeSemesterIndex - 1 >= 0) {
-            nextSemester = semesters[activeSemesterIndex - 1];
-            console.log('✓ Next semester found:', nextSemester.year_code, '-', nextSemester.semester_name);
-        } else {
-            console.log('⚠ No next semester available (active is the newest)');
-        }
-        
-        console.log('=== END DEBUG ===');
-        
-        // SOURCE SEMESTER QUICK ACCESS - Show Previous and Active
-        let sourceQuickHTML = '';
-        
-        // Previous semester button (one before active, could be from previous school year)
-        if (previousSemester) {
-            sourceQuickHTML += `
-                <button type="button" class="btn btn-sm btn-secondary btn-block semester-quick-btn" 
-                        data-semester-id="${previousSemester.id}" data-target="source">
-                    <i class="fas fa-step-backward mr-1"></i> Previous (${previousSemester.semester_name})
-                </button>
-            `;
-        }
-        
-        // Active semester button
-        sourceQuickHTML += `
-            <button type="button" class="btn btn-sm btn-secondary btn-block semester-quick-btn" 
-                    data-semester-id="${activeSemester.id}" data-target="source">
-                <i class="fas fa-check-circle mr-1"></i> Active (${activeSemester.semester_name})
-            </button>
-        `;
-        
-        $('#sourceSemesterQuick').html(sourceQuickHTML);
-        
-        // TARGET SEMESTER QUICK ACCESS - Show Active and Next
-        let targetQuickHTML = `
-            <button type="button" class="btn btn-sm btn-primary btn-block semester-quick-btn active" 
-                    data-semester-id="${activeSemester.id}" data-target="target">
-                <i class="fas fa-check-circle mr-1"></i> Active (${activeSemester.semester_name})
-            </button>
-        `;
-        
-        // Next semester button (could be from next school year)
-        if (nextSemester) {
-            targetQuickHTML += `
-                <button type="button" class="btn btn-sm btn-secondary btn-block semester-quick-btn" 
-                        data-semester-id="${nextSemester.id}" data-target="target">
-                    <i class="fas fa-step-forward mr-1"></i> Next (${nextSemester.semester_name})
-                </button>
-            `;
-        }
-        
-        $('#targetSemesterQuick').html(targetQuickHTML);
-    }
-
-    // Initialize quick access buttons
-    initializeQuickAccessButtons();
-
-    // Handle quick access button clicks
-    $(document).on('click', '.semester-quick-btn', function() {
-        const semesterId = $(this).data('semester-id');
-        const target = $(this).data('target');
-        
-        if (target === 'source') {
-            $('#source_semester').val(semesterId).trigger('change');
-            // Update active state
-            $('#sourceSemesterQuick .semester-quick-btn').removeClass('active btn-primary').addClass('btn-secondary');
-            $(this).addClass('active btn-primary').removeClass('btn-secondary');
-        } else {
-            $('#target_semester').val(semesterId).trigger('change');
-            // Update active state
-            $('#targetSemesterQuick .semester-quick-btn').removeClass('active btn-primary').addClass('btn-secondary');
-            $(this).addClass('active btn-primary').removeClass('btn-secondary');
-        }
-    });
-
-    // =========================================================================
     // INITIALIZE SELECT2
     // =========================================================================
     $('#filter_section').select2({
         theme: 'bootstrap4',
-        placeholder: 'All Sections',
         allowClear: true,
         width: '100%'
     });
 
-    $('#target_section').select2({
+    $('#target_strand, #target_level').select2({
         theme: 'bootstrap4',
-        placeholder: 'Select section...',
         allowClear: true,
         width: '100%'
     });
 
     // =========================================================================
-    // SOURCE SEMESTER CHANGE - LOAD STUDENTS
+    // AUTO-LOAD STUDENTS ON PAGE LOAD
     // =========================================================================
-    $('#source_semester').on('change', function() {
-        const semesterId = $(this).val();
-        
-        if (!semesterId) {
-            clearStudentTable();
-            $('#filterOptions').hide();
-            $('#filter_section').empty().append('<option value="">All Sections</option>');
-            return;
-        }
-
-        loadStudentsBySemester(semesterId);
-        loadSectionsBySemester(semesterId);
-        $('#filterOptions').show();
-    });
+    loadStudents();
+    loadFilterOptions();
 
     // =========================================================================
-    // LOAD STUDENTS BY SEMESTER
+    // LOAD STUDENTS FROM CURRENT SEMESTER
     // =========================================================================
-    function loadStudentsBySemester(semesterId) {
+    function loadStudents() {
         $('#assignmentTableBody').html(`
             <tr>
                 <td colspan="6" class="text-center py-4">
@@ -182,26 +70,27 @@ $(document).ready(function() {
         `);
 
         $.ajax({
-            url: API_ROUTES.loadStudentsBySemester,
+            url: API_ROUTES.loadStudents,
             type: 'POST',
             data: {
-                _token: $('input[name="_token"]').val(),
-                semester_id: semesterId
+                _token: $('input[name="_token"]').val()
             },
             success: function(response) {
                 if (response.success) {
                     allStudents = response.students;
                     loadedStudents = response.students;
                     
-                    // Auto-detect strand and level from first student
-                    if (loadedStudents.length > 0) {
-                        const firstStudent = loadedStudents[0];
-                        if (firstStudent.strand_id && firstStudent.level_id) {
-                            sourceStrandId = firstStudent.strand_id;
-                            sourceLevelId = firstStudent.level_id;
-                            $('#target_strand').val(sourceStrandId).trigger('change');
+                    // Build section-strand and section-level maps
+                    response.students.forEach(function(student) {
+                        if (student.current_section_id) {
+                            if (student.strand_id) {
+                                sectionStrandMap[student.current_section_id] = student.strand_id;
+                            }
+                            if (student.level_id) {
+                                sectionLevelMap[student.current_section_id] = student.level_id;
+                            }
                         }
-                    }
+                    });
                     
                     populateStudentTable(loadedStudents);
                     
@@ -226,23 +115,36 @@ $(document).ready(function() {
     }
 
     // =========================================================================
-    // LOAD SECTIONS BY SEMESTER (for filter dropdown)
+    // LOAD FILTER OPTIONS (Sections only)
     // =========================================================================
-    function loadSectionsBySemester(semesterId) {
+    function loadFilterOptions() {
         $.ajax({
-            url: API_ROUTES.getSectionsBySemester,
+            url: API_ROUTES.getFilterOptions,
             type: 'POST',
             data: {
-                _token: $('input[name="_token"]').val(),
-                semester_id: semesterId
+                _token: $('input[name="_token"]').val()
             },
             success: function(response) {
                 if (response.success) {
-                    const $select = $('#filter_section');
-                    $select.empty().append('<option value="">All Sections</option>');
-                    
+                    // Populate section filter without strand name
+                    const $sectionFilter = $('#filter_section');
+                    $sectionFilter.empty().append('<option value="">All Sections</option>');
                     response.sections.forEach(function(section) {
-                        $select.append(`<option value="${section.id}">${section.name} (${section.code})</option>`);
+                        const $option = $('<option>')
+                            .val(section.id)
+                            .text(`${section.name} (${section.code}) - ${section.level_name}`)
+                            .attr('data-strand-id', section.strand_id)
+                            .attr('data-level-id', section.level_id);
+                        
+                        $sectionFilter.append($option);
+                        
+                        // Update maps
+                        if (section.strand_id) {
+                            sectionStrandMap[section.id] = section.strand_id;
+                        }
+                        if (section.level_id) {
+                            sectionLevelMap[section.id] = section.level_id;
+                        }
                     });
                 }
             }
@@ -250,21 +152,60 @@ $(document).ready(function() {
     }
 
     // =========================================================================
-    // FILTER BY SECTION
+    // FILTER BY SECTION - Auto-update target strand and level
     // =========================================================================
     $('#filter_section').on('change', function() {
         const sectionId = $(this).val();
         
-        if (!sectionId) {
-            // Show all students
-            loadedStudents = allStudents;
-        } else {
-            // Filter by section
-            loadedStudents = allStudents.filter(s => s.current_section_id == sectionId);
+        if (sectionId) {
+            // Get strand and level from selected option or maps
+            let strandId = $(this).find('option:selected').data('strand-id');
+            let levelId = $(this).find('option:selected').data('level-id');
+            
+            if (!strandId) {
+                strandId = sectionStrandMap[sectionId];
+            }
+            if (!levelId) {
+                levelId = sectionLevelMap[sectionId];
+            }
+            
+            // Set flag to prevent warning popups
+            isProgrammaticChange = true;
+            
+            // Update target strand
+            if (strandId && $('#target_strand').val() !== strandId) {
+                currentTargetStrandId = strandId;
+                $('#target_strand').val(strandId).trigger('change.select2');
+            }
+            
+            // Update target level
+            if (levelId && $('#target_level').val() !== levelId) {
+                currentTargetLevelId = levelId;
+                $('#target_level').val(levelId).trigger('change.select2');
+            }
+            
+            // Reset flag after a brief delay
+            setTimeout(function() {
+                isProgrammaticChange = false;
+            }, 100);
         }
         
-        populateStudentTable(loadedStudents);
+        applyFilters();
     });
+
+    // =========================================================================
+    // APPLY ALL FILTERS
+    // =========================================================================
+    function applyFilters() {
+        const sectionId = $('#filter_section').val();
+        
+        loadedStudents = allStudents.filter(function(student) {
+            let matchesSection = !sectionId || student.current_section_id == sectionId;
+            return matchesSection;
+        });
+        
+        populateStudentTable(loadedStudents);
+    }
 
     // =========================================================================
     // FILTER BY STUDENT SEARCH
@@ -288,18 +229,287 @@ $(document).ready(function() {
     });
 
     // =========================================================================
-    // TARGET STRAND CHANGE
+    // TARGET STRAND CHANGE - Show warning and update current section filter
     // =========================================================================
     $('#target_strand').on('change', function() {
-        const strandId = $(this).val();
-        const semesterId = $('#target_semester').val();
+        const newStrandId = $(this).val();
         
-        $('#target_section').empty().append('<option value="">Select section...</option>');
-        $('#capacityInfo').hide();
-        targetSectionCapacity = null;
-        targetSectionEnrolled = null;
+        // If empty, clear everything
+        if (!newStrandId) {
+            $('#target_section').val('');
+            $('#target_level').val('').trigger('change.select2');
+            $('.section-card').removeClass('selected');
+            $('#targetSectionCards').html(`
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-arrow-up"></i>
+                    <p class="mb-0"><small>Select strand and level first</small></p>
+                </div>
+            `);
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            currentTargetStrandId = null;
+            filterCurrentSections(null, null);
+            validateSubmitButton();
+            return;
+        }
         
-        if (!strandId || !sourceLevelId) {
+        // Check if changing to different strand (and not programmatic)
+        if (!isProgrammaticChange && currentTargetStrandId && currentTargetStrandId !== newStrandId) {
+            const strandName = $('#target_strand option:selected').text();
+            
+            Swal.fire({
+                title: 'Transferring to Different Strand',
+                html: `
+                    <div class="text-left">
+                        <p>You are changing the target strand to:</p>
+                        <p class="mb-0"><strong>${strandName}</strong></p>
+                        <hr>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle"></i> 
+                            Students will be transferred to a different strand
+                        </p>
+                    </div>
+                `,
+                icon: 'warning',
+                confirmButtonText: 'Continue',
+                showCancelButton: true,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // User confirmed - proceed with clearing and updating
+                    currentTargetStrandId = newStrandId;
+                    
+                    // Clear target section and level
+                    $('#target_section').val('');
+                    $('#target_level').val('').trigger('change.select2');
+                    $('.section-card').removeClass('selected');
+                    $('#targetSectionCards').html(`
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-arrow-up"></i>
+                            <p class="mb-0"><small>Select strand and level first</small></p>
+                        </div>
+                    `);
+                    targetSectionCapacity = null;
+                    targetSectionEnrolled = null;
+                    
+                    filterCurrentSections(newStrandId, currentTargetLevelId);
+                    validateSubmitButton();
+                } else {
+                    // User cancelled - revert to previous strand without clearing anything
+                    isProgrammaticChange = true;
+                    $('#target_strand').val(currentTargetStrandId).trigger('change.select2');
+                    setTimeout(function() {
+                        isProgrammaticChange = false;
+                    }, 100);
+                }
+            });
+        } else {
+            // First time selection or programmatic change
+            currentTargetStrandId = newStrandId;
+            
+            // Clear target section
+            $('#target_section').val('');
+            $('#target_level').val('').trigger('change.select2');
+            $('.section-card').removeClass('selected');
+            $('#targetSectionCards').html(`
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-arrow-up"></i>
+                    <p class="mb-0"><small>Select strand and level first</small></p>
+                </div>
+            `);
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            
+            filterCurrentSections(newStrandId, currentTargetLevelId);
+            validateSubmitButton();
+        }
+    });
+
+    // =========================================================================
+    // TARGET LEVEL CHANGE - Show warning and load sections
+    // =========================================================================
+    $('#target_level').on('change', function() {
+        const newLevelId = $(this).val();
+        
+        // If empty, clear everything
+        if (!newLevelId) {
+            $('#target_section').val('');
+            $('.section-card').removeClass('selected');
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            $('#targetSectionCards').html(`
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-arrow-up"></i>
+                    <p class="mb-0"><small>Select strand and level first</small></p>
+                </div>
+            `);
+            currentTargetLevelId = null;
+            filterCurrentSections(currentTargetStrandId, null);
+            validateSubmitButton();
+            return;
+        }
+        
+        // Check if changing to different level (and not programmatic)
+        if (!isProgrammaticChange && currentTargetLevelId && currentTargetLevelId !== newLevelId) {
+            const levelName = $('#target_level option:selected').text();
+            
+            Swal.fire({
+                title: 'Transferring to Different Level',
+                html: `
+                    <div class="text-left">
+                        <p>You are changing the target level to:</p>
+                        <p class="mb-0"><strong>${levelName}</strong></p>
+                        <hr>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle"></i> 
+                            Students will be transferred to a different grade level
+                        </p>
+                    </div>
+                `,
+                icon: 'warning',
+                confirmButtonText: 'Continue',
+                showCancelButton: true,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // User confirmed - proceed with clearing and loading sections
+                    currentTargetLevelId = newLevelId;
+                    
+                    // Clear target section
+                    $('#target_section').val('');
+                    $('.section-card').removeClass('selected');
+                    targetSectionCapacity = null;
+                    targetSectionEnrolled = null;
+                    
+                    // Show loading state
+                    $('#targetSectionCards').html(`
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p class="mb-0"><small>Loading sections...</small></p>
+                        </div>
+                    `);
+                    
+                    filterCurrentSections(currentTargetStrandId, newLevelId);
+                    loadTargetSections();
+                    validateSubmitButton();
+                } else {
+                    // User cancelled - revert to previous level without clearing anything
+                    isProgrammaticChange = true;
+                    if (currentTargetLevelId) {
+                        $('#target_level').val(currentTargetLevelId).trigger('change.select2');
+                    } else {
+                        $('#target_level').val('').trigger('change.select2');
+                    }
+                    setTimeout(function() {
+                        isProgrammaticChange = false;
+                    }, 100);
+                }
+            });
+        } else {
+            // First time selection or programmatic change
+            currentTargetLevelId = newLevelId;
+            
+            // Clear target section
+            $('#target_section').val('');
+            $('.section-card').removeClass('selected');
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            
+            filterCurrentSections(currentTargetStrandId, newLevelId);
+            
+            // Always load sections when level changes
+            if ($('#target_strand').val()) {
+                // Show loading state
+                $('#targetSectionCards').html(`
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p class="mb-0"><small>Loading sections...</small></p>
+                    </div>
+                `);
+                loadTargetSections();
+            } else {
+                $('#targetSectionCards').html(`
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-arrow-up"></i>
+                        <p class="mb-0"><small>Select strand first</small></p>
+                    </div>
+                `);
+            }
+            
+            validateSubmitButton();
+        }
+    });
+
+    // =========================================================================
+    // FILTER CURRENT SECTION OPTIONS based on target strand and level
+    // =========================================================================
+    function filterCurrentSections(strandId, levelId) {
+        const $sectionFilter = $('#filter_section');
+        
+        $sectionFilter.find('option').each(function() {
+            const $option = $(this);
+            if ($option.val() === '') {
+                $option.show(); // Keep "All Sections" option
+                return;
+            }
+            
+            const optionStrandId = $option.data('strand-id');
+            const optionLevelId = $option.data('level-id');
+            
+            let showOption = true;
+            
+            if (strandId && optionStrandId != strandId) {
+                showOption = false;
+            }
+            
+            if (levelId && optionLevelId != levelId) {
+                showOption = false;
+            }
+            
+            if (showOption) {
+                $option.show();
+            } else {
+                $option.hide();
+            }
+        });
+        
+        // If current selection is not valid, reset
+        const currentSelection = $sectionFilter.val();
+        if (currentSelection) {
+            const $selectedOption = $sectionFilter.find('option:selected');
+            const selectedStrandId = $selectedOption.data('strand-id');
+            const selectedLevelId = $selectedOption.data('level-id');
+            
+            let isValid = true;
+            if (strandId && selectedStrandId != strandId) {
+                isValid = false;
+            }
+            if (levelId && selectedLevelId != levelId) {
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                $sectionFilter.val('').trigger('change.select2');
+            }
+        }
+        
+        $sectionFilter.trigger('change.select2');
+    }
+
+    // =========================================================================
+    // LOAD TARGET SECTIONS (requires both strand and level)
+    // =========================================================================
+    function loadTargetSections() {
+        const strandId = $('#target_strand').val();
+        const levelId = $('#target_level').val();
+        
+        if (!strandId || !levelId) {
+            $('#targetSectionCards').html(`
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-arrow-up"></i>
+                    <p class="mb-0"><small>Select strand and level first</small></p>
+                </div>
+            `);
             return;
         }
         
@@ -309,12 +519,18 @@ $(document).ready(function() {
             data: {
                 _token: $('input[name="_token"]').val(),
                 strand_id: strandId,
-                current_level_id: sourceLevelId,
-                semester_id: semesterId
+                level_id: levelId
             },
             success: function(response) {
                 if (response.success) {
-                    populateTargetSections(response.current_level, response.next_level);
+                    displayTargetSectionCards(response.sections);
+                } else {
+                    $('#targetSectionCards').html(`
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <small>No sections available</small>
+                        </div>
+                    `);
                 }
             },
             error: function() {
@@ -322,110 +538,263 @@ $(document).ready(function() {
                     icon: 'error',
                     title: 'Failed to load target sections'
                 });
+                $('#targetSectionCards').html(`
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-times-circle"></i>
+                        <small>Error loading sections</small>
+                    </div>
+                `);
             }
         });
-    });
+    }
 
     // =========================================================================
-    // TARGET SECTION CHANGE
+    // DISPLAY TARGET SECTION CARDS
     // =========================================================================
-    $('#target_section').on('select2:select', function(e) {
-        const sectionId = e.params.data.id;
-        loadSectionCapacity(sectionId);
-    }).on('select2:clear', function() {
-        $('#capacityInfo').hide();
-        targetSectionCapacity = null;
-        targetSectionEnrolled = null;
+    function displayTargetSectionCards(sections) {
+        const $container = $('#targetSectionCards');
+        const previouslySelectedId = $('#target_section').val();
+        $container.empty();
+        
+        if (!sections || sections.length === 0) {
+            $container.html(`
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <small>No sections available for this strand and level</small>
+                </div>
+            `);
+            // Clear selection if no sections available
+            $('#target_section').val('');
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            return;
+        }
+        
+        // Get current sections of ALL checked (selected) students
+        const currentSectionIds = new Set();
+        
+        $('.student-checkbox:checked').each(function() {
+            const $row = $(this).closest('tr');
+            const studentNumber = $row.data('student-number');
+            const studentData = allStudents.find(s => s.student_number === studentNumber);
+            if (studentData && studentData.current_section_id) {
+                currentSectionIds.add(studentData.current_section_id.toString());
+            }
+        });
+        
+        let shouldClearSelection = false;
+        let hasAvailableSections = false;
+        
+        sections.forEach(function(section) {
+            const sectionIdStr = section.id.toString();
+            
+            // Skip if this section is a current section of any selected student
+            if (currentSectionIds.has(sectionIdStr)) {
+                // If this was the selected target section, mark for clearing
+                if (previouslySelectedId == section.id) {
+                    shouldClearSelection = true;
+                }
+                return; // Don't display this section
+            }
+            
+            hasAvailableSections = true;
+            
+            const available = section.capacity - section.enrolled_count;
+            const percentage = (section.enrolled_count / section.capacity) * 100;
+            const isFull = available <= 0;
+            const wasSelected = previouslySelectedId == section.id;
+            
+            let statusBadge = '';
+            let disabledClass = '';
+            let selectedClass = '';
+            let enrolledText = '';
+            let progressBar = '';
+            
+            if (isFull) {
+                statusBadge = '<span class="badge badge-primary capacity-badge">Full</span>';
+                disabledClass = 'disabled';
+                enrolledText = `<small class="text-muted">${section.enrolled_count} / ${section.capacity} enrolled</small>`;
+                progressBar = `
+                    <div class="progress capacity-progress">
+                        <div class="progress-bar bg-primary" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+                
+                // If this was selected but is now full, clear the selection
+                if (wasSelected) {
+                    shouldClearSelection = true;
+                }
+            } else {
+                statusBadge = `<span class="badge badge-primary capacity-badge">${available} slots</span>`;
+                enrolledText = `<small class="text-muted">${section.enrolled_count} / ${section.capacity} enrolled</small>`;
+                progressBar = `
+                    <div class="progress capacity-progress">
+                        <div class="progress-bar bg-primary" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+                
+                // Restore selection if this was previously selected and still valid
+                if (wasSelected) {
+                    selectedClass = 'selected';
+                    targetSectionCapacity = section.capacity;
+                    targetSectionEnrolled = section.enrolled_count;
+                }
+            }
+            
+            const card = $(`
+                <div class="section-card card mb-2 ${disabledClass} ${selectedClass}" 
+                     data-section-id="${section.id}" 
+                     data-capacity="${section.capacity}" 
+                     data-enrolled="${section.enrolled_count}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-0">${section.name}</h6>
+                                <small class="text-muted">${section.code} - ${section.level_name}</small>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            ${enrolledText}
+                        </div>
+                        ${progressBar}
+                    </div>
+                </div>
+            `);
+            
+            $container.append(card);
+        });
+        
+        // If no sections available after filtering out current sections
+        if (!hasAvailableSections) {
+            $container.html(`
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle"></i>
+                    <small>No other sections available - selected students are already in all sections for this strand and level</small>
+                </div>
+            `);
+            shouldClearSelection = true;
+        }
+        
+        // Clear selection if it became invalid
+        if (shouldClearSelection) {
+            $('#target_section').val('');
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            Toast.fire({
+                icon: 'info',
+                title: 'Selection cleared - section no longer available'
+            });
+        }
+        
+        // Update capacity display if there's a valid selection
+        if ($('#target_section').val() && targetSectionCapacity) {
+            updateCapacityDisplay();
+        }
+    }
+
+    // =========================================================================
+    // HANDLE SECTION CARD CLICK - SINGLE SELECTION ONLY (TOGGLE)
+    // =========================================================================
+    $(document).on('click', '.section-card', function(e) {
+        // Prevent action if card is disabled
+        if ($(this).hasClass('disabled')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            Toast.fire({
+                icon: 'warning',
+                title: 'This section is full'
+            });
+            
+            return false;
+        }
+        
+        const $clickedCard = $(this);
+        const isAlreadySelected = $clickedCard.hasClass('selected');
+        const sectionId = $clickedCard.data('section-id');
+        const capacity = $clickedCard.data('capacity');
+        const enrolled = $clickedCard.data('enrolled');
+        
+        if (isAlreadySelected) {
+            // Toggle OFF - deselect the card and reload sections to reset display
+            $('#target_section').val('');
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            loadTargetSections();
+        } else {
+            // Selecting a NEW card - store the selection temporarily
+            const newSectionId = sectionId;
+            const newCapacity = capacity;
+            const newEnrolled = enrolled;
+            
+            // Clear current selection
+            $('#target_section').val('');
+            targetSectionCapacity = null;
+            targetSectionEnrolled = null;
+            
+            // Reload all cards to reset displays, then select the new card
+            $.ajax({
+                url: API_ROUTES.getTargetSections,
+                type: 'POST',
+                data: {
+                    _token: $('input[name="_token"]').val(),
+                    strand_id: $('#target_strand').val(),
+                    level_id: $('#target_level').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        displayTargetSectionCards(response.sections);
+                        
+                        // Now select the new card after reload
+                        const $newCard = $(`.section-card[data-section-id="${newSectionId}"]`);
+                        if ($newCard.length && !$newCard.hasClass('disabled')) {
+                            $newCard.addClass('selected');
+                            $('#target_section').val(newSectionId);
+                            targetSectionCapacity = newCapacity;
+                            targetSectionEnrolled = newEnrolled;
+                            updateCapacityDisplay();
+                        }
+                        
+                        validateSubmitButton();
+                    }
+                }
+            });
+        }
+        
         validateSubmitButton();
     });
 
     // =========================================================================
-    // LOAD SECTION CAPACITY
-    // =========================================================================
-    function loadSectionCapacity(sectionId) {
-        const semesterId = $('#target_semester').val();
-        
-        $.ajax({
-            url: API_ROUTES.getSectionCapacity,
-            type: 'POST',
-            data: {
-                _token: $('input[name="_token"]').val(),
-                section_id: sectionId,
-                semester_id: semesterId
-            },
-            success: function(response) {
-                if (response.success) {
-                    targetSectionCapacity = response.capacity;
-                    targetSectionEnrolled = response.enrolled_count;
-                    updateCapacityDisplay();
-                    validateSubmitButton();
-                }
-            },
-            error: function() {
-                Toast.fire({
-                    icon: 'error',
-                    title: 'Failed to load section capacity'
-                });
-            }
-        });
-    }
-
-    // =========================================================================
-    // UPDATE CAPACITY DISPLAY
+    // UPDATE CAPACITY DISPLAY (for selected students count)
     // =========================================================================
     function updateCapacityDisplay() {
+        if (!targetSectionCapacity) return;
+        
         const selectedCount = $('.student-checkbox:checked:visible').length;
         const availableSlots = targetSectionCapacity - targetSectionEnrolled;
         const afterAssignment = targetSectionEnrolled + selectedCount;
         
-        const statusText = selectedCount > availableSlots ? 'Exceeds' : `${availableSlots} slots`;
-        const targetSectionName = $('#target_section option:selected').text().split(' (')[0] || 'Section';
-        
-        $('#capacityInfo').html(`
-            <div class="card section-capacity-card mb-0">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0">${targetSectionName}</h6>
-                        <span class="badge badge-light border">${statusText}</span>
-                    </div>
-                    <small class="text-muted d-block mb-2">
-                        ${afterAssignment} / ${targetSectionCapacity} enrolled
-                    </small>
-                </div>
-            </div>
-        `).show();
-    }
-
-    // =========================================================================
-    // POPULATE TARGET SECTIONS
-    // =========================================================================
-    function populateTargetSections(currentLevel, nextLevel) {
-        const $select = $('#target_section');
-        $select.empty();
-        $select.append('<option value="">Select section...</option>');
-        
-        if (currentLevel && currentLevel.sections.length > 0) {
-            const currentGroup = $('<optgroup>').attr('label', `Current Level (${currentLevel.name})`);
-            currentLevel.sections.forEach(function(section) {
-                currentGroup.append(
-                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
-                );
-            });
-            $select.append(currentGroup);
-        }
-        
-        if (nextLevel && nextLevel.sections.length > 0) {
-            const nextGroup = $('<optgroup>').attr('label', `Next Level (${nextLevel.name})`);
-            nextLevel.sections.forEach(function(section) {
-                nextGroup.append(
-                    $('<option>').val(section.id).text(`${section.name} (${section.code})`)
-                );
-            });
-            $select.append(nextGroup);
-        }
-        
-        if ((!currentLevel || currentLevel.sections.length === 0) && (!nextLevel || nextLevel.sections.length === 0)) {
-            $select.append('<option value="" disabled>No sections available</option>');
+        // Update the selected card's appearance
+        const $selectedCard = $('.section-card.selected');
+        if ($selectedCard.length > 0) {
+            const percentage = (afterAssignment / targetSectionCapacity) * 100;
+            const wouldExceed = afterAssignment > targetSectionCapacity;
+            const remainingAfter = availableSlots - selectedCount;
+            
+            // Always use primary color
+            $selectedCard.find('.capacity-badge')
+                .removeClass('badge-secondary')
+                .addClass('badge-primary')
+                .text(wouldExceed ? 'Exceeds!' : `${remainingAfter} after`);
+            
+            $selectedCard.find('.text-muted:last')
+                .text(`${afterAssignment} / ${targetSectionCapacity} after assignment`);
+            
+            $selectedCard.find('.progress-bar')
+                .removeClass('bg-secondary')
+                .addClass('bg-primary')
+                .css('width', `${Math.min(percentage, 100)}%`);
         }
     }
 
@@ -436,8 +805,8 @@ $(document).ready(function() {
         $('#assignmentTableBody').html(`
             <tr>
                 <td colspan="6" class="text-center text-muted py-5">
-                    <i class="fas fa-arrow-left fa-2x mb-3"></i>
-                    <p>Select a source semester to load students</p>
+                    <i class="fas fa-inbox fa-2x mb-3"></i>
+                    <p>No students found</p>
                 </td>
             </tr>
         `);
@@ -505,6 +874,10 @@ $(document).ready(function() {
         if (targetSectionCapacity) {
             updateCapacityDisplay();
         }
+        // Refresh section cards to update after loading students
+        if ($('#target_strand').val() && $('#target_level').val()) {
+            loadTargetSections();
+        }
         validateSubmitButton();
     }
 
@@ -521,6 +894,10 @@ $(document).ready(function() {
         if (targetSectionCapacity) {
             updateCapacityDisplay();
         }
+        // Refresh section cards when selection changes
+        if ($('#target_strand').val() && $('#target_level').val()) {
+            loadTargetSections();
+        }
         validateSubmitButton();
     });
 
@@ -530,6 +907,10 @@ $(document).ready(function() {
         updateStudentCount();
         if (targetSectionCapacity) {
             updateCapacityDisplay();
+        }
+        // Refresh section cards when selection changes
+        if ($('#target_strand').val() && $('#target_level').val()) {
+            loadTargetSections();
         }
         validateSubmitButton();
         
@@ -572,6 +953,10 @@ $(document).ready(function() {
                 $('#selectAllCheckbox').prop('checked', false);
                 if (targetSectionCapacity) {
                     updateCapacityDisplay();
+                }
+                // Refresh section cards after removing students
+                if ($('#target_strand').val() && $('#target_level').val()) {
+                    loadTargetSections();
                 }
                 validateSubmitButton();
                 
@@ -647,18 +1032,18 @@ $(document).ready(function() {
     }
 
     // =========================================================================
-    // FORM SUBMISSION (Same as before - keeping batch processing logic)
+    // FORM SUBMISSION
     // =========================================================================
     $('#assign_section_form').on('submit', function(e) {
         e.preventDefault();
 
-        if (!$('#target_semester').val()) {
-            Swal.fire('Missing Selection', 'Please select a target semester', 'warning');
+        if (!$('#target_strand').val()) {
+            Swal.fire('Missing Selection', 'Please select a target strand', 'warning');
             return;
         }
 
-        if (!$('#target_strand').val()) {
-            Swal.fire('Missing Selection', 'Please select a target strand', 'warning');
+        if (!$('#target_level').val()) {
+            Swal.fire('Missing Selection', 'Please select a target level', 'warning');
             return;
         }
 
@@ -698,9 +1083,9 @@ $(document).ready(function() {
             }
         }
 
-        const targetSectionText = $('#target_section option:selected').text();
-        const targetSemesterName = $('#target_semester option:selected').text();
+        const targetSectionName = $('.section-card.selected h6').text();
         const targetStrandName = $('#target_strand option:selected').text();
+        const targetLevelName = $('#target_level option:selected').text();
 
         Swal.fire({
             title: 'Confirm Assignment',
@@ -709,8 +1094,8 @@ $(document).ready(function() {
                     <hr>
                     <p><strong>Assigning ${students.length} student(s)</strong></p>
                     <p><strong>Strand:</strong> ${targetStrandName}</p>
-                    <p><strong>Section:</strong> ${targetSectionText}</p>
-                    <p><strong>Semester:</strong> ${targetSemesterName}</p>
+                    <p><strong>Level:</strong> ${targetLevelName}</p>
+                    <p><strong>Section:</strong> ${targetSectionName}</p>
                     ${targetSectionCapacity ? `
                         <hr>
                         <p><strong>Section Capacity:</strong> ${targetSectionEnrolled + students.length} / ${targetSectionCapacity}</p>
@@ -731,7 +1116,6 @@ $(document).ready(function() {
     });
 
     function processAssignments(students) {
-        const semesterId = $('#target_semester').val();
         const batchSize = 25;
         const batches = [];
         
@@ -740,7 +1124,7 @@ $(document).ready(function() {
         }
 
         showProcessingModal(batches.length, students.length);
-        processBatches(batches, semesterId, 0, students.length, 0);
+        processBatches(batches, 0, students.length, 0);
     }
 
     function showProcessingModal(totalBatches, totalStudents) {
@@ -778,7 +1162,7 @@ $(document).ready(function() {
         $('#detailText').text(`Processing batch ${batchNum} of ${totalBatches}`);
     }
 
-    function processBatches(batches, semesterId, currentBatch, totalStudents, processedCount) {
+    function processBatches(batches, currentBatch, totalStudents, processedCount) {
         if (currentBatch >= batches.length) {
             Swal.fire({
                 icon: 'success',
@@ -806,7 +1190,6 @@ $(document).ready(function() {
             type: 'POST',
             data: {
                 _token: $('input[name="_token"]').val(),
-                semester_id: semesterId,
                 section_id: $('#target_section').val(),
                 students: batch
             },
@@ -816,7 +1199,7 @@ $(document).ready(function() {
                 updateProgress(actualProcessed, totalStudents, batchNumber, batches.length);
                 
                 setTimeout(function() {
-                    processBatches(batches, semesterId, currentBatch + 1, totalStudents, processedCount);
+                    processBatches(batches, currentBatch + 1, totalStudents, processedCount);
                 }, 300);
             },
             error: function(xhr) {

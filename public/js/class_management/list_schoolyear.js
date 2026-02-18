@@ -63,6 +63,13 @@ $(document).ready(function () {
         }
     });
 
+    // ── ADDED: Graduation Button ──────────────────────────────────────────────
+    $('#graduationBtn').click(function () {
+        if (!selectedYearId) return;
+        window.location.href = API_ROUTES.graduationPage.replace(':id', selectedYearId);
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Add Semester Button - SINGLE HANDLER
     $('#addSemesterBtn').off('click').on('click', function () {
         if (!selectedYearId) return;
@@ -405,6 +412,10 @@ $(document).ready(function () {
 
         $('#detailsTitle').text(`School Year ${year.year_start}-${year.year_end}`);
 
+        // ── ADDED: hide until semesters load and confirm all are completed ────
+        $('#graduationBtn').hide();
+        // ─────────────────────────────────────────────────────────────────────
+
         loadSemesters(yearId);
     }
 
@@ -432,15 +443,30 @@ $(document).ready(function () {
                         $('#addSemesterBtn').prop('disabled', false)
                             .attr('title', 'Add Semester');
                     }
+
+                    // ── ADDED: show graduation only if every semester is completed ──
+                    const total     = response.data.length;
+                    const completed = response.data.filter(s => s.status === 'completed').length;
+                    $('#graduationBtn').toggle(total > 0 && total === completed);
+                    // ─────────────────────────────────────────────────────────────
+
                 } else {
                     currentSemesters = [];
                     $('#noSemesters').show();
                     $('#addSemesterBtn').prop('disabled', false);
+
+                    // ── ADDED ─────────────────────────────────────────────────
+                    $('#graduationBtn').hide();
+                    // ─────────────────────────────────────────────────────────
                 }
             },
             error: function () {
                 $('#semestersLoading').hide();
                 $('#noSemesters').show();
+
+                // ── ADDED ─────────────────────────────────────────────────────
+                $('#graduationBtn').hide();
+                // ─────────────────────────────────────────────────────────────
             }
         });
     }

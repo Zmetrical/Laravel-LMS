@@ -470,42 +470,40 @@ public function changeGuardianEmail(Request $request, $studentId, $guardianId)
  */
 public function getGuardianStatus($studentId, $guardianId)
 {
-    try {
-        $guardian = DB::table('guardian_students as gs')
-            ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
-            ->join('students as s', 'gs.student_number', '=', 's.student_number')
-            ->where('s.id', $studentId)
-            ->where('gs.guardian_id', $guardianId)
-            ->select(
-                'g.id',
-                'g.email',
-                'g.email_verified_at',
-                'g.verification_sent_at',
-                'g.is_active'
-            )
-            ->first();
+    // Remove try-catch temporarily to see actual Laravel errors
+    $guardian = DB::table('guardian_students as gs')
+        ->join('guardians as g', 'gs.guardian_id', '=', 'g.id')
+        ->join('students as s', 'gs.student_number', '=', 's.student_number')
+        ->where('s.id', $studentId)
+        ->where('gs.guardian_id', $guardianId)
+        ->select(
+            'g.id',
+            'g.email',
+            'g.email_verified_at',
+            'g.verification_sent_at',
+            'g.is_active'
+        )
+        ->first();
 
-        if (!$guardian) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Guardian not found'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'is_verified' => !is_null($guardian->email_verified_at),
-            'email' => $guardian->email,
-            'verified_at' => $guardian->email_verified_at,
-            'verification_sent_at' => $guardian->verification_sent_at
-        ]);
-
-    } catch (Exception $e) {
+    if (!$guardian) {
         return response()->json([
             'success' => false,
-            'message' => 'Failed to get guardian status'
-        ], 500);
+            'message' => 'Guardian not found or not linked to this student',
+            'debug' => [
+                'student_id' => $studentId,
+                'guardian_id' => $guardianId,
+                'query_result' => 'No guardian found'
+            ]
+        ], 404);
     }
+
+    return response()->json([
+        'success' => true,
+        'is_verified' => !is_null($guardian->email_verified_at),
+        'email' => $guardian->email,
+        'verified_at' => $guardian->email_verified_at,
+        'verification_sent_at' => $guardian->verification_sent_at
+    ]);
 }
 
     /**

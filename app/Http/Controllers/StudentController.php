@@ -581,4 +581,117 @@ public function showProfile()
             ], 500);
         }
     }
+
+public function listGradecard()
+{
+    return view('student.list_gradecard');
+}
+
+public function getGradecardSemesters()
+{
+    $studentNumber = auth()->user()->student_number;
+
+    $semesters = DB::table('student_semester_enrollment as sse')
+        ->join('semesters as s', 'sse.semester_id', '=', 's.id')
+        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+        ->where('sse.student_number', $studentNumber)
+        ->select(
+            's.id',
+            's.name as semester_name',
+            's.status',
+            'sy.code as school_year_code',
+            DB::raw("CONCAT(s.name, ' - SY ', sy.code) as display_name")
+        )
+        ->orderBy('sy.year_start', 'desc')
+        ->orderBy('s.code', 'desc')
+        ->get();
+
+    return response()->json([
+        'semesters' => $semesters
+    ]);
+}
+
+public function getGradecardData(Request $request)
+{
+    $studentNumber = auth()->user()->student_number;
+    $semesterId = $request->semester_id;
+
+    // Get grades
+    $grades = DB::table('grades_final as gf')
+        ->join('classes as c', 'gf.class_code', '=', 'c.class_code')
+        ->where('gf.student_number', $studentNumber)
+        ->where('gf.semester_id', $semesterId)
+        ->select(
+            'c.class_name',
+            'c.class_category',
+            'gf.q1_grade',
+            'gf.q2_grade',
+            'gf.final_grade',
+            'gf.remarks'
+        )
+        ->orderBy('c.class_category')
+        ->orderBy('c.class_name')
+        ->get();
+
+    // Get student info for this semester
+    $studentInfo = DB::table('student_semester_enrollment as sse')
+        ->leftJoin('sections as sec', 'sse.section_id', '=', 'sec.id')
+        ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+        ->leftJoin('levels as lv', 'sec.level_id', '=', 'lv.id')
+        ->leftJoin('section_adviser_matrix as sam', function($join) use ($semesterId) {
+            $join->on('sec.id', '=', 'sam.section_id')
+                 ->where('sam.semester_id', '=', $semesterId);
+        })
+        ->leftJoin('teachers as t', 'sam.teacher_id', '=', 't.id')
+        ->where('sse.student_number', $studentNumber)
+        ->where('sse.semester_id', $semesterId)
+        ->select(
+            'lv.name as level_name',
+            'sec.name as section_name',
+            'str.code as strand_code',
+            DB::raw("CONCAT(t.first_name, ' ', t.last_name) as adviser_name")
+        )
+        ->first();
+
+    return response()->json([
+        'grades' => $grades,
+        'student_info' => $studentInfo
+    ]);
+}
+
+public function getGradecardSummary()
+{
+    $studentNumber = auth()->user()->student_number;
+
+    $summary = DB::table('grades_final as gf')
+        ->join('classes as c', 'gf.class_code', '=', 'c.class_code')
+        ->join('semesters as s', 'gf.semester_id', '=', 's.id')
+        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+        ->where('gf.student_number', $studentNumber)
+        ->select(
+            'c.class_name',
+            'c.class_category',
+            's.id as semester_id',
+            's.name as semester_name',
+            's.status as semester_status',
+            'sy.code as school_year_code',
+            'sy.year_start',
+            's.code as semester_code',
+            'gf.q1_grade',
+            'gf.q2_grade',
+            'gf.final_grade',
+            'gf.remarks',
+            DB::raw("CONCAT(s.name, ' - SY ', sy.code) as full_semester")
+        )
+        ->orderBy('sy.year_start', 'desc')
+        ->orderBy('s.code', 'desc')
+        ->orderBy('c.class_category')
+        ->orderBy('c.class_name')
+        ->get();
+
+    return response()->json([
+        'summary' => $summary
+    ]);
+}
+    
 }

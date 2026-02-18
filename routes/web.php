@@ -20,6 +20,7 @@ use App\Http\Controllers\Grade_Management\Grade_Management;
 
 use App\Http\Controllers\Class_Management\Year_Management;
 use App\Http\Controllers\Class_Management\Semester_Management;
+use App\Http\Controllers\Class_Management\Graduation_Management;
 
 
 use App\Http\Controllers\Audit\AuditLogController;
@@ -47,6 +48,7 @@ use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\User_Management\Profile_Management;
 use App\Http\Controllers\User_Management\User_Management;
 use App\Http\Controllers\User_Management\GuardianEmailController;
+use App\Http\Controllers\User_Management\Admin_Management;
 
 use App\Http\Controllers\User_Management\Section_Management;
 
@@ -90,6 +92,38 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         });
 
+        // Inside your admin middleware group:
+        Route::prefix('graduation')->name('graduation.')->group(function () {
+
+            // Main graduation page for a school year
+            Route::get('/{schoolYearId}', [Graduation_Management::class, 'show'])
+                ->name('show');
+
+            // AJAX: get students with eligibility data
+            Route::get('/{schoolYearId}/students', [Graduation_Management::class, 'getStudents'])
+                ->name('students');
+
+            // AJAX: save/update a single student's graduation record
+            Route::post('/{schoolYearId}/save-record', [Graduation_Management::class, 'saveStudentRecord'])
+                ->name('save-record');
+
+            // AJAX: finalize the entire graduation list
+            Route::post('/{schoolYearId}/finalize', [Graduation_Management::class, 'finalize'])
+                ->name('finalize');
+        });
+
+
+        // Admin Management Routes (Super Admin Only)
+            Route::get('/create_admin', [Admin_Management::class, 'create_admin'])->name('create_admin');
+            Route::post('/insert_admin', [Admin_Management::class, 'insert_admin'])->name('insert_admin');
+            Route::get('/list_admin', [Admin_Management::class, 'list_admin'])->name('list_admin');
+            Route::post('/update_admin/{id}', [Admin_Management::class, 'update_admin'])->name('update_admin');
+            Route::post('/reset_admin_password/{id}', [Admin_Management::class, 'reset_password'])->name('reset_admin_password');
+            Route::delete('/delete_admin/{id}', [Admin_Management::class, 'delete_admin'])->name('delete_admin');
+
+            Route::post('/toggle_admin_status/{id}', [Admin_Management::class, 'toggle_status'])->name('toggle_admin_status');
+
+
         // ---------------------------------------------------------------------------
         // ARCHIVE MANAGEMENT 
         // ---------------------------------------------------------------------------
@@ -124,6 +158,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Semester Activation (if not already exists)
         Route::post('/semesters/{id}/set-active', [Semester_Management::class, 'setActive'])->name('semesters.set-active');
 
+        Route::post('/archive/check-graduating-students', [Semester_Management::class, 'checkGraduatingStudents'])
+            ->name('archive.check-graduating-students');
+            
+        Route::get('/archive/get-available-strands', [Semester_Management::class, 'getAvailableStrands'])
+            ->name('archive.get-available-strands');
+    
+        Route::get('archive/semesters', [Semester_Management::class, 'getSemesters'])
+            ->name('archive.get-semesters');
 
         // Semester Management Routes
         Route::prefix('semesters')->group(function () {
@@ -178,29 +220,42 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->middleware('auth:admin')
             ->name('teacher.credentials');
 
-        // Section Assignment
-        Route::get('/section-assignment', [Section_Management::class, 'assign_section'])
-            ->name('assign_section');
+    // Section Assignment Page
+    Route::get('/section-assignment', [Section_Management::class, 'assign_section'])
+        ->name('assign_section');
 
-        Route::get('/section-assignment/get-sections', [Section_Management::class, 'get_sections'])
-            ->name('section_assignment.get_sections');
+    // Section Assignment API Routes
+    Route::prefix('section-assignment')->name('section_assignment.')->group(function () {
+        // Load all students from current active semester
+        Route::post('/load-students', [Section_Management::class, 'load_students'])
+            ->name('load_students');
+    
+    // Get filter options (sections and strands) for current semester
+    Route::post('/filter-options', [Section_Management::class, 'get_filter_options'])
+        ->name('get_filter_options');
+    
+    // Get target sections for selected strand
+    Route::post('/get-target-sections', [Section_Management::class, 'get_target_sections'])
+        ->name('get_target_sections');
+    
+    // Get section capacity and enrolled count
+    Route::post('/get-section-capacity', [Section_Management::class, 'get_section_capacity'])
+        ->name('get_section_capacity');
+    
+    // Assign students to new section
+    Route::post('/assign-students', [Section_Management::class, 'assign_students'])
+        ->name('assign_students');
+});
 
-
-// Section Assignment Routes - Updated for semester-first workflow
-Route::post('/section_assignment/load_students_by_semester', [Section_Management::class, 'load_students_by_semester'])->name('section_assignment.load_students_by_semester');
-Route::post('/section_assignment/get_sections_by_semester', [Section_Management::class, 'get_sections_by_semester'])->name('section_assignment.get_sections_by_semester');
-Route::post('/section_assignment/assign_students', [Section_Management::class, 'assign_students'])->name('section_assignment.assign_students');
-
-Route::post('/section-assignment/get-target-sections', [Section_Management::class, 'get_target_sections'])
-    ->name('section_assignment.get_target_sections');
-Route::post('/section-assignment/get-section-capacity', [Section_Management::class, 'get_section_capacity'])
-    ->name('section_assignment.get_section_capacity');
-
-// Section Adviser Routes
-Route::post('/section-adviser/get', [Section_Management::class, 'get_section_adviser'])->name('admin.section_adviser.get');
-Route::post('/section-adviser/save', [Section_Management::class, 'save_section_adviser'])->name('admin.section_adviser.save');
-Route::post('/section-adviser/search-teachers', [Section_Management::class, 'search_teachers'])->name('admin.section_adviser.search_teachers');
-
+        // Section Adviser Routes (keep these as they are separate functionality)
+        Route::prefix('section-adviser')->name('section_adviser.')->group(function () {
+            Route::post('/get', [Section_Management::class, 'get_section_adviser'])
+                ->name('get');
+            Route::post('/save', [Section_Management::class, 'save_section_adviser'])
+                ->name('save');
+            Route::post('/search-teachers', [Section_Management::class, 'search_teachers'])
+                ->name('search_teachers');
+        });
 
         // Section Grades View
         Route::get('/grades/section-view', [SectionGrade_Management::class, 'index'])
@@ -228,6 +283,10 @@ Route::post('/section-adviser/search-teachers', [Section_Management::class, 'sea
             Route::get('/cards', [Grade_Card::class, 'card_grades'])->name('cards');
             Route::get('/card/view', [Grade_Card::class, 'getGradeCard'])->name('card.view');
             Route::get('/card/{student_number}/{semester_id}', [Grade_Card::class, 'viewGradeCardPage'])->name('card.view.page');
+
+            Route::get('/evaluation/{student_number}', [Grade_Card::class, 'evaluation'])->name('evaluation');
+            Route::get('/evaluation/{student_number}/data', [Grade_Card::class, 'getEvaluationData'])->name('evaluation.data');
+
         });
 
         // ---------------------------------------------------------------------------
@@ -416,6 +475,12 @@ Route::prefix('student')->name('student.')->group(function () {
                 ->name('quarterly-grades');
         });
 
+    Route::get('/gradecard', [StudentController::class, 'listGradecard'])->name('list_gradecard');
+    Route::get('/gradecard/semesters', [StudentController::class, 'getGradecardSemesters']);
+    Route::get('/gradecard/data', [StudentController::class, 'getGradecardData']);
+    Route::get('/gradecard/summary', [StudentController::class, 'getGradecardSummary']);
+
+
         // Class Pages
         Route::get('/my_classes', [Class_List::class, 'student_class_list'])->name('list_class');
         Route::get('/my_grades', [Grade_List::class, 'student_grade_list'])->name('list_grade');
@@ -510,6 +575,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
         Route::get('adviser/grades/cards', [Grade_Card::class, 'teacherCardGrades'])->name('grades.cards');
         Route::get('adviser/grades/card/{student_number}/{semester_id}', [Grade_Card::class, 'teacherViewGradeCardPage'])->name('grades.card.view');
+
+
 
         // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {
@@ -632,7 +699,6 @@ Route::prefix('guardian')->name('guardian.')->group(function () {
     Route::get('/student/{student_number}/grades/data', [GuardianController::class, 'get_student_grades_data'])->name('student.grades.data');
 });
 
-// Test dev routes
 Route::prefix('testdev')->group(function () {
     Route::get('/', [TestDevController::class, 'index'])->name('testdev.index');
     Route::post('/send-verification', [TestDevController::class, 'send_verification_email'])->name('testdev.send_verification');
@@ -640,4 +706,8 @@ Route::prefix('testdev')->group(function () {
     Route::post('/send-guardian-email', [TestDevController::class, 'send_guardian_email'])->name('testdev.send_guardian_email');
     Route::get('/get-guardians', [TestDevController::class, 'get_guardians'])->name('testdev.get_guardians');
     Route::get('/get-guardian-students/{id}', [TestDevController::class, 'get_guardian_students']);
+
+    Route::get('/dev-flags', [TestDevController::class, 'date'])->name('testdev.date');
+    Route::post('/dev-flags/mock-time', [TestDevController::class, 'set_mock_time'])->name('testdev.mock.time');
+    Route::post('/dev-flags/toggle', [TestDevController::class, 'toggle_dev_flag'])->name('testdev.toggle.date');
 });

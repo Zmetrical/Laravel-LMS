@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Enrollment_Management;
+use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\MainController;
 use Illuminate\Http\Request;
@@ -949,100 +950,130 @@ class Enroll_Management extends MainController
     /**
      * Assign teacher to class
      */
-    public function assignTeacher(Request $request)
-    {
-        $request->validate([
-            'class_id' => 'required|exists:classes,id',
-            'teacher_id' => 'required|exists:teachers,id'
-        ]);
+public function assignTeacher(Request $request)
+{
+    $request->validate([
+        'class_id' => 'required|exists:classes,id',
+        'teacher_id' => 'required|exists:teachers,id'
+    ]);
 
-        try {
-            DB::beginTransaction();
+    try {
+        DB::beginTransaction();
 
-            $activeSemester = $this->getActiveSemester();
-            
-            if (!$activeSemester) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active semester found'
-                ], 400);
-            }
-
-            // Get class and teacher info
-            $class = DB::table('classes')->find($request->class_id);
-            $teacher = DB::table('teachers')->find($request->teacher_id);
-
-            // Check if there's an existing assignment
-            $existingAssignment = DB::table('teacher_class_matrix')
-                ->where('class_id', $request->class_id)
-                ->where('semester_id', $activeSemester->semester_id)
-                ->first();
-
-            $oldTeacher = null;
-            if ($existingAssignment) {
-                $oldTeacher = DB::table('teachers')->find($existingAssignment->teacher_id);
-            }
-
-            // Remove existing teacher assignment for this class and semester
-            DB::table('teacher_class_matrix')
-                ->where('class_id', $request->class_id)
-                ->where('semester_id', $activeSemester->semester_id)
-                ->delete();
-
-            // Assign new teacher
-            DB::table('teacher_class_matrix')->insert([
-                'teacher_id' => $request->teacher_id,
-                'class_id' => $request->class_id,
-                'semester_id' => $activeSemester->semester_id,
-                'school_year_id' => $activeSemester->school_year->id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            // Log the assignment
-            $description = $oldTeacher 
-                ? "Reassigned class '{$class->class_name}' from {$oldTeacher->first_name} {$oldTeacher->last_name} to {$teacher->first_name} {$teacher->last_name} for {$activeSemester->semester_name} ({$activeSemester->school_year->code})"
-                : "Assigned teacher {$teacher->first_name} {$teacher->last_name} to class '{$class->class_name}' for {$activeSemester->semester_name} ({$activeSemester->school_year->code})";
-
-            $this->logAudit(
-                $oldTeacher ? 'reassigned' : 'assigned',
-                'teacher_class_matrix',
-                (string)$request->class_id,
-                $description,
-                $oldTeacher ? [
-                    'teacher_id' => $oldTeacher->id,
-                    'teacher_name' => "{$oldTeacher->first_name} {$oldTeacher->last_name}",
-                    'teacher_email' => $oldTeacher->email,
-                ] : null,
-                [
-                    'teacher_id' => $request->teacher_id,
-                    'teacher_name' => "{$teacher->first_name} {$teacher->last_name}",
-                    'teacher_email' => $teacher->email,
-                    'class_id' => $request->class_id,
-                    'class_code' => $class->class_code,
-                    'class_name' => $class->class_name,
-                    'semester_id' => $activeSemester->semester_id,
-                    'semester_name' => $activeSemester->semester_name,
-                    'school_year_id' => $activeSemester->school_year->id,
-                    'school_year' => $activeSemester->school_year->code,
-                ]
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Teacher assigned successfully'
-            ]);
-        } catch (Exception $e) {
+        $activeSemester = $this->getActiveSemester();
+        
+        if (!$activeSemester) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign teacher: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No active semester found'
+            ], 400);
         }
+
+        // Get class and teacher info
+        $class = DB::table('classes')->find($request->class_id);
+        $teacher = DB::table('teachers')->find($request->teacher_id);
+
+        // Check if there's an existing assignment
+        $existingAssignment = DB::table('teacher_class_matrix')
+            ->where('class_id', $request->class_id)
+            ->where('semester_id', $activeSemester->semester_id)
+            ->first();
+
+        $oldTeacher = null;
+        if ($existingAssignment) {
+            $oldTeacher = DB::table('teachers')->find($existingAssignment->teacher_id);
+        }
+
+        // Remove existing teacher assignment for this class and semester
+        DB::table('teacher_class_matrix')
+            ->where('class_id', $request->class_id)
+            ->where('semester_id', $activeSemester->semester_id)
+            ->delete();
+
+        // Assign new teacher
+        DB::table('teacher_class_matrix')->insert([
+            'teacher_id' => $request->teacher_id,
+            'class_id' => $request->class_id,
+            'semester_id' => $activeSemester->semester_id,
+            'school_year_id' => $activeSemester->school_year->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        // ✅ CREATE INITIAL TEACHER STATUS TRAIL
+        $this->ensureTeacherActiveTrail($request->teacher_id, $activeSemester->school_year->id);
+
+        // Log the assignment
+        $description = $oldTeacher 
+            ? "Reassigned class '{$class->class_name}' from {$oldTeacher->first_name} {$oldTeacher->last_name} to {$teacher->first_name} {$teacher->last_name} for {$activeSemester->semester_name} ({$activeSemester->school_year->code})"
+            : "Assigned teacher {$teacher->first_name} {$teacher->last_name} to class '{$class->class_name}' for {$activeSemester->semester_name} ({$activeSemester->school_year->code})";
+
+        $this->logAudit(
+            $oldTeacher ? 'reassigned' : 'assigned',
+            'teacher_class_matrix',
+            (string)$request->class_id,
+            $description,
+            $oldTeacher ? [
+                'teacher_id' => $oldTeacher->id,
+                'teacher_name' => "{$oldTeacher->first_name} {$oldTeacher->last_name}",
+                'teacher_email' => $oldTeacher->email,
+            ] : null,
+            [
+                'teacher_id' => $request->teacher_id,
+                'teacher_name' => "{$teacher->first_name} {$teacher->last_name}",
+                'teacher_email' => $teacher->email,
+                'class_id' => $request->class_id,
+                'class_code' => $class->class_code,
+                'class_name' => $class->class_name,
+                'semester_id' => $activeSemester->semester_id,
+                'semester_name' => $activeSemester->semester_name,
+                'school_year_id' => $activeSemester->school_year->id,
+                'school_year' => $activeSemester->school_year->code,
+            ]
+        );
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Teacher assigned successfully'
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to assign teacher: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+private function ensureTeacherActiveTrail($teacherId, $schoolYearId)
+{
+    $existing = DB::table('teacher_school_year_status')
+        ->where('teacher_id', $teacherId)
+        ->where('school_year_id', $schoolYearId)
+        ->first();
+    
+    // Only create initial trail if none exists
+    if (!$existing) {
+        DB::table('teacher_school_year_status')->insert([
+            'teacher_id' => $teacherId,
+            'school_year_id' => $schoolYearId,
+            'status' => 'active',
+            'reactivated_by' => Auth::guard('admin')->id(),
+            'reactivated_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        \Log::info('Created initial teacher status trail', [
+            'teacher_id' => $teacherId,
+            'school_year_id' => $schoolYearId,
+            'trigger' => 'class_assignment'
+        ]);
+    }
+}
 
     /**
      * Remove teacher from class

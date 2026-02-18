@@ -393,6 +393,61 @@ function loadSectionEnrollment(sectionId) {
                 </li>
             `);
         });
+
+        // Add Class Instructors tab
+        tabsContainer.append(`
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-quarter="instructors">
+                    <i class="fas fa-chalkboard-teacher"></i> Class Instructors
+                </a>
+            </li>
+        `);
+    }
+
+    function displayClassInstructors() {
+        const tbody = $('#studentsTableBody');
+        const thead = $('#studentsTableHead');
+        tbody.empty();
+        thead.empty();
+
+        $('.classes-detail-row').remove();
+
+        if (allClasses.length === 0) {
+            thead.html('<tr><th>No Data</th></tr>');
+            tbody.html(`
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No classes found</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        const headerHtml = `
+            <tr>
+                <th width="150">Class Code</th>
+                <th>Class Name</th>
+                <th width="300">Instructor</th>
+            </tr>
+        `;
+        thead.html(headerHtml);
+
+        allClasses.forEach(cls => {
+            const teacherName = cls.teacher_name && cls.teacher_name.trim() !== '' 
+                ? cls.teacher_name 
+                : '<span class="text-muted"><i>No instructor assigned</i></span>';
+            
+            const row = `
+                <tr>
+                    <td><strong>${cls.class_code}</strong></td>
+                    <td>${cls.class_name}</td>
+                    <td>${teacherName}</td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
     }
 
     function displaySectionEnrollment(students, filterClassCode, quarter) {
@@ -605,6 +660,17 @@ function loadSectionEnrollment(sectionId) {
     }
 
     function applyFilters() {
+        if (selectedQuarter === 'instructors') {
+            // Hide filters when showing instructors
+            $('#filtersSection').hide();
+            displayClassInstructors();
+            $('#studentCount').text(`${allClasses.length} Class${allClasses.length !== 1 ? 'es' : ''}`);
+            return;
+        }
+
+        // Show filters for student views
+        $('#filtersSection').show();
+
         const searchTerm = $('#studentSearch').val().toLowerCase();
         const remarksFilter = $('#remarksFilter').val();
 
