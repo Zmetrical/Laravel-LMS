@@ -76,6 +76,14 @@ class GradebookImportExportController extends MainController
                 return response()->json(['success' => false, 'message' => 'Q1 and Q2 quarters not found'], 404);
             }
             
+
+            \Log::info('Template check', [
+            'path' => storage_path('app/templates/SHS-E-Class-Record.xlsx'),
+            'exists' => file_exists(storage_path('app/templates/SHS-E-Class-Record.xlsx')),
+            'is_readable' => is_readable(storage_path('app/templates/SHS-E-Class-Record.xlsx')),
+            'storage_path' => storage_path(),
+        ]);
+
             $templatePath = storage_path('app/templates/SHS-E-Class-Record.xlsx');
             
             if (!file_exists($templatePath)) {
