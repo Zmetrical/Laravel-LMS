@@ -1,15 +1,5 @@
 $(document).ready(function () {
-    // Profile image preview
-    $('#profileImageInput').on('change', function (e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                $('#profileImagePreview').attr('src', e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
+
 
 // Toggle password visibility (Admin Type 1 only)
 $('#togglePassword').on('click', function() {
@@ -103,12 +93,6 @@ $('#togglePasscode').on('click', function() {
         formData.append('email', $('#email').val());
         formData.append('phone', $('#phone').val());
         formData.append('gender', $('#gender').val());
-
-        // Append profile image if selected
-        const profileImage = $('#profileImageInput')[0].files[0];
-        if (profileImage) {
-            formData.append('profile_image', profileImage);
-        }
 
         // Add CSRF token
         formData.append('_token', $('input[name="_token"]').val());

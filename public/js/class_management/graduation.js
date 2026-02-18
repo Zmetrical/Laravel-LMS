@@ -330,14 +330,20 @@ $(document).ready(function () {
         (s.class_details || []).forEach(function (c) {
             const remarksBadge = remarksLabel(c.remarks);
             const gradeDisplay = c.final_grade !== null ? parseFloat(c.final_grade).toFixed(2) : '—';
-            const semLabel     = c.semester_id ? ('Sem ' + c.semester_id) : '—';
+            
+            // Use the new fields sent from Backend
+            const className    = c.class_name || ''; 
+            const semLabel     = c.semester_label || '—';
 
             subBody.append(`
                 <tr>
-                    <td>${escHtml(c.class_code)}</td>
-                    <td>${semLabel}</td>
-                    <td class="text-center">${gradeDisplay}</td>
-                    <td class="text-center">${remarksBadge}</td>
+                    <td>
+                        <strong>${escHtml(c.class_code)}</strong><br>
+                        <small class="text-muted">${escHtml(className)}</small>
+                    </td>
+                    <td><small>${escHtml(semLabel)}</small></td>
+                    <td class="text-center align-middle">${gradeDisplay}</td>
+                    <td class="text-center align-middle">${remarksBadge}</td>
                 </tr>
             `);
         });

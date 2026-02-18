@@ -44,13 +44,6 @@
                                 @method('POST')
                             @endif
 
-                            <div class="text-center mb-3" data-editable>
-                                <label for="profileImageInput" class="btn btn-sm btn-default">
-                                    <i class="fas fa-camera"></i> Upload Photo
-                                </label>
-                                <input type="file" id="profileImageInput" name="profile_image" class="d-none">
-                            </div>
-
                             <ul class="list-group list-group-unbordered mb-3">
 
                                 @if(auth()->guard('admin')->check())
@@ -99,7 +92,7 @@
                                 
                                 @if(count($enrolledSemesters) > 0)
                                 <a href="{{ route('admin.grades.evaluation', $student->student_number) }}" 
-                                   class="btn btn-primary btn-block">
+                                   class="btn btn-default btn-block">
                                     <i class="fas fa-graduation-cap"></i> View Evaluation
                                 </a>
                                 @endif
@@ -135,7 +128,7 @@
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label for="middleInitial"><i class="fas fa-user mr-1"></i>M.I.</label>
+                                    <label for="middleInitial"><i class="fas fa-user mr-1"></i>M.I. <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="middleInitial"
                                         name="middle_name" data-editable placeholder="M.I."
                                         maxlength="1"

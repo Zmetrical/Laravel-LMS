@@ -76,6 +76,7 @@ class Graduation_Management extends MainController
     /**
      * Return all Grade 12 students (regular + irregular) with eligibility data.
      */
+
     public function getStudents(Request $request, $schoolYearId)
     {
         try {
@@ -85,6 +86,8 @@ class Graduation_Management extends MainController
                 return response()->json(['success' => false, 'message' => 'School year not found.'], 404);
             }
 
+            // Optional: Strict check for semester completion
+            // You can comment this out if you want to view data mid-year
             if (!$this->allSemestersCompleted($schoolYearId)) {
                 return response()->json([
                     'success' => false,
@@ -93,172 +96,207 @@ class Graduation_Management extends MainController
             }
 
             $grade12LevelId = $this->getGrade12LevelId();
-
             if (!$grade12LevelId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Grade 12 level is not configured in the levels table.'
-                ], 422);
+                return response()->json(['success' => false, 'message' => 'Grade 12 level configuration missing.'], 422);
             }
 
-            // Semesters under this school year
-            $semesterIds = DB::table('semesters')
+            // Get Current Semester IDs for this School Year
+            $currentSemesterIds = DB::table('semesters')
                 ->where('school_year_id', $schoolYearId)
                 ->pluck('id')
                 ->toArray();
 
-            if (empty($semesterIds)) {
-                return response()->json([
-                    'success' => true,
-                    'data'    => [],
-                    'summary' => ['total' => 0, 'eligible' => 0, 'issues' => 0, 'missing' => 0],
-                    'school_year' => $schoolYear,
-                ]);
-            }
+            // ── 1. IDENTIFY TARGET STUDENTS ───────────────────────────────────
 
-            // ── REGULAR STUDENTS ──────────────────────────────────────────────
+            // A. Regulars: Students currently in a Grade 12 Section
             $grade12SectionIds = DB::table('sections')
                 ->where('level_id', $grade12LevelId)
                 ->where('status', 1)
                 ->pluck('id')
                 ->toArray();
 
-            $activeSectionIds = DB::table('section_class_matrix')
-                ->whereIn('section_id', $grade12SectionIds)
-                ->whereIn('semester_id', $semesterIds)
-                ->distinct()
-                ->pluck('section_id')
-                ->toArray();
-
-            $regularStudents   = collect();
-            $regularClassCodes = [];
-
-            if (!empty($activeSectionIds)) {
-                $regularStudents = DB::table('students')
-                    ->whereIn('section_id', $activeSectionIds)
+            $regularSNs = collect();
+            if (!empty($grade12SectionIds)) {
+                $regularSNs = DB::table('students')
+                    ->whereIn('section_id', $grade12SectionIds)
                     ->where('student_type', 'regular')
-                    ->select('student_number', 'first_name', 'middle_name', 'last_name', 'gender', 'section_id', 'student_type')
-                    ->get();
-
-                $sectionClassMap = DB::table('section_class_matrix as scm')
-                    ->join('classes as c', 'scm.class_id', '=', 'c.id')
-                    ->whereIn('scm.section_id', $activeSectionIds)
-                    ->whereIn('scm.semester_id', $semesterIds)
-                    ->select('scm.section_id', 'scm.semester_id', 'c.class_code')
-                    ->get()
-                    ->groupBy('section_id');
-
-                foreach ($regularStudents as $student) {
-                    $sectionClasses = $sectionClassMap[$student->section_id] ?? collect();
-                    $regularClassCodes[$student->student_number] = $sectionClasses->map(function ($sc) {
-                        return ['class_code' => $sc->class_code, 'semester_id' => $sc->semester_id];
-                    })->values()->toArray();
-                }
+                    ->pluck('student_number');
             }
 
-            // ── IRREGULAR STUDENTS ────────────────────────────────────────────
-            $irregularStudentNumbers = DB::table('student_level_matrix')
+            // B. Irregulars: Students in Grade 12 Level Matrix
+            $irregularSNs = DB::table('student_level_matrix')
                 ->where('level_id', $grade12LevelId)
-                ->whereIn('semester_id', $semesterIds)
+                ->whereIn('semester_id', $currentSemesterIds)
                 ->distinct()
-                ->pluck('student_number')
-                ->toArray();
+                ->pluck('student_number');
 
-            $irregularStudents    = collect();
-            $irregularEnrollments = collect();
+            // C. Merge to get unique list of Student Numbers
+            $allStudentNumbers = $regularSNs->merge($irregularSNs)->unique()->values()->toArray();
 
-            if (!empty($irregularStudentNumbers)) {
-                $irregularStudents = DB::table('students')
-                    ->whereIn('student_number', $irregularStudentNumbers)
-                    ->where('student_type', 'irregular')
-                    ->select('student_number', 'first_name', 'middle_name', 'last_name', 'gender', 'section_id', 'student_type')
-                    ->get();
-
-                $irregularEnrollments = DB::table('student_class_matrix')
-                    ->whereIn('student_number', $irregularStudentNumbers)
-                    ->whereIn('semester_id', $semesterIds)
-                    ->where('enrollment_status', '!=', 'dropped')
-                    ->select('student_number', 'class_code', 'semester_id')
-                    ->get()
-                    ->groupBy('student_number');
-            }
-
-            // ── MERGE ─────────────────────────────────────────────────────────
-            $allStudents = $regularStudents->merge($irregularStudents);
-
-            if ($allStudents->isEmpty()) {
+            if (empty($allStudentNumbers)) {
                 return response()->json([
-                    'success' => true,
-                    'data'    => [],
+                    'success' => true, 'data' => [],
                     'summary' => ['total' => 0, 'eligible' => 0, 'issues' => 0, 'missing' => 0],
-                    'school_year' => $schoolYear,
-                    'note' => 'No Grade 12 students found for this school year.',
+                    'school_year' => $schoolYear, 'note' => 'No Grade 12 students found.',
                 ]);
             }
 
-            $allStudentNumbers = $allStudents->pluck('student_number')->toArray();
+            // Fetch Student Basic Info
+            $allStudents = DB::table('students')
+                ->whereIn('student_number', $allStudentNumbers)
+                ->select('student_number', 'first_name', 'middle_name', 'last_name', 'gender', 'section_id', 'student_type')
+                ->get();
 
-            // Section names keyed by section_id
-            $allSectionIds = $allStudents->pluck('section_id')->filter()->unique()->values()->toArray();
-            $sectionNames  = DB::table('sections')
-                ->whereIn('id', $allSectionIds)
-                ->pluck('name', 'id');
+            // ── 2. PRELOAD DATA SOURCES (BATCH FETCHING) ──────────────────────
 
-            // Final grades for all students
+            // SOURCE A: Section History (CRITICAL FIX)
+            // Get all sections these students have EVER joined (Grade 11, Grade 12, etc.)
+            // using 'enrollment_status' column
+            $enrollmentHistory = DB::table('student_semester_enrollment')
+                ->whereIn('student_number', $allStudentNumbers)
+                ->where('enrollment_status', 'enrolled') 
+                ->select('student_number', 'section_id')
+                ->get()
+                ->groupBy('student_number');
+
+            // Collect ALL unique section IDs involved (Current + History) to fetch their subjects
+            $allPertinentSectionIds = $allStudents->pluck('section_id') // Current sections
+                ->merge($enrollmentHistory->flatten()->pluck('section_id')) // History sections
+                ->filter()
+                ->unique()
+                ->toArray();
+
+            // SOURCE B: Subjects attached to Sections (The Matrix)
+            // Map: SectionID => List of ClassCodes
+            $sectionSubjectMap = DB::table('section_class_matrix as scm')
+                ->join('classes as c', 'scm.class_id', '=', 'c.id')
+                ->whereIn('scm.section_id', $allPertinentSectionIds)
+                ->select('scm.section_id', 'scm.semester_id', 'c.class_code')
+                ->get()
+                ->groupBy('section_id');
+
+            // SOURCE C: Individual Subject Enrollments (For Irregulars / Back subjects)
+            $individualEnrollments = DB::table('student_class_matrix')
+                ->whereIn('student_number', $allStudentNumbers)
+                ->where('enrollment_status', '!=', 'dropped')
+                ->select('student_number', 'class_code', 'semester_id')
+                ->get()
+                ->groupBy('student_number');
+
+            // SOURCE D: Final Grades (Completed Subjects)
             $finalGrades = DB::table('grades_final')
                 ->whereIn('student_number', $allStudentNumbers)
-                ->whereIn('semester_id', $semesterIds)
                 ->select('student_number', 'class_code', 'semester_id', 'final_grade', 'remarks')
                 ->get()
                 ->groupBy('student_number');
 
-            // Existing graduation records
+            // SOURCE E: Metadata Maps (For Display)
+            
+            // 1. Section Names
+            $sectionNames = DB::table('sections')
+                ->whereIn('id', $allPertinentSectionIds)
+                ->pluck('name', 'id');
+
+            // 2. Class Names (Code => Name)
+            // Note: We fetch all classes to ensure we have names for everything found
+            $allClassesMap = DB::table('classes')->pluck('class_name', 'class_code');
+
+            // 3. Semester Labels (ID => "2025-2026 First Semester")
+            $semesterInfo = DB::table('semesters')
+                ->join('school_years', 'semesters.school_year_id', '=', 'school_years.id')
+                ->select('semesters.id', 'semesters.name as sem_name', 'school_years.code as sy_code')
+                ->get()
+                ->keyBy('id');
+
+            // Existing Graduation Records
             $existingRecords = DB::table('graduation_records')
                 ->where('school_year_id', $schoolYearId)
                 ->whereIn('student_number', $allStudentNumbers)
-                ->select('student_number', 'status', 'is_finalized')
                 ->get()
                 ->keyBy('student_number');
 
-            // ── BUILD RESULT ──────────────────────────────────────────────────
+            // ── 3. PROCESS EACH STUDENT ───────────────────────────────────────
             $result   = [];
             $eligible = 0;
             $issues   = 0;
             $missing  = 0;
 
             foreach ($allStudents as $student) {
-                $sn          = $student->student_number;
-                $myGrades    = $finalGrades[$sn] ?? collect();
-                $gradeByCode = $myGrades->keyBy('class_code');
+                $sn = $student->student_number;
 
-                if ($student->student_type === 'regular') {
-                    $myClasses = collect($regularClassCodes[$sn] ?? []);
-                } else {
-                    $myClasses = ($irregularEnrollments[$sn] ?? collect())->map(function ($e) {
-                        return ['class_code' => $e->class_code, 'semester_id' => $e->semester_id];
-                    });
+                // 1. Determine ALL SECTIONS this student has been part of
+                //    Start with Current Section
+                $mySections = collect($student->section_id ? [$student->section_id] : []);
+                
+                //    Add Historical Sections (Grade 11, etc.)
+                if (isset($enrollmentHistory[$sn])) {
+                    $mySections = $mySections->merge($enrollmentHistory[$sn]->pluck('section_id'));
+                }
+                $mySections = $mySections->unique()->filter();
+
+                // 2. Build Required Subject List from those Sections
+                $sectionSubjects = collect();
+                foreach ($mySections as $secId) {
+                    if (isset($sectionSubjectMap[$secId])) {
+                        $sectionSubjects = $sectionSubjects->merge($sectionSubjectMap[$secId]);
+                    }
                 }
 
-                $totalSubjects = $myClasses->count();
+                // 3. Get Individual Enrollments & Grades
+                $myIndividual = $individualEnrollments[$sn] ?? collect();
+                $myGrades     = $finalGrades[$sn] ?? collect();
+                $gradeByCode  = $myGrades->keyBy('class_code');
+
+                // 4. MERGE EVERYTHING into one Master Subject List
+                $allSubjectCodes = $sectionSubjects->pluck('class_code')
+                    ->merge($myIndividual->pluck('class_code'))
+                    ->merge($myGrades->pluck('class_code'))
+                    ->unique();
+
+                $totalSubjects = 0;
                 $passedCount   = 0;
                 $failedCount   = 0;
                 $incCount      = 0;
                 $missingCount  = 0;
                 $classDetails  = [];
 
-                foreach ($myClasses as $class) {
-                    $classCode   = is_array($class) ? $class['class_code'] : $class->class_code;
-                    $semesterId  = is_array($class) ? $class['semester_id'] : $class->semester_id;
+                foreach ($allSubjectCodes as $classCode) {
+                    $totalSubjects++;
+                    
+                    // Priority for Details: Grade > Individual > Section
                     $gradeRecord = $gradeByCode[$classCode] ?? null;
+
+                    // Determine Semester ID
+                    $semesterId = $gradeRecord->semester_id ?? null;
+                    if (!$semesterId) {
+                        $indiv = $myIndividual->firstWhere('class_code', $classCode);
+                        $semesterId = $indiv->semester_id ?? null;
+                    }
+                    if (!$semesterId) {
+                        $secSub = $sectionSubjects->firstWhere('class_code', $classCode);
+                        $semesterId = $secSub->semester_id ?? null;
+                    }
+
+                    // Format Semester Label
+                    $semLabel = '—';
+                    if ($semesterId && isset($semesterInfo[$semesterId])) {
+                        $s = $semesterInfo[$semesterId];
+                        $semLabel = "{$s->sy_code} {$s->sem_name}";
+                    }
+
+                    // Get Class Name
+                    $className = $allClassesMap[$classCode] ?? $classCode;
 
                     if (!$gradeRecord) {
                         $missingCount++;
                         $classDetails[] = [
-                            'class_code'   => $classCode,
-                            'semester_id'  => $semesterId,
-                            'final_grade'  => null,
-                            'remarks'      => null,
-                            'grade_status' => 'missing',
+                            'class_code'     => $classCode,
+                            'class_name'     => $className,
+                            'semester_id'    => $semesterId,
+                            'semester_label' => $semLabel,
+                            'final_grade'    => null,
+                            'remarks'        => null,
+                            'grade_status'   => 'missing',
                         ];
                         continue;
                     }
@@ -274,12 +312,14 @@ class Graduation_Management extends MainController
                     }
 
                     $classDetails[] = [
-                        'class_code'   => $classCode,
-                        'semester_id'  => $semesterId,
-                        'final_grade'  => $gradeRecord->final_grade,
-                        'remarks'      => $remarks,
-                        'grade_status' => $remarks === 'PASSED' ? 'passed' :
-                                          ($remarks === 'INC'    ? 'inc'    : 'failed'),
+                        'class_code'     => $classCode,
+                        'class_name'     => $className,
+                        'semester_id'    => $semesterId,
+                        'semester_label' => $semLabel,
+                        'final_grade'    => $gradeRecord->final_grade,
+                        'remarks'        => $remarks,
+                        'grade_status'   => $remarks === 'PASSED' ? 'passed' :
+                                            ($remarks === 'INC'    ? 'inc'    : 'failed'),
                     ];
                 }
 
@@ -294,13 +334,13 @@ class Graduation_Management extends MainController
                     $eligible++;
                 }
 
-                $existingRecord = $existingRecords[$sn] ?? null;
+                $rec = $existingRecords[$sn] ?? null;
 
                 $result[] = [
                     'student_number'     => $sn,
                     'full_name'          => trim(
-                        $student->last_name . ', ' .
-                        $student->first_name .
+                        $student->last_name . ', ' . 
+                        $student->first_name . 
                         ($student->middle_name ? ' ' . substr($student->middle_name, 0, 1) . '.' : '')
                     ),
                     'first_name'         => $student->first_name,
@@ -316,41 +356,29 @@ class Graduation_Management extends MainController
                     'missing_count'      => $missingCount,
                     'eligibility_status' => $eligibilityStatus,
                     'class_details'      => $classDetails,
-                    'graduation_status'  => $existingRecord ? $existingRecord->status : null,
-                    'is_finalized'       => $existingRecord ? (bool) $existingRecord->is_finalized : false,
+                    'graduation_status'  => $rec ? $rec->status : null,
+                    'is_finalized'       => $rec ? (bool) $rec->is_finalized : false,
                 ];
             }
 
-            // Sort by last name then first name
             usort($result, function ($a, $b) {
-                $last = strcmp($a['last_name'], $b['last_name']);
-                return $last !== 0 ? $last : strcmp($a['first_name'], $b['first_name']);
+                return strcmp($a['last_name'], $b['last_name']) ?: strcmp($a['first_name'], $b['first_name']);
             });
 
             return response()->json([
                 'success' => true,
                 'data'    => $result,
                 'summary' => [
-                    'total'    => count($result),
-                    'eligible' => $eligible,
-                    'issues'   => $issues,
-                    'missing'  => $missing,
+                    'total' => count($result), 'eligible' => $eligible, 
+                    'issues' => $issues, 'missing' => $missing
                 ],
                 'school_year'  => $schoolYear,
                 'is_finalized' => $existingRecords->where('is_finalized', true)->isNotEmpty(),
             ]);
 
         } catch (Exception $e) {
-            \Log::error('Failed to get graduation students', [
-                'school_year_id' => $schoolYearId,
-                'error'          => $e->getMessage(),
-                'trace'          => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load graduation data: ' . $e->getMessage(),
-            ], 500);
+            \Log::error('Graduation Data Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()], 500);
         }
     }
 

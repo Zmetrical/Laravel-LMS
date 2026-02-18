@@ -424,9 +424,6 @@
 </div>
 
 <div class="container-fluid no-print text-center mb-4">
-    <a href="{{ route('admin.grades.cards') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Back
-    </a>
     <button class="btn btn-primary" onclick="window.print()">
         <i class="fas fa-print"></i> Print
     </button>

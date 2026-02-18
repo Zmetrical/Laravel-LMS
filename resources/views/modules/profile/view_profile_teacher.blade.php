@@ -42,21 +42,27 @@
                                 @csrf
                                 @method('POST')
                             @endif
-
+{{-- 
                             @if($mode === 'edit')
-                            <div class="text-center mb-3">
-                                <label for="profileImageInput" class="btn btn-sm btn-default">
-                                    <i class="fas fa-camera"></i> Upload Photo
-                                </label>
-                                <input type="file" id="profileImageInput" name="profile_image" accept="image/*" class="d-none">
-                            </div>
-                            @endif
+                                <div class="text-center mb-3">
+                                    <label for="profileImageInput" class="btn btn-sm btn-default">
+                                        <i class="fas fa-camera"></i> Upload Photo
+                                    </label>
+                                    <input type="file" id="profileImageInput" name="profile_image" accept="image/*" class="d-none">
+                                </div>
+                            @endif --}}
 
-                            @if($mode === 'view')
-                                <a href="{{ route('profile.teacher.edit', $teacher->id) }}" class="btn btn-primary btn-block">
-                                    <i class="fas fa-edit"></i> Edit Profile
-                                </a>
-                            @else
+                                @if($mode === 'view')
+                                    <hr>
+                                    <a href="{{ route('profile.teacher.edit', $teacher->id) }}" class="btn btn-primary btn-block">
+                                        <i class="fas fa-edit"></i> Edit Profile
+                                    </a>
+                                    <hr>
+                                    <a href="{{ route('admin.teachers.history', $teacher->id) }}" class="btn btn-default btn-block mt-2">
+                                        <i class="fas fa-history"></i> View Subject History
+                                    </a>
+                                @else
+                                <hr>
                                 <button type="submit" class="btn btn-primary btn-block mb-2">
                                     <i class="fas fa-save"></i> Save
                                 </button>
@@ -188,33 +194,6 @@
                 </form>
                 </div>
 
-                <!-- Teaching Assignment Card (Optional - add if you have this data) -->
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-chalkboard-teacher mr-2"></i>Teaching Assignments</h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 300px;">
-                            <table class="table table-sm table-hover m-0">
-                                <thead>
-                                    <tr>
-                                        <th>Subject</th>
-                                        <th>Section</th>
-                                        <th>Schedule</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-3">
-                                            <i class="fas fa-inbox fa-2x d-block mb-2"></i>
-                                            No teaching assignments found
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

@@ -12,6 +12,7 @@
 
 @section('styles')
 <style>
+
     /* Ensure card body can expand */
     .card-body {
         overflow: visible !important;
@@ -239,30 +240,97 @@
             flex-direction: column;
             align-items: center;
         }
-
-        .footer-box {
-            margin: 5px 0 !important;
-        }
     }
 
     @media print {
-        .no-print {
+        @page {
+            size: letter portrait;
+        }
+
+        /* Hide all chrome UI */
+        .no-print,
+        .main-header,
+        .main-sidebar,
+        .main-footer,
+        .breadcrumb-custom,
+        ol.breadcrumb {
             display: none !important;
         }
 
         body {
             margin: 0;
             padding: 0;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Strip all wrapper/layout chrome */
+        .content-wrapper,
+        .wrapper,
+        .container-fluid {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+        }
+
+        /* Remove AdminLTE card borders — card-outline adds border-top: 3px solid */
+        .card,
+        .card-outline,
+        .card-outline.card-primary,
+        .card-primary {
+            border: none !important;
+            border-top: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+        }
+
+        .card-body {
+            padding: 0 !important;
         }
 
         .report-card-container {
             margin: 0;
-            padding: 0.5in;
+            padding: 0;
             box-shadow: none !important;
+            max-width: 100%;
+            width: 100%;
         }
 
         .semester-section {
             page-break-inside: avoid;
+        }
+
+        /* Footer row alignment */
+        .footer-section {
+            display: flex !important;
+            justify-content: center !important;
+            flex-direction: row !important;
+        }
+
+        .footer-box {
+            display: inline-block !important;
+        }
+
+        /* Ensure colored backgrounds print */
+        .category-header {
+            background: #2a347e !important;
+            color: white !important;
+        }
+
+        .semester-header {
+            background: #2a347e !important;
+            color: white !important;
+        }
+
+        .grades-table tbody tr:nth-child(even) {
+            background: #f8f9fa !important;
+        }
+
+        .info-label {
+            background: #f8f9fa !important;
         }
     }
 </style>
@@ -271,27 +339,9 @@
 @section('content')
 <br>
 <div class="container-fluid">
-    <!-- Action Buttons Card -->
-    <div class="card card-outline card-primary mb-3">
-        <div class="card-body py-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <a href="{{ route('admin.list_student') }}" class="btn btn-default">
-                        <i class="fas fa-arrow-left"></i> Back to Student List
-                    </a>
-                </div>
-                <div>
-                    <button class="btn btn-secondary" onclick="window.print()">
-                        <i class="fas fa-print"></i> Print Evaluation
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Evaluation Document -->
-    <div class="card card-primary card-outline">
-        <div class="card-body">
+
             <div id="evaluation-document">
                 <div class="report-card-container">
                     <img src="{{ asset('img/logo/trinity_logo.png') }}" class="watermark-logo" alt="Watermark">
@@ -340,36 +390,35 @@
                         <div class="footer-section">
                             <div class="footer-box">
                                 <div class="footer-title">Description</div>
-                                <div class="footer-row"><span class="label">Outstanding</span></div>
-                                <div class="footer-row"><span class="label">Very Satisfactory</span></div>
-                                <div class="footer-row"><span class="label">Satisfactory</span></div>
-                                <div class="footer-row"><span class="label">Fairly Satisfactory</span></div>
-                                <div class="footer-row"><span class="label">Did Not Meet Expectations</span></div>
+                                <div class="footer-row">Outstanding</div>
+                                <div class="footer-row">Very Satisfactory</div>
+                                <div class="footer-row">Satisfactory</div>
+                                <div class="footer-row">Fairly Satisfactory</div>
+                                <div class="footer-row">Did Not Meet Expectations</div>
                             </div>
 
                             <div class="footer-box" style="margin-left: 40px;">
                                 <div class="footer-title">Grading Scale</div>
-                                <div class="footer-row"><span class="label">90-100</span></div>
-                                <div class="footer-row"><span class="label">85-89</span></div>
-                                <div class="footer-row"><span class="label">80-84</span></div>
-                                <div class="footer-row"><span class="label">75-79</span></div>
-                                <div class="footer-row"><span class="label">Below 75</span></div>
+                                <div class="footer-row">90-100</div>
+                                <div class="footer-row">85-89</div>
+                                <div class="footer-row">80-84</div>
+                                <div class="footer-row">75-79</div>
+                                <div class="footer-row">Below 75</div>
                             </div>
 
                             <div class="footer-box" style="margin-left: 40px;">
                                 <div class="footer-title">Remarks</div>
-                                <div class="footer-row"><span class="label">Passed</span></div>
-                                <div class="footer-row"><span class="label">Passed</span></div>
-                                <div class="footer-row"><span class="label">Passed</span></div>
-                                <div class="footer-row"><span class="label">Passed</span></div>
-                                <div class="footer-row"><span class="label">Failed</span></div>
+                                <div class="footer-row">Passed</div>
+                                <div class="footer-row">Passed</div>
+                                <div class="footer-row">Passed</div>
+                                <div class="footer-row">Passed</div>
+                                <div class="footer-row">Failed</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+
 </div>
 @endsection
 

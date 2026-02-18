@@ -458,6 +458,7 @@
 @section('foot')
     <script>
         $(document).ready(function () {
+            // Sidebar collapse memory
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 $('body').addClass('sidebar-collapse');
             }
@@ -469,6 +470,17 @@
             $('[data-widget="pushmenu"]').on('shown.lte.pushmenu', function () {
                 localStorage.setItem('sidebar-collapsed', 'false');
             });
+
+            // Auto-open treeview containing the active link
+            var $activeLink = $('.nav-treeview .nav-link.active');
+            if ($activeLink.length) {
+                $activeLink
+                    .closest('.nav-item')
+                    .parents('.nav-item')
+                    .addClass('menu-open')
+                    .children('.nav-link')
+                    .addClass('active');
+            }
         });
     </script>
     @yield('scripts')

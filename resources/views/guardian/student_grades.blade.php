@@ -11,15 +11,11 @@
 
 @section('styles')
 <style>
-    .student-info-card {
-        position: sticky;
-        top: 70px;
-        z-index: 100;
-    }
-
-    .report-card-container {
+    /* ── Report Card (matches admin view_card exactly) ── */
+    .report-card-page {
         background: white;
         max-width: 8.5in;
+        min-height: 11in;
         margin: 20px auto;
         padding: 0.5in;
         box-shadow: 0 0 20px rgba(0,0,0,0.15);
@@ -202,79 +198,38 @@
         display: inline-block;
     }
 
-    @media (max-width: 767.98px) {
-        .student-info-card {
-            position: relative;
-            top: 0;
-        }
-        
-        .report-card-container {
-            padding: 0.25in;
-            margin: 10px;
-        }
-
-        .logo {
-            width: 60px;
-            height: 60px;
-        }
-
-        .school-name {
-            font-size: 14px;
-        }
-
-        .school-info {
-            font-size: 10px;
-        }
-
-        .grades-table {
-            font-size: 10px;
-        }
-
-        .grades-table th,
-        .grades-table td {
-            padding: 4px 3px;
-        }
-
-        .footer-section {
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .footer-box {
-            margin: 5px 0 !important;
-        }
+    /* ── Student info card (guardian-only UI, hidden on print) ── */
+    .student-info-card {
+        position: sticky;
+        top: 70px;
+        z-index: 100;
     }
 
-    @media print {
-        .student-info-card,
-        .no-print {
-            display: none !important;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-        }
-
-        .report-card-container {
-            margin: 0;
-            padding: 0.5in;
-            box-shadow: none !important;
-        }
+@media print {
+    .no-print { display: none !important; }
+    body { margin: 0; padding: 0; }
+    .report-card-page {
+        margin: 0 auto;
+        padding: 0.5in;
+        box-shadow: none !important;
+        max-width: 8.5in;
+        width: 8.5in;
     }
+}
 </style>
 @endsection
 
 @section('content')
 <div class="row">
-    <!-- Student Info Card (Sticky Header) -->
+
+    {{-- Student Info Card (Guardian-only sticky header) --}}
     <div class="col-12 no-print">
         <div class="card student-info-card">
             <div class="card-body p-3">
                 <div class="row align-items-center">
                     <div class="col-auto">
-                        <img class="img-circle" 
-                             src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}" 
+                        <img class="img-circle"
+                             src="{{ $student->profile_image ? asset('storage/' . $student->profile_image) : asset('img/default-avatar.png') }}"
                              alt="Student"
                              style="width: 60px; height: 60px; object-fit: cover;">
                     </div>
@@ -291,7 +246,7 @@
         </div>
     </div>
 
-    <!-- Semester Selector -->
+    {{-- Semester Selector --}}
     <div class="col-12 no-print">
         <div class="card mb-3">
             <div class="card-header py-2">
@@ -303,7 +258,7 @@
                     <select class="form-control" id="semester-selector" data-student-number="{{ $student->student_number }}">
                         <option value="">-- Select Semester --</option>
                         @foreach($semesters as $semester)
-                        <option value="{{ $semester->id }}" 
+                        <option value="{{ $semester->id }}"
                                 data-school-year="{{ $semester->school_year_code }}"
                                 {{ $semester->status === 'active' ? 'selected' : '' }}>
                             {{ $semester->display_name }}
@@ -320,13 +275,15 @@
         </div>
     </div>
 
-    <!-- Digital Report Card -->
-    <div class="col-12" id="report-card-wrapper" style="display: none;">
-        <div class="report-card-container">
+</div>{{-- end .row --}}
+
+{{-- Report Card outside the grid row, same as admin view_card --}}
+<div id="report-card-wrapper" style="display: none;">
+    <div class="report-card-page">
             <img src="{{ asset('img/logo/trinity_logo.png') }}" class="watermark-logo" alt="Watermark">
-            
+
             <div class="content">
-                <!-- Header -->
+                {{-- Header --}}
                 <div class="header">
                     <div class="header-left">
                         <img src="{{ asset('img/logo/trinity_logo.png') }}" class="logo" alt="School Logo">
@@ -343,7 +300,7 @@
                 <div class="school-year">School Year <span id="school-year-display"></span></div>
                 <div class="school-year" id="semester-display"></div>
 
-                <!-- Student Information -->
+                {{-- Student Information --}}
                 <div class="student-info">
                     <table class="student-info-table">
                         <tr>
@@ -361,10 +318,10 @@
                     </table>
                 </div>
 
-                <!-- Grades Section -->
+                {{-- Grades Section --}}
                 <div class="grades-section">
                     <div class="section-header">LEARNING PROGRESS AND ACHIEVEMENT</div>
-                    
+
                     <table class="grades-table">
                         <thead>
                             <tr>
@@ -385,7 +342,7 @@
                     </table>
                 </div>
 
-                <!-- Footer -->
+                {{-- Footer --}}
                 <div class="footer-section">
                     <div class="footer-box">
                         <div class="footer-title">Description</div>
@@ -417,14 +374,13 @@
             </div>
         </div>
 
-        <!-- Action Buttons -->
+        {{-- Action Buttons --}}
         <div class="text-center mb-4 no-print">
             <button class="btn btn-primary" onclick="window.print()">
                 <i class="fas fa-print"></i> Print Report Card
             </button>
         </div>
     </div>
-</div>
 @endsection
 
 @section('scripts')

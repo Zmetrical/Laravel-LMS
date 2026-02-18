@@ -621,7 +621,7 @@ public function setActiveSchoolYear($id)
         }
     }
 
-    public function getSemesterSections($id)
+public function getSemesterSections($id)
     {
         try {
             $semester = DB::table('semesters')->find($id);
@@ -633,23 +633,36 @@ public function setActiveSchoolYear($id)
                 ], 404);
             }
 
-            // Get sections that have classes enrolled in this semester via section_class_matrix
-            $sectionIds = DB::table('section_class_matrix')
+            // 1. Get sections that have CLASSES in this semester
+            $classSectionIds = DB::table('section_class_matrix')
                 ->where('semester_id', $id)
-                ->distinct()
-                ->pluck('section_id');
+                ->pluck('section_id')
+                ->toArray();
 
-            if ($sectionIds->isEmpty()) {
+            // 2. Get sections that have STUDENTS enrolled in this semester
+            // (This fixes the "Missing Section" bug for historical data)
+            $studentSectionIds = DB::table('student_semester_enrollment')
+                ->where('semester_id', $id)
+                ->whereNotNull('section_id')
+                ->where('enrollment_status', 'enrolled')
+                ->pluck('section_id')
+                ->toArray();
+
+            // 3. Merge both lists to get ALL active sections for this semester
+            $sectionIds = array_unique(array_merge($classSectionIds, $studentSectionIds));
+
+            if (empty($sectionIds)) {
                 return response()->json([
                     'success' => true,
                     'data' => []
                 ]);
             }
 
-            // Get section details with student count
+            // Get section details
             $sections = DB::table('sections as sec')
                 ->join('strands as str', 'sec.strand_id', '=', 'str.id')
                 ->join('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                // Count current regular students (Optional: could switch to historical count if needed)
                 ->leftJoin('students as s', function($join) {
                     $join->on('s.section_id', '=', 'sec.id')
                          ->where('s.student_type', '=', 'regular');
@@ -680,6 +693,7 @@ public function setActiveSchoolYear($id)
                 'success' => true,
                 'data' => $sections
             ]);
+
         } catch (Exception $e) {
             \Log::error('Failed to load semester sections', [
                 'semester_id' => $id,
@@ -742,9 +756,11 @@ public function setActiveSchoolYear($id)
                 )
                 ->get();
 
-            // Get regular students in this section
-            $students = DB::table('students as s')
-                ->where('s.section_id', $sectionId)
+                $students = DB::table('student_semester_enrollment as sse')
+                ->join('students as s', 'sse.student_number', '=', 's.student_number')
+                ->where('sse.semester_id', $semesterId) // Filter by the requested semester history
+                ->where('sse.section_id', $sectionId)   // Filter by the section they were in THEN
+                ->where('sse.enrollment_status', 'enrolled')
                 ->where('s.student_type', 'regular')
                 ->select(
                     's.student_number',
@@ -983,7 +999,6 @@ public function setActiveSemester($id)
 
         DB::beginTransaction();
 
-        // FIXED: Only reset active semesters to upcoming, preserve completed status
         DB::table('semesters')
             ->where('status', 'active')
             ->update(['status' => 'upcoming']);
@@ -992,32 +1007,56 @@ public function setActiveSemester($id)
             ->where('id', $id)
             ->update([
                 'status' => 'active',
+                'activated_at' => now(),
+                'activated_by' => \Auth::guard('admin')->id(),
                 'updated_at' => now()
             ]);
 
-        // FIXED: Only reset active school years to upcoming, preserve completed status
         DB::table('school_years')
             ->where('status', 'active')
             ->update(['status' => 'upcoming']);
             
         DB::table('school_years')
             ->where('id', $semester->school_year_id)
-            ->update(['status' => 'active']);
+            ->update([
+                'status' => 'active',
+                'activated_at' => now(),
+                'activated_by' => \Auth::guard('admin')->id(),
+                'updated_at' => now()
+            ]);
+
+        // Sync students.section_id from their enrollment in this semester
+        $enrollments = DB::table('student_semester_enrollment')
+            ->where('semester_id', $id)
+            ->where('enrollment_status', 'enrolled')
+            ->whereNotNull('section_id')
+            ->select('student_number', 'section_id')
+            ->get();
+
+        foreach ($enrollments as $enrollment) {
+            DB::table('students')
+                ->where('student_number', $enrollment->student_number)
+                ->update([
+                    'section_id' => $enrollment->section_id,
+                    'updated_at' => now()
+                ]);
+        }
 
         $this->logAudit(
             'activated',
             'semesters',
             (string)$id,
-            "Activated {$semester->name} for school year {$schoolYear->code}",
+            "Activated {$semester->name} for school year {$schoolYear->code}. Synced section_id for {$enrollments->count()} student(s).",
             ['status' => $semester->status],
-            ['status' => 'active']
+            ['status' => 'active', 'students_synced' => $enrollments->count()]
         );
 
         DB::commit();
 
         return response()->json([
             'success' => true,
-            'message' => 'Semester activated successfully!'
+            'message' => 'Semester activated successfully!',
+            'students_synced' => $enrollments->count()
         ]);
     } catch (Exception $e) {
         DB::rollBack();

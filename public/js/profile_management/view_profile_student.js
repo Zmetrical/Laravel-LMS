@@ -32,17 +32,6 @@ $(document).ready(function () {
         });
     }
 
-    // Profile image preview
-    $('#profileImageInput').on('change', function (e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                $('#profileImagePreview').attr('src', e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
 
     // ---------------------------------------------------------------------------
     //  Student Credentials Toggle
