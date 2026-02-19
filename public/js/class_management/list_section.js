@@ -574,10 +574,9 @@ function saveSection() {
                     text: response.message,
                     timer: 2000,
                     showConfirmButton: false
+                }).then(function() {
+                    window.location.reload();
                 });
-                
-                $('#sectionModal').modal('hide');
-                loadSections();
             }
         },
         error: function(xhr) {
@@ -647,10 +646,9 @@ function toggleSectionStatus(sectionId, action) {
                             text: response.message,
                             timer: 2000,
                             showConfirmButton: false
+                        }).then(function() {
+                            window.location.reload();
                         });
-                        
-                        // Reload sections to update both tables
-                        loadSections();
                     }
                 },
                 error: function(xhr) {

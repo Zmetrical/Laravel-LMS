@@ -10,10 +10,13 @@ $(document).ready(function () {
     });
 
     let selectedSectionId = null;
-    let sections = [];
-    let levels = [];
-    let strands = [];
+    let selectedClassCode = null;
+    let sections    = [];
+    let levels      = [];
+    let strands     = [];
     let allStudents = [];
+    let gradeMap    = {};       // { class_code: [student_numbers that submitted] }
+    let loadedClasses = [];
 
     // Load sections on page load
     loadSections();
@@ -23,20 +26,19 @@ $(document).ready(function () {
     // ========================================================================
     function loadSections() {
         showLoader('#sectionsListContainer', 'Loading sections...');
-        
+
         $.ajax({
             url: API_ROUTES.getSections,
             method: 'GET',
             success: function (response) {
                 console.log('Sections response:', response);
-                
+
                 if (response.success) {
                     sections = Array.isArray(response.sections) ? response.sections : [];
-                    levels = Array.isArray(response.levels) ? response.levels : [];
-                    strands = Array.isArray(response.strands) ? response.strands : [];
+                    levels   = Array.isArray(response.levels)   ? response.levels   : [];
+                    strands  = Array.isArray(response.strands)  ? response.strands  : [];
 
                     console.log('Loaded sections:', sections.length);
-                    console.log('Sections data:', sections);
 
                     if (sections.length === 0) {
                         showError('#sectionsListContainer', 'No sections with enrolled classes found for current semester');
@@ -52,12 +54,8 @@ $(document).ready(function () {
             },
             error: function (xhr) {
                 console.error('AJAX Error:', xhr);
-                const errorMsg = xhr.responseJSON?.message || 'Failed to load sections';
-                showError('#sectionsListContainer', errorMsg);
-                Toast.fire({
-                    icon: "error",
-                    title: "Could not load sections. Please refresh the page."
-                });
+                showError('#sectionsListContainer', xhr.responseJSON?.message || 'Failed to load sections');
+                Toast.fire({ icon: "error", title: "Could not load sections. Please refresh the page." });
             }
         });
     }
@@ -81,17 +79,15 @@ $(document).ready(function () {
     // RENDER SECTIONS LIST
     // ========================================================================
     function renderSectionsList() {
-        const container = $('#sectionsListContainer');
-        const search = $('#sectionSearch').val().toLowerCase();
-        const levelFilter = $('#levelFilter').val();
+        const container    = $('#sectionsListContainer');
+        const search       = $('#sectionSearch').val().toLowerCase();
+        const levelFilter  = $('#levelFilter').val();
         const strandFilter = $('#strandFilter').val();
 
         let filtered = sections.filter(section => {
-            const matchSearch = !search ||
-                section.name.toLowerCase().includes(search) ||
-                section.code.toLowerCase().includes(search);
-            const matchLevel = !levelFilter || section.level_id == levelFilter;
-            const matchStrand = !strandFilter || section.strand_id == strandFilter;
+            const matchSearch  = !search || section.name.toLowerCase().includes(search) || section.code.toLowerCase().includes(search);
+            const matchLevel   = !levelFilter  || section.level_id  == levelFilter;
+            const matchStrand  = !strandFilter || section.strand_id == strandFilter;
             return matchSearch && matchLevel && matchStrand;
         });
 
@@ -109,11 +105,10 @@ $(document).ready(function () {
 
         filtered.forEach(section => {
             const sectionDisplay = `${section.level_name} - ${section.strand_code || section.strand_name}`;
-            const percentage = section.submission_percentage || 0;
-            const progressClass = 'bg-primary';
-            
+            const percentage     = section.submission_percentage || 0;
+
             const item = `
-                <a href="#" class="list-group-item list-group-item-action section-item" 
+                <a href="#" class="list-group-item list-group-item-action section-item"
                    data-section-id="${section.id}"
                    data-section-name="${section.name}"
                    data-section-level="${section.level_name}"
@@ -124,11 +119,11 @@ $(document).ready(function () {
                             <h6 class="mb-1"><strong>${section.name}</strong></h6>
                             <p class="mb-1 text-muted small">${sectionDisplay}</p>
                             <small class="text-muted">
-                                <i class="fas fa-user-graduate"></i> ${section.student_count || 0} students | 
+                                <i class="fas fa-user-graduate"></i> ${section.student_count || 0} students |
                                 <i class="fas fa-book"></i> ${section.class_count || 0} classes
                             </small>
                             <div class="submission-progress mt-2">
-                                <div class="submission-progress-bar ${progressClass}" 
+                                <div class="submission-progress-bar bg-primary"
                                      style="width: ${percentage}%"></div>
                             </div>
                             <small class="text-muted">${percentage}% submitted</small>
@@ -143,24 +138,25 @@ $(document).ready(function () {
     // ========================================================================
     // SECTION ITEM CLICK
     // ========================================================================
-    $(document).on('click', '.section-item', function(e) {
+    $(document).on('click', '.section-item', function (e) {
         e.preventDefault();
-        
+
         $('.section-item').removeClass('active');
         $(this).addClass('active');
-        
+
         selectedSectionId = $(this).data('section-id');
-        const sectionName = $(this).data('section-name');
-        const sectionLevel = $(this).data('section-level');
+        const sectionName   = $(this).data('section-name');
+        const sectionLevel  = $(this).data('section-level');
         const sectionStrand = $(this).data('section-strand');
-        
+
         $('#selectedSectionName').html(`<i class="fas fa-users"></i> ${sectionName}`);
-        $('#levelDisplay').text(sectionLevel || '-');
+        $('#levelDisplay').text(sectionLevel   || '-');
         $('#strandDisplay').text(sectionStrand || '-');
-        
+
         $('#noSectionSelected').hide();
         $('#gradesSection').show();
-        
+
+        selectedClassCode = null;
         resetStudentFilters();
         loadSectionDetails(selectedSectionId);
     });
@@ -174,8 +170,11 @@ $(document).ready(function () {
                 <i class="fas fa-spinner fa-spin"></i> Loading classes...
             </div>
         `);
-        showLoader('#studentsBody', 'Loading students...', 5);
-        
+        showLoader('#studentsBody', 'Loading students...', 4);
+
+        gradeMap      = {};
+        loadedClasses = [];
+
         const url = API_ROUTES.getSectionDetails.replace(':id', sectionId);
 
         $.ajax({
@@ -183,21 +182,21 @@ $(document).ready(function () {
             method: 'GET',
             success: function (response) {
                 if (response.success) {
-                    renderClasses(response.classes || []);
-                    allStudents = response.students || [];
+                    loadedClasses = response.classes   || [];
+                    gradeMap      = response.grade_map || {};
+                    allStudents   = response.students  || [];
+
+                    renderClasses(loadedClasses);
                     renderStudents(allStudents);
                 } else {
                     showError('#classesContainer', 'Failed to load classes');
-                    showError('#studentsBody', 'Failed to load students', 5);
+                    showError('#studentsBody', 'Failed to load students', 4);
                 }
             },
-            error: function (xhr) {
+            error: function () {
                 showError('#classesContainer', 'Failed to load data');
-                showError('#studentsBody', 'Failed to load data', 5);
-                Toast.fire({
-                    icon: "error",
-                    title: "Could not load section details"
-                });
+                showError('#studentsBody', 'Failed to load data', 4);
+                Toast.fire({ icon: "error", title: "Could not load section details" });
             }
         });
     }
@@ -205,91 +204,109 @@ $(document).ready(function () {
     // ========================================================================
     // RENDER CLASSES WITH GRADE STATUS
     // ========================================================================
-function renderClasses(classes) {
-    const container = $('#classesContainer');
-    container.empty();
-    
-    $('#classesCount').text(`${classes.length} ${classes.length === 1 ? 'Class' : 'Classes'}`);
+    function renderClasses(classes) {
+        const container = $('#classesContainer');
+        container.empty();
 
-    if (classes.length === 0) {
-        container.html(`
-            <div class="text-center py-4 text-muted">
-                <i class="fas fa-inbox fa-2x mb-2"></i>
-                <p class="mb-0">No classes enrolled</p>
-            </div>
-        `);
-        return;
-    }
+        $('#classesCount').text(`${classes.length} ${classes.length === 1 ? 'Class' : 'Classes'}`);
 
-    classes.forEach(cls => {
-        const statusText = cls.is_complete ? 
-            '<span class="text-success">Complete</span>' :
-            '<span class="text-danger">Not Complete</span>';
+        if (classes.length === 0) {
+            container.html(`
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p class="mb-0">No classes enrolled</p>
+                </div>
+            `);
+            return;
+        }
 
-        const borderClass = cls.is_complete ? 'border-success' : 'border-danger';
-        const teachers = cls.teachers || '<span class="text-muted">No teacher assigned</span>';
-        
-        // Get current section info from the active section item
-        const activeSectionItem = $('.section-item.active');
-        const sectionCode = activeSectionItem.data('section-code') || '';
-        
-        // Build URL with filters
-        const gradeListUrl = `/admin/grades/list?class=${encodeURIComponent(cls.class_code)}&section=${encodeURIComponent(sectionCode)}&semester=${cls.semester_id || ''}`;
-        
-        // Only show eye icon if grades are complete
-        const viewButton = cls.is_complete ? 
-            `<a href="${gradeListUrl}" class="btn btn-sm btn-secondary" title="View Grades in Grade List">
-                <i class="fas fa-eye"></i>
-            </a>` : '';
-        
-        const card = `
-            <div class="card class-card ${borderClass} mb-2">
-                <div class="card-body p-3">
-                    <div class="row align-items-center">
+        classes.forEach(cls => {
+            const statusText  = cls.is_complete
+                ? '<span class="text-success">Complete</span>'
+                : '<span class="text-danger">Not Complete</span>';
+            const borderClass = cls.is_complete ? 'border-success' : 'border-danger';
+            const teachers    = cls.teachers || '<span class="text-muted">No teacher assigned</span>';
 
-                        <div class="col-md-2 text-center">
-                            ${statusText}
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="mb-0"><strong>${cls.class_name}</strong></h6>
-                            <small class="text-muted">
-                                <i class="fas fa-chalkboard-teacher"></i> ${teachers}
-                            </small>
-                        </div>
-                        <div class="col-md-2 text-center">
-                            <small class="text-muted d-block">Submitted</small>
-                            <strong>${cls.submitted_count} / ${cls.total_students}</strong>
-                        </div>
+            const sectionCode  = $('.section-item.active').data('section-code') || '';
+            const gradeListUrl = `/admin/grades/list?class=${encodeURIComponent(cls.class_code)}&section=${encodeURIComponent(sectionCode)}&semester=${cls.semester_id || ''}`;
 
-                        <div class="col-md-2 text-right">
-                            ${viewButton}
+            const viewButton = cls.is_complete
+                ? `<a href="${gradeListUrl}" class="btn btn-sm btn-secondary" title="View Grades"
+                      onclick="event.stopPropagation()">
+                       <i class="fas fa-eye"></i>
+                   </a>`
+                : '';
+
+            container.append(`
+                <div class="card class-card ${borderClass} mb-2"
+                     data-class-code="${cls.class_code}"
+                     title="Click to filter students by grade status for this class"
+                     style="cursor: pointer;">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-2 text-center">
+                                ${statusText}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-0"><strong>${cls.class_name}</strong></h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-chalkboard-teacher"></i> ${teachers}
+                                </small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <small class="text-muted d-block">Submitted</small>
+                                <strong>${cls.submitted_count} / ${cls.total_students}</strong>
+                            </div>
+                            <div class="col-md-2 text-right">
+                                ${viewButton}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-        container.append(card);
+            `);
+        });
+    }
+
+    // ========================================================================
+    // CLASS CARD CLICK — selects class to show per-student grade status
+    // ========================================================================
+    $(document).on('click', '.class-card', function () {
+        const clickedCode = $(this).data('class-code');
+
+        // Toggle off if clicking the same card
+        if (selectedClassCode === clickedCode) {
+            selectedClassCode = null;
+            $('.class-card').removeClass('class-card-selected');
+            applyStudentFilters();
+            return;
+        }
+
+        selectedClassCode = clickedCode;
+        $('.class-card').removeClass('class-card-selected');
+        $(this).addClass('class-card-selected');
+
+        applyStudentFilters();
     });
-}
+
     // ========================================================================
     // RENDER STUDENTS
     // ========================================================================
     function renderStudents(students) {
-        const tbody = $('#studentsBody');
-        tbody.empty();
-        
-        const totalCount = allStudents.length;
+        const tbody         = $('#studentsBody');
+        const totalCount    = allStudents.length;
         const filteredCount = students.length;
-        const countText = filteredCount === totalCount 
+
+        tbody.empty();
+
+        const countText = filteredCount === totalCount
             ? `${totalCount} ${totalCount === 1 ? 'Student' : 'Students'}`
             : `${filteredCount} of ${totalCount} Students`;
-        
         $('#studentsCount').text(countText);
 
         if (students.length === 0) {
             tbody.html(`
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
+                    <td colspan="4" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">${allStudents.length === 0 ? 'No students in this section' : 'No students match your filters'}</p>
                     </td>
@@ -298,22 +315,28 @@ function renderClasses(classes) {
             return;
         }
 
-        students.forEach((student, index) => {
+        students.forEach(student => {
             const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
-            
-            const row = `
+
+            let statusCell;
+            if (!selectedClassCode) {
+                statusCell = '<span class="text-muted">-</span>';
+            } else {
+                const submittedList = gradeMap[selectedClassCode] || [];
+                const isSubmitted   = submittedList.includes(student.student_number);
+                statusCell = isSubmitted
+                    ? '<span class="badge badge-primary">Submitted</span>'
+                    : '<span class="badge badge-secondary">Pending</span>';
+            }
+
+            tbody.append(`
                 <tr>
                     <td>${student.student_number}</td>
                     <td>${fullName}</td>
-                    <td class="text-center">
-                        ${student.gender || '-'}
-                    </td>
-                    <td class="text-center">
-                            ${student.student_type ? student.student_type.toUpperCase() : 'N/A'}
-                    </td>
+                    <td class="text-center">${student.gender || '-'}</td>
+                    <td class="text-center">${statusCell}</td>
                 </tr>
-            `;
-            tbody.append(row);
+            `);
         });
     }
 
@@ -321,29 +344,37 @@ function renderClasses(classes) {
     // STUDENT FILTERS
     // ========================================================================
     function applyStudentFilters() {
-        const searchTerm = $('#studentSearchFilter').val().toLowerCase();
-        const genderFilter = $('#genderFilter').val();
-        const typeFilter = $('#studentTypeFilter').val();
+        const searchTerm        = $('#studentSearchFilter').val().toLowerCase();
+        const genderFilter      = $('#genderFilter').val();
+        const gradeStatusFilter = $('#gradeStatusFilter').val();
 
         const filtered = allStudents.filter(student => {
             const fullName = `${student.first_name} ${student.middle_name} ${student.last_name}`.toLowerCase();
-            
-            const matchSearch = !searchTerm || 
+
+            const matchSearch = !searchTerm ||
                 student.student_number.toLowerCase().includes(searchTerm) ||
                 fullName.includes(searchTerm);
-            
-            const matchGender = !genderFilter || student.gender === genderFilter;
-            const matchType = !typeFilter || student.student_type === typeFilter;
 
-            return matchSearch && matchGender && matchType;
+            const matchGender = !genderFilter || student.gender === genderFilter;
+
+            // Status filter only applies when a class card is selected
+            let matchStatus = true;
+            if (gradeStatusFilter && selectedClassCode) {
+                const submittedList = gradeMap[selectedClassCode] || [];
+                const isSubmitted   = submittedList.includes(student.student_number);
+                if (gradeStatusFilter === 'submitted') matchStatus = isSubmitted;
+                if (gradeStatusFilter === 'pending')   matchStatus = !isSubmitted;
+            }
+
+            return matchSearch && matchGender && matchStatus;
         });
 
         renderStudents(filtered);
     }
 
-    $('#studentSearchFilter, #genderFilter, #studentTypeFilter').on('input change', applyStudentFilters);
+    $('#studentSearchFilter, #genderFilter, #gradeStatusFilter').on('input change', applyStudentFilters);
 
-    $('#resetStudentFiltersBtn').click(function() {
+    $('#resetStudentFiltersBtn').click(function () {
         resetStudentFilters();
         renderStudents(allStudents);
     });
@@ -351,7 +382,9 @@ function renderClasses(classes) {
     function resetStudentFilters() {
         $('#studentSearchFilter').val('');
         $('#genderFilter').val('');
-        $('#studentTypeFilter').val('');
+        $('#gradeStatusFilter').val('');
+        selectedClassCode = null;
+        $('.class-card').removeClass('class-card-selected');
     }
 
     // ========================================================================
@@ -365,7 +398,7 @@ function renderClasses(classes) {
     // UTILITY FUNCTIONS
     // ========================================================================
     function showLoader(selector, message = 'Loading...', colspan = 1) {
-        const loader = colspan > 1 
+        const loader = colspan > 1
             ? `<tr><td colspan="${colspan}" class="text-center py-4">
                     <div class="spinner-border spinner-border-sm text-primary" role="status">
                         <span class="sr-only">Loading...</span>
@@ -378,7 +411,6 @@ function renderClasses(classes) {
                     </div>
                     <p class="mt-2 mb-0 small">${message}</p>
                </div>`;
-        
         $(selector).html(loader);
     }
 
@@ -392,7 +424,6 @@ function renderClasses(classes) {
                     <i class="fas fa-exclamation-triangle mb-2"></i>
                     <p class="mb-0 small">${message}</p>
                </div>`;
-        
         $(selector).html(error);
     }
 });

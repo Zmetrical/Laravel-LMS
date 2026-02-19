@@ -123,12 +123,21 @@ class Graduation_Management extends MainController
                     ->pluck('student_number');
             }
 
-            // B. Irregulars: Students in Grade 12 Level Matrix
-            $irregularSNs = DB::table('student_level_matrix')
-                ->where('level_id', $grade12LevelId)
-                ->whereIn('semester_id', $currentSemesterIds)
-                ->distinct()
-                ->pluck('student_number');
+// B. Irregulars: Students in Grade 12 Level Matrix
+$irregularSNs = DB::table('student_level_matrix')
+    ->where('level_id', $grade12LevelId)
+    ->whereIn('semester_id', $currentSemesterIds)
+    ->distinct()
+    ->pluck('student_number');
+
+// B2. Fallback: Irregular students whose current section_id maps to a Grade 12 section
+// (covers cases where student_level_matrix has no entries for these students)
+$irregularFromSections = DB::table('students')
+    ->whereIn('section_id', $grade12SectionIds)
+    ->where('student_type', 'irregular')
+    ->pluck('student_number');
+
+$irregularSNs = $irregularSNs->merge($irregularFromSections);
 
             // C. Merge to get unique list of Student Numbers
             $allStudentNumbers = $regularSNs->merge($irregularSNs)->unique()->values()->toArray();
@@ -235,12 +244,14 @@ class Graduation_Management extends MainController
                 $mySections = $mySections->unique()->filter();
 
                 // 2. Build Required Subject List from those Sections
-                $sectionSubjects = collect();
-                foreach ($mySections as $secId) {
-                    if (isset($sectionSubjectMap[$secId])) {
-                        $sectionSubjects = $sectionSubjects->merge($sectionSubjectMap[$secId]);
-                    }
-                }
+$sectionSubjects = collect();
+if ($student->student_type === 'regular') {
+    foreach ($mySections as $secId) {
+        if (isset($sectionSubjectMap[$secId])) {
+            $sectionSubjects = $sectionSubjects->merge($sectionSubjectMap[$secId]);
+        }
+    }
+}
 
                 // 3. Get Individual Enrollments & Grades
                 $myIndividual = $individualEnrollments[$sn] ?? collect();
@@ -248,10 +259,16 @@ class Graduation_Management extends MainController
                 $gradeByCode  = $myGrades->keyBy('class_code');
 
                 // 4. MERGE EVERYTHING into one Master Subject List
-                $allSubjectCodes = $sectionSubjects->pluck('class_code')
-                    ->merge($myIndividual->pluck('class_code'))
-                    ->merge($myGrades->pluck('class_code'))
-                    ->unique();
+if ($student->student_type === 'irregular') {
+    $allSubjectCodes = $myIndividual->pluck('class_code')
+        ->merge($myGrades->pluck('class_code'))
+        ->unique();
+} else {
+    $allSubjectCodes = $sectionSubjects->pluck('class_code')
+        ->merge($myIndividual->pluck('class_code'))
+        ->merge($myGrades->pluck('class_code'))
+        ->unique();
+}
 
                 $totalSubjects = 0;
                 $passedCount   = 0;

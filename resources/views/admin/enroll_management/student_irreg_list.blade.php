@@ -28,21 +28,23 @@
                     <h3 class="card-title"><i class="fas fa-users"></i> Irregular Students List</h3>
                 </div>
                 <div class="card-body">
-                    <table id="irregularStudentsTable" class="table table-bordered table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Student Number</th>
-                                <th>Full Name</th>
-                                <th>Grade Level</th>
-                                <th>Strand</th>
-                                <th>Section</th>
-                                <th>Enrolled Classes</th>
-                                <th width="120">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table id="irregularStudentsTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Student Number</th>
+                                    <th>Full Name</th>
+                                    <th>Grade Level</th>
+                                    <th>Strand</th>
+                                    <th>Section</th>
+                                    <th>Enrolled Classes</th>
+                                    <th width="120">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

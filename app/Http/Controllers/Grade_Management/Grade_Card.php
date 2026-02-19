@@ -44,60 +44,108 @@ class Grade_Card extends MainController
             ->orderBy('sec.code')
             ->get();
 
-        // Get grade cards - one record per student per semester
-        $gradeCards = DB::table('grades_final as gf')
-            ->select(
-                'gf.student_number',
-                'gf.semester_id',
-                's.first_name',
-                's.middle_name',
-                's.last_name',
-                's.student_type',
-                'sec.code as section_code',
-                'sec.name as section_name',
-                'str.code as strand_code',
-                'lvl.name as level_name',
-                DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
-                DB::raw("COUNT(gf.id) as total_subjects"),
-                DB::raw("SUM(CASE WHEN gf.remarks = 'PASSED' THEN 1 ELSE 0 END) as passed_count"),
-                DB::raw("SUM(CASE WHEN gf.remarks = 'FAILED' THEN 1 ELSE 0 END) as failed_count"),
-                DB::raw("ROUND(AVG(gf.final_grade), 2) as general_average"),
-                DB::raw("MAX(gf.computed_at) as last_computed")
-            )
-            ->join('students as s', 'gf.student_number', '=', 's.student_number')
-            ->join('semesters as sem', 'gf.semester_id', '=', 'sem.id')
-            ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
-            ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
-            ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
-            ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
-            ->groupBy(
-                'gf.student_number',
-                'gf.semester_id',
-                's.first_name',
-                's.middle_name',
-                's.last_name',
-                's.student_type',
-                'sec.code',
-                'sec.name',
-                'str.code',
-                'lvl.name',
-                'semester_display'
-            )
-            ->orderBy('sy.year_start', 'desc')
-            ->orderBy('sem.code', 'asc')
-            ->orderBy('s.last_name')
-            ->orderBy('s.first_name')
-            ->get();
-
         $data = [
             'scripts' => ['grade_management/card_grades.js'],
             'semesters' => $semesters,
             'activeSemester' => $activeSemester,
             'sections' => $sections,
-            'gradeCards' => $gradeCards
         ];
 
         return view('admin.grade_management.card_grades', $data);
+    }
+
+    /**
+     * AJAX endpoint for paginated, filtered grade cards list (admin)
+     */
+    public function getGradeCardsAjax(Request $request)
+    {
+        try {
+            $search     = trim($request->get('search', ''));
+            $semesterId = $request->get('semester_id');
+            $sectionCode = $request->get('section_code');
+            $perPage    = (int) $request->get('per_page', 15);
+
+            $query = DB::table('grades_final as gf')
+                ->join('students as s', 'gf.student_number', '=', 's.student_number')
+                ->join('semesters as sem', 'gf.semester_id', '=', 'sem.id')
+                ->join('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+                ->leftJoin('levels as lvl', 'sec.level_id', '=', 'lvl.id')
+                ->select(
+                    'gf.student_number',
+                    'gf.semester_id',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.student_type',
+                    'sec.code as section_code',
+                    'sec.name as section_name',
+                    'str.code as strand_code',
+                    'lvl.name as level_name',
+                    DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
+                    DB::raw("COUNT(gf.id) as total_subjects"),
+                    DB::raw("SUM(CASE WHEN gf.remarks = 'PASSED' THEN 1 ELSE 0 END) as passed_count"),
+                    DB::raw("SUM(CASE WHEN gf.remarks = 'FAILED' THEN 1 ELSE 0 END) as failed_count"),
+                    DB::raw("ROUND(AVG(gf.final_grade), 2) as general_average"),
+                    DB::raw("MAX(gf.computed_at) as last_computed"),
+                    DB::raw("sy.year_start")
+                )
+                ->groupBy(
+                    'gf.student_number',
+                    'gf.semester_id',
+                    's.first_name',
+                    's.middle_name',
+                    's.last_name',
+                    's.student_type',
+                    'sec.code',
+                    'sec.name',
+                    'str.code',
+                    'lvl.name',
+                    'semester_display',
+                    'sy.year_start'
+                );
+
+            // Filters
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('s.student_number', 'like', "%{$search}%")
+                      ->orWhere('s.first_name',   'like', "%{$search}%")
+                      ->orWhere('s.last_name',    'like', "%{$search}%");
+                });
+            }
+
+            if ($semesterId) {
+                $query->where('gf.semester_id', $semesterId);
+            }
+
+            if ($sectionCode) {
+                $query->where('sec.code', $sectionCode);
+            }
+
+            $query->orderBy('sy.year_start', 'desc')
+                  ->orderBy('sem.code', 'asc')
+                  ->orderBy('s.last_name')
+                  ->orderBy('s.first_name');
+
+            $gradeCards = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data'    => $gradeCards->items(),
+                'meta'    => [
+                    'current_page' => $gradeCards->currentPage(),
+                    'last_page'    => $gradeCards->lastPage(),
+                    'per_page'     => $gradeCards->perPage(),
+                    'total'        => $gradeCards->total(),
+                    'from'         => $gradeCards->firstItem() ?? 0,
+                    'to'           => $gradeCards->lastItem()   ?? 0,
+                ],
+            ]);
+        } catch (Exception $e) {
+            \Log::error('getGradeCardsAjax failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to load grade cards.'], 500);
+        }
     }
 
     /**
@@ -344,7 +392,7 @@ class Grade_Card extends MainController
 
             // Get adviser name
             $adviser_name = null;
-            if ($student->student_type === 'regular' && $student->section_id) {
+            if ($student->section_id) {
                 $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
             }
 
@@ -450,7 +498,7 @@ class Grade_Card extends MainController
 
             // Get adviser name
             $adviser_name = null;
-            if ($student->student_type === 'regular' && $student->section_id) {
+            if ($student->section_id) {
                 $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
             }
 
@@ -496,63 +544,31 @@ class Grade_Card extends MainController
      * Get all enrolled subjects for a student in a semester.
      * Updated to fetch subjects even if no grade exists.
      */
-    private function getEnrolledSubjects($studentNumber, $semesterId, $studentType)
-    {
-        // 1. Get Section History
-        // Find which section the student was enrolled in for this specific semester.
-        // This fixes the issue of viewing past semesters where the student had a different section.
-        $historySectionId = DB::table('student_semester_enrollment')
-            ->where('student_number', $studentNumber)
-            ->where('semester_id', $semesterId)
-            ->where('enrollment_status', 'enrolled')
-            ->value('section_id');
+private function getEnrolledSubjects($studentNumber, $semesterId, $studentType)
+{
+    $historySectionId = DB::table('student_semester_enrollment')
+        ->where('student_number', $studentNumber)
+        ->where('semester_id', $semesterId)
+        ->where('enrollment_status', 'enrolled')
+        ->value('section_id');
 
-        // Fallback: If no history record (legacy data), use current section if checking current semester?
-        // Or just keep null. Let's fallback to current if strict history fails, but be careful.
-        if (!$historySectionId) {
-             $historySectionId = DB::table('students')->where('student_number', $studentNumber)->value('section_id');
-        }
+    if (!$historySectionId) {
+        $historySectionId = DB::table('students')->where('student_number', $studentNumber)->value('section_id');
+    }
 
-        // 2. Fetch Subjects from Section Matrix (Regular Load)
-        $sectionSubjects = collect();
-        if ($historySectionId) {
-            $sectionSubjects = DB::table('section_class_matrix as scm')
-                ->join('classes as c', 'scm.class_id', '=', 'c.id')
-                ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
-                    $join->on('gf.class_code', '=', 'c.class_code')
-                         ->where('gf.student_number', '=', $studentNumber)
-                         ->where('gf.semester_id', '=', $semesterId);
-                })
-                ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
-                ->where('scm.section_id', $historySectionId)
-                ->where('scm.semester_id', $semesterId)
-                ->select(
-                    'c.id as class_id',
-                    'c.class_code',
-                    'c.class_name',
-                    'c.class_category',
-                    'gf.q1_grade',
-                    'gf.q2_grade',
-                    'gf.final_grade',
-                    'gf.remarks',
-                    'gf.computed_at',
-                    DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
-                )
-                ->get();
-        }
-
-        // 3. Fetch Subjects from Individual Matrix (Irregular/Back Subjects)
-        $individualSubjects = DB::table('student_class_matrix as stcm')
-            ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
+    // Regular only — irregular students use student_class_matrix exclusively
+    $sectionSubjects = collect();
+    if ($historySectionId && $studentType !== 'irregular') {
+        $sectionSubjects = DB::table('section_class_matrix as scm')
+            ->join('classes as c', 'scm.class_id', '=', 'c.id')
             ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
                 $join->on('gf.class_code', '=', 'c.class_code')
                      ->where('gf.student_number', '=', $studentNumber)
                      ->where('gf.semester_id', '=', $semesterId);
             })
             ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
-            ->where('stcm.student_number', $studentNumber)
-            ->where('stcm.semester_id', $semesterId)
-            ->where('stcm.enrollment_status', '!=', 'dropped')
+            ->where('scm.section_id', $historySectionId)
+            ->where('scm.semester_id', $semesterId)
             ->select(
                 'c.id as class_id',
                 'c.class_code',
@@ -566,13 +582,37 @@ class Grade_Card extends MainController
                 DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
             )
             ->get();
-
-        // 4. Merge and return
-        // Use class_code as unique key to prevent duplicates if a subject is in both matrices
-        $merged = $sectionSubjects->merge($individualSubjects)->unique('class_code');
-
-        return $merged->sortBy('class_category')->sortBy('class_code')->values();
     }
+
+    $individualSubjects = DB::table('student_class_matrix as stcm')
+        ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
+        ->leftJoin('grades_final as gf', function($join) use ($studentNumber, $semesterId) {
+            $join->on('gf.class_code', '=', 'c.class_code')
+                 ->where('gf.student_number', '=', $studentNumber)
+                 ->where('gf.semester_id', '=', $semesterId);
+        })
+        ->leftJoin('teachers as t', 'gf.computed_by', '=', 't.id')
+        ->where('stcm.student_number', $studentNumber)
+        ->where('stcm.semester_id', $semesterId)
+        ->where('stcm.enrollment_status', '!=', 'dropped')
+        ->select(
+            'c.id as class_id',
+            'c.class_code',
+            'c.class_name',
+            'c.class_category',
+            'gf.q1_grade',
+            'gf.q2_grade',
+            'gf.final_grade',
+            'gf.remarks',
+            'gf.computed_at',
+            DB::raw("CONCAT(t.first_name, ' ', COALESCE(t.last_name, '')) as teacher_name")
+        )
+        ->get();
+
+    $merged = $sectionSubjects->merge($individualSubjects)->unique('class_code');
+
+    return $merged->sortBy('class_category')->sortBy('class_code')->values();
+}
 
     /**
      * Get adviser name for a section from section_adviser_matrix
@@ -605,13 +645,17 @@ class Grade_Card extends MainController
         return view('admin.grade_management.view_evaluation', compact('student'));
     }
 
-/**
+    /**
      * Get evaluation data for admin
      * Updated: Sorts Oldest to Newest (Chronological Order)
      */
-    public function getEvaluationData($student_number)
-    {
-        // 1. Fetch Regular Load History (via Section Enrollment)
+public function getEvaluationData($student_number)
+{
+    $studentType = DB::table('students')->where('student_number', $student_number)->value('student_type');
+
+    // Regular load via section enrollment — skipped for irregular
+    $regularLoad = collect();
+    if ($studentType !== 'irregular') {
         $regularLoad = DB::table('student_semester_enrollment as sse')
             ->join('section_class_matrix as scm', function($join) {
                 $join->on('sse.section_id', '=', 'scm.section_id')
@@ -635,46 +679,42 @@ class Grade_Card extends MainController
                 DB::raw("CONCAT(s.name, ' - SY ', sy.code) as full_semester")
             )
             ->get();
-
-        // 2. Fetch Irregular/Individual Load History (via Student Class Matrix)
-        $individualLoad = DB::table('student_class_matrix as stcm')
-            ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
-            ->join('semesters as s', 'stcm.semester_id', '=', 's.id')
-            ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
-            ->leftJoin('grades_final as gf', function($join) use ($student_number) {
-                $join->on('c.class_code', '=', 'gf.class_code')
-                     ->on('s.id', '=', 'gf.semester_id')
-                     ->where('gf.student_number', '=', $student_number);
-            })
-            ->where('stcm.student_number', $student_number)
-            ->where('stcm.enrollment_status', '!=', 'dropped')
-            ->select(
-                'c.class_name', 'c.class_category', 'c.class_code',
-                's.id as semester_id', 's.name as semester_name', 's.status as semester_status', 's.code as semester_code',
-                'sy.code as school_year_code', 'sy.year_start',
-                'gf.q1_grade', 'gf.q2_grade', 'gf.final_grade', 'gf.remarks',
-                DB::raw("CONCAT(s.name, ' - SY ', sy.code) as full_semester")
-            )
-            ->get();
-
-        // 3. Merge, Unique, and Sort (UPDATED)
-        $summary = $regularLoad->merge($individualLoad)
-            ->unique(function($item) {
-                return $item->class_code . '-' . $item->semester_id;
-            })
-            // CHANGE 1: Sort by Year ASC (Oldest First)
-            ->sortBy('year_start') 
-            ->groupBy('year_start')
-            ->flatMap(function($items) {
-                // CHANGE 2: Sort by Name first, then Semester ASC
-                // This ensures subjects are alphabetical, and semeters are chronological (1st then 2nd)
-                return $items->sortBy('class_name')
-                             ->sortBy('semester_code');
-            })
-            ->values();
-
-        return response()->json([
-            'summary' => $summary
-        ]);
     }
+
+    $individualLoad = DB::table('student_class_matrix as stcm')
+        ->join('classes as c', 'stcm.class_code', '=', 'c.class_code')
+        ->join('semesters as s', 'stcm.semester_id', '=', 's.id')
+        ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+        ->leftJoin('grades_final as gf', function($join) use ($student_number) {
+            $join->on('c.class_code', '=', 'gf.class_code')
+                 ->on('s.id', '=', 'gf.semester_id')
+                 ->where('gf.student_number', '=', $student_number);
+        })
+        ->where('stcm.student_number', $student_number)
+        ->where('stcm.enrollment_status', '!=', 'dropped')
+        ->select(
+            'c.class_name', 'c.class_category', 'c.class_code',
+            's.id as semester_id', 's.name as semester_name', 's.status as semester_status', 's.code as semester_code',
+            'sy.code as school_year_code', 'sy.year_start',
+            'gf.q1_grade', 'gf.q2_grade', 'gf.final_grade', 'gf.remarks',
+            DB::raw("CONCAT(s.name, ' - SY ', sy.code) as full_semester")
+        )
+        ->get();
+
+    $summary = $regularLoad->merge($individualLoad)
+        ->unique(function($item) {
+            return $item->class_code . '-' . $item->semester_id;
+        })
+        ->sortBy('year_start')
+        ->groupBy('year_start')
+        ->flatMap(function($items) {
+            return $items->sortBy('class_name')
+                         ->sortBy('semester_code');
+        })
+        ->values();
+
+    return response()->json([
+        'summary' => $summary
+    ]);
+}
 }

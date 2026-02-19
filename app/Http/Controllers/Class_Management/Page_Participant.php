@@ -26,98 +26,84 @@ class Page_Participant extends MainController
         ]);
     }
 
-    public function getParticipants($classId)
-    {
-        try {
-            // Get students enrolled directly via student_class_matrix
-            $directStudents = DB::table('student_class_matrix as scm')
-                ->join('classes as c', 'scm.class_code', '=', 'c.class_code')
-                ->join('students as s', 'scm.student_number', '=', 's.student_number')
-                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
-                ->leftJoin('strands as st', 'sec.strand_id', '=', 'st.id')
-                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
-                ->where('c.id', $classId)
-                ->select(
-                    's.id',
-                    's.student_number',
-                    's.first_name',
-                    's.middle_name',
-                    's.last_name',
-                    's.email',
-                    's.gender',
-                    's.student_type',
-                    's.profile_image',
-                    'sec.name as section_name',
-                    'sec.code as section_code',
-                    'st.name as strand_name',
-                    'l.name as level_name',
-                    DB::raw("'direct' as enrollment_type")
-                )
-                ->get();
+public function getParticipants($classId)
+{
+    try {
+        // 1. Get the class and the current active semester
+        $class = DB::table('classes')->where('id', $classId)->first();
+        if (!$class) return response()->json(['success' => false, 'message' => 'Class not found'], 404);
 
-            // Get students enrolled via section_class_matrix
-            $sectionStudents = DB::table('section_class_matrix as scm')
-                ->join('classes as c', 'scm.class_id', '=', 'c.id')
-                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
-                ->join('students as s', 's.section_id', '=', 'sec.id')
-                ->leftJoin('strands as st', 'sec.strand_id', '=', 'st.id')
-                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
-                ->where('c.id', $classId)
-                ->select(
-                    's.id',
-                    's.student_number',
-                    's.first_name',
-                    's.middle_name',
-                    's.last_name',
-                    's.email',
-                    's.gender',
-                    's.student_type',
-                    's.profile_image',
-                    'sec.name as section_name',
-                    'sec.code as section_code',
-                    'st.name as strand_name',
-                    'l.name as level_name',
-                    DB::raw("'section' as enrollment_type")
-                )
-                ->get();
+        $activeSemester = DB::table('semesters')->where('status', 'active')->first();
+        $semesterId = $activeSemester ? $activeSemester->id : null;
 
-            // Merge and remove duplicates (prioritize direct enrollment)
-            $allStudents = $directStudents->merge($sectionStudents);
-            $uniqueStudents = $allStudents->unique('student_number')->values();
+        // 2. Get students enrolled directly (Irregulars)
+        // Added semester_id check and enrollment_status check
+        $directStudents = DB::table('student_class_matrix as scm')
+            ->join('students as s', 'scm.student_number', '=', 's.student_number')
+            ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+            ->leftJoin('strands as st', 'sec.strand_id', '=', 'st.id')
+            ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+            ->where('scm.class_code', $class->class_code)
+            ->where('scm.semester_id', $semesterId)
+            ->where('scm.enrollment_status', 'enrolled')
+            ->select(
+                's.id', 's.student_number', 's.first_name', 's.middle_name', 's.last_name',
+                's.email', 's.gender', 's.student_type', 's.profile_image',
+                'sec.name as section_name', 'sec.code as section_code',
+                'st.name as strand_name', 'l.name as level_name',
+                DB::raw("'direct' as enrollment_type")
+            )
+            ->get();
 
-            // Format the data
-            $participants = $uniqueStudents->map(function($student, $index) {
-                return [
-                    'row_number' => $index + 1,
-                    'id' => $student->id,
-                    'student_number' => $student->student_number,
-                    'full_name' => trim($student->first_name . ' ' . $student->middle_name . ' ' . $student->last_name),
-                    'first_name' => $student->first_name,
-                    'middle_name' => $student->middle_name,
-                    'last_name' => $student->last_name,
-                    'email' => $student->email,
-                    'gender' => $student->gender,
-                    'student_type' => $student->student_type,
-                    'section_code' => $student->section_code ?? 'N/A',
-                    'section_name' => $student->section_name ?? 'No Section',
-                    'strand_name' => $student->strand_name ?? '',
-                    'level_name' => $student->level_name ?? '',
-                    'enrollment_type' => $student->enrollment_type,
-                    'profile_image' => $student->profile_image ?? 'default-avatar.png'
-                ];
-            });
+        // 3. Get students enrolled via Section (Regulars)
+        // Added semester_id check
+        $sectionStudents = DB::table('section_class_matrix as scm')
+            ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+            ->join('students as s', 's.section_id', '=', 'sec.id')
+            ->leftJoin('strands as st', 'sec.strand_id', '=', 'st.id')
+            ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+            ->where('scm.class_id', $classId)
+            ->where('scm.semester_id', $semesterId)
+            ->select(
+                's.id', 's.student_number', 's.first_name', 's.middle_name', 's.last_name',
+                's.email', 's.gender', 's.student_type', 's.profile_image',
+                'sec.name as section_name', 'sec.code as section_code',
+                'st.name as strand_name', 'l.name as level_name',
+                DB::raw("'section' as enrollment_type")
+            )
+            ->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => $participants,
-                'total' => $participants->count()
-            ]);
+        // 4. Merge and Remove duplicates
+        $allStudents = $directStudents->merge($sectionStudents);
+        $uniqueStudents = $allStudents->unique('student_number')->values();
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching participants: ' . $e->getMessage()
-            ], 500);
-        }
+        // 5. Format the data
+        $participants = $uniqueStudents->map(function($student, $index) {
+            return [
+                'row_number' => $index + 1,
+                'id' => $student->id,
+                'student_number' => $student->student_number,
+                'full_name' => trim($student->first_name . ' ' . $student->middle_name . ' ' . $student->last_name),
+                'email' => $student->email,
+                'gender' => $student->gender,
+                'student_type' => $student->student_type,
+                'section_name' => $student->section_name ?? 'No Section',
+                'enrollment_type' => $student->enrollment_type,
+                'profile_image' => $student->profile_image ?? 'default-avatar.png'
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $participants,
+            'total' => $participants->count()
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ], 500);
     }
+}
 }

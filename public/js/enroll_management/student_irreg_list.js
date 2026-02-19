@@ -36,14 +36,15 @@ $(document).ready(function () {
                 render: function (data) {
                     const url = API_ROUTES.enrollmentPage.replace(':id', data.id);
                     return `
-                                <a href="${url}" class="btn btn-sm btn-primary" title="Manage Classes">
-                                    <i class="fas fa-book"></i> Enroll
-                                </a>
-                            `;
+                        <a href="${url}" class="btn btn-sm btn-primary" title="Manage Classes">
+                            <i class="fas fa-book"></i> Enroll
+                        </a>
+                    `;
                 }
             }
         ],
         responsive: true,
+        autoWidth: false,
         order: [[1, 'asc']],
         pageLength: 25,
         language: {

@@ -158,7 +158,7 @@ $(document).ready(function() {
         if (sections.length === 0) {
             container.html(`
                 <div class="mt-1">
-                    <strong><i class="fas fa-layer-group"></i> Sections (Current Semester):</strong>
+                    <strong><i class="fas fa-layer-group"></i> Sections:</strong>
                     <p class="text-muted mb-0"><i class="fas fa-inbox"></i> No sections enrolled</p>
                 </div>
             `);
@@ -167,7 +167,7 @@ $(document).ready(function() {
 
         let html = `
             <div class="mt-1">
-                <strong><i class="fas fa-layer-group"></i> Sections (Current Semester):</strong>
+                <strong><i class="fas fa-layer-group"></i> Sections:</strong>
                 <div class="mt-1">
         `;
 

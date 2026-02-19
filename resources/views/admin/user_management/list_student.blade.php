@@ -6,11 +6,9 @@
             <link rel="stylesheet" href="{{ asset('css/' . $style) }}">
         @endforeach
     @endif
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
     <style>
         .filter-card { background: #f8f9fa; border: 1px solid #e9ecef; }
-        .filter-card .form-control, .filter-card .form-select { 
+        .filter-card .form-control { 
             font-size: 0.875rem; 
             height: calc(2.25rem + 2px);
         }
@@ -21,21 +19,32 @@
             text-transform: uppercase;
             margin-bottom: 0.25rem;
         }
-        
-        /* Fix DataTables alignment */
-        .table-responsive {
-            overflow-x: auto;
+        .table-responsive { overflow-x: auto; }
+        #studentTable { width: 100% !important; }
+        .badge small { font-size: 0.7rem; margin-left: 2px; }
+
+        /* Skeleton rows */
+        .skeleton-row td {
+            padding: 0.6rem 0.75rem;
         }
-        
-        #studentTable {
-            width: 100% !important;
+        .skeleton-line {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.2s infinite;
+            border-radius: 3px;
+            height: 13px;
+            display: inline-block;
         }
-        
-        /* Compact badge styling */
-        .badge small {
-            font-size: 0.7rem;
-            margin-left: 2px;
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
+
+        /* Pagination */
+        .pagination-info { font-size: 0.8rem; color: #6c757d; }
+
+        /* Per-page select */
+        #perPageSelect { width: auto; display: inline-block; font-size: 0.8rem; height: calc(1.9rem + 2px); }
     </style>
 @endsection
 
@@ -62,7 +71,7 @@
                     <select class="form-control" id="semester">
                         <option value="">All Semesters</option>
                         @foreach($semesters as $sem)
-                            <option value="{{ $sem->id }}" 
+                            <option value="{{ $sem->id }}"
                                 {{ isset($activeSemester) && $activeSemester->id == $sem->id ? 'selected' : '' }}>
                                 {{ $sem->display_name }}
                             </option>
@@ -114,11 +123,18 @@
     <div class="card card-primary card-outline">
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-users mr-2"></i>Student List</h3>
-            <div class="card-tools">
-                <span class="badge badge-primary" id="studentsCount">{{ count($students) }} Students</span>
+            <div class="card-tools d-flex align-items-center">
+                <label class="mb-0 mr-2 text-sm text-muted">Show</label>
+                <select class="form-control" id="perPageSelect">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="badge badge-primary ml-2" id="studentsCount">Loading...</span>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-striped table-hover mb-0" id="studentTable">
                     <thead>
@@ -135,89 +151,40 @@
                         </tr>
                     </thead>
                     <tbody id="studentTableBody">
-                        @foreach ($students as $student)
-                            <tr>
-                                <td data-semester-id="{{ $student->semester_id ?? '' }}">
-                                    @if($student->semester_display)
-                                        {{ $student->semester_display }}
-                                    @else
-                                        <span class="text-muted">No enrollment</span>
-                                    @endif
-                                </td>
-                                <td>{{ $student->student_number }}</td>
-                                <td>{{ $student->last_name }}, {{ $student->first_name }}</td>
-                                <td>{{ $student->strand }}</td>
-                                <td>{{ $student->level }}</td>
-                                <td>{{ $student->enrolled_section_name ?? $student->current_section }}</td>
-                                <td>
-                                    @php
-                                        $type = $student->student_type ?? 'regular';
-                                        $badgeClass = match($type) {
-                                            'regular' => 'badge-primary',
-                                            'irregular' => 'badge-secondary',
-                                            default => 'badge-primary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ ucfirst($type) }}</span>
-                                </td>
-                                <td class="text-center">
-                                    @php
-                                        $verificationStatus = $student->verification_status ?? 'none';
-                                    @endphp
-                                    
-                                    @if($verificationStatus === 'verified')
-                                        {{-- Guardian email verified - Primary (Blue) --}}
-                                        <span class="badge badge-primary" 
-                                              title="Guardian email verified: {{ $student->guardian_email }}&#10;Verified on: {{ date('M d, Y', strtotime($student->email_verified_at)) }}">
-                                            <i class="fas fa-check-circle"></i>
-                                            <small>Verified</small>
-                                        </span>
-                                    @elseif($verificationStatus === 'pending')
-                                        {{-- Guardian exists but not verified - Secondary (Gray) --}}
-                                        <span class="badge badge-secondary" 
-                                              title="Verification pending for: {{ $student->guardian_email }}">
-                                            <i class="fas fa-clock"></i>
-                                            <small>Pending</small>
-                                        </span>
-                                    @else
-                                        {{-- No guardian linked - Secondary (Gray) --}}
-                                        <span class="badge badge-secondary" 
-                                              title="No guardian linked">
-                                            <i class="fas fa-times-circle"></i>
-                                            <small>None</small>
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <a href="{{ route('profile.student.show', $student->id) }}" 
-                                        class="btn btn-sm btn-primary" title="View Profile">
-                                        <i class="fas fa-user"></i>
-                                    </a>
-                                    <a href="{{ route('profile.student.edit', $student->id) }}"
-                                        class="btn btn-sm btn-primary" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
+                        {{-- Populated via AJAX --}}
                     </tbody>
                 </table>
             </div>
+
+            <!-- No results -->
+            <div id="noResultsMessage" class="alert alert-primary text-center m-3" style="display: none;">
+                <i class="fas fa-info-circle"></i> No students found matching your filters.
+            </div>
+        </div>
+
+        <!-- Pagination row -->
+        <div class="card-footer d-flex justify-content-between align-items-center" id="paginationWrapper" style="display: none !important;">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <ul class="pagination pagination-sm mb-0" id="paginationLinks"></ul>
         </div>
     </div>
 </div>
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script>
         const API_ROUTES = {
-            getSections: "{{ route('admin.sections.filter') }}",
+            getStudentsAjax: "{{ route('admin.students.list.ajax') }}",
+            getSections:     "{{ route('admin.sections.filter') }}",
+        showStudent:     "{{ url('profile/student') }}",
+            editStudent:     "{{ url('profile/student') }}", 
         };
+        @if(isset($activeSemester))
+        const DEFAULT_SEMESTER = "{{ $activeSemester->id }}";
+        @else
+            const DEFAULT_SEMESTER = "";
+        @endif
     </script>
     @if(isset($scripts))
         @foreach($scripts as $script)

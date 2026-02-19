@@ -728,9 +728,54 @@ class Enroll_Management extends MainController
         return view('admin.enroll_management.teacher_enroll_class', $data);
     }
 
-    /**
-     * Get all classes with section count and teacher info
-     */
+    // /**
+    //  * Get all classes with section count and teacher info
+    //  */
+    // public function getClassesList()
+    // {
+    //     try {
+    //         $activeSemester = $this->getActiveSemester();
+            
+    //         if (!$activeSemester) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'No active semester found'
+    //             ], 500);
+    //         }
+
+    //         $classes = DB::table('classes as c')
+    //             ->leftJoin('teacher_class_matrix as tcm', function($join) use ($activeSemester) {
+    //                 $join->on('c.id', '=', 'tcm.class_id')
+    //                      ->where('tcm.semester_id', '=', $activeSemester->semester_id);
+    //             })
+    //             ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
+    //             ->leftJoin('section_class_matrix as scm', function($join) use ($activeSemester) {
+    //                 $join->on('c.id', '=', 'scm.class_id')
+    //                      ->where('scm.semester_id', '=', $activeSemester->semester_id);
+    //             })
+    //             ->select(
+    //                 'c.id',
+    //                 'c.class_code',
+    //                 'c.class_name',
+    //                 DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
+    //                 DB::raw('COUNT(DISTINCT scm.section_id) as section_count')
+    //             )
+    //             ->groupBy('c.id', 'c.class_code', 'c.class_name', 't.first_name', 't.last_name')
+    //             ->orderBy('c.class_code')
+    //             ->get();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $classes
+    //         ]);
+    //     } catch (Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to load classes: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+
     public function getClassesList()
     {
         try {
@@ -743,26 +788,59 @@ class Enroll_Management extends MainController
                 ], 500);
             }
 
+            // Get all classes with their assigned teacher for this semester
             $classes = DB::table('classes as c')
                 ->leftJoin('teacher_class_matrix as tcm', function($join) use ($activeSemester) {
                     $join->on('c.id', '=', 'tcm.class_id')
                          ->where('tcm.semester_id', '=', $activeSemester->semester_id);
                 })
                 ->leftJoin('teachers as t', 'tcm.teacher_id', '=', 't.id')
-                ->leftJoin('section_class_matrix as scm', function($join) use ($activeSemester) {
-                    $join->on('c.id', '=', 'scm.class_id')
-                         ->where('scm.semester_id', '=', $activeSemester->semester_id);
-                })
                 ->select(
                     'c.id',
                     'c.class_code',
                     'c.class_name',
-                    DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name"),
-                    DB::raw('COUNT(DISTINCT scm.section_id) as section_count')
+                    DB::raw("CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, '')) as teacher_name")
                 )
-                ->groupBy('c.id', 'c.class_code', 'c.class_name', 't.first_name', 't.last_name')
                 ->orderBy('c.class_code')
                 ->get();
+
+foreach ($classes as $class) {
+    // 1. Count Unique Sections (Regular + Irregular)
+    $regularSectionIds = DB::table('section_class_matrix')
+        ->where('class_id', $class->id)
+        ->where('semester_id', $activeSemester->semester_id)
+        ->pluck('section_id')
+        ->toArray();
+
+    $irregSectionIds = DB::table('student_class_matrix as stcm')
+        ->join('students as s', 'stcm.student_number', '=', 's.student_number')
+        ->where('stcm.class_code', $class->class_code)
+        ->where('stcm.semester_id', $activeSemester->semester_id)
+        ->where('stcm.enrollment_status', 'enrolled')
+        ->whereNotNull('s.section_id')
+        ->pluck('s.section_id')
+        ->toArray();
+
+    $class->section_count = count(array_unique(array_merge($regularSectionIds, $irregSectionIds)));
+
+    // 2. Count Total Unique Students (Merge Regular + Irregular) — unchanged
+    $sectionStudentNumbers = DB::table('section_class_matrix as scm')
+        ->join('students as s', 'scm.section_id', '=', 's.section_id')
+        ->where('scm.class_id', $class->id)
+        ->where('scm.semester_id', $activeSemester->semester_id)
+        ->pluck('s.student_number')
+        ->toArray();
+
+    $matrixStudentNumbers = DB::table('student_class_matrix as stcm')
+        ->where('stcm.class_code', $class->class_code)
+        ->where('stcm.semester_id', $activeSemester->semester_id)
+        ->where('stcm.enrollment_status', 'enrolled')
+        ->pluck('stcm.student_number')
+        ->toArray();
+
+    $allStudents = array_merge($sectionStudentNumbers, $matrixStudentNumbers);
+    $class->student_count = count(array_unique($allStudents));
+}
 
             return response()->json([
                 'success' => true,
@@ -775,78 +853,245 @@ class Enroll_Management extends MainController
             ], 500);
         }
     }
-
     /**
      * Get class details (teacher and enrolled sections)
      */
-    public function getClassDetails($classId)
-    {
-        try {
-            $activeSemester = $this->getActiveSemester();
+    // public function getClassDetails($classId)
+    // {
+    //     try {
+    //         $activeSemester = $this->getActiveSemester();
             
-            if (!$activeSemester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active semester found'
-                ], 500);
-            }
+    //         if (!$activeSemester) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'No active semester found'
+    //             ], 500);
+    //         }
 
-            // Get assigned teacher for current semester
-            $teacher = DB::table('teacher_class_matrix as tcm')
-                ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
-                ->where('tcm.class_id', $classId)
-                ->where('tcm.semester_id', $activeSemester->semester_id)
-                ->select('t.*', 'tcm.created_at as assigned_at')
-                ->first();
+    //         // Get assigned teacher for current semester
+    //         $teacher = DB::table('teacher_class_matrix as tcm')
+    //             ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
+    //             ->where('tcm.class_id', $classId)
+    //             ->where('tcm.semester_id', $activeSemester->semester_id)
+    //             ->select('t.*', 'tcm.created_at as assigned_at')
+    //             ->first();
 
-            // Get enrolled sections with student count
-            $sections = DB::table('section_class_matrix as scm')
-                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
-                ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
-                ->where('scm.class_id', $classId)
-                ->where('scm.semester_id', $activeSemester->semester_id)
-                ->select(
-                    'sec.id',
-                    'sec.name',
-                    'sec.code',
-                    DB::raw('COUNT(s.id) as student_count')
-                )
-                ->groupBy('sec.id', 'sec.name', 'sec.code')
-                ->orderBy('sec.name')
-                ->get();
+    //         // Get enrolled sections with student count
+    //         $sections = DB::table('section_class_matrix as scm')
+    //             ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+    //             ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
+    //             ->where('scm.class_id', $classId)
+    //             ->where('scm.semester_id', $activeSemester->semester_id)
+    //             ->select(
+    //                 'sec.id',
+    //                 'sec.name',
+    //                 'sec.code',
+    //                 DB::raw('COUNT(s.id) as student_count')
+    //             )
+    //             ->groupBy('sec.id', 'sec.name', 'sec.code')
+    //             ->orderBy('sec.name')
+    //             ->get();
 
-            return response()->json([
-                'success' => true,
-                'teacher' => $teacher,
-                'sections' => $sections
-            ]);
-        } catch (Exception $e) {
+    //         return response()->json([
+    //             'success' => true,
+    //             'teacher' => $teacher,
+    //             'sections' => $sections
+    //         ]);
+    //     } catch (Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to load class details: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+public function getClassDetails($classId)
+{
+    try {
+        $activeSemester = $this->getActiveSemester();
+
+        if (!$activeSemester) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load class details: ' . $e->getMessage()
+                'message' => 'No active semester found'
             ], 500);
         }
+
+        $class = DB::table('classes')->find($classId);
+
+        // Assigned teacher
+        $teacher = DB::table('teacher_class_matrix as tcm')
+            ->join('teachers as t', 'tcm.teacher_id', '=', 't.id')
+            ->where('tcm.class_id', $classId)
+            ->where('tcm.semester_id', $activeSemester->semester_id)
+            ->select('t.*', 'tcm.created_at as assigned_at')
+            ->first();
+
+        // Sections from section_class_matrix (regular students)
+        $regularSections = DB::table('section_class_matrix as scm')
+            ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+            ->leftJoin('students as s', 'sec.id', '=', 's.section_id')
+            ->where('scm.class_id', $classId)
+            ->where('scm.semester_id', $activeSemester->semester_id)
+            ->select('sec.id', 'sec.name', 'sec.code', DB::raw('COUNT(s.id) as student_count'))
+            ->groupBy('sec.id', 'sec.name', 'sec.code')
+            ->get();
+
+        // Sections from irregular students enrolled via student_class_matrix
+        $irregSections = DB::table('student_class_matrix as stcm')
+            ->join('students as s', 'stcm.student_number', '=', 's.student_number')
+            ->join('sections as sec', 's.section_id', '=', 'sec.id')
+            ->where('stcm.class_code', $class->class_code)
+            ->where('stcm.semester_id', $activeSemester->semester_id)
+            ->where('stcm.enrollment_status', 'enrolled')
+            ->whereNotNull('s.section_id')
+            ->select('sec.id', 'sec.name', 'sec.code', DB::raw('COUNT(s.id) as student_count'))
+            ->groupBy('sec.id', 'sec.name', 'sec.code')
+            ->get();
+
+        // Merge, deduplicate by section id, sum student counts for sections in both
+        $merged = $regularSections->keyBy('id');
+
+        foreach ($irregSections as $sec) {
+            if ($merged->has($sec->id)) {
+                // Section already in regular list — add irregular count
+                $merged[$sec->id]->student_count += $sec->student_count;
+            } else {
+                $merged->put($sec->id, $sec);
+            }
+        }
+
+        $sections = $merged->sortBy('name')->values();
+
+        return response()->json([
+            'success' => true,
+            'teacher' => $teacher,
+            'sections' => $sections
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load class details: ' . $e->getMessage()
+        ], 500);
     }
+}
+    // public function getClassStudents($classId)
+    // {
+    //     try {
+    //         $class = DB::table('classes')->find($classId);
+
+    //         if (!$class) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Class not found'
+    //             ], 404);
+    //         }
+
+    //         // Get students from sections enrolled in this class (Regular students)
+    //         $regularStudents = DB::table('section_class_matrix as scm')
+    //             ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+    //             ->join('students as s', 'sec.id', '=', 's.section_id')
+    //             ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+    //             ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+    //             ->where('scm.class_id', $classId)
+    //             ->select(
+    //                 's.id',
+    //                 's.student_number',
+    //                 's.first_name',
+    //                 's.last_name',
+    //                 's.student_type',
+    //                 's.section_id',
+    //                 'sec.name as section_name',
+    //                 'str.name as strand_name',
+    //                 'str.code as strand_code',
+    //                 'l.name as level_name'
+    //             )
+    //             ->get();
+
+    //         // Get irregular students directly enrolled in this class
+    //         $irregularStudents = DB::table('student_class_matrix as scm')
+    //             ->join('students as s', function ($join) {
+    //                 $join->on(
+    //                     DB::raw('scm.student_number COLLATE utf8mb4_unicode_ci'),
+    //                     '=',
+    //                     DB::raw('s.student_number COLLATE utf8mb4_unicode_ci')
+    //                 );
+    //             })
+    //             ->join('classes as c', function ($join) {
+    //                 $join->on(
+    //                     DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
+    //                     '=',
+    //                     DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
+    //                 );
+    //             })
+    //             ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
+    //             ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
+    //             ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
+    //             ->where('c.id', $classId)
+    //             ->select(
+    //                 's.id',
+    //                 's.student_number',
+    //                 's.first_name',
+    //                 's.last_name',
+    //                 's.student_type',
+    //                 's.section_id',
+    //                 'sec.name as section_name',
+    //                 'str.name as strand_name',
+    //                 'str.code as strand_code',
+    //                 'l.name as level_name'
+    //             )
+    //             ->get();
+
+    //         // Merge both collections and remove duplicates
+    //         $allStudents = $regularStudents->merge($irregularStudents)
+    //             ->unique('id')
+    //             ->sortBy('last_name')
+    //             ->values();
+
+    //         // Get sections for filter
+    //         $sections = DB::table('section_class_matrix as scm')
+    //             ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
+    //             ->where('scm.class_id', $classId)
+    //             ->select('sec.id', 'sec.name')
+    //             ->orderBy('sec.name')
+    //             ->get();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $allStudents,
+    //             'sections' => $sections
+    //         ]);
+    //     } catch (Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to load students: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     public function getClassStudents($classId)
     {
         try {
-            $class = DB::table('classes')->find($classId);
+            $class = DB::table('classes')->where('id', $classId)->first();
 
             if (!$class) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Class not found'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Class not found'], 404);
             }
 
-            // Get students from sections enrolled in this class (Regular students)
+            // Get Active Semester
+            $activeSemester = $this->getActiveSemester();
+            $semesterId = $activeSemester ? $activeSemester->semester_id : null;
+
+            // 1. Get students from sections enrolled in this class (Regulars)
+            // Added scm.semester_id check
             $regularStudents = DB::table('section_class_matrix as scm')
                 ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
                 ->join('students as s', 'sec.id', '=', 's.section_id')
                 ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
                 ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
                 ->where('scm.class_id', $classId)
+                ->where('scm.semester_id', $semesterId) 
+                ->where('s.student_type', 'regular')
+
                 ->select(
                     's.id',
                     's.student_number',
@@ -857,56 +1102,48 @@ class Enroll_Management extends MainController
                     'sec.name as section_name',
                     'str.name as strand_name',
                     'str.code as strand_code',
-                    'l.name as level_name'
+                    'l.name as level_name',
+                    DB::raw("'section' as enrollment_source")
                 )
                 ->get();
 
-            // Get irregular students directly enrolled in this class
-            $irregularStudents = DB::table('student_class_matrix as scm')
-                ->join('students as s', function ($join) {
-                    $join->on(
-                        DB::raw('scm.student_number COLLATE utf8mb4_unicode_ci'),
-                        '=',
-                        DB::raw('s.student_number COLLATE utf8mb4_unicode_ci')
-                    );
-                })
-                ->join('classes as c', function ($join) {
-                    $join->on(
-                        DB::raw('scm.class_code COLLATE utf8mb4_unicode_ci'),
-                        '=',
-                        DB::raw('c.class_code COLLATE utf8mb4_unicode_ci')
-                    );
-                })
-                ->leftJoin('sections as sec', 's.section_id', '=', 'sec.id')
-                ->leftJoin('strands as str', 'sec.strand_id', '=', 'str.id')
-                ->leftJoin('levels as l', 'sec.level_id', '=', 'l.id')
-                ->where('c.id', $classId)
-                ->select(
-                    's.id',
-                    's.student_number',
-                    's.first_name',
-                    's.last_name',
-                    's.student_type',
-                    's.section_id',
-                    'sec.name as section_name',
-                    'str.name as strand_name',
-                    'str.code as strand_code',
-                    'l.name as level_name'
-                )
-                ->get();
+            // 2. Get irregular students directly enrolled in this class
+            // Added scm.semester_id check AND enrollment_status check
+$irregularStudents = DB::table('student_class_matrix as scm')
+    ->join('students as s', 'scm.student_number', '=', 's.student_number')
+    ->where('scm.class_code', $class->class_code)
+    ->where('scm.semester_id', $semesterId)
+    ->where('scm.enrollment_status', 'enrolled')
+    ->select(
+        's.id',
+        's.student_number',
+        's.first_name',
+        's.last_name',
+        's.student_type',
+        DB::raw('NULL as section_id'),
+        DB::raw('NULL as section_name'),
+        DB::raw('NULL as strand_name'),
+        DB::raw('NULL as strand_code'),
+        DB::raw('NULL as level_name'),
+        DB::raw("'direct' as enrollment_source")
+    )
+    ->get();
 
-            // Merge both collections and remove duplicates
-            $allStudents = $regularStudents->merge($irregularStudents)
-                ->unique('id')
+            // 3. Merge both collections and remove duplicates
+            // We prioritize Direct enrollment if a student appears in both (rare, but prevents duplicates)
+            $allStudents = $irregularStudents->merge($regularStudents)
+                ->unique('student_number') 
                 ->sortBy('last_name')
                 ->values();
 
-            // Get sections for filter
+            // 4. Get sections for filter dropdown
             $sections = DB::table('section_class_matrix as scm')
                 ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
                 ->where('scm.class_id', $classId)
+                ->where('scm.semester_id', $semesterId)
                 ->select('sec.id', 'sec.name')
                 ->orderBy('sec.name')
+                ->distinct()
                 ->get();
 
             return response()->json([

@@ -14,7 +14,7 @@
             height: 100%;
             transition: width 0.3s;
         }
-        
+
         .class-card {
             border-left: 4px solid #6c757d;
             transition: all 0.2s;
@@ -40,7 +40,7 @@
     <div class="alert alert-dark">
         <h5><i class="icon fas fa-calendar-alt"></i> {{ $activeSemesterDisplay ?? 'No Active Semester' }}</h5>
     </div>
-    
+
     <div class="row">
         <!-- Left Sidebar - Section List -->
         <div class="col-md-3">
@@ -50,7 +50,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="p-3">
-                        <input type="text" class="form-control form-control-sm" id="sectionSearch" 
+                        <input type="text" class="form-control form-control-sm" id="sectionSearch"
                                placeholder="Search sections...">
                     </div>
                     <div class="p-3 pt-0">
@@ -89,10 +89,10 @@
                         <div class="row align-items-center">
                             <div class="col-md-12">
                                 <h4 class="mb-1" id="selectedSectionName">
-                                    <i class="fas fa-users"></i> 
+                                    <i class="fas fa-users"></i>
                                 </h4>
                                 <p class="text-muted mb-0">
-                                    <i class="fas fa-layer-group"></i> <span id="levelDisplay"></span> | 
+                                    <i class="fas fa-layer-group"></i> <span id="levelDisplay"></span> |
                                     <i class="fas fa-graduation-cap"></i> <span id="strandDisplay"></span>
                                 </p>
                             </div>
@@ -125,11 +125,12 @@
                             <span class="badge badge-light" id="studentsCount">0 Students</span>
                         </div>
                     </div>
-                    
+
                     <!-- Filters -->
                     <div class="card-body pb-0">
+                        <!-- Search / gender / status / reset row -->
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-5">
                                 <div class="input-group input-group-sm">
                                     <div class="input-group-prepend">
                                         <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -145,11 +146,11 @@
                                     <option value="Female">Female</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <select class="form-control form-control-sm" id="studentTypeFilter">
-                                    <option value="">All Types</option>
-                                    <option value="regular">Regular</option>
-                                    <option value="irregular">Irregular</option>
+                            <div class="col-md-3">
+                                <select class="form-control form-control-sm" id="gradeStatusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="submitted">Submitted</option>
+                                    <option value="pending">Pending</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -159,21 +160,21 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="card-body p-0 pt-3">
                         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-striped table-hover mb-0">
                                 <thead style="position: sticky; top: 0; z-index: 1; background: white;">
                                     <tr>
                                         <th width="20%">Student Number</th>
-                                        <th width="50%">Name</th>
+                                        <th width="45%">Name</th>
                                         <th width="10%" class="text-center">Gender</th>
-                                        <th width="15%" class="text-center">Type</th>
+                                        <th width="25%" class="text-center">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="studentsBody">
                                     <tr>
-                                        <td colspan="5" class="text-center py-4 text-primary">
+                                        <td colspan="4" class="text-center py-4 text-primary">
                                             <i class="fas fa-spinner fa-spin"></i> Loading...
                                         </td>
                                     </tr>
@@ -197,17 +198,10 @@
             getSectionDetails: "{{ route('admin.sections.grades-details', ['id' => ':id']) }}",
         };
     </script>
-    
+
     @if(isset($scripts))
         @foreach($scripts as $script)
             <script src="{{ asset('js/' . $script) }}"></script>
         @endforeach
     @endif
 @endsection
-
-
-
-
-
-
-

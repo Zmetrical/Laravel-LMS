@@ -299,6 +299,7 @@ public function getTeacherClasses()
             ]);
         }
 
+        // Get Classes assigned to Teacher
         $classes = DB::table('teacher_class_matrix as tcm')
             ->join('classes as c', 'tcm.class_id', '=', 'c.id')
             ->where('tcm.teacher_id', $teacher->id)
@@ -311,32 +312,41 @@ public function getTeacherClasses()
             ->orderBy('c.class_code')
             ->get();
 
-        // Add counts for each class
+        // Calculate counts for each class
         foreach ($classes as $class) {
-            // Count sections assigned to this class
+            // 1. Count Sections
             $class->section_count = DB::table('section_class_matrix')
                 ->where('class_id', $class->id)
                 ->where('semester_id', $activeSemester->id)
                 ->distinct()
                 ->count('section_id');
 
-            // Count students (both regular and irregular)
-            $regularStudents = DB::table('section_class_matrix as scm')
-                ->join('sections as sec', 'scm.section_id', '=', 'sec.id')
-                ->join('students as s', 'sec.id', '=', 's.section_id')
+            // 2. Count Total Unique Students
+            // Logic: Get IDs from Section enrollment AND IDs from Direct enrollment, merge them, and count unique.
+            
+            // A. Get Students via Section Enrollment
+            $sectionStudentNumbers = DB::table('section_class_matrix as scm')
+                ->join('students as s', 'scm.section_id', '=', 's.section_id')
                 ->where('scm.class_id', $class->id)
                 ->where('scm.semester_id', $activeSemester->id)
-                ->where('s.student_type', 'regular')
-                ->distinct()
-                ->count('s.student_number');
+                // We remove the 'where student_type = regular' check. 
+                // If they are in the section assigned to this class, they count, regardless of type.
+                ->pluck('s.student_number') 
+                ->toArray();
 
-            $irregularStudents = DB::table('student_class_matrix as stcm')
+            // B. Get Students via Direct Enrollment (Irregular/Matrix)
+            $matrixStudentNumbers = DB::table('student_class_matrix as stcm')
                 ->where('stcm.class_code', $class->class_code)
                 ->where('stcm.semester_id', $activeSemester->id)
                 ->where('stcm.enrollment_status', 'enrolled')
-                ->count();
+                ->pluck('stcm.student_number')
+                ->toArray();
 
-            $class->student_count = $regularStudents + $irregularStudents;
+            // C. Merge and Unique
+            $allStudents = array_merge($sectionStudentNumbers, $matrixStudentNumbers);
+            $uniqueStudents = array_unique($allStudents);
+
+            $class->student_count = count($uniqueStudents);
         }
 
         return response()->json([

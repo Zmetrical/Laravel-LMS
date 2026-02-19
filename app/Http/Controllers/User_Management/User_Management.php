@@ -652,13 +652,20 @@ class User_Management extends Controller
         return Str::random(10);
     }
 
-public function list_students(Request $request)
+
+/**
+     * AJAX endpoint for paginated, filtered student list (admin)
+     * Add this method to the User_Management controller.
+     * Also remove the heavy student query from list_students() — replace with just filter data.
+     */
+
+    // ── Updated list_students (page load only, no student query) ─────────────
+    public function list_students(Request $request)
     {
         $strands = Strand::all();
-        $levels = Level::all();
-        $sections = Section::all();
-        
-        // Get semesters for filter
+        $levels  = Level::all();
+
+        // Semesters for filter dropdown
         $semesters = DB::table('semesters as s')
             ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
             ->select(
@@ -673,65 +680,208 @@ public function list_students(Request $request)
             ->orderBy('s.code', 'asc')
             ->get();
 
-        // Get active semester for default selection
         $activeSemester = $semesters->where('status', 'active')->first();
 
-        // Get ALL enrollment records with guardian verification status
-        $students = DB::table('students')
-            ->join('sections', 'students.section_id', '=', 'sections.id')
-            ->join('levels', 'sections.level_id', '=', 'levels.id')
-            ->join('strands', 'sections.strand_id', '=', 'strands.id')
-            ->leftJoin('student_semester_enrollment as sse', 'students.student_number', '=', 'sse.student_number')
-            ->leftJoin('semesters as sem', 'sse.semester_id', '=', 'sem.id')
-            ->leftJoin('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
-            ->leftJoin('sections as enrolled_section', 'sse.section_id', '=', 'enrolled_section.id')
-            // Join with guardian to get verification status
-            ->leftJoin('guardian_students as gs', 'students.student_number', '=', 'gs.student_number')
-            ->leftJoin('guardians as g', 'gs.guardian_id', '=', 'g.id')
-            ->select(
-                'students.id',
-                'students.student_number',
-                'students.first_name',
-                'students.middle_name',
-                'students.last_name',
-                'students.email',
-                'students.student_type',
-                'sections.name as current_section',
-                'levels.name as level',
-                'strands.code as strand',
-                'sse.semester_id',
-                'enrolled_section.name as enrolled_section_name',
-                'sse.enrollment_status',
-                'sse.enrollment_date',
-                DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
-                // Add guardian email and verification status
-                'g.email as guardian_email',
-                'g.email_verified_at',
-                DB::raw('CASE 
-                    WHEN g.email_verified_at IS NOT NULL THEN "verified"
-                    WHEN g.email IS NOT NULL THEN "pending"
-                    ELSE "none"
-                END as verification_status')
-            )
-            ->orderBy('students.last_name')
-            ->orderBy('students.first_name')
-            ->orderBy('sem.id', 'desc')
-            ->get();
-
         $data = [
-            'scripts' => [
-                'user_management/list_student.js',
-            ],
-            'strands' => $strands,
-            'levels' => $levels,
-            'sections' => $sections,
-            'semesters' => $semesters,
-            'students' => $students,
-            'activeSemester' => $activeSemester
+            'scripts' => ['user_management/list_student.js'],
+            'strands'        => $strands,
+            'levels'         => $levels,
+            'semesters'      => $semesters,
+            'activeSemester' => $activeSemester,
         ];
 
         return view('admin.user_management.list_student', $data);
     }
+
+    // ── New AJAX endpoint ─────────────────────────────────────────────────────
+    public function getStudentsAjax(Request $request)
+    {
+        try {
+            $search      = trim($request->get('search', ''));
+            $semesterId  = $request->get('semester_id');
+            $studentType = $request->get('student_type');
+            $strandCode  = $request->get('strand_code');
+            $levelName   = $request->get('level_name');
+            $sectionName = $request->get('section_name');
+            $perPage     = (int) $request->get('per_page', 25);
+
+            $query = DB::table('students')
+                ->join('sections', 'students.section_id', '=', 'sections.id')
+                ->join('levels', 'sections.level_id', '=', 'levels.id')
+                ->join('strands', 'sections.strand_id', '=', 'strands.id')
+                ->leftJoin('student_semester_enrollment as sse', function ($join) use ($semesterId) {
+                    $join->on('students.student_number', '=', 'sse.student_number');
+                    if ($semesterId) {
+                        $join->where('sse.semester_id', '=', $semesterId);
+                    }
+                })
+                ->leftJoin('semesters as sem', 'sse.semester_id', '=', 'sem.id')
+                ->leftJoin('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+                ->leftJoin('sections as enrolled_section', 'sse.section_id', '=', 'enrolled_section.id')
+                ->leftJoin('guardian_students as gs', 'students.student_number', '=', 'gs.student_number')
+                ->leftJoin('guardians as g', 'gs.guardian_id', '=', 'g.id')
+                ->select(
+                    'students.id',
+                    'students.student_number',
+                    'students.first_name',
+                    'students.middle_name',
+                    'students.last_name',
+                    'students.email',
+                    'students.student_type',
+                    'sections.name as current_section',
+                    'levels.name as level',
+                    'strands.code as strand',
+                    'sse.semester_id',
+                    'sse.enrollment_status',
+                    'sse.enrollment_date',
+                    'enrolled_section.name as enrolled_section_name',
+                    DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
+                    'g.email as guardian_email',
+                    'g.email_verified_at',
+                    DB::raw('CASE
+                        WHEN g.email_verified_at IS NOT NULL THEN "verified"
+                        WHEN g.email IS NOT NULL THEN "pending"
+                        ELSE "none"
+                    END as verification_status')
+                );
+
+            // Search: student number or name
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('students.student_number', 'like', "%{$search}%")
+                      ->orWhere('students.first_name',   'like', "%{$search}%")
+                      ->orWhere('students.last_name',    'like', "%{$search}%");
+                });
+            }
+
+            // Semester filter — only show students with enrollment in this semester
+            if ($semesterId) {
+                $query->where('sse.semester_id', $semesterId);
+            }
+
+            // Student type filter
+            if ($studentType) {
+                $query->where('students.student_type', $studentType);
+            }
+
+            // Strand filter (on current/base section strand)
+            if ($strandCode) {
+                $query->where('strands.code', $strandCode);
+            }
+
+            // Level filter (on current/base section level)
+            if ($levelName) {
+                $query->where('levels.name', $levelName);
+            }
+
+            // Section filter (enrolled section name)
+            if ($sectionName) {
+                $query->where('enrolled_section.name', $sectionName);
+            }
+
+            $query->orderBy('students.last_name')
+                  ->orderBy('students.first_name');
+
+            $students = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data'    => $students->items(),
+                'meta'    => [
+                    'current_page' => $students->currentPage(),
+                    'last_page'    => $students->lastPage(),
+                    'per_page'     => $students->perPage(),
+                    'total'        => $students->total(),
+                    'from'         => $students->firstItem() ?? 0,
+                    'to'           => $students->lastItem()   ?? 0,
+                ],
+            ]);
+        } catch (Exception $e) {
+            \Log::error('getStudentsAjax failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to load students.'], 500);
+        }
+    }
+
+// public function list_students(Request $request)
+//     {
+//         $strands = Strand::all();
+//         $levels = Level::all();
+//         $sections = Section::all();
+        
+//         // Get semesters for filter
+//         $semesters = DB::table('semesters as s')
+//             ->join('school_years as sy', 's.school_year_id', '=', 'sy.id')
+//             ->select(
+//                 's.id',
+//                 's.name',
+//                 's.code',
+//                 'sy.code as school_year_code',
+//                 DB::raw("CONCAT(sy.code, ' - ', s.name) as display_name"),
+//                 's.status'
+//             )
+//             ->orderBy('sy.year_start', 'desc')
+//             ->orderBy('s.code', 'asc')
+//             ->get();
+
+//         // Get active semester for default selection
+//         $activeSemester = $semesters->where('status', 'active')->first();
+
+//         // Get ALL enrollment records with guardian verification status
+//         $students = DB::table('students')
+//             ->join('sections', 'students.section_id', '=', 'sections.id')
+//             ->join('levels', 'sections.level_id', '=', 'levels.id')
+//             ->join('strands', 'sections.strand_id', '=', 'strands.id')
+//             ->leftJoin('student_semester_enrollment as sse', 'students.student_number', '=', 'sse.student_number')
+//             ->leftJoin('semesters as sem', 'sse.semester_id', '=', 'sem.id')
+//             ->leftJoin('school_years as sy', 'sem.school_year_id', '=', 'sy.id')
+//             ->leftJoin('sections as enrolled_section', 'sse.section_id', '=', 'enrolled_section.id')
+//             // Join with guardian to get verification status
+//             ->leftJoin('guardian_students as gs', 'students.student_number', '=', 'gs.student_number')
+//             ->leftJoin('guardians as g', 'gs.guardian_id', '=', 'g.id')
+//             ->select(
+//                 'students.id',
+//                 'students.student_number',
+//                 'students.first_name',
+//                 'students.middle_name',
+//                 'students.last_name',
+//                 'students.email',
+//                 'students.student_type',
+//                 'sections.name as current_section',
+//                 'levels.name as level',
+//                 'strands.code as strand',
+//                 'sse.semester_id',
+//                 'enrolled_section.name as enrolled_section_name',
+//                 'sse.enrollment_status',
+//                 'sse.enrollment_date',
+//                 DB::raw("CONCAT(sy.code, ' - ', sem.name) as semester_display"),
+//                 // Add guardian email and verification status
+//                 'g.email as guardian_email',
+//                 'g.email_verified_at',
+//                 DB::raw('CASE 
+//                     WHEN g.email_verified_at IS NOT NULL THEN "verified"
+//                     WHEN g.email IS NOT NULL THEN "pending"
+//                     ELSE "none"
+//                 END as verification_status')
+//             )
+//             ->orderBy('students.last_name')
+//             ->orderBy('students.first_name')
+//             ->orderBy('sem.id', 'desc')
+//             ->get();
+
+//         $data = [
+//             'scripts' => [
+//                 'user_management/list_student.js',
+//             ],
+//             'strands' => $strands,
+//             'levels' => $levels,
+//             'sections' => $sections,
+//             'semesters' => $semesters,
+//             'students' => $students,
+//             'activeSemester' => $activeSemester
+//         ];
+
+//         return view('admin.user_management.list_student', $data);
+//     }
 
     public function getSectionsForFilter(Request $request)
     {

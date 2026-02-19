@@ -239,7 +239,7 @@ class GuardianController extends Controller
 
         // Get adviser name for regular students
         $adviser_name = null;
-        if ($student->student_type === 'regular' && $student->section_id) {
+        if ($student->section_id) {
             $adviser_name = $this->getAdviserName($student->section_id, $semesterId);
         }
 

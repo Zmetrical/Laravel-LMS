@@ -567,92 +567,91 @@ function loadSectionEnrollment(sectionId) {
         });
     }
 
-    $(document).on('click', '.expand-btn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+$(document).on('click', '.expand-btn', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const studentId = $(this).data('student-id');
+    const mainRow = $(this).closest('tr');
+    const existingDetailRow = mainRow.next('.classes-detail-row');
+    const isExpanded = $(this).hasClass('expanded');
+    
+    if (isExpanded) {
+        $(this).removeClass('expanded');
+        existingDetailRow.remove();
+    } else {
+        $('.expand-btn').removeClass('expanded');
+        $('.classes-detail-row').remove();
         
-        const studentId = $(this).data('student-id');
-        const mainRow = $(this).closest('tr');
-        const existingDetailRow = mainRow.next('.classes-detail-row');
-        const isExpanded = $(this).hasClass('expanded');
+        $(this).addClass('expanded');
         
-        if (isExpanded) {
-            $(this).removeClass('expanded');
-            existingDetailRow.remove();
-        } else {
-            $('.expand-btn').removeClass('expanded');
-            $('.classes-detail-row').remove();
-            
-            $(this).addClass('expanded');
-            
-            const classesData = JSON.parse(mainRow.attr('data-classes'));
-            
-            let classesHtml = '';
-            if (classesData && classesData.length > 0) {
-                classesData.forEach(function(classGrade) {
-                    const cls = allClasses.find(c => c.class_code === classGrade.class_code);
-                    const className = cls ? cls.class_name : classGrade.class_code;
-                    
-                    // ONLY SHOW GRADE FOR SELECTED QUARTER
-                    let gradeDisplay = '';
-                    let gradeColor = '#6c757d';
-                    
-                    if (selectedQuarter === 'final') {
-                        const final = classGrade.final_grade || '-';
-                        gradeDisplay = final;
-                        gradeColor = final !== '-' && parseFloat(final) >= 75 ? '#28a745' : 
-                                    final !== '-' ? '#dc3545' : '#6c757d';
-                    } else if (selectedQuarter === '1ST') {
-                        const q1 = classGrade.q1 || '-';
-                        gradeDisplay = q1;
-                        gradeColor = q1 !== '-' && parseFloat(q1) >= 75 ? '#28a745' : 
-                                    q1 !== '-' ? '#dc3545' : '#6c757d';
-                    } else if (selectedQuarter === '2ND') {
-                        const q2 = classGrade.q2 || '-';
-                        gradeDisplay = q2;
-                        gradeColor = q2 !== '-' && parseFloat(q2) >= 75 ? '#28a745' : 
-                                    q2 !== '-' ? '#dc3545' : '#6c757d';
-                    }
-                    
-                    const remarks = classGrade.remarks || '-';
-                    const remarksColor = classGrade.remarks === 'PASSED' ? '#28a745' :
-                                       classGrade.remarks === 'FAILED' ? '#dc3545' : '#6c757d';
-                    
-                    classesHtml += `
-                        <div class="class-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="class-name">${className}</div>
-                                <div>
-                                    <span style="color: ${gradeColor}; font-weight: 600; font-size: 1.1rem; margin-right: 1rem;">${gradeDisplay}</span>
-                                    ${selectedQuarter === 'final' ? `<span style="color: ${remarksColor}; font-weight: 600;">${remarks}</span>` : ''}
-                                </div>
+        const classesData = JSON.parse(mainRow.attr('data-classes'));
+        
+        let classesHtml = '';
+        if (classesData && classesData.length > 0) {
+            classesData.forEach(function(classGrade) {
+                // Use class_name from the grade data directly — no allClasses lookup needed
+                const className = classGrade.class_name || classGrade.class_code;
+                
+                let gradeDisplay = '';
+                let gradeColor = '#6c757d';
+                
+                if (selectedQuarter === 'final') {
+                    const final = classGrade.final_grade || '-';
+                    gradeDisplay = final;
+                    gradeColor = final !== '-' && parseFloat(final) >= 75 ? '#28a745' : 
+                                final !== '-' ? '#dc3545' : '#6c757d';
+                } else if (selectedQuarter === '1ST') {
+                    const q1 = classGrade.q1 || '-';
+                    gradeDisplay = q1;
+                    gradeColor = q1 !== '-' && parseFloat(q1) >= 75 ? '#28a745' : 
+                                q1 !== '-' ? '#dc3545' : '#6c757d';
+                } else if (selectedQuarter === '2ND') {
+                    const q2 = classGrade.q2 || '-';
+                    gradeDisplay = q2;
+                    gradeColor = q2 !== '-' && parseFloat(q2) >= 75 ? '#28a745' : 
+                                q2 !== '-' ? '#dc3545' : '#6c757d';
+                }
+                
+                const remarks = classGrade.remarks || '-';
+                const remarksColor = classGrade.remarks === 'PASSED' ? '#28a745' :
+                                   classGrade.remarks === 'FAILED' ? '#dc3545' : '#6c757d';
+                
+                classesHtml += `
+                    <div class="class-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="class-name">${className}</div>
+                            <div>
+                                <span style="color: ${gradeColor}; font-weight: 600; font-size: 1.1rem; margin-right: 1rem;">${gradeDisplay}</span>
+                                ${selectedQuarter === 'final' ? `<span style="color: ${remarksColor}; font-weight: 600;">${remarks}</span>` : ''}
                             </div>
                         </div>
-                    `;
-                });
-            } else {
-                classesHtml = `
-                    <div class="no-classes">
-                        <i class="fas fa-inbox fa-2x mb-2"></i>
-                        <p>No classes enrolled</p>
                     </div>
                 `;
-            }
-            
-            const colSpan = 4;
-            const detailRow = $(`
-                <tr class="classes-detail-row">
-                    <td colspan="${colSpan}" class="classes-detail-cell">
-                        <div class="classes-container">
-                            ${classesHtml}
-                        </div>
-                    </td>
-                </tr>
-            `);
-            
-            mainRow.after(detailRow);
+            });
+        } else {
+            classesHtml = `
+                <div class="no-classes">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p>No classes enrolled</p>
+                </div>
+            `;
         }
-    });
+        
+        const colSpan = 4;
+        const detailRow = $(`
+            <tr class="classes-detail-row">
+                <td colspan="${colSpan}" class="classes-detail-cell">
+                    <div class="classes-container">
+                        ${classesHtml}
+                    </div>
+                </td>
+            </tr>
+        `);
+        
+        mainRow.after(detailRow);
+    }
+});
 
     function updateStudentCount(students) {
         const count = students.length;

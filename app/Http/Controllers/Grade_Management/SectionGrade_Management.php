@@ -215,21 +215,42 @@ class SectionGrade_Management extends MainController
                 ->groupBy('c.id', 'c.class_code', 'c.class_name')
                 ->get();
 
-            // Get students in section
-            $students = DB::table('students')
-                ->where('section_id', $sectionId)
-                ->select(
-                    'student_number',
-                    'first_name',
-                    'middle_name',
-                    'last_name',
-                    'email',
-                    'gender',
-                    'student_type'
-                )
-                ->orderBy('last_name')
-                ->orderBy('first_name')
-                ->get();
+// Get total classes in this section for the active semester
+$totalClasses = DB::table('section_class_matrix')
+    ->where('section_id', $sectionId)
+    ->where('semester_id', $activeSemester->id)
+    ->count();
+
+        // Get students in section with grade submission status
+        $students = DB::table('students as s')
+            ->where('s.section_id', $sectionId)
+            ->leftJoin(DB::raw('(
+                SELECT gf.student_number, COUNT(DISTINCT gf.class_code) as submitted_count
+                FROM grades_final gf
+                INNER JOIN section_class_matrix scm ON scm.semester_id = ' . $activeSemester->id . '
+                    AND scm.section_id = ' . (int)$sectionId . '
+                INNER JOIN classes c ON c.id = scm.class_id AND c.class_code = gf.class_code
+                WHERE gf.semester_id = ' . $activeSemester->id . '
+                GROUP BY gf.student_number
+            ) as gs'), 'gs.student_number', '=', 's.student_number')
+            ->select(
+                's.student_number',
+                's.first_name',
+                's.middle_name',
+                's.last_name',
+                's.email',
+                's.gender',
+                DB::raw('COALESCE(gs.submitted_count, 0) as submitted_count'),
+                DB::raw($totalClasses . ' as total_classes'),
+                DB::raw('CASE
+                    WHEN COALESCE(gs.submitted_count, 0) = 0 THEN "none"
+                    WHEN COALESCE(gs.submitted_count, 0) >= ' . $totalClasses . ' THEN "complete"
+                    ELSE "partial"
+                END as grade_status')
+            )
+            ->orderBy('s.last_name')
+            ->orderBy('s.first_name')
+            ->get();
 
             // Get grade submission status for each class
             foreach ($classes as $class) {
@@ -255,11 +276,24 @@ class SectionGrade_Management extends MainController
                     : 0;
             }
 
+            $classCodes = $classes->pluck('class_code')->toArray();
+            $studentNumbers = $students->pluck('student_number')->toArray();
+
+            $gradeMap = DB::table('grades_final')
+                ->where('semester_id', $activeSemester->id)
+                ->whereIn('class_code', $classCodes)
+                ->whereIn('student_number', $studentNumbers)
+                ->select('class_code', 'student_number')
+                ->get()
+                ->groupBy('class_code')
+                ->map(fn($group) => $group->pluck('student_number')->toArray());
+
             return response()->json([
                 'success' => true,
                 'section' => $section,
                 'classes' => $classes,
-                'students' => $students
+                'students' => $students,
+                'grade_map' => $gradeMap
             ]);
 
         } catch (Exception $e) {

@@ -268,9 +268,18 @@
                                             <a href="{{ route('admin.grades.section-view') }}"
                                                 class="nav-link {{ Request::routeIs('admin.grades.section-view') ? 'active' : '' }}">
                                                 <i class="far fa-circle nav-icon"></i>
-                                                <p>Grade Submissions</p>
+                                                <p>Section Grade</p>
                                             </a>
                                         </li>
+
+                                        <li class="nav-item">
+                                            <a href="{{ route('admin.irreg.grades-view') }}"
+                                                class="nav-link {{ Request::routeIs('admin.irreg.grades-view') ? 'active' : '' }}">
+                                                <i class="far fa-circle nav-icon"></i>
+                                                <p>Irregular Grades</p>
+                                            </a>
+                                        </li>
+
                                         <li class="nav-item">
                                             <a href="{{ route('admin.grades.cards') }}"
                                                 class="nav-link {{ Request::routeIs('admin.grades.card') ? 'active' : '' }}">

@@ -1,8 +1,6 @@
 @extends('layouts.main')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -11,7 +9,7 @@
             background: #f8f9fa; 
             border: 1px solid #e9ecef; 
         }
-        .filter-card .form-control, .filter-card .form-select { 
+        .filter-card .form-control { 
             font-size: 0.875rem; 
             height: calc(2.25rem + 2px);
         }
@@ -38,11 +36,10 @@
             border: 1px solid #dee2e6;
             border-radius: 4px;
             margin-bottom: 10px;
-            transition: all 0.2s ease;
+            transition: border-color 0.15s ease;
         }
         .grade-card-list:hover {
-            border-color: #007bff;
-            box-shadow: 0 1px 4px rgba(0,123,255,0.1);
+            border-color: #2a347e;
         }
         .grade-card-list .card-body {
             padding: 0.75rem 1rem;
@@ -81,10 +78,6 @@
             width: 14px;
             text-align: center;
         }
-        .info-label-inline {
-            color: #6c757d;
-            margin-right: 0.3rem;
-        }
         .info-value-inline {
             color: #212529;
             font-weight: 500;
@@ -108,6 +101,36 @@
             white-space: nowrap;
             padding: 0.4rem 0.9rem;
             font-size: 0.875rem;
+        }
+
+        /* Skeleton loader */
+        .skeleton-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            padding: 0.75rem 1rem;
+        }
+        .skeleton-line {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.2s infinite;
+            border-radius: 3px;
+            height: 14px;
+            margin-bottom: 8px;
+        }
+        .skeleton-line.short { width: 35%; }
+        .skeleton-line.medium { width: 60%; }
+        .skeleton-line.long { width: 80%; }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Pagination info */
+        .pagination-info {
+            font-size: 0.8rem;
+            color: #6c757d;
         }
     </style>
 @endsection
@@ -165,64 +188,23 @@
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-id-card mr-2"></i>Student Grade Cards</h3>
             <div class="card-tools">
-                <span class="badge badge-primary" id="cardsCount">{{ count($gradeCards) }} Records</span>
+                <span class="badge badge-primary" id="cardsCount">Loading...</span>
             </div>
         </div>
         <div class="card-body">
-            <div id="gradeCardsContainer">
-                @foreach ($gradeCards as $card)
-                    <div class="grade-card-list grade-card-item" 
-                         data-student-number="{{ $card->student_number }}"
-                         data-student-name="{{ strtolower($card->last_name . ' ' . $card->first_name) }}"
-                         data-section-code="{{ $card->section_code }}"
-                         data-semester-id="{{ $card->semester_id }}">
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-9">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="student-id-badge">{{ $card->student_number }}</span>
-                                        <h5 class="student-name-display">{{ strtoupper($card->last_name) }}, {{ strtoupper($card->first_name) }}</h5>
-                                    </div>
-                                    
-                                    <div class="info-inline">
-                                        <div class="info-item-inline">
-                                            <i class="fas fa-users"></i>
-                                            <span class="info-value-inline">
-                                                {{ $card->section_name ?? 'N/A' }}
-                                                @if($card->section_name)
-                                                    <small class="text-muted">({{ $card->strand_code }} - {{ $card->level_name }})</small>
-                                                @endif
-                                            </span>
-                                        </div>
-                                        
-                                        <div class="info-item-inline">
-                                            <i class="fas fa-user-tag"></i>
-                                            <span class="badge badge-{{ $card->student_type === 'regular' ? 'primary' : 'secondary' }}">
-                                                {{ strtoupper($card->student_type) }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-3">
-                                    <div class="d-flex align-items-center justify-content-end">
-                                        <div class="subjects-count-compact">
-                                            <span class="semester-label">{{ $card->semester_display }}</span>
-                                        </div>
-                                        <a href="{{ route('admin.grades.card.view.page', ['student_number' => $card->student_number, 'semester_id' => $card->semester_id]) }}" 
-                                           class="btn btn-primary view-card-btn">
-                                            <i class="fas fa-file-alt"></i> View Card
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
 
+            <!-- Cards Container -->
+            <div id="gradeCardsContainer"></div>
+
+            <!-- No Results -->
             <div id="noResultsMessage" class="alert alert-primary text-center" style="display: none;">
                 <i class="fas fa-info-circle"></i> No grade cards found matching your filters.
+            </div>
+
+            <!-- Pagination Row -->
+            <div class="d-flex justify-content-between align-items-center mt-3" id="paginationWrapper" style="display: none !important;">
+                <div class="pagination-info" id="paginationInfo"></div>
+                <ul class="pagination pagination-sm mb-0" id="paginationLinks"></ul>
             </div>
         </div>
     </div>
@@ -233,8 +215,15 @@
     <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
     <script>
         const API_ROUTES = {
-            getGradeCard: "{{ route('admin.grades.card.view') }}"
+            getGradeCard:   "{{ route('admin.grades.card.view') }}",
+            getCardsAjax:   "{{ route('admin.grades.cards.list') }}",
         };
+        const CARD_VIEW_BASE = "{{ url('admin/grades/card') }}";
+        @if(isset($activeSemester))
+            const DEFAULT_SEMESTER = "{{ $activeSemester->semester_id }}";
+        @else
+        const DEFAULT_SEMESTER = "";
+        @endif
     </script>
     @if(isset($scripts))
         @foreach($scripts as $script)

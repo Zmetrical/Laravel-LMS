@@ -36,6 +36,7 @@ use App\Http\Controllers\Grade_Management\SectionGrade_Management;
 
 use App\Http\Controllers\Grade_Management\Grade_List;
 use App\Http\Controllers\Grade_Management\Grade_Card;
+use App\Http\Controllers\Grade_Management\IrregGrade_Management;
 
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\Enrollment_Management\Enroll_Management;
@@ -271,6 +272,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/sections/{sectionId}/classes/{classId}/grades', [SectionGrade_Management::class, 'getClassGrades'])
             ->name('sections.class-grades');
 
+        Route::get('/grades/irreg', [IrregGrade_Management::class, 'index'])->name('irreg.grades-view');
+        Route::get('/grades/irreg/students', [IrregGrade_Management::class, 'getIrregStudents'])->name('irreg.grades-list');
+        Route::get('/grades/irreg/student/{student_number}', [IrregGrade_Management::class, 'getStudentGradeDetails'])->name('irreg.grades-details');
 
 
         Route::prefix('grades')->name('grades.')->group(function () {
@@ -288,6 +292,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/evaluation/{student_number}/data', [Grade_Card::class, 'getEvaluationData'])->name('evaluation.data');
 
         });
+        Route::get('/grades/cards/list', [Grade_Card::class, 'getGradeCardsAjax'])->name('grades.cards.list');
+
+
 
         // ---------------------------------------------------------------------------
         // USER MANAGEMENT
@@ -297,6 +304,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/list_student', [User_Management::class, 'list_students'])->name('list_student');
             Route::get('/get_sections/filter', [User_Management::class, 'getSectionsForFilter'])->name('sections.filter');
             Route::get('/create_teacher', [User_Management::class, 'create_teacher'])->name('create_teacher');
+            Route::get('/students/list/ajax', [User_Management::class, 'getStudentsAjax'])->name('students.list.ajax');
 
             Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
 
