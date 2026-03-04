@@ -310,10 +310,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::get('/list_teacher', [User_Management::class, 'list_teacher'])->name('list_teacher');
 
-            Route::post('/teachers/toggle-status', [User_Management::class, 'toggleTeacherStatus'])
-                ->name('teachers.toggleStatus');
+
             Route::get('/teachers/{id}/history', [User_Management::class, 'teacherHistory'])
                 ->name('teachers.history');
+
             Route::post('/teachers/toggle-status', [User_Management::class, 'toggleTeacherStatus'])
                 ->name('teachers.toggleStatus');
 
