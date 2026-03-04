@@ -2,15 +2,18 @@ FROM php:8.2-apache
 
 # Install system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev libzip-dev libxml2-dev libicu-dev g++ \
+    libpq-dev libzip-dev libxml2-dev libicu-dev \
+    libpng-dev libjpeg-dev libfreetype6-dev g++ \
     zip unzip curl git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions one by one to catch any failures
+# Install PHP extensions one by one
 RUN docker-php-ext-install pdo
 RUN docker-php-ext-install pdo_pgsql
 RUN docker-php-ext-install zip
 RUN docker-php-ext-install xml
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd
 RUN docker-php-ext-configure intl && docker-php-ext-install intl
 
 # Install Composer
