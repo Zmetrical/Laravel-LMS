@@ -60,7 +60,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Teacher Pages
         Route::post('/insert_teacher', [User_Management::class, 'insert_teacher'])->name('insert_teacher');
         Route::post('/active/toggle-status', [User_Management::class, 'toggleTeacherStatus'])
-            ->name('teachers.toggleStatus');
+            ->name('teachers.active.toggleStatus');
     });
 
     Route::get('/levels/data', [Class_Management::class, 'getLevelsData'])->name('levels.data');
