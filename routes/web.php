@@ -342,7 +342,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [SectionController::class, 'index'])->name('enrollment.sections');
                 Route::get('/list', [SectionController::class, 'getSectionsList'])->name('sections.list');
                 Route::get('/{id}/details', [SectionController::class, 'getSectionDetails'])->name('sections.details');
-                Route::get('/{sectionId}/available-classes', [SectionController::class, 'getAvailableClasses'])->name('classes.available');
+
+                Route::get('/{sectionId}/available-classes', [SectionController::class, 'getAvailableClasses'])
+                    ->name('enrollment.classes.available'); // ← rename this one        
+
                 Route::post('/{id}/enroll', [SectionController::class, 'enrollClass'])->name('sections.enroll');
                 Route::delete('/{sectionId}/classes/{classId}', [SectionController::class, 'removeClass'])->name('sections.remove-class');
 
