@@ -17,16 +17,16 @@ use Illuminate\Support\Facades\Route;
 // PUBLIC API ROUTES
 // ===========================================================================
 
-Route::get('sections/data', [User_Management::class, 'get_Sections'])->name('api.sections.data');
+Route::get('/section/data', [User_Management::class, 'get_Sections'])->name('api.sections.data');
 
-Route::get('/levels/data', function () {
+Route::get('/level/data', function () {
     return response()->json([
         'success' => true,
         'data' => DB::table('levels')->get()
     ]);
 })->name('api.levels.data');
 
-Route::get('/strands/data', function () {
+Route::get('/strand/data', function () {
     return response()->json([
         'success' => true,
         'data' => DB::table('strands')->where('status', 1)->get()
@@ -131,7 +131,7 @@ Route::prefix('teacher')->name('teacher.')->middleware(['web', 'auth:teacher'])-
         });
 
         Route::get('/participants', [Page_Participant::class, 'getParticipants'])->name('participants.list');
-        Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('grades.list');
+        Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('grades.data');
         Route::get('/students', [Page_Grade::class, 'getStudents'])->name('students.list');
         Route::get('/quizzes', [Page_Grade::class, 'getQuizzes'])->name('quizzes.list');
     });
