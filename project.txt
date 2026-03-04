@@ -1,3 +1,6 @@
+==============
+Learning Management System for Academics like Moodle Google Classroom
+==============
 No custom css just admin lte bootstrap and its plugins for ui
 secondary(primary color) primary(secondary color) and seconday(tertiary) color is enough
 dont use info or any other colors

@@ -165,7 +165,9 @@ class Page_Quiz extends MainController
                 'questions' => 'required|array|min:1',
                 'questions.*.question_text' => 'required|string',
                 'questions.*.question_type' => 'required|in:multiple_choice,multiple_answer,true_false,short_answer',
-                'questions.*.points' => 'required|numeric|min:0.01'
+                'questions.*.points' => 'required|numeric|min:0.01',
+                'max_questions' => 'nullable|integer|min:1'
+
             ]);
 
             foreach ($request->questions as $i => $q) {
@@ -202,6 +204,10 @@ class Page_Quiz extends MainController
                 }
             }
 
+if ($request->max_questions !== null && $request->max_questions > count($request->questions)) {
+    throw new \Exception("Questions to show ({$request->max_questions}) cannot exceed total questions (" . count($request->questions) . ")");
+}
+
             // Get related data for audit log
             $class = DB::table('classes')->where('id', $classId)->first();
             $lesson = DB::table('lessons')->where('id', $lessonId)->first();
@@ -225,6 +231,8 @@ class Page_Quiz extends MainController
                 'max_attempts' => $request->max_attempts,
                 'show_results' => 1,
                 'shuffle_questions' => 1,
+'max_questions' => $request->max_questions,
+
                 'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now()
@@ -299,6 +307,8 @@ class Page_Quiz extends MainController
                     'time_limit' => $request->time_limit,
                     'passing_score' => $request->passing_score,
                     'max_attempts' => $request->max_attempts,
+'max_questions' => $request->max_questions,
+
                     'available_from' => $request->available_from,
                     'available_until' => $request->available_until
                 ]
@@ -326,7 +336,9 @@ class Page_Quiz extends MainController
                 'semester_id' => 'required|integer|exists:semesters,id',
                 'available_from' => 'nullable|date',
                 'available_until' => 'nullable|date|after_or_equal:available_from',
-                'questions' => 'required|array|min:1'
+                'questions' => 'required|array|min:1',
+                'max_questions' => 'nullable|integer|min:1',
+
             ]);
 
             foreach ($request->questions as $i => $q) {
@@ -362,6 +374,9 @@ class Page_Quiz extends MainController
                     }
                 }
             }
+if ($request->max_questions !== null && $request->max_questions > count($request->questions)) {
+    throw new \Exception("Questions to show ({$request->max_questions}) cannot exceed total questions (" . count($request->questions) . ")");
+}
 
             // Get old quiz data for audit log
             $oldQuiz = DB::table('quizzes')->where('id', $quizId)->first();
@@ -393,6 +408,8 @@ class Page_Quiz extends MainController
                 'max_attempts' => $request->max_attempts,
                 'semester_id' => $request->semester_id,
                 'quarter_id' => $request->quarter_id,
+'max_questions' => $request->max_questions,
+
                 'updated_at' => now()
             ]);
 
@@ -463,7 +480,9 @@ class Page_Quiz extends MainController
                     'semester_id' => $oldQuiz->semester_id,
                     'quarter_id' => $oldQuiz->quarter_id,
                     'available_from' => $oldQuiz->available_from,
-                    'available_until' => $oldQuiz->available_until
+                    'available_until' => $oldQuiz->available_until,
+'max_questions' => $oldQuiz->max_questions,
+
                 ],
                 [
                     'quiz_title' => $request->title,
@@ -484,7 +503,9 @@ class Page_Quiz extends MainController
                     'passing_score' => $request->passing_score,
                     'max_attempts' => $request->max_attempts,
                     'available_from' => $request->available_from,
-                    'available_until' => $request->available_until
+                    'available_until' => $request->available_until,
+'max_questions' => $request->max_questions,
+
                 ]
             );
 

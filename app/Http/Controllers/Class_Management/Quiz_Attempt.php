@@ -283,21 +283,33 @@ class Quiz_Attempt extends MainController
             }
 
             // Use attempt ID as seed for consistent randomization
-            $seed = $attemptId;
+$seed = $attemptId;
 
-            // Get questions with consistent order
-            if ($quiz->shuffle_questions) {
-                $questions = DB::table('quiz_questions')
-                    ->where('quiz_id', $quizId)
-                    ->orderBy('order_number', 'asc')
-                    ->get()
-                    ->shuffle($seed);
-            } else {
-                $questions = DB::table('quiz_questions')
-                    ->where('quiz_id', $quizId)
-                    ->orderBy('order_number', 'asc')
-                    ->get();
-            }
+// Get questions
+$questions = DB::table('quiz_questions')
+    ->where('quiz_id', $quizId)
+    ->orderBy('order_number', 'asc')
+    ->get();
+
+// Shuffle with seed so same attempt always gets same order
+if ($quiz->shuffle_questions) {
+    $questions = $questions->shuffle($seed);
+}
+
+// Apply max_questions — slice AFTER shuffle so subset is consistent per attempt
+if ($quiz->max_questions && $quiz->max_questions < $questions->count()) {
+    $questions = $questions->take($quiz->max_questions);
+}
+
+// For new attempts, correct total_points to match the actual questions shown
+if (!$isResuming) {
+    $actualTotalPoints = $questions->sum('points');
+    DB::table('student_quiz_attempts')
+        ->where('id', $attemptId)
+        ->update(['total_points' => $actualTotalPoints]);
+}
+
+$questionsData = [];
 
             $questionsData = [];
             foreach ($questions as $question) {

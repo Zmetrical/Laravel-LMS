@@ -112,7 +112,13 @@
                 <div class="col-md-4">
                     <div class="form-group">
                         <label>Passing Score (%) <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="passingScore" value="75" min="0" max="100" required>
+                        <div class="input-group">
+<input type="number" class="form-control" id="passingScore" value="75" min="0" max="100" step="1" required>
+                            <div class="input-group-append">
+                                <span class="input-group-text" id="passingScorePts" style="min-width:80px; font-size:0.85rem;">— pts</span>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Based on total points in question pool</small>
                     </div>
                 </div>
             </div>
@@ -131,6 +137,16 @@
                         <small class="form-text text-muted">Leave empty for no end date</small>
                     </div>
                 </div>
+                    <div class="col-md-4">
+        <div class="form-group">
+            <label>Questions to Show per Attempt</label>
+            <input type="number" class="form-control" id="questionsToShow" min="1" placeholder="e.g. 30">
+            <small class="form-text text-muted">
+                <span id="questionsToShowHint" class="d-block"></span>
+            </small>
+        </div>
+    </div>
+
             </div>
         </form>
     </div>
@@ -152,6 +168,10 @@
             <div class="card-footer text-center">
                 <strong>Total: <span id="totalQuestions">0</span> questions</strong><br>
                 <strong>Points: <span id="totalPoints">0</span></strong>
+                <hr class="my-2">
+                <button type="button" class="btn btn-secondary btn-sm btn-block" id="previewQuizBtn">
+                    <i class="fas fa-eye"></i> Preview Quiz
+                </button>
             </div>
         </div>
     </div>
@@ -301,7 +321,8 @@
     const MAX_OPTIONS = 10;
     const SEMESTER_ID = {{ $semesterId ?? 'null' }};
     const DEFAULT_QUARTER_ID = {{ $defaultQuarterId ?? 'null' }};
-    
+    const PREVIEW_ROUTE = "{{ route('teacher.class.quiz.preview.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}";
+
     @if($isEdit ?? false)
         const QUIZ_ID = {{ $quiz->id ?? 0 }};
     @endif

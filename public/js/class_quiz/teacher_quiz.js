@@ -2,6 +2,7 @@ $(document).ready(function() {
     let questions = [];
     let selectedType = null;
     let editingIndex = null;
+let autoTrackMax = true;
 
     const questionTypes = {
         multiple_choice: { name: 'Multiple Choice', icon: 'fa-check-circle', color: 'primary' },
@@ -359,46 +360,111 @@ $(document).ready(function() {
         showToast('success', 'Question added');
     }
 
-    function updateQuestionList() {
-        const nav = $('#questionNav');
-        
-        if (questions.length === 0) {
-            nav.html('<li class="nav-item text-center text-muted p-3"><small>No questions added yet</small></li>');
-            $('#totalQuestions').text('0');
-            $('#totalPoints').text('0');
-            return;
-        }
-
-        let html = '';
-        let totalPts = 0;
-
-        questions.forEach((q, i) => {
-            totalPts += parseFloat(q.points);
-            const type = questionTypes[q.question_type];
-            const preview = q.question_text.substring(0, 40) + (q.question_text.length > 40 ? '...' : '');
-
-            html += `
-                <li class="nav-item question-item p-2">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div style="flex:1; cursor:pointer;" class="edit-question-btn" data-index="${i}">
-                            <span class="badge badge-${type.color} mr-1">${i + 1}</span>
-                            <i class="fas ${type.icon} text-${type.color} mr-1"></i>
-                            <small>${escapeHtml(preview)}</small>
-                            <span class="badge badge-light ml-1">${q.points}pts</span>
-                        </div>
-                        <div>
-                            <button class="btn btn-xs btn-primary edit-question-btn mr-1" data-index="${i}"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-xs btn-danger delete-question-btn" data-index="${i}"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                </li>
-            `;
-        });
-
-        nav.html(html);
-        $('#totalQuestions').text(questions.length);
-        $('#totalPoints').text(totalPts.toFixed(2));
+function updateQuestionList() {
+    const nav = $('#questionNav');
+    
+    if (questions.length === 0) {
+        nav.html('<li class="nav-item text-center text-muted p-3"><small>No questions added yet</small></li>');
+        $('#totalQuestions').text('0');
+        $('#totalPoints').text('0');
+        updatePassingScoreDisplay(0);
+        updateQuestionsToShowHint(0);
+        return;
     }
+
+    let html = '';
+    let totalPts = 0;
+
+    questions.forEach((q, i) => {
+        totalPts += parseFloat(q.points);
+        const type = questionTypes[q.question_type];
+        const preview = q.question_text.substring(0, 40) + (q.question_text.length > 40 ? '...' : '');
+
+        html += `
+            <li class="nav-item question-item p-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div style="flex:1; cursor:pointer;" class="edit-question-btn" data-index="${i}">
+                        <span class="badge badge-${type.color} mr-1">${i + 1}</span>
+                        <i class="fas ${type.icon} text-${type.color} mr-1"></i>
+                        <small>${escapeHtml(preview)}</small>
+                        <span class="badge badge-light ml-1">${q.points}pts</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-xs btn-primary edit-question-btn mr-1" data-index="${i}"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-xs btn-danger delete-question-btn" data-index="${i}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </li>
+        `;
+    });
+
+    nav.html(html);
+    $('#totalQuestions').text(questions.length);
+    $('#totalPoints').text(totalPts.toFixed(2));
+
+    // Enforce questionsToShow cap
+const newTotal = questions.length;
+if (autoTrackMax) {
+    // auto mode — always sync to total
+    $('#questionsToShow').val(newTotal > 0 ? newTotal : '');
+} else {
+    // manual mode — only enforce bounds
+    const currentVal = parseInt($('#questionsToShow').val());
+    if (currentVal > newTotal) $('#questionsToShow').val(newTotal);
+    if (currentVal < 1 && newTotal > 0) $('#questionsToShow').val(1);
+}
+
+    updatePassingScoreDisplay(totalPts);
+    updateQuestionsToShowHint(questions.length);
+}
+
+// AFTER
+$('#questionsToShow').on('input', function() {
+    const val = parseInt($(this).val());
+    const total = questions.length;
+
+    if (isNaN(val) || val >= total) {
+        autoTrackMax = true;
+        $(this).val(total > 0 ? total : '');
+    } else {
+        if (val < 1) {
+            $(this).val(1);
+        }
+        autoTrackMax = false;
+    }
+    updateQuestionsToShowHint(questions.length);
+});
+
+function updatePassingScoreDisplay(totalPts) {
+    const pct = parseFloat($('#passingScore').val()) || 0;
+    if (totalPts > 0) {
+const pts = Math.round((pct / 100) * totalPts);
+        $('#passingScorePts').text(pts + ' pts');
+    } else {
+        $('#passingScorePts').text('— pts');
+    }
+}
+
+$('#passingScore').on('input', function() {
+    let val = parseInt($(this).val());
+    if (val > 100) $(this).val(100);
+    else if (val < 0) $(this).val(0);
+    const totalPts = questions.reduce((sum, q) => sum + parseFloat(q.points), 0);
+    updatePassingScoreDisplay(totalPts);
+});
+function updateQuestionsToShowHint(totalCount) {
+    const qts = parseInt($('#questionsToShow').val());
+    const hint = $('#questionsToShowHint');
+    if (!$('#questionsToShow').val() || isNaN(qts)) {
+        hint.text(totalCount > 0 ? `All ${totalCount} questions will be shown` : '');
+    } else {
+        if (qts > totalCount && totalCount > 0) {
+            hint.text(`Capped at ${totalCount} (pool size)`);
+        } else {
+            hint.text(totalCount > 0 ? `${qts} of ${totalCount} questions shown randomly` : '');
+        }
+    }
+}
 
     function openEditModal(index) {
         editingIndex = index;
@@ -579,18 +645,21 @@ $(document).ready(function() {
                 return;
             }
         }
-        const data = {
-            title,
-            description: "",
-            time_limit: parseInt($('#timeLimit').val()) || null,
-            available_from: availableFrom,
-            available_until: availableUntil,
-            passing_score: parseFloat($('#passingScore').val()),
-            max_attempts: parseInt($('#maxAttempts').val()),
-            semester_id: SEMESTER_ID,
-            quarter_id: quarterId,
-            questions
-        };
+const maxQuestionsRaw = $('#questionsToShow').val();
+const maxQuestions = maxQuestionsRaw !== '' ? parseInt(maxQuestionsRaw) : null;
+const data = {
+    title,
+    description: "",
+    time_limit: parseInt($('#timeLimit').val()) || null,
+    available_from: availableFrom,
+    available_until: availableUntil,
+    passing_score: parseFloat($('#passingScore').val()),
+    max_attempts: parseInt($('#maxAttempts').val()),
+    max_questions: maxQuestions,
+    semester_id: SEMESTER_ID,
+    quarter_id: quarterId,
+    questions
+};
 
         const btn = $('#saveQuiz');
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
@@ -637,6 +706,16 @@ $(document).ready(function() {
         $('#timeLimit').val(data.quiz.time_limit || '');
         $('#passingScore').val(data.quiz.passing_score);
         $('#maxAttempts').val(data.quiz.max_attempts);
+
+$('#questionsToShow').val(data.quiz.max_questions ?? '');
+// if a custom value was saved (less than total), it was manually set
+const savedMax = data.quiz.max_questions;
+const totalQs = questions.length;
+autoTrackMax = (savedMax === null || savedMax === undefined || parseInt(savedMax) >= totalQs);
+// recalculate displays after populating
+const totalPts = questions.reduce((sum, q) => sum + parseFloat(q.points), 0);
+updatePassingScoreDisplay(totalPts);
+updateQuestionsToShowHint(questions.length);
 
             // Add these lines for date fields
     if (data.quiz.available_from) {
@@ -687,4 +766,61 @@ $(document).ready(function() {
         if (!text) return '';
         return text.toString().replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
     }
+
+    $('#previewQuizBtn').on('click', function () {
+    if (questions.length === 0) return;
+
+    const timeLimitVal = parseInt($('#timeLimit').val()) || 0;
+
+    Swal.fire({
+        title: 'Preview Quiz?',
+        html: `
+            <p>You are about to preview this quiz as a student would see it.</p>
+            <ul class="text-left">
+                ${timeLimitVal > 0
+                    ? `<li>Timer will run: <strong>${timeLimitVal} minute${timeLimitVal > 1 ? 's' : ''}</strong></li>`
+                    : '<li>No time limit set</li>'}
+                ${$('#questionsToShow').val()
+                    ? `<li>Will show <strong>${$('#questionsToShow').val()}</strong> of <strong>${questions.length}</strong> questions (randomized)</li>`
+                    : `<li>All <strong>${questions.length}</strong> questions will be shown</li>`}
+            </ul>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#6c757d',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: '<i class="fas fa-eye"></i> Start Preview',
+        cancelButtonText: 'Cancel'
+    }).then(result => {
+        if (!result.isConfirmed) return;
+
+        const maxQsRaw = $('#questionsToShow').val();
+
+        $.ajax({
+            url: PREVIEW_ROUTE,
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': CSRF_TOKEN,
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                title:         $('#quizTitle').val() || 'Untitled Quiz',
+                time_limit:    timeLimitVal || null,
+                passing_score: parseInt($('#passingScore').val()) || 75,
+                max_questions: maxQsRaw !== '' ? parseInt(maxQsRaw) : null,
+                questions:     questions
+            }),
+            success: function (res) {
+                if (res.success) {
+                    window.location.href = res.redirect;
+                } else {
+                    showToast('error', res.message || 'Failed to start preview');
+                }
+            },
+            error: function () {
+                showToast('error', 'Failed to start preview');
+            }
+        });
+    });
+});
 });

@@ -14,6 +14,8 @@ use App\Http\Controllers\Class_Management\Page_Lecture;
 use App\Http\Controllers\Class_Management\Page_Lesson;
 use App\Http\Controllers\Class_Management\Page_Participant;
 use App\Http\Controllers\Class_Management\Page_Quiz;
+
+use App\Http\Controllers\Class_Management\Quiz_Preview;
 use App\Http\Controllers\Class_Management\Quiz_Attempt;
 use App\Http\Controllers\Class_Management\Quiz_Submit;
 use App\Http\Controllers\Grade_Management\Grade_Management;
@@ -609,7 +611,12 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             Route::prefix('lesson/{lessonId}/quiz')->name('quiz.')->group(function () {
                 Route::get('/create', [Page_Quiz::class, 'teacherCreate'])->name('create');
                 Route::get('/{quizId}/edit', [Page_Quiz::class, 'teacherEdit'])->name('edit');
+
+                Route::post('preview', [Quiz_Preview::class, 'storePreview'])->name('preview.store');
+                Route::get('preview', [Quiz_Preview::class, 'showPreview'])->name('preview.show');
             });
+
+
         });
 
         // Route::prefix('gradebook')->name('gradebook.')->group(function() {
