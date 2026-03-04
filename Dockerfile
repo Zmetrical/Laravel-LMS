@@ -1,12 +1,15 @@
 FROM php:8.2-apache
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    libpq-dev libzip-dev libxml2-dev libicu-dev \
+# Install system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev libzip-dev libxml2-dev libicu-dev g++ \
     zip unzip curl git \
-    && docker-php-ext-install \
-        pdo pdo_pgsql zip xml mbstring intl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure intl \
+    && docker-php-ext-install \
+        pdo pdo_pgsql zip xml mbstring intl
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
