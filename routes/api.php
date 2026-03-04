@@ -89,20 +89,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // STUDENT API ROUTES
 // ===========================================================================
 
+// api.php
 Route::prefix('student')->name('student.')->middleware(['web', 'auth:student'])->group(function () {
-
-    Route::get('/classes', [Class_List::class, 'getStudentClasses'])->name('classes.list');
-    Route::get('/classes/{id}/details', [Class_List::class, 'getClassDetails'])->name('classes.details');
+    Route::get('/classes', [Class_List::class, 'getStudentClasses'])->name('api.classes.list');
+    Route::get('/classes/{id}/details', [Class_List::class, 'getClassDetails'])->name('api.classes.details');
 
     Route::prefix('class/{classId}')->name('class.')->group(function () {
-        Route::get('/lessons', [Page_Lesson::class, 'studentList'])->name('lessons.list');
-        Route::get('/lesson/{lessonId}/lecture/{lectureId}/data', [Page_Lecture::class, 'getData'])
-            ->name('lecture.data');
-        Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('grades.list');
-        Route::get('/student/{studentNumber}/grades', [Page_Grade::class, 'getStudentGrades'])->name('grades.student');
+        Route::get('/lessons', [Page_Lesson::class, 'studentList'])->name('api.lessons.list');
+        Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('api.grades.list');
+        Route::get('/student/{studentNumber}/grades', [Page_Grade::class, 'getStudentGrades'])->name('api.grades.student');
+        Route::get('/lesson/{lessonId}/lecture/{lectureId}/data', [Page_Lecture::class, 'getData'])->name('api.lecture.data');
     });
 });
-
 // ===========================================================================
 // TEACHER API ROUTES
 // ===========================================================================
@@ -130,10 +128,11 @@ Route::prefix('teacher')->name('teacher.')->middleware(['web', 'auth:teacher'])-
             Route::delete('/{quizId}', [Page_Quiz::class, 'destroy'])->name('delete');
         });
 
-        Route::get('/participants', [Page_Participant::class, 'getParticipants'])->name('participants.list');
-        Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('grades.data');
-        Route::get('/students', [Page_Grade::class, 'getStudents'])->name('students.list');
-        Route::get('/quizzes', [Page_Grade::class, 'getQuizzes'])->name('quizzes.list');
+        Route::get('/participants', [Page_Participant::class, 'getParticipants'])->name('api.participants.list');
+        Route::get('/grades', [Page_Grade::class, 'getGrades'])->name('api.grades.list');
+        Route::get('/students', [Page_Grade::class, 'getStudents'])->name('api.students.list');
+        Route::get('/quizzes', [Page_Grade::class, 'getQuizzes'])->name('api.quizzes.list');
+        Route::get('/lessons', [Page_Lesson::class, 'teacherList'])->name('api.lessons.list');
     });
 
 });
