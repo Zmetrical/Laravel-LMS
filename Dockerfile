@@ -11,7 +11,6 @@ RUN docker-php-ext-install pdo
 RUN docker-php-ext-install pdo_pgsql
 RUN docker-php-ext-install zip
 RUN docker-php-ext-install xml
-RUN docker-php-ext-install mbstring
 RUN docker-php-ext-configure intl && docker-php-ext-install intl
 
 # Install Composer
