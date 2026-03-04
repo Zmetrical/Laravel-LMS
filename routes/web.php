@@ -161,6 +161,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Semester Activation (if not already exists)
         Route::post('/semesters/{id}/set-active', [Semester_Management::class, 'setActive'])->name('semesters.set-active');
 
+        
         Route::post('/archive/check-graduating-students', [Semester_Management::class, 'checkGraduatingStudents'])
             ->name('archive.check-graduating-students');
             
@@ -176,7 +177,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/list', [Year_Management::class, 'getSemestersData'])->name('semesters.list');
             Route::post('/create', [Year_Management::class, 'createSemester'])->name('semesters.create');
             Route::put('/{id}/update', [Year_Management::class, 'updateSemester'])->name('semesters.update');
-            Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.set-active');
+            Route::post('/{id}/set-active', [Year_Management::class, 'setActiveSemester'])->name('semesters.year.set-active');
             Route::get('/{id}/classes', [Year_Management::class, 'getSemesterClasses'])->name('semesters.classes');
             Route::get('/{id}/quarters', [Year_Management::class, 'getQuarters'])
                 ->name('semesters.quarters');
@@ -468,8 +469,6 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::post('/auth', [Login_Controller::class, 'auth_student'])->name('auth');
     });
 
-    // Logout - accessible when authenticated
-    Route::post('/logout', [Login_Controller::class, 'logout_student'])->name('logout');
 
     // Authenticated Routes
     Route::middleware('auth:student')->group(function () {
@@ -561,7 +560,6 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
     });
 
     // Logout - accessible when authenticated
-    Route::post('/logout', [Login_Controller::class, 'logout_teacher'])->name('logout');
 
     // Authenticated Routes
     Route::middleware('auth:teacher')->group(function () {
