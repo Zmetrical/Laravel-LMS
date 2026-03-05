@@ -137,7 +137,7 @@
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script>
     const API_ROUTES = {
-        getLectureData: "{{ route('student.class.lecture.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
+        getLectureData: "{{ route('api.student.class.lecture.data', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
         getProgress: "{{ route('student.class.lecture.progress', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
         markComplete: "{{ route('student.class.lecture.markComplete', ['classId' => $class->id, 'lessonId' => $lessonId, 'lectureId' => $lectureId]) }}",
         backToLessons: "{{ route('student.class.lessons', $class->id) }}"

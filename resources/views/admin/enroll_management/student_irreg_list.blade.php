@@ -58,7 +58,7 @@
     
     <script>
         const API_ROUTES = {
-            getStudents: "{{ route('admin.students.list') }}",
+            getStudents: "{{ route('api.admin.students.list') }}",
             enrollmentPage: "{{ route('admin.student_class_enrollment', ['id' => ':id']) }}"
         };
     </script>

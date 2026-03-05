@@ -331,7 +331,7 @@
         const API_ROUTES = {
             getSections: "{{ route('admin.sections.list') }}",
             getSectionDetails: "{{ route('admin.sections.details', ['id' => ':id']) }}",
-            getAvailableClasses: "{{ route('admin.classes.available', ['sectionId' => ':id']) }}",
+            getAvailableClasses: "{{ route('api.admin.classes.available', ['sectionId' => ':id']) }}",
             enrollClass: "{{ route('admin.sections.enroll', ['id' => ':id']) }}",
             removeClass: "{{ route('admin.sections.remove-class', ['sectionId' => ':sectionId', 'classId' => ':classId']) }}",
              getSectionAdviser: "{{ route('admin.sections.adviser', ['id' => ':id']) }}",

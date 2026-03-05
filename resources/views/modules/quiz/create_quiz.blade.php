@@ -329,10 +329,10 @@
     
     const API_ROUTES = {
         @if($isEdit ?? false)
-            getQuizData: "{{ route('teacher.class.quiz.data', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
-            submitQuiz: "{{ route('teacher.class.quiz.update', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
+            getQuizData: "{{ route('api.teacher.class.quiz.data', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
+            submitQuiz: "{{ route('api.teacher.class.quiz.update', ['classId' => $class->id, 'lessonId' => $lesson->id, 'quizId' => $quiz->id ?? 0]) }}",
         @else
-            submitQuiz: "{{ route('teacher.class.quiz.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}",
+            submitQuiz: "{{ route('api.teacher.class.quiz.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}",
         @endif
         backToLessons: "{{ route('teacher.class.lessons', $class->id) }}"
     };

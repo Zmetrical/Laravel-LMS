@@ -242,7 +242,7 @@
             getSemesters:     "{{ route('admin.semesters.list') }}",
             createSemester:   "{{ route('admin.semesters.create') }}",
             updateSemester:   "{{ route('admin.semesters.update', ['id' => ':id']) }}",
-            setActiveSemester:"{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
+            setActiveSemester:"{{ route('admin.semesters.year.set-active', ['id' => ':id']) }}",
             semestersPage:    "{{ route('admin.semesters.index') }}",
             archiveManagementPage: "{{ route('admin.archive.index') }}",
             graduationPage:   "{{ route('admin.graduation.show', ['schoolYearId' => ':id']) }}",

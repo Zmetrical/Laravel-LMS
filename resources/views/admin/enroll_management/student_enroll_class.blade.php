@@ -136,10 +136,10 @@
     <script>
         const STUDENT_ID = {{ $studentId }};
         const API_ROUTES = {
-            getStudentInfo: "{{ route('admin.students.info', ['id' => $studentId]) }}",
-            getStudentClasses: "{{ route('admin.students.classes', ['id' => $studentId]) }}",
-            enrollClass: "{{ route('admin.students.enroll') }}",
-            unenrollClass: "{{ route('admin.students.unenroll') }}"
+            getStudentInfo: "{{ route('api.admin.students.info', ['id' => $studentId]) }}",
+            getStudentClasses: "{{ route('api.admin.students.classes', ['id' => $studentId]) }}",
+            enrollClass: "{{ route('api.admin.students.enroll') }}",
+            unenrollClass: "{{ route('api.admin.students.unenroll') }}"
         };
 
         const ACTIVE_SEMESTER_ID = {{ $activeSemester->semester_id ?? 'null' }};

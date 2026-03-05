@@ -250,10 +250,10 @@
     // Lecture-specific constants
     const API_ROUTES = {
         @if(isset($lecture))
-            submitUrl: "{{ route('teacher.class.lecture.update', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
-            deleteUrl: "{{ route('teacher.class.lecture.delete', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
+            submitUrl: "{{ route('api.teacher.class.lecture.update', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
+            deleteUrl: "{{ route('api.teacher.class.lecture.delete', ['classId' => $class->id, 'lessonId' => $lesson->id, 'lectureId' => $lecture->id]) }}",
         @else
-            submitUrl: "{{ route('teacher.class.lecture.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}",
+            submitUrl: "{{ route('api.teacher.class.lecture.store', ['classId' => $class->id, 'lessonId' => $lesson->id]) }}",
         @endif
         redirectUrl: "{{ route('teacher.class.lessons', $class->id) }}"
     };

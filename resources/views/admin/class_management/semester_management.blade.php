@@ -461,7 +461,7 @@
         getSemesterDetails: "{{ route('admin.archive.semester-details', ['id' => ':id']) }}",
         getSectionStudents: "{{ route('admin.archive.section-students', ['semesterId' => ':semesterId', 'sectionId' => ':sectionId']) }}",
         completeSemester: "{{ route('admin.archive.complete-semester', ['id' => ':id']) }}",
-        activateSemester: "{{ route('admin.semesters.set-active', ['id' => ':id']) }}",
+        activateSemester: "{{ route('admin.semesters.year.set-active', ['id' => ':id']) }}",
         getPreviousSemester: "{{ route('admin.archive.get-previous-semester', ['id' => ':id']) }}",
         searchSections: "{{ route('admin.archive.search-sections') }}",
         loadStudents: "{{ route('admin.archive.load-students') }}",

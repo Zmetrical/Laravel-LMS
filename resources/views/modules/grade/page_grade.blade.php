@@ -34,7 +34,7 @@
 @section('page-scripts')
 <script>
     const API_ROUTES = {
-        getGrades: "{{ route('student.class.grades.student', ['classId' => $class->id, 'studentNumber' => $studentNumber]) }}",
+        getGrades: "{{ route('api.student.class.grades.student', ['classId' => $class->id, 'studentNumber' => $studentNumber]) }}",
         viewQuiz: "{{ route('student.class.quiz.view', ['classId' => $class->id, 'lessonId' => ':lessonId', 'quizId' => ':quizId']) }}",
         classId: {{ $class->id }},
         studentNumber: "{{ $studentNumber }}"

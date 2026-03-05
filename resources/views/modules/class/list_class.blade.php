@@ -55,7 +55,7 @@
     <script>
         const USER_TYPE = "{{ $userType }}";
         const API_ROUTES = {
-            getClasses: "{{ $isTeacher ? route('teacher.classes.list') : route('student.classes.list') }}"
+            getClasses: "{{ $isTeacher ? route('api.teacher.classes.list') : route('api.student.classes.list') }}"
             @if($isTeacher)
             ,
             gradebook: "{{ route('teacher.gradebook.view', ['classId' => ':classId']) }}"

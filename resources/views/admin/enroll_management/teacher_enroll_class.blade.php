@@ -238,12 +238,12 @@
     
     <script>
         const API_ROUTES = {
-            getClasses: "{{ route('admin.classes.list') }}",
-            getClassDetails: "{{ route('admin.classes.details', ['id' => ':id']) }}",
-            getClassStudents: "{{ route('admin.classes.students', ['id' => ':id']) }}",
-            getTeachers: "{{ route('admin.teachers.list') }}",
-            assignTeacher: "{{ route('admin.classes.assign-teacher') }}",
-            removeTeacher: "{{ route('admin.classes.remove-teacher') }}"
+            getClasses: "{{ route('api.admin.classes.list') }}",
+            getClassDetails: "{{ route('api.admin.classes.details', ['id' => ':id']) }}",
+            getClassStudents: "{{ route('api.admin.classes.students', ['id' => ':id']) }}",
+            getTeachers: "{{ route('api.admin.teachers.list') }}",
+            assignTeacher: "{{ route('api.admin.classes.assign-teacher') }}",
+            removeTeacher: "{{ route('api.admin.classes.remove-teacher') }}"
         };
     </script>
     

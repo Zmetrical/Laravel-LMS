@@ -1,4 +1,4 @@
-@extends('modules.class.main', [
+    @extends('modules.class.main', [
     'activeTab' => 'lessons', 
     'userType' => $userType, 
     'class' => $class])
@@ -198,13 +198,13 @@
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script>
     const API_ROUTES = {
-        getLessons: "{{ route($userType === 'teacher' ? 'teacher.class.lessons.list' : 'student.class.lessons.list', $class->id ?? 0) }}",
+        getLessons: "{{ route($userType === 'teacher' ? 'api.teacher.class.lessons.list' : 'api.student.class.lessons.list', $class->id ?? 0) }}",
         
         @if($userType === 'teacher')
         // Lesson
-            createLesson: "{{ route('teacher.class.lessons.store', $class->id ?? 0) }}",
-            updateLesson: "{{ route('teacher.class.lessons.update', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
-            deleteLesson: "{{ route('teacher.class.lessons.delete', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
+            createLesson: "{{ route('api.teacher.class.lessons.store', $class->id ?? 0) }}",
+            updateLesson: "{{ route('api.teacher.class.lessons.update', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
+            deleteLesson: "{{ route('api.teacher.class.lessons.delete', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
         // Lecture 
             createLecture: "{{ route('teacher.class.lectures.create', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId']) }}",
             editLecture: "{{ route('teacher.class.lectures.edit', ['classId' => $class->id ?? 0, 'lessonId' => ':lessonId', 'lectureId' => ':lectureId']) }}",
