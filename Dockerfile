@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip unzip curl git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions one by one
+# Install PHP extensions
 RUN docker-php-ext-install pdo
 RUN docker-php-ext-install pdo_pgsql
 RUN docker-php-ext-install zip
@@ -37,11 +37,21 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --optimize
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage \
-    && chown -R www-data:www-data /var/www/html/bootstrap/cache
+    && chown -R www-data:www-data /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache
 
-# Point Apache to /public
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' \
-    /etc/apache2/sites-available/000-default.conf
+# Configure Apache virtual host pointing to /public with AllowOverride All
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+        Options -Indexes +FollowSymLinks\n\
+    </Directory>\n\
+    ErrorLog ${APACHE_LOG_DIR}/error.log\n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
