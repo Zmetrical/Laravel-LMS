@@ -3,6 +3,9 @@ services:
     name: lrv_poject
     env: docker
     plan: free
+    port: 80 
+
+
     dockerfilePath: ./Dockerfile
     envVars:
       - key: APP_KEY
