@@ -115,7 +115,7 @@
 
     <script>
         const API_ROUTES = {
-            insertTeacher: "{{ route('admin.insert_teacher') }}",
+            insertTeacher: "{{ route('api.admin.insert_teacher') }}",
             redirectAfterSubmit: "{{ route('admin.list_teacher') }}"
         };
     </script>

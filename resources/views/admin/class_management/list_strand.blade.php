@@ -183,8 +183,8 @@
     <script>
     const API_ROUTES = {
         getStrands: "{{ route('admin.strands.data') }}",
-        createStrand: "{{ route('admin.strands.store') }}",
-        updateStrand: "{{ route('admin.strands.update', ':id') }}",
+        createStrand: "{{ route('api.admin.strands.store') }}",
+        updateStrand: "{{ route('api.admin.strands.update', ':id') }}",
         getStrandSections: "{{ route('admin.strands.sections', ':id') }}"
     };
     </script>
