@@ -18,7 +18,11 @@ Supports multiple roles — Super Admin, Admin, Teacher, and Student — each wi
 
 ## About
 
-Built for Trinity, this system manages the full academic cycle — from setting up school years and semesters, assigning teachers and sections, tracking student grades, to monitoring all user activity through audit logs. Access is controlled per role, so each user only sees what's relevant to them, while parents can view grades via secure, time-limited email links.
+Trinity LMS is a tailored platform designed specifically for a hybrid learning environment, bridging the gap between online and face-to-face instruction. 
+
+A major focus of this project was making life easier for teachers and admins. The system features a seamless grading workflow that allows educators to merge physical classroom scores with online assessments using templated Excel imports and exports. It also handles the heavy lifting of school administration with tools for bulk student creation, easy section reassignments, and deep historical tracking to generate detailed grade cards with specific weight breakdowns.
+
+For online assessments, the platform includes a strict, built-in quiz engine equipped with time limits, randomized questions and answers, and an alt-tab warning system to maintain exam integrity.
 
 ---
 
@@ -141,7 +145,7 @@ Parents can access their child's grades securely without an account via a magic 
 - Grades — Grade Search, Section Grade, Irregular Grades, Grade Card
 
 **System Operation**
-- User Management — Insert Student, Insert Teacher, List Students, List Teachers
+- User Management — Bulk Insert Students, Insert Teacher, List Students, List Teachers, Historical Records
 - Class Management — List Class, List Strand, List Section
 
 **Audit & Monitoring**
@@ -156,12 +160,13 @@ Everything the Admin has, plus:
 ### Teacher
 
 **Class Management & Instruction**
-- My Classes — View assigned classes, access lessons, and create lectures/quizzes
-- My Students — View student grade cards
+- My Classes — View assigned classes, access lessons, and create lectures
+- Quizzes — Create quizzes with time limits, randomized Q&A, and alt-tab monitoring
+- My Students — View student grade cards and historical progress
 
 **Gradebook & Assessments**
-- View and manage student grades
-- Import grades directly from Excel
+- View and manage student grades with specific weightings
+- Import and Export grades seamlessly via Excel templates to connect face-to-face and online scores
 - Monitor and grade quizzes
 
 **Activity Logs**
@@ -172,13 +177,13 @@ Everything the Admin has, plus:
 
 **Academics**
 - My Classes — Quick access to enrolled classes directly from the sidebar
-- Content Hub — Access class lectures, lessons, and take quizzes
-- Grades & Gradecard — View individual assessment grades and final report cards
+- Content Hub — Access class lectures, lessons, and take secured quizzes
+- Grades & Gradecard — View individual assessment grades, weight details, and final report cards
 - Notifications — Alerts for pending quizzes on the sidebar
 
 ### Parent Access
 - Secure email dispatch system containing a unique, time-limited magic link.
-- Public, read-only view of their child's grades and report card.
+- Public, read-only view of their child's detailed grades and report card.
 
 ---
 
