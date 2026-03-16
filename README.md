@@ -70,7 +70,31 @@ Built for Trinity, this system manages the full academic cycle — from setting 
 
 ---
 
-> 📌 More screenshots coming — Teacher and Student role screenshots will be added here.
+### Teacher
+
+#### Class Management & Content
+
+| My Classes | Lessons |
+|---|---|
+| ![My Classes](screenshots/teacher/class-list.png) | ![Lessons](screenshots/teacher/lessons.png) |
+
+| Create Lecture | Create Quiz |
+|---|---|
+| ![Create Lecture](screenshots/teacher/create-lecture.png) | ![Create Quiz](screenshots/teacher/create-quiz.png) |
+
+#### Gradebook & Assessments
+
+| Gradebook View | Gradebook Import (Excel) |
+|---|---|
+| ![Gradebook View](screenshots/teacher/gradebook-view.png) | ![Gradebook Import](screenshots/teacher/gradebook-import.png) |
+
+| Quiz Grades | |
+|---|---|
+| ![Quiz Grades](screenshots/teacher/quiz-grades.png) | |
+
+---
+
+> 📌 More screenshots coming — Student role screenshots will be added here.
 
 ---
 
@@ -94,6 +118,21 @@ Built for Trinity, this system manages the full academic cycle — from setting 
 Everything the Admin has, plus:
 - Admin Management — Insert Admin, List Admins
 - School Year / Semester management
+
+### Teacher
+
+**Class Management & Instruction**
+- My Classes — View assigned classes, access lessons, and create lectures/quizzes
+- My Students — View student grade cards
+
+**Gradebook & Assessments**
+- View and manage student grades
+- Import grades directly from Excel
+- Monitor and grade quizzes
+
+**Activity Logs**
+- My Logs — Track personal system activity
+- Student Logs — Monitor activity of enrolled students
 
 ---
 
