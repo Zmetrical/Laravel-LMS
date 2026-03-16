@@ -54,15 +54,19 @@ Built for Trinity, this system manages the full academic cycle — from setting 
 
 #### Class Management
 
-| List Class |
-|---|
-| ![List Class](screenshots/admin/list-class.png) |
+| List Class | List Section |
+|---|---|
+| ![List Class](screenshots/admin/list-class.png) | ![List Section](screenshots/admin/list-section.png) |
 
 #### Audit & Monitoring
 
-| Historical Records |
-|---|
-| ![Historical Records](screenshots/admin/historical-records.png) |
+| Historical Records | Teacher Activity |
+|---|---|
+| ![Historical Records](screenshots/admin/historical-records.png) | ![Teacher Activity](screenshots/admin/audit-teacher.png) |
+
+| Login History | |
+|---|---|
+| ![Login History](screenshots/admin/audit-login.png) | |
 
 ---
 
@@ -79,11 +83,11 @@ Built for Trinity, this system manages the full academic cycle — from setting 
 - Grades — Grade Search, Section Grade, Irregular Grades, Grade Card
 
 **System Operation**
-- User Management — Insert/List Students, Insert/List Teachers
+- User Management — Insert Student, Insert Teacher, List Students, List Teachers
 - Class Management — List Class, List Strand, List Section
 
 **Audit & Monitoring**
-- Admin Activity, Teacher Activity, Student Activity, Login History
+- Audit Logs — Admin Activity, Teacher Activity, Student Activity, Login History
 
 ### Super Admin
 
@@ -105,7 +109,7 @@ Everything the Admin has, plus:
 ## Setup
 
 ```bash
-git clone https://github.com/Zmetrical/Laravel-LMS.git
+git clone [https://github.com/Zmetrical/Laravel-LMS.git](https://github.com/Zmetrical/Laravel-LMS.git)
 cd Laravel-LMS
 
 composer install
@@ -113,27 +117,3 @@ npm install && npm run dev
 
 cp .env.example .env
 php artisan key:generate
-```
-
-Update your `.env` with your database credentials, then:
-
-```bash
-php artisan migrate --seed
-php artisan storage:link
-php artisan serve
-```
-
----
-
-## Roles
-
-| Role | Access |
-|------|--------|
-| `super_admin` | Full system access — manages admins, school years, all modules |
-| `admin` | Semester operations, grades, class and user management, audit logs |
-| `teacher` | *(coming soon)* |
-| `student` | *(coming soon)* |
-
----
-
-> Built with Laravel & Bootstrap · Trinity School
