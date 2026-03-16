@@ -1,7 +1,7 @@
 # Trinity Learning Management System
 
 A web-based Learning Management System built with Laravel and Bootstrap.
-Supports multiple roles — Super Admin, Admin, Teacher, and Student — each with their own portal and access level.
+Supports multiple roles — Super Admin, Admin, Teacher, and Student — each with their own portal and access level, plus secure public grade viewing for parents.
 
 ---
 
@@ -18,7 +18,7 @@ Supports multiple roles — Super Admin, Admin, Teacher, and Student — each wi
 
 ## About
 
-Built for Trinity, this system manages the full academic cycle — from setting up school years and semesters, assigning teachers and sections, tracking student grades, to monitoring all user activity through audit logs. Access is controlled per role, so each user only sees what's relevant to them.
+Built for Trinity, this system manages the full academic cycle — from setting up school years and semesters, assigning teachers and sections, tracking student grades, to monitoring all user activity through audit logs. Access is controlled per role, so each user only sees what's relevant to them, while parents can view grades via secure, time-limited email links.
 
 ---
 
@@ -94,7 +94,41 @@ Built for Trinity, this system manages the full academic cycle — from setting 
 
 ---
 
-> 📌 More screenshots coming — Student role screenshots will be added here.
+### Student
+
+#### Dashboard & Content
+
+| Class View | Lectures |
+|---|---|
+| ![Class View](screenshots/student/class.png) | ![Lectures](screenshots/student/lectures.png) |
+
+| Lessons | Quizzes |
+|---|---|
+| ![Lessons](screenshots/student/lessons.png) | ![Quizzes](screenshots/student/quizzes.png) |
+
+| View Quiz | |
+|---|---|
+| ![View Quiz](screenshots/student/view-quiz.png) | |
+
+#### Academic Records
+
+| Grade Details | |
+|---|---|
+| ![Grade Details](screenshots/student/grade-details.png) | |
+
+---
+
+### Parent (Public View)
+
+Parents can access their child's grades securely without an account via a magic link sent to their email.
+
+| Parent Email Link | Parent Grade View |
+|---|---|
+| ![Parent Email Link](screenshots/parent/parent-email.png) | ![Parent Grade View](screenshots/parent/parent-view.png) |
+
+| Parent Grade Card | |
+|---|---|
+| ![Parent Grade Card](screenshots/parent/parent-gradecard.png) | |
 
 ---
 
@@ -134,6 +168,18 @@ Everything the Admin has, plus:
 - My Logs — Track personal system activity
 - Student Logs — Monitor activity of enrolled students
 
+### Student
+
+**Academics**
+- My Classes — Quick access to enrolled classes directly from the sidebar
+- Content Hub — Access class lectures, lessons, and take quizzes
+- Grades & Gradecard — View individual assessment grades and final report cards
+- Notifications — Alerts for pending quizzes on the sidebar
+
+### Parent Access
+- Secure email dispatch system containing a unique, time-limited magic link.
+- Public, read-only view of their child's grades and report card.
+
 ---
 
 ## Tech Stack
@@ -141,7 +187,7 @@ Everything the Admin has, plus:
 - **Backend** — Laravel (PHP)
 - **Frontend** — Bootstrap, AdminLTE, Font Awesome
 - **Database** — MySQL
-- **Auth** — Laravel Auth with role-based access control
+- **Auth** — Laravel Auth with role-based access control (Admin, Teacher, Student) + Signed Routes (Parent Access)
 
 ---
 
