@@ -28,8 +28,6 @@ For online assessments, the platform includes a strict, built-in quiz engine equ
 
 ## Screenshots
 
-> Screenshots are organized by role inside the `/screenshots` folder.
-
 ---
 
 ### Admin
