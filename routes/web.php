@@ -569,6 +569,7 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::get('/profile', [TeacherController::class, 'show_profile'])->name('profile');
 
 
+
         Route::get('/audit/my-logs',        [TeacherAuditController::class, 'index'])->name('audit.my_logs');
         Route::get('/audit/my-logs/data',   [TeacherAuditController::class, 'getMyLogs'])->name('audit.my_logs.data');
         Route::get('/audit/my-logs/{id}',   [TeacherAuditController::class, 'getMyLogDetail'])->name('audit.my_logs.detail');
@@ -592,6 +593,10 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
         // Class Content Pages
         Route::prefix('class/{classId}')->name('class.')->group(function () {
             // Main Pages
+
+
+
+
             Route::get('/lessons', [Page_Lesson::class, 'teacherIndex'])->name('lessons');
             Route::get('/quizzes', [Page_Quiz::class, 'teacherIndex'])->name('quizzes');
             Route::get('/grades', [Page_Grade::class, 'teacherIndex'])->name('grades');
@@ -602,6 +607,8 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
             // Lecture Management Pages
             Route::prefix('lesson/{lessonId}/lecture')->name('lectures.')->group(function () {
+
+
                 Route::get('/create', [Page_Lecture::class, 'create'])->name('create');
                 Route::get('/{lectureId}/edit', [Page_Lecture::class, 'edit'])->name('edit');
                 Route::get('/{lectureId}/download/{filename}', [Page_Lecture::class, 'download'])->name('download');
@@ -610,6 +617,9 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
 
             // Quiz Management Pages
             Route::prefix('lesson/{lessonId}/quiz')->name('quiz.')->group(function () {
+            Route::post('preview/export-ppt', [Page_Quiz::class, 'exportQuizPPT'])
+                    ->name('preview.export.ppt');
+
                 Route::get('/create', [Page_Quiz::class, 'teacherCreate'])->name('create');
                 Route::get('/{quizId}/edit', [Page_Quiz::class, 'teacherEdit'])->name('edit');
 

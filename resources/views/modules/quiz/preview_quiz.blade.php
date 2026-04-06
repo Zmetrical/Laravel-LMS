@@ -97,7 +97,9 @@
         top: 70px;
         z-index: 100;
     }
-
+.all-questions-mode .card-footer {
+    display: none !important;
+}
     @media (max-width: 768px) {
         .options-container {
             grid-template-columns: 1fr;
@@ -117,14 +119,26 @@
     <div class="col-lg-9 col-md-8">
 
         {{-- Quiz Header --}}
-        <div class="card bg-secondary mb-3">
-            <div class="card-body py-3">
-                <h4 class="text-white mb-0">
-                    <i class="fas fa-clipboard-list"></i> {{ $preview['title'] }}
-                </h4>
-            </div>
-        </div>
+<div class="card bg-secondary mb-3">
+    <div class="card-body py-3">
 
+
+<div class="d-flex justify-content-between align-items-center">
+    <h4 class="text-white mb-0">
+        <i class="fas fa-clipboard-list"></i> {{ $preview['title'] }}
+    </h4>
+    <div class="d-flex align-items-center">
+        <button type="button" class="btn btn-light btn-sm ml-2" id="viewModeToggle">
+            <i class="fas fa-square"></i> <span id="viewModeText">Show All</span>
+        </button>
+        <button type="button" class="btn btn-light btn-sm ml-1" id="categorizeBtn">
+            <i class="fas fa-layer-group"></i> <span id="categorizeBtnText">Categorize</span>
+        </button>
+    </div>
+</div>
+
+    </div>
+</div>
         {{-- Questions --}}
         <div id="questionsContainer">
             @foreach($questions as $index => $question)
@@ -187,25 +201,28 @@
                                maxlength="500">
                     @endif
                 </div>
-                <div class="card-footer bg-light">
-                    <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-default prev-btn"
-                                data-index="{{ $index }}"
-                                {{ $index === 0 ? 'disabled' : '' }}>
-                            <i class="fas fa-arrow-left"></i> Previous
-                        </button>
-                        @if($index < count($questions) - 1)
-                            <button type="button" class="btn btn-secondary next-btn"
-                                    data-index="{{ $index }}">
-                                Next <i class="fas fa-arrow-right"></i>
-                            </button>
-                        @else
-                            <button type="button" class="btn btn-secondary" id="finishPreviewBtn">
-                                <i class="fas fa-flag-checkered"></i> Finish Preview
-                            </button>
-                        @endif
-                    </div>
-                </div>
+
+
+<div class="card-footer bg-light">
+    <div class="d-flex justify-content-between">
+        <button type="button" class="btn btn-default prev-btn"
+                {{ $index === 0 ? 'disabled' : '' }}>
+            <i class="fas fa-arrow-left"></i> Previous
+        </button>
+        <div>
+            <button type="button" class="btn btn-secondary next-btn"
+                    {{ $index === count($questions) - 1 ? 'style=display:none;' : '' }}>
+                Next <i class="fas fa-arrow-right"></i>
+            </button>
+            <button type="button" class="btn btn-secondary finish-preview-btn"
+                    {{ $index < count($questions) - 1 ? 'style=display:none;' : '' }}>
+                <i class="fas fa-flag-checkered"></i> Finish Preview
+            </button>
+        </div>
+    </div>
+</div>
+
+
             </div>
             @endforeach
         </div>
@@ -250,11 +267,15 @@
                     </div>
                 </div>
             </div>
-            <div class="card-footer">
-                <button type="button" class="btn btn-secondary btn-block" id="submitPreviewBtn">
-                    <i class="fas fa-paper-plane"></i> Submit Preview
-                </button>
-            </div>
+<div class="card-footer">
+    <button type="button" class="btn btn-secondary btn-block" id="submitPreviewBtn">
+        <i class="fas fa-paper-plane"></i> Submit Preview
+    </button>
+    <hr class="my-2">
+    <button type="button" class="btn btn-default btn-block" id="exportPptBtn">
+        <i class="fas fa-file-powerpoint"></i> Download PPT
+    </button>
+</div>
         </div>
 
     </div>
@@ -269,6 +290,76 @@
     const TIME_LIMIT   = {{ $preview['time_limit'] ?? 0 }};
     const PASSING_SCORE = {{ $preview['passing_score'] ?? 75 }};
     const BACK_URL     = "{{ $backUrl }}";
+
+const EXPORT_PPT_ROUTE = "{{ route('teacher.class.quiz.preview.export.ppt', ['classId' => $class->id, 'lessonId' => $lesson->id], false) }}";
+const EXPORT_PPT_FILENAME = "{{ \Str::slug($preview['title']) }}.pptx";
+
+document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('exportPptBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            triggerPptExport(this, false);
+        });
+    });
+    
+// A unified, robust export function
+function triggerPptExport(btn, showSwalValidation = false) {
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+ 
+    // Build ordered questions using window.questionOrder (set by quiz_preview.js).
+    // Falls back to original order if for some reason the array isn't ready yet.
+    const orderedQuestions = (window.questionOrder || QUESTIONS.map((_, i) => i))
+        .map(i => QUESTIONS[i]);
+ 
+    fetch(EXPORT_PPT_ROUTE, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            title: {!! json_encode($preview['title']) !!},
+            time_limit: TIME_LIMIT,
+            passing_score: PASSING_SCORE,
+            questions: orderedQuestions   // <-- respects categorize / original order
+        })
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.text().then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    throw new Error(data.message || 'Server error.');
+                } catch(e) {
+                    throw new Error(`HTTP ${res.status}: Route mismatch or redirect error.`);
+                }
+            });
+        }
+        return res.blob();
+    })
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = EXPORT_PPT_FILENAME;
+        a.click();
+        URL.revokeObjectURL(url);
+ 
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    })
+    .catch(err => {
+        if (showSwalValidation) {
+            Swal.showValidationMessage('Export failed: ' + err.message);
+        } else {
+            Swal.fire('Error', err.message, 'error');
+        }
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
 </script>
 @if(isset($scripts))
     @foreach($scripts as $script)

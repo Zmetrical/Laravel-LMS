@@ -110,6 +110,8 @@ Route::name('api.')->group(function () {
 
     Route::prefix('teacher')->name('teacher.')->middleware(['web', 'auth:teacher'])->group(function () {
 
+
+
         Route::get('/classes', [Class_List::class, 'getTeacherClasses'])->name('classes.list');
 
         Route::prefix('class/{classId}')->name('class.')->group(function () {
